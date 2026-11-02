@@ -1,0 +1,40 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - uses: microsoft/setup-msbuild@v2
+
+      # The test project is a console runner: exit code 0 = all passed.
+      - name: Core tests
+        run: dotnet run --project tests/ClaudeVS.Core.Tests/ClaudeVS.Core.Tests.csproj -c Release
+
+      - name: Build solution (Release)
+        run: msbuild ClaudeVS.sln /restore /m /v:minimal /nologo /p:Configuration=Release /p:DeployExtension=false /warnaserror
+
+      - name: Upload VSIX
+        uses: actions/upload-artifact@v4
+        with:
+          name: ClaudeVS-vsix
+          path: src/ClaudeVS/bin/Release/ClaudeVS.vsix
+          if-no-files-found: error
