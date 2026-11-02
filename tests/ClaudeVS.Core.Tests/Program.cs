@@ -13,8 +13,10 @@ namespace ClaudeVS.Core.Tests
 {
     internal static class Program
     {
-        private static int Main()
+        private static int Main(string[] args)
         {
+            if (args.Length > 0 && args[0] == "--live") return LiveSmoke.Run(args.Length > 1 ? args[1] : null);
+
             var tests = typeof(Program).GetMethods(BindingFlags.NonPublic | BindingFlags.Static).Where(m => m.Name.StartsWith("Test_")).ToList();
             int failed = 0;
             foreach (var t in tests)
@@ -308,6 +310,29 @@ namespace ClaudeVS.Core.Tests
                 True(capped.Truncated && capped.Count == 2, "cap");
             }
             finally { Directory.Delete(root, true); }
+        }
+
+        // ---------- Real CLI output ----------
+        /// <summary>One real turn from Claude Code 2.1.316 (sanitized), captured by the --live smoke test.</summary>
+        private static void Test_Parser_RealCli_2_1_316()
+        {
+            var parser = new ClaudeStreamParser();
+            var events = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.316-turn.jsonl"))
+                .SelectMany(l => parser.Parse(l)).ToList();
+
+            var start = events.Single(e => e.Kind == ClaudeEventKind.SessionStarted);
+            Eq("claude-haiku-5-5", start.Model, "init reports the requested model");
+            Eq("PING", string.Concat(events.Where(e => e.Kind == ClaudeEventKind.TextDelta).Select(e => e.Text)), "streamed text");
+            Eq(0, events.Count(e => e.Kind == ClaudeEventKind.AssistantText), "no duplicate full text when deltas were streamed");
+            Eq("claude-sonnet-5-5", events.Last(e => e.Kind == ClaudeEventKind.AssistantUsage).Model, "model that actually answered");
+            Eq(0, events.Count(e => e.Kind == ClaudeEventKind.Error), "status / rate_limit lines are ignored, not errors");
+
+            var done = events.Single(e => e.Kind == ClaudeEventKind.TurnCompleted);
+            True(!done.IsError, "success");
+            Eq(0.0417311, done.TotalCostUsd, "cost");
+            Eq(1_000_000L, done.ContextWindow, "context window from modelUsage");
+            True(done.Usage.CacheRead > 0 && done.LastRequestUsage.ContextTokens > 20_000, "usage: " + done.Usage.Total);
+            Eq("00000000-0000-0000-0000-000000000001", parser.SessionId, "session id");
         }
 
         // ---------- Edit diff ----------

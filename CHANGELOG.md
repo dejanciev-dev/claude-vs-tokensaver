@@ -7,6 +7,10 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- Warning when the CLI answers with a different model than the one requested. The CLI can accept
+  `--model haiku` and still answer with Sonnet (seen in plan mode), which costs more than routing intended.
+- Live smoke test against the real CLI (`--live`, opt-in) and a parser regression test built from
+  real Claude Code 2.1.316 output.
 - **Diff** button on Claude's file edits (Edit, MultiEdit, Write) opens Visual Studio's diff window.
   The "before" side is rebuilt by undoing the edit on the current file; if that is not possible, only
   the changed text is compared.

@@ -67,6 +67,9 @@ namespace ClaudeVS.ToolWindow
         private ClaudeEvent _pendingPermission;
         private string _adviceCommand;
         private string _turnModel;
+        // Model families requested per sent prompt (null = Auto/default), matched to turns in order.
+        private readonly Queue<string> _requestedFamilies = new Queue<string>();
+        private bool _warnedModelMismatch;
         private string _lastHint;
         private readonly System.Collections.Generic.List<string> _attachedFiles = new System.Collections.Generic.List<string>();
         private System.Collections.Generic.IReadOnlyList<BuildError> _attachedErrors;
@@ -419,6 +422,7 @@ namespace ClaudeVS.ToolWindow
                     CharsAvoided = built.CharsAvoided,
                 });
 
+                _requestedFamilies.Enqueue(model == ModelChoice.Auto ? null : model.ToCli());
                 await _session.SetModelAsync(model);
                 await _session.SetEffortAsync(effort);
 
@@ -493,6 +497,7 @@ namespace ClaudeVS.ToolWindow
                     ThreadHelper.ThrowIfNotOnUIThread();
                     if (s != _session) return; // an old session we stopped on purpose (New, Resume, solution change)
                     _pendingUsages.Clear();    // its unfinished turns will never complete
+                    _requestedFamilies.Clear();
                     FlushText();
                     if (code != 0 && code != 1) Append($"\n[claude exited with code {code}]\n");
                 });
@@ -642,6 +647,7 @@ namespace ClaudeVS.ToolWindow
                         FlushText();
                         if (ev.IsError && !string.IsNullOrEmpty(ev.Text)) AppendError("[error] ", ev.Text);
                         string used = _turnModel != null ? " · " + _turnModel : "";
+                        CheckModelMismatch(_turnModel);
                         RecordUsage(ev, _turnModel);
                         _turnModel = null;
                         Append($"\n  ✓ {ev.DurationMs / 1000.0:0.0}s · {TokenMeter.Format(ev.Usage.Total)} tok · ${_meterModel?.LastTurnCostUsd:0.000}{used}\n");
@@ -651,6 +657,22 @@ namespace ClaudeVS.ToolWindow
                         break;
                 }
             }
+        }
+
+        /// <summary>
+        /// The CLI can accept a model (its init event reports it) and still answer with another one, for example
+        /// in plan mode. Routing to a cheaper model then silently costs more, so say so once per conversation.
+        /// </summary>
+        private void CheckModelMismatch(string modelUsed)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            string requested = _requestedFamilies.Count > 0 ? _requestedFamilies.Dequeue() : null;
+            string used = PriceTable.Family(modelUsed);
+            if (requested == null || used == null || string.Equals(requested, used, StringComparison.OrdinalIgnoreCase)) return;
+            ClaudeOutputPane.WriteLine($"Model mismatch: requested {requested}, answered by {modelUsed}");
+            if (_warnedModelMismatch) return;
+            _warnedModelMismatch = true;
+            Append($"\n  ⚠ Asked for {requested}, but {modelUsed} answered. The CLI changed the model (plan mode or your Claude Code settings can do this), so this turn cost {used} prices.\n");
         }
 
         /// <summary>Completes the record started in SendText and appends it to the local usage log (off the UI thread).</summary>
@@ -848,6 +870,8 @@ namespace ClaudeVS.ToolWindow
             _ = System.Threading.Tasks.Task.Run(() => old.Dispose());
             _sessionDir = null;
             _pendingUsages.Clear();
+            _requestedFamilies.Clear();
+            _warnedModelMismatch = false;
             lock (_pendingText) _pendingText.Clear();
             _permission.Visibility = Visibility.Collapsed;
         }
