@@ -7,6 +7,11 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Question cards:** when Claude asks a question (AskUserQuestion), the chat shows its options as
+  choices with descriptions plus an "Other" field, and sends your answer back to Claude.
+- **Plan approval cards:** when Claude presents a plan (ExitPlanMode), the chat renders it and offers
+  **Approve** or **Request changes** with feedback. After approval the CLI leaves plan mode and asks
+  permission for edits as usual.
 - Warning when the CLI answers with a different model than the one requested. Verified with Claude Code
   2.1.316: in acceptEdits mode (the default) Haiku answers as routed ($0.002 for a short turn); in plan
   mode the CLI answers with Sonnet even when Haiku is requested ($0.042 for the same turn).

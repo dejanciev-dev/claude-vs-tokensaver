@@ -92,7 +92,7 @@ Tick the boxes as you go. Each phase ends with something you can run.
 - [x] File edits: **Diff** button on Edit/MultiEdit/Write rows using `IVsDifferenceService` (before rebuilt by undoing the edit; Write uses a snapshot)
 - [ ] Theme check: Light, Dark, Blue in VS 2022 and VS 2026
 - [x] Prompt box: history (Ctrl+Up/Down), `/` command hints incl. custom `.claude/commands`, `@` file picker (attaches the file as a reference)
-- [ ] Questions & plan approval cards (`AskUserQuestion`, `ExitPlanMode` over `can_use_tool`)
+- [x] Questions & plan approval cards (`AskUserQuestion`, `ExitPlanMode` over `can_use_tool`) — request shapes and the answer format verified against CLI 2.1.316
 
 **Done when:** a colleague can use it without explanation. Tag `v0.3.0`.
 

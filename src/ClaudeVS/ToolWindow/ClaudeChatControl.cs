@@ -636,6 +636,7 @@ namespace ClaudeVS.ToolWindow
                         break;
                     case ClaudeEventKind.PermissionRequest:
                         FlushText();
+                        if (ShowInteractiveCard(ev)) break;
                         _pendingPermission = ev;
                         _permissionText.Text = "Allow " + ev.Text + "?";
                         _permission.Visibility = Visibility.Visible;
@@ -773,6 +774,45 @@ namespace ClaudeVS.ToolWindow
             _adviceCommand = advice?.SuggestedCommand;
             _adviceAction.Content = _adviceCommand;
             _adviceAction.Visibility = _adviceCommand == null ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        /// <summary>
+        /// AskUserQuestion and ExitPlanMode need an answer, not just allow/deny, so they get a card in the
+        /// transcript instead of the permission bar. Returns false for other tools.
+        /// </summary>
+        private bool ShowInteractiveCard(ClaudeEvent ev)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var session = _session;
+            void Respond(bool allow, Newtonsoft.Json.Linq.JObject input, string denyMessage, string note)
+            {
+                ThreadHelper.ThrowIfNotOnUIThread();
+                if (session != _session || session == null) { Append("\n  (that conversation has ended; the answer was not sent)\n"); return; }
+                Append($"  {note}\n");
+                Fire(() => session.RespondToPermissionAsync(ev.RequestId, input ?? ev.ToolInput ?? new JObject(), allow, denyMessage));
+            }
+
+            if (ev.ToolName == AskUserQuestionTool.Name)
+            {
+                var questions = AskUserQuestionTool.Parse(ev.ToolInput);
+                if (questions.Count == 0) return false;
+                _view.AppendQuestionCard(questions, chosen =>
+                {
+                    ThreadHelper.ThrowIfNotOnUIThread();
+                    var summary = string.Join("; ", chosen.Values.Where(v => v.Count > 0).Select(v => string.Join(", ", v)));
+                    Respond(true, AskUserQuestionTool.BuildAnswer(ev.ToolInput, chosen), null, "✔ answered: " + (summary.Length > 0 ? summary : "(no choice)"));
+                });
+                return true;
+            }
+
+            if (ev.ToolName == ExitPlanModeTool.Name)
+            {
+                _view.AppendPlanCard(ExitPlanModeTool.Plan(ev.ToolInput),
+                    () => { ThreadHelper.ThrowIfNotOnUIThread(); Respond(true, null, null, "✔ plan approved — Claude starts the work"); },
+                    feedback => { ThreadHelper.ThrowIfNotOnUIThread(); Respond(false, null, ExitPlanModeTool.RevisionMessage(feedback), "✎ changes requested"); });
+                return true;
+            }
+            return false;
         }
 
         private void AnswerPermission(bool allow)

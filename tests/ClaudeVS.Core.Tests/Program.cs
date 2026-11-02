@@ -15,6 +15,8 @@ namespace ClaudeVS.Core.Tests
     {
         private static int Main(string[] args)
         {
+            if (args.Length >= 4 && args[0] == "--live-ask")
+                return LiveSmoke.RunInteractive(args[1], (PermissionModeChoice)Enum.Parse(typeof(PermissionModeChoice), args[2], true), args[3]);
             if (args.Length > 0 && args[0] == "--live")
                 return LiveSmoke.Run(args.Length > 1 ? args[1] : null,
                     args.Length > 2 ? (PermissionModeChoice)Enum.Parse(typeof(PermissionModeChoice), args[2], true) : PermissionModeChoice.Plan,
@@ -336,6 +338,38 @@ namespace ClaudeVS.Core.Tests
             Eq(1_000_000L, done.ContextWindow, "context window from modelUsage");
             True(done.Usage.CacheRead > 0 && done.LastRequestUsage.ContextTokens > 20_000, "usage: " + done.Usage.Total);
             Eq("00000000-0000-0000-0000-000000000001", parser.SessionId, "session id");
+        }
+
+        /// <summary>Real AskUserQuestion and ExitPlanMode permission requests from Claude Code 2.1.316 (sanitized).</summary>
+        private static void Test_InteractiveRequests_RealCli()
+        {
+            var parser = new ClaudeStreamParser();
+            var reqs = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.316-permissions.jsonl"))
+                .SelectMany(l => parser.Parse(l)).Where(e => e.Kind == ClaudeEventKind.PermissionRequest).ToList();
+            Eq(2, reqs.Count, "two permission requests");
+
+            var ask = reqs[0];
+            Eq(AskUserQuestionTool.Name, ask.ToolName, "ask tool");
+            Eq("req-1", ask.RequestId, "request id");
+            var qs = AskUserQuestionTool.Parse(ask.ToolInput);
+            Eq(1, qs.Count, "one question");
+            Eq("Which color do you prefer?", qs[0].Text, "question text");
+            Eq("Color", qs[0].Header, "header");
+            Eq("Red,Blue", string.Join(",", qs[0].Options.Select(o => o.Label)), "options");
+            Eq("Choose blue", qs[0].Options[1].Description, "description");
+
+            // The exact answer shape the real CLI accepted (Claude replied with the chosen color).
+            var answer = AskUserQuestionTool.BuildAnswer(ask.ToolInput, new Dictionary<string, IReadOnlyList<string>> { ["Which color do you prefer?"] = new[] { "Red" } });
+            Eq("Red", (string)answer["answers"]["Which color do you prefer?"], "answers map");
+            Eq(1, ((JArray)answer["questions"]).Count, "original input kept");
+            Eq(null, ask.ToolInput["answers"], "request input not modified");
+            Eq("A, C", (string)AskUserQuestionTool.BuildAnswer(new JObject(), new Dictionary<string, IReadOnlyList<string>> { ["q"] = new[] { "A", " ", "C" } })["answers"]["q"], "multi-select joined");
+
+            var plan = reqs[1];
+            Eq(ExitPlanModeTool.Name, plan.ToolName, "plan tool");
+            string md = ExitPlanModeTool.Plan(plan.ToolInput);
+            True(md.StartsWith("# Plan: add hello.txt") && md.Contains("## Steps"), md);
+            True(ExitPlanModeTool.RevisionMessage("use README").EndsWith("use README"), "feedback included");
         }
 
         // ---------- Edit diff ----------
