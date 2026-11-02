@@ -1,0 +1,127 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using Newtonsoft.Json;
+
+namespace ClaudeVS.Core.Tokens
+{
+    /// <summary>One completed turn, as written to the local usage log.</summary>
+    public sealed class UsageRecord
+    {
+        [JsonProperty("ts")] public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+        [JsonProperty("solution")] public string Solution { get; set; }
+
+        // Routing
+        [JsonProperty("routed")] public bool Routed { get; set; }
+        [JsonProperty("routeModel")] public string RouteModel { get; set; }
+        [JsonProperty("routeEffort")] public string RouteEffort { get; set; }
+        [JsonProperty("routeScore")] public double? RouteScore { get; set; }
+        [JsonProperty("routeReason")] public string RouteReason { get; set; }
+        [JsonProperty("promptChars")] public int PromptChars { get; set; }
+
+        // Outcome
+        [JsonProperty("model")] public string ModelUsed { get; set; }
+        [JsonProperty("in")] public long InputTokens { get; set; }
+        [JsonProperty("out")] public long OutputTokens { get; set; }
+        [JsonProperty("cacheRead")] public long CacheReadTokens { get; set; }
+        [JsonProperty("cacheWrite")] public long CacheWriteTokens { get; set; }
+        [JsonProperty("cost")] public double CostUsd { get; set; }
+        [JsonProperty("ms")] public long DurationMs { get; set; }
+        [JsonProperty("error")] public bool IsError { get; set; }
+
+        /// <summary>Characters of file content not sent thanks to references (≈ chars/4 tokens).</summary>
+        [JsonProperty("charsAvoided")] public long CharsAvoided { get; set; }
+
+        [JsonIgnore] public long TotalTokens => InputTokens + OutputTokens + CacheReadTokens + CacheWriteTokens;
+    }
+
+    public sealed class UsageSummary
+    {
+        public int Turns { get; set; }
+        public double CostUsd { get; set; }
+        public long TotalTokens { get; set; }
+        public long TokensAvoided { get; set; }
+        public double CacheHitPercent { get; set; }
+        /// <summary>Turns per model actually used (e.g. "claude-haiku-…" → 12).</summary>
+        public Dictionary<string, int> TurnsByModel { get; set; } = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        public DateTime? Since { get; set; }
+
+        public override string ToString()
+        {
+            if (Turns == 0) return "no turns recorded yet";
+            string models = string.Join(", ", TurnsByModel.OrderByDescending(kv => kv.Value).Select(kv => $"{kv.Key} {kv.Value}"));
+            return $"{Turns} turns, ${CostUsd:0.00}, {TokenMeter.Format(TotalTokens)} tok, cache {CacheHitPercent:0}%, "
+                 + $"~{TokenMeter.Format(TokensAvoided)} tok avoided by references"
+                 + (models.Length > 0 ? $" | {models}" : "")
+                 + (Since.HasValue ? $" | since {Since.Value.ToLocalTime():yyyy-MM-dd}" : "");
+        }
+
+        public static UsageSummary From(IEnumerable<UsageRecord> records, string solution = null)
+        {
+            var s = new UsageSummary();
+            long input = 0, cacheRead = 0;
+            foreach (var r in records ?? Enumerable.Empty<UsageRecord>())
+            {
+                if (solution != null && !string.Equals(r.Solution, solution, StringComparison.OrdinalIgnoreCase)) continue;
+                s.Turns++;
+                s.CostUsd += r.CostUsd;
+                s.TotalTokens += r.TotalTokens;
+                s.TokensAvoided += r.CharsAvoided / 4;
+                input += r.InputTokens + r.CacheReadTokens + r.CacheWriteTokens;
+                cacheRead += r.CacheReadTokens;
+                if (!string.IsNullOrEmpty(r.ModelUsed))
+                    s.TurnsByModel[r.ModelUsed] = s.TurnsByModel.TryGetValue(r.ModelUsed, out int n) ? n + 1 : 1;
+                if (!s.Since.HasValue || r.Timestamp < s.Since.Value) s.Since = r.Timestamp;
+            }
+            s.CacheHitPercent = input > 0 ? 100.0 * cacheRead / input : 0;
+            return s;
+        }
+    }
+
+    /// <summary>
+    /// Append-only JSON-lines log of completed turns, kept locally (never sent anywhere).
+    /// Feeds router tuning and the savings report. Thread-safe within one process.
+    /// </summary>
+    public sealed class UsageLog
+    {
+        private static readonly object Gate = new object();
+
+        public UsageLog(string path) { Path = path ?? throw new ArgumentNullException(nameof(path)); }
+
+        public string Path { get; }
+
+        public static string DefaultPath => System.IO.Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "claude-vs-tokensaver", "usage.jsonl");
+
+        public void Append(UsageRecord record)
+        {
+            if (record == null) return;
+            string line = JsonConvert.SerializeObject(record, Formatting.None, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+            lock (Gate)
+            {
+                Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Path));
+                File.AppendAllText(Path, line + "\n");
+            }
+        }
+
+        /// <summary>All readable records; malformed lines (e.g. a partial write) are skipped.</summary>
+        public IReadOnlyList<UsageRecord> ReadAll()
+        {
+            var list = new List<UsageRecord>();
+            string[] lines;
+            lock (Gate)
+            {
+                if (!File.Exists(Path)) return list;
+                lines = File.ReadAllLines(Path);
+            }
+            foreach (var l in lines)
+            {
+                if (string.IsNullOrWhiteSpace(l)) continue;
+                try { var r = JsonConvert.DeserializeObject<UsageRecord>(l); if (r != null) list.Add(r); }
+                catch (JsonException) { }
+            }
+            return list;
+        }
+    }
+}

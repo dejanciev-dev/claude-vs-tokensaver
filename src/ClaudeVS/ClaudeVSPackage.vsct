@@ -40,6 +40,19 @@
           <ButtonText>Ask Claude About Selection</ButtonText>
         </Strings>
       </Button>
+      <Button guid="guidClaudeVSCmdSet" id="cmdidAttachCurrentFile" priority="0x0150" type="Button">
+        <Parent guid="guidClaudeVSCmdSet" id="ClaudeSubMenuGroup" />
+        <CommandFlag>DefaultDisabled</CommandFlag>
+        <Strings>
+          <ButtonText>Attach Current File as Reference</ButtonText>
+        </Strings>
+      </Button>
+      <Button guid="guidClaudeVSCmdSet" id="cmdidAttachErrorList" priority="0x0160" type="Button">
+        <Parent guid="guidClaudeVSCmdSet" id="ClaudeSubMenuGroup" />
+        <Strings>
+          <ButtonText>Attach Error List</ButtonText>
+        </Strings>
+      </Button>
       <Button guid="guidClaudeVSCmdSet" id="cmdidGenerateClaudeMd" priority="0x0200" type="Button">
         <Parent guid="guidClaudeVSCmdSet" id="ClaudeSubMenuGroup" />
         <Strings>
@@ -60,12 +73,18 @@
     <CommandPlacement guid="guidClaudeVSCmdSet" id="cmdidOpenWindow" priority="0x0050">
       <Parent guid="guidClaudeVSCmdSet" id="ClaudeSubMenuGroup" />
     </CommandPlacement>
+    <!-- "Attach Current File" also in the editor context menu, next to "Ask Claude About Selection". -->
+    <CommandPlacement guid="guidClaudeVSCmdSet" id="cmdidAttachCurrentFile" priority="0x0200">
+      <Parent guid="guidClaudeVSCmdSet" id="EditorContextGroup" />
+    </CommandPlacement>
   </CommandPlacements>
 
   <KeyBindings>
     <!-- Ctrl+Alt+K, Ctrl+Alt+C: open the chat. Change in Tools > Options > Keyboard if it clashes. -->
     <KeyBinding guid="guidClaudeVSCmdSet" id="cmdidOpenWindow" editor="guidVSStd97" key1="K" mod1="Control Alt" key2="C" mod2="Control Alt" />
     <KeyBinding guid="guidClaudeVSCmdSet" id="cmdidSendSelection" editor="guidVSStd97" key1="K" mod1="Control Alt" key2="S" mod2="Control Alt" />
+    <KeyBinding guid="guidClaudeVSCmdSet" id="cmdidAttachCurrentFile" editor="guidVSStd97" key1="K" mod1="Control Alt" key2="F" mod2="Control Alt" />
+    <KeyBinding guid="guidClaudeVSCmdSet" id="cmdidAttachErrorList" editor="guidVSStd97" key1="K" mod1="Control Alt" key2="E" mod2="Control Alt" />
   </KeyBindings>
 
   <Symbols>
@@ -79,6 +98,8 @@
       <IDSymbol name="cmdidSendSelection" value="0x0101" />
       <IDSymbol name="cmdidGenerateClaudeMd" value="0x0102" />
       <IDSymbol name="cmdidInstallTokenSaver" value="0x0103" />
+      <IDSymbol name="cmdidAttachCurrentFile" value="0x0104" />
+      <IDSymbol name="cmdidAttachErrorList" value="0x0105" />
     </GuidSymbol>
   </Symbols>
 </CommandTable>

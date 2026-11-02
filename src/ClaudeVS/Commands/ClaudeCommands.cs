@@ -35,6 +35,32 @@ namespace ClaudeVS.Commands
                 ((OleMenuCommand)s).Visible = VsContext.GetSelection() != null;
             };
 
+            var attachFile = Add(mcs, PackageIds.AttachCurrentFile, (s, e) => Run(async () =>
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                string path = VsContext.GetActiveDocumentPath() ?? throw new InvalidOperationException("Open a file in the editor first.");
+                var chat = await _package.ShowChatAsync();
+                chat.AttachFile(path);
+            }));
+            attachFile.BeforeQueryStatus += (s, e) =>
+            {
+                ThreadHelper.ThrowIfNotOnUIThread();
+                ((OleMenuCommand)s).Enabled = VsContext.GetActiveDocumentPath() != null;
+            };
+
+            Add(mcs, PackageIds.AttachErrorList, (s, e) => Run(async () =>
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                var errors = VsContext.GetErrors();
+                if (errors.Count == 0)
+                {
+                    Message("Claude Code", "The Error List has no errors to attach.", OLEMSGICON.OLEMSGICON_INFO);
+                    return;
+                }
+                var chat = await _package.ShowChatAsync();
+                chat.AttachErrors(errors);
+            }));
+
             Add(mcs, PackageIds.GenerateClaudeMd, (s, e) => Run(GenerateClaudeMdAsync));
             Add(mcs, PackageIds.InstallTokenSaver, (s, e) => Run(InstallTokenSaverAsync));
         }

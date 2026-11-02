@@ -41,10 +41,16 @@ namespace ClaudeVS.Options
         [Category("Token saving"), DisplayName("Auto-approve quiet rewrites"), Description("When installing hooks: run rewritten dotnet build/test commands without asking.")]
         public bool AutoApproveHookRewrites { get; set; } = false;
 
+        [Category("Token saving"), DisplayName("Max attached errors"), Description("Attach Error List sends at most this many errors, one line each.")]
+        public int MaxAttachedErrors { get; set; } = 20;
+
+        [Category("Diagnostics"), DisplayName("Keep local usage log"), Description("Append one line per turn (model, route, tokens, cost) to %LocalAppData%\\claude-vs-tokensaver\\usage.jsonl. Stays on this machine; used for router tuning and the savings report.")]
+        public bool KeepUsageLog { get; set; } = true;
+
         [Category("Diagnostics"), DisplayName("Log raw CLI traffic"), Description("Write every stream-json line sent to and received from claude to Output > Claude Code. Large; turn on only when debugging.")]
         public bool LogRawCliTraffic { get; set; } = false;
 
-        public ContextSettings ToContextSettings() => new ContextSettings { InlineMaxLines = InlineMaxLines };
+        public ContextSettings ToContextSettings() => new ContextSettings { InlineMaxLines = InlineMaxLines, MaxErrors = MaxAttachedErrors };
 
         public TokenMeterSettings ToMeterSettings() => new TokenMeterSettings
         {
