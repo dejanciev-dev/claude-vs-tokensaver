@@ -26,6 +26,7 @@ namespace ClaudeVS
         {
             Instance = this;
             await JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
+            await Diagnostics.ClaudeOutputPane.InitializeAsync(this, cancellationToken);
             await ClaudeCommands.InitializeAsync(this);
         }
 

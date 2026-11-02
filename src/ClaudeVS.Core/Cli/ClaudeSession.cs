@@ -38,6 +38,8 @@ namespace ClaudeVS.Core.Cli
 
         public event EventHandler<ClaudeEvent> EventReceived;
         public event EventHandler<int> Exited;
+        /// <summary>Every raw protocol line, for diagnostics. Raised on background threads.</summary>
+        public event EventHandler<RawLineEventArgs> RawLine;
 
         public void Start()
         {
@@ -157,6 +159,7 @@ namespace ClaudeVS.Core.Cli
             StreamWriter stdin;
             lock (_gate) stdin = _process != null && !_process.HasExited ? _stdin : null;
             if (stdin == null) throw new InvalidOperationException("Claude process is not running.");
+            RaiseRaw(RawLineDirection.Stdin, line);
             await stdin.WriteLineAsync(line).ConfigureAwait(false);
         }
 
@@ -167,6 +170,7 @@ namespace ClaudeVS.Core.Cli
                 string line;
                 while ((line = reader.ReadLine()) != null)
                 {
+                    RaiseRaw(isError ? RawLineDirection.Stderr : RawLineDirection.Stdout, line);
                     if (isError)
                     {
                         if (!string.IsNullOrWhiteSpace(line)) Raise(new ClaudeEvent { Kind = ClaudeEventKind.Error, Text = line });
@@ -191,6 +195,14 @@ namespace ClaudeVS.Core.Cli
             catch (Exception ex) { Debug.WriteLine("ClaudeSession handler failed: " + ex); }
         }
 
+        private void RaiseRaw(RawLineDirection direction, string line)
+        {
+            var handler = RawLine;
+            if (handler == null) return;
+            try { handler(this, new RawLineEventArgs(direction, line)); }
+            catch (Exception ex) { Debug.WriteLine("ClaudeSession raw handler failed: " + ex); }
+        }
+
         private static int SafeExitCode(Process p) { try { return p.ExitCode; } catch { return -1; } }
 
         public void Dispose()
@@ -212,5 +224,14 @@ namespace ClaudeVS.Core.Cli
                 _process = null;
             }
         }
+    }
+
+    public enum RawLineDirection { Stdin, Stdout, Stderr }
+
+    public sealed class RawLineEventArgs : EventArgs
+    {
+        public RawLineEventArgs(RawLineDirection direction, string line) { Direction = direction; Line = line; }
+        public RawLineDirection Direction { get; }
+        public string Line { get; }
     }
 }

@@ -55,6 +55,17 @@ namespace ClaudeVS.Core.Tests
             Eq("\"C:\\dir with space\\\\\"", ClaudeArgsBuilder.Quote("C:\\dir with space\\"));
         }
 
+        // ---------- Error hints ----------
+        private static void Test_ErrorHints_KnownAndUnknown()
+        {
+            True(ClaudeErrorHints.Explain("Invalid API key · Please run /login")?.Contains("/login") == true, "login");
+            True(ClaudeErrorHints.Explain("API Error: 429 {\"type\":\"rate_limit_error\"}")?.Contains("Rate limited") == true, "rate limit");
+            True(ClaudeErrorHints.Explain("API Error: 529 {\"type\":\"overloaded_error\"}")?.Contains("overloaded") == true, "overloaded");
+            True(ClaudeErrorHints.Explain("Prompt is too long")?.Contains("/compact") == true, "too long");
+            Eq(null, ClaudeErrorHints.Explain("Build failed at line 401"), "no false positive on numbers");
+            Eq(null, ClaudeErrorHints.Explain(""), "empty");
+        }
+
         // ---------- Parser ----------
         private static void Test_Parser_FullTurn()
         {

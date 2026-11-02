@@ -9,8 +9,8 @@ Tick the boxes as you go. Each phase ends with something you can run.
 
 | Area | State |
 |---|---|
-| `ClaudeVS.Core` (CLI session, parser, router, meter, context, setup) | ✅ Written, 15/15 tests pass |
-| `ClaudeVS` VSIX (package, tool window, commands, options) | ⚠️ Written, **never compiled** — first build will need small fixes |
+| `ClaudeVS.Core` (CLI session, parser, router, meter, context, setup) | ✅ Written, 16/16 tests pass |
+| `ClaudeVS` VSIX (package, tool window, commands, options) | ✅ Builds clean (0 warnings); not yet run in the experimental instance |
 | Real end-to-end run against `claude` CLI | ❌ Not done |
 | Markdown transcript, diffs, history, question cards | ❌ Not started |
 
@@ -24,12 +24,12 @@ Tick the boxes as you go. Each phase ends with something you can run.
 - [ ] Visual Studio 2022 17.14+ (or VS 2026) with workload **Visual Studio extension development**
 - [ ] .NET 8 SDK (for the Core tests)
 - [ ] Claude Code CLI installed and logged in — `claude --version` and `claude -p "hi"` work in a terminal
-- [ ] Create the GitHub repo `claude-vs-tokensaver`, push the scaffold, replace `OWNER` in `source.extension.vsixmanifest`
+- [x] Create the GitHub repo `claude-vs-tokensaver`, push the scaffold, replace `OWNER` in `source.extension.vsixmanifest`
 
 ### 1.2 First build
-- [ ] Open `ClaudeVS.sln`, restore NuGet
-- [ ] Pin `Microsoft.VSSDK.BuildTools` (currently `17.*`) to the version that restored
-- [ ] Fix compile errors in `src/ClaudeVS` (expected: usings, analyzer warnings `VSTHRD*`)
+- [x] Open `ClaudeVS.sln`, restore NuGet
+- [x] Pin `Microsoft.VSSDK.BuildTools` to the version that restored (17.14.2142)
+- [x] Fix compile errors in `src/ClaudeVS` (expected: usings, analyzer warnings `VSTHRD*`)
 - [ ] `ClaudeVS` → **Set as Startup Project** → F5
 - [ ] Check: **View → Other Windows → Claude Code** opens the window
 - [ ] Check: **Tools → Options → Claude Code** shows the settings page
@@ -50,11 +50,11 @@ Tick the boxes as you go. Each phase ends with something you can run.
 ## Phase 2 — Make the core features solid (1 week)
 
 ### 2.1 Model routing
-- [ ] Log every route decision (prompt length, score, reason, chosen model) to the output pane
+- [x] Log every route decision (prompt length, score, reason, chosen model) to the output pane
 - [ ] Collect ~50 real prompts from your own work; tune keyword lists and thresholds in `ModelRouter.cs`
 - [ ] Add those prompts as test cases in `tests/ClaudeVS.Core.Tests`
 - [ ] Verify `set_model` / `apply_flag_settings` take effect mid-session (check `init`/result `modelUsage`)
-- [ ] Show the model actually used per turn in the footer
+- [x] Show the model actually used per turn in the footer
 
 ### 2.2 Token meter
 - [ ] Confirm context % matches the CLI's own `/context` output (±2%)
@@ -75,8 +75,8 @@ Tick the boxes as you go. Each phase ends with something you can run.
 - [ ] Run **Generate Lean CLAUDE.md** on 2–3 different solutions (API, Angular+API, legacy .NET Framework) and fix scanner gaps
 
 ### 2.5 Diagnostics
-- [ ] Add an Output window pane "Claude Code" (`IVsOutputWindow`) with raw stdin/stdout lines behind an option
-- [ ] Friendly error when `claude` is not found / not logged in
+- [x] Add an Output window pane "Claude Code" (`IVsOutputWindow`) with raw stdin/stdout lines behind an option
+- [x] Friendly error when `claude` is not found / not logged in (`ClaudeErrorHints`)
 
 **Done when:** you use it for a full working day without switching to the terminal. Tag `v0.2.0`.
 
