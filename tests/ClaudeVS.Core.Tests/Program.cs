@@ -205,6 +205,74 @@ namespace ClaudeVS.Core.Tests
             Eq("Text:*not italic*", Render("\\*not italic\\*"), "escapes");
         }
 
+        // ---------- Chat helpers ----------
+        private static void Test_PromptHistory_BrowseAndDraft()
+        {
+            var h = new ClaudeVS.Core.Chat.PromptHistory(max: 3);
+            h.Add("a"); h.Add("b"); h.Add("b"); h.Add("c"); h.Add("d"); // dup skipped, "a" evicted
+            Eq(3, h.Count, "max + dedupe");
+            Eq("d", h.Previous("draft"), "newest first");
+            Eq("c", h.Previous("ignored"), "older");
+            Eq("b", h.Previous(null), "oldest");
+            Eq(null, h.Previous(null), "nothing older");
+            Eq("c", h.Next(), "newer");
+            Eq("d", h.Next(), "newest");
+            Eq("draft", h.Next(), "draft restored");
+            Eq(null, h.Next(), "not browsing");
+        }
+
+        private static void Test_SlashCommands_DiscoverAndMatch()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "cvs-cmd-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "sln", ".claude", "commands", "git"));
+                Directory.CreateDirectory(Path.Combine(root, "home", ".claude", "commands"));
+                File.WriteAllText(Path.Combine(root, "sln", ".claude", "commands", "review.md"), "---\ndescription: \"Review the diff\"\n---\nDo it.");
+                File.WriteAllText(Path.Combine(root, "sln", ".claude", "commands", "git", "pr.md"), "# Open a PR\nbody");
+                File.WriteAllText(Path.Combine(root, "home", ".claude", "commands", "review.md"), "user version");
+                File.WriteAllText(Path.Combine(root, "home", ".claude", "commands", "standup.md"), "Write my standup");
+
+                var all = ClaudeVS.Core.Chat.SlashCommands.Discover(Path.Combine(root, "sln"), Path.Combine(root, "home"));
+                Eq("compact,git:pr,review,standup", string.Join(",", all.Select(c => c.Name).OrderBy(n => n)), "names");
+                Eq("Review the diff", all.First(c => c.Name == "review").Description, "project wins, front matter");
+                Eq("Open a PR", all.First(c => c.Name == "git:pr").Description, "first line");
+
+                Eq("/review", string.Join(",", ClaudeVS.Core.Chat.SlashCommands.Match(all, "/rev")), "/review");
+                Eq(4, ClaudeVS.Core.Chat.SlashCommands.Match(all, "/").Count, "all");
+                Eq(0, ClaudeVS.Core.Chat.SlashCommands.Match(all, "review").Count, "needs slash");
+            }
+            finally { Directory.Delete(root, true); }
+        }
+
+        private static void Test_SessionHistory_ListAndTitles()
+        {
+            Eq("C--Users-Dejan-Ciev-source-myrepos-claude-vs-tokensaver",
+               ClaudeVS.Core.Chat.SessionHistory.EncodeProjectPath(@"C:\Users\Dejan Ciev\source\myrepos\claude-vs-tokensaver\"), "CLI folder naming");
+
+            string root = Path.Combine(Path.GetTempPath(), "cvs-hist-" + Guid.NewGuid().ToString("N"));
+            string sln = @"C:\work\My App";
+            string folder = Path.Combine(root, ClaudeVS.Core.Chat.SessionHistory.EncodeProjectPath(sln));
+            try
+            {
+                Directory.CreateDirectory(folder);
+                File.WriteAllText(Path.Combine(folder, "s1.jsonl"),
+                    "{\"type\":\"user\",\"isMeta\":true,\"message\":{\"content\":\"meta\"}}\n" +
+                    "{\"type\":\"user\",\"message\":{\"content\":\"<command-name>/init</command-name>\"}}\n" +
+                    "{\"type\":\"user\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"Fix the\\nlogin bug\"}]}}\n");
+                File.WriteAllText(Path.Combine(folder, "s2.jsonl"), "{\"type\":\"summary\",\"summary\":\"Price API refactor\"}\nnot json\n");
+                File.WriteAllText(Path.Combine(folder, "empty.jsonl"), "{\"type\":\"system\"}\n");
+                File.SetLastWriteTimeUtc(Path.Combine(folder, "s1.jsonl"), DateTime.UtcNow.AddHours(-1));
+
+                var list = ClaudeVS.Core.Chat.SessionHistory.List(root, sln);
+                Eq("s2,s1", string.Join(",", list.Select(s => s.Id)), "newest first, empty skipped");
+                Eq("Price API refactor", list[0].Title, "summary");
+                Eq("Fix the login bug", list[1].Title, "first real prompt, one line");
+                Eq(0, ClaudeVS.Core.Chat.SessionHistory.List(root, @"C:\other").Count, "other project");
+            }
+            finally { Directory.Delete(root, true); }
+        }
+
         // ---------- Error hints ----------
         private static void Test_ErrorHints_KnownAndUnknown()
         {

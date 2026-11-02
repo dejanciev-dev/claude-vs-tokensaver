@@ -7,6 +7,8 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using ClaudeVS.Commands;
+using System.Collections.Generic;
+using ClaudeVS.Core.Chat;
 using ClaudeVS.Core.Cli;
 using ClaudeVS.Core.Context;
 using ClaudeVS.Core.Tokens;
@@ -29,6 +31,7 @@ namespace ClaudeVS.ToolWindow
         private readonly Button _new = Btn("New", "Start a new conversation (fresh context = cheapest)");
         private readonly Button _compact = Btn("/compact", "Summarize the conversation to shrink context");
         private readonly Button _stop = Btn("Stop", "Interrupt the current turn");
+        private readonly Button _historyBtn = Btn("History", "Resume an earlier conversation in this solution");
         private readonly ProgressBar _ctxBar = new ProgressBar { Height = 6, Minimum = 0, Maximum = 100, Margin = new Thickness(0, 4, 0, 2) };
         private readonly TextBlock _meter = new TextBlock { FontSize = 11, TextWrapping = TextWrapping.Wrap };
         private readonly TextBlock _advice = new TextBlock { FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) };
@@ -50,6 +53,10 @@ namespace ClaudeVS.ToolWindow
         private TokenMeter _meterModel;
         private EditorSelection _selection;
         private string _sessionDir;
+        private string _resumeId;
+        private readonly PromptHistory _promptHistory = new PromptHistory();
+        private List<SlashCommand> _commands = new List<SlashCommand>(SlashCommands.BuiltIn);
+        private string _commandsDir;
         private ClaudeEvent _pendingPermission;
         private string _adviceCommand;
         private string _turnModel;
@@ -79,6 +86,7 @@ namespace ClaudeVS.ToolWindow
 
             _send.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); SendFromBox(); };
             _new.Click += (s, e) => NewChat();
+            _historyBtn.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); ShowHistoryMenu(); };
             _stop.Click += (s, e) => Fire(() => _session?.InterruptAsync());
             _compact.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); SendText("/compact", routed: false); };
             _adviceAction.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); if (_adviceCommand != null) SendText(_adviceCommand, routed: false); };
@@ -109,6 +117,7 @@ namespace ClaudeVS.ToolWindow
             toolbar.Children.Add(_new);
             toolbar.Children.Add(_compact);
             toolbar.Children.Add(_stop);
+            toolbar.Children.Add(_historyBtn);
 
             var adviceRow = new DockPanel();
             _adviceAction.Visibility = Visibility.Collapsed;
@@ -231,6 +240,12 @@ namespace ClaudeVS.ToolWindow
                 e.Handled = true;
                 SendFromBox();
             }
+            else if ((e.Key == Key.Up || e.Key == Key.Down) && (Keyboard.Modifiers & ModifierKeys.Control) != 0)
+            {
+                e.Handled = true;
+                string text = e.Key == Key.Up ? _promptHistory.Previous(_prompt.Text) : _promptHistory.Next();
+                if (text != null) { _prompt.Text = text; _prompt.CaretIndex = text.Length; }
+            }
             else if (e.Key == Key.Escape && HasAttachments)
             {
                 e.Handled = true;
@@ -243,6 +258,7 @@ namespace ClaudeVS.ToolWindow
             ThreadHelper.ThrowIfNotOnUIThread();
             string text = _prompt.Text.Trim();
             if (text.Length == 0) return;
+            _promptHistory.Add(text);
             _prompt.Clear();
             SendText(text, routed: !text.StartsWith("/"));
         }
@@ -319,6 +335,16 @@ namespace ClaudeVS.ToolWindow
 
         private void UpdateRouteHint()
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (_prompt.Text.TrimStart().StartsWith("/"))
+            {
+                RefreshCommands();
+                var matches = SlashCommands.Match(_commands, _prompt.Text);
+                _route.Text = matches.Count == 0
+                    ? "No matching command. Custom commands live in .claude/commands/*.md"
+                    : string.Join("   ", matches.Take(6).Select(c => c + (string.IsNullOrEmpty(c.Description) ? "" : " — " + c.Description)));
+                return;
+            }
             if ((ModelChoice)_model.SelectedItem != ModelChoice.Auto || string.IsNullOrWhiteSpace(_prompt.Text) || _prompt.Text.TrimStart().StartsWith("/"))
             {
                 _route.Text = "";
@@ -343,7 +369,9 @@ namespace ClaudeVS.ToolWindow
                 PermissionMode = o?.PermissionMode ?? PermissionModeChoice.AcceptEdits,
                 AppendSystemPrompt = (o?.ConciseAnswers ?? true) ? ClaudeOptionsPage.BrevityPrompt : null,
                 ExtraArguments = o?.ExtraArguments ?? "",
+                ResumeSessionId = _resumeId,
             });
+            _resumeId = null;
             _sessionDir = dir;
             _session.EventReceived += OnEvent;
             if (o?.LogRawCliTraffic == true) _session.RawLine += OnRawLine;
@@ -356,12 +384,59 @@ namespace ClaudeVS.ToolWindow
             LogUsageSummary(dir);
         }
 
+        /// <summary>Custom slash commands for the current solution, re-read when the solution changes.</summary>
+        private void RefreshCommands(bool force = false)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            string dir = VsContext.GetSolutionDirectory();
+            if (!force && _commandsDir != null && string.Equals(dir, _commandsDir, StringComparison.OrdinalIgnoreCase)) return;
+            _commandsDir = dir ?? "";
+            _commands = SlashCommands.Discover(dir, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+        }
+
+        private void ShowHistoryMenu()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            string dir = VsContext.GetSolutionDirectory() ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            var sessions = SessionHistory.List(SessionHistory.DefaultProjectsRoot, dir);
+            var menu = new ContextMenu { PlacementTarget = _historyBtn, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom };
+            if (sessions.Count == 0)
+                menu.Items.Add(new MenuItem { Header = "No earlier conversations for this folder", IsEnabled = false });
+            foreach (var s in sessions)
+            {
+                var item = new MenuItem
+                {
+                    Header = $"{s.LastWriteUtc.ToLocalTime():MMM d HH:mm}   {s.Title}",
+                    ToolTip = $"{s.Id} · {s.SizeBytes / 1024:N0} KB on disk",
+                };
+                string id = s.Id, title = s.Title;
+                item.Click += (o, e) => { ThreadHelper.ThrowIfNotOnUIThread(); ResumeSession(id, title); };
+                menu.Items.Add(item);
+            }
+            menu.IsOpen = true;
+        }
+
+        /// <summary>The next prompt continues an earlier conversation (claude --resume). Earlier messages are not redrawn.</summary>
+        private void ResumeSession(string sessionId, string title)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            DisposeSession();
+            ResetMeter();
+            _view.Clear();
+            _resumeId = sessionId;
+            Append($"Resuming: {title}\nEarlier messages are not shown here, but Claude has the full context. The meter updates after the first answer.\n");
+            ClaudeOutputPane.WriteLine($"Next prompt resumes session {sessionId}");
+            _prompt.Focus();
+        }
+
         private void NewChat()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             DisposeSession();
             ResetMeter();
             _view.Clear();
+            _resumeId = null;
+            RefreshCommands(force: true);
             Append("New conversation.\n");
         }
 
@@ -393,7 +468,10 @@ namespace ClaudeVS.ToolWindow
                         break;
                     case ClaudeEventKind.ToolUse:
                         FlushText();
-                        Append($"\n  ⚙ {ev.Text}\n");
+                        _view.AppendTool(ev.ToolUseId, ev.Text, ev.ToolInput?.ToString());
+                        break;
+                    case ClaudeEventKind.ToolResult:
+                        _view.CompleteTool(ev.ToolUseId, ev.ResultChars, ev.IsError);
                         break;
                     case ClaudeEventKind.PermissionRequest:
                         FlushText();
