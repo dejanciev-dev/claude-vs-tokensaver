@@ -36,6 +36,14 @@ Experimental Instance* from the Start menu.
 - Add a line under **Unreleased** in `CHANGELOG.md` for anything a user would notice.
 - Describe how you tested, including whether you ran it in the experimental instance.
 
+## Releasing
+
+1. Set the new version in `src/ClaudeVS/source.extension.vsixmanifest` (`Identity Version`).
+2. In `CHANGELOG.md`, rename **Unreleased** to `[x.y.z] - YYYY-MM-DD` and add a new empty **Unreleased** section above it.
+3. Merge to `main`, then tag and push: `git tag vX.Y.Z && git push origin vX.Y.Z`.
+4. The *Release* workflow checks that the tag matches the manifest version, builds, runs the tests and creates a
+   **draft** GitHub Release with the `.vsix` and that version's changelog notes. Review the draft and publish it.
+
 ## Reporting bugs
 
 Use the bug report template. Include the VS version, the `claude --version` output and the lines from

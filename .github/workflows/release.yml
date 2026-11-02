@@ -1,0 +1,57 @@
+name: Release
+
+# Push a tag like v0.2.0 to build the VSIX and create a DRAFT GitHub Release with it attached.
+# Review the draft on GitHub and publish it yourself. Marketplace publishing is a separate, manual step.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check tag matches manifest version
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}".TrimStart('v')
+          [xml]$m = Get-Content src/ClaudeVS/source.extension.vsixmanifest
+          $ver = $m.PackageManifest.Metadata.Identity.Version
+          if ($tag -ne $ver) { throw "Tag v$tag does not match manifest version $ver. Update source.extension.vsixmanifest first." }
+          "VERSION=$ver" | Out-File -Append $env:GITHUB_ENV
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - uses: microsoft/setup-msbuild@v2
+
+      - name: Core tests
+        run: dotnet test tests/ClaudeVS.Core.Tests/ClaudeVS.Core.Tests.csproj -c Release
+
+      - name: Build solution (Release)
+        run: msbuild ClaudeVS.sln /restore /m /v:minimal /nologo /p:Configuration=Release /p:DeployExtension=false /warnaserror
+
+      - name: Release notes from CHANGELOG
+        shell: pwsh
+        run: |
+          $lines = Get-Content CHANGELOG.md
+          $start = ($lines | Select-String -Pattern "^## \[$env:VERSION\]" | Select-Object -First 1).LineNumber
+          if (-not $start) { "See CHANGELOG.md." | Out-File notes.md; exit 0 }
+          $rest = $lines[$start..($lines.Length - 1)]
+          $end = ($rest | Select-String -Pattern '^## \[' | Select-Object -First 1).LineNumber
+          $body = if ($end) { $rest[0..($end - 2)] } else { $rest }
+          $body | Out-File notes.md
+
+      - name: Create draft release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $vsix = "src/ClaudeVS/bin/Release/ClaudeVS.vsix"
+          Copy-Item $vsix "ClaudeVS-$env:VERSION.vsix"
+          gh release create "${{ github.ref_name }}" "ClaudeVS-$env:VERSION.vsix" --draft --title "v$env:VERSION" --notes-file notes.md
