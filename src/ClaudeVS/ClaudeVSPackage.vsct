@@ -91,12 +91,12 @@
   </CommandPlacements>
 
   <KeyBindings>
-    <!-- Ctrl+Alt+K, Ctrl+Alt+C: open the chat. Change in Tools > Options > Keyboard if it clashes. -->
-    <KeyBinding guid="guidClaudeVSCmdSet" id="cmdidOpenWindow" editor="guidVSStd97" key1="K" mod1="Control Alt" key2="C" mod2="Control Alt" />
-    <KeyBinding guid="guidClaudeVSCmdSet" id="cmdidSendSelection" editor="guidVSStd97" key1="K" mod1="Control Alt" key2="S" mod2="Control Alt" />
-    <KeyBinding guid="guidClaudeVSCmdSet" id="cmdidAttachCurrentFile" editor="guidVSStd97" key1="K" mod1="Control Alt" key2="F" mod2="Control Alt" />
-    <KeyBinding guid="guidClaudeVSCmdSet" id="cmdidAttachErrorList" editor="guidVSStd97" key1="K" mod1="Control Alt" key2="E" mod2="Control Alt" />
-    <KeyBinding guid="guidClaudeVSCmdSet" id="cmdidNewChatWindow" editor="guidVSStd97" key1="K" mod1="Control Alt" key2="N" mod2="Control Alt" />
+    <!-- Chords: Ctrl+Alt+K, then the letter alone (no modifiers). Ctrl+Alt+K, C: open the chat. Change in Tools > Options > Keyboard if it clashes. -->
+    <KeyBinding guid="guidClaudeVSCmdSet" id="cmdidOpenWindow" editor="guidVSStd97" key1="K" mod1="Control Alt" key2="C" />
+    <KeyBinding guid="guidClaudeVSCmdSet" id="cmdidSendSelection" editor="guidVSStd97" key1="K" mod1="Control Alt" key2="S" />
+    <KeyBinding guid="guidClaudeVSCmdSet" id="cmdidAttachCurrentFile" editor="guidVSStd97" key1="K" mod1="Control Alt" key2="F" />
+    <KeyBinding guid="guidClaudeVSCmdSet" id="cmdidAttachErrorList" editor="guidVSStd97" key1="K" mod1="Control Alt" key2="E" />
+    <KeyBinding guid="guidClaudeVSCmdSet" id="cmdidNewChatWindow" editor="guidVSStd97" key1="K" mod1="Control Alt" key2="N" />
   </KeyBindings>
 
   <Symbols>

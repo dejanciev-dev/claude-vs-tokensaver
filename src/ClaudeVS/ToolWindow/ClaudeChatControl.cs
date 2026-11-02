@@ -27,23 +27,34 @@ namespace ClaudeVS.ToolWindow
     /// </summary>
     public sealed class ClaudeChatControl : UserControl, IDisposable
     {
-        private readonly ComboBox _model = new ComboBox { Width = 90, Margin = new Thickness(0, 0, 4, 0) };
-        private readonly ComboBox _effort = new ComboBox { Width = 80, Margin = new Thickness(0, 0, 4, 0) };
-        private readonly Button _new = Btn("New", "Start a new conversation (fresh context = cheapest)");
-        private readonly Button _compact = Btn("/compact", "Summarize the conversation to shrink context");
-        private readonly Button _stop = Btn("Stop", "Interrupt the current turn");
-        private readonly Button _historyBtn = Btn("History", "Resume an earlier conversation in this solution");
-        private readonly ProgressBar _ctxBar = new ProgressBar { Height = 6, Minimum = 0, Maximum = 100, Margin = new Thickness(0, 4, 0, 2) };
-        private readonly TextBlock _meter = new TextBlock { FontSize = 11, TextWrapping = TextWrapping.Wrap };
-        private readonly TextBlock _advice = new TextBlock { FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) };
+        private readonly ComboBox _model = ChatTheme.Combo(76, "Model. Auto picks Haiku / Sonnet / Opus for each prompt");
+        private readonly ComboBox _effort = ChatTheme.Combo(70, "Thinking effort. Auto follows the model choice");
+        private readonly Button _new = ChatTheme.IconButton(ChatTheme.IconAdd, "New conversation (a fresh context is cheapest)");
+        private readonly Button _compact = ChatTheme.IconButton(ChatTheme.IconCompact, "Compact: summarize the conversation to shrink context");
+        private readonly Button _stop = ChatTheme.IconButton(ChatTheme.IconStop, "Stop the current answer");
+        private readonly Button _historyBtn = ChatTheme.IconButton(ChatTheme.IconHistory, "Resume an earlier conversation in this solution");
+        private readonly ProgressBar _ctxBar = new ProgressBar { Height = 2, Minimum = 0, Maximum = 100, Margin = new Thickness(0, 5, 0, 0), BorderThickness = new Thickness(0), Background = ChatTheme.Subtle };
+        private readonly TextBlock _meter = new TextBlock { FontSize = 11, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
+        private readonly TextBlock _advice = new TextBlock { FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 0), VerticalAlignment = VerticalAlignment.Center };
         private readonly Button _adviceAction = Btn("", "");
         private readonly TranscriptView _view = new TranscriptView();
-        private readonly StackPanel _permission = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 4, 0, 4), Visibility = Visibility.Collapsed };
+        private readonly StackPanel _permission = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 6), Visibility = Visibility.Collapsed };
         private readonly TextBlock _permissionText = new TextBlock { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0), TextWrapping = TextWrapping.Wrap, MaxWidth = 400 };
-        private readonly TextBlock _route = new TextBlock { FontSize = 11, Opacity = 0.75, TextWrapping = TextWrapping.Wrap };
-        private readonly TextBlock _attachment = new TextBlock { FontSize = 11, Visibility = Visibility.Collapsed };
-        private readonly TextBox _prompt = new TextBox { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 54, MaxHeight = 200, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
-        private readonly Button _send = Btn("Send", "Enter = send, Shift+Enter = new line");
+        private readonly TextBlock _route = new TextBlock { FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(2, 0, 0, 4) };
+        private readonly TextBlock _attachment = new TextBlock { FontSize = 11, Visibility = Visibility.Collapsed, Margin = new Thickness(2, 0, 0, 4), TextWrapping = TextWrapping.Wrap };
+        private readonly TextBox _prompt = new TextBox
+        {
+            AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 38, MaxHeight = 200,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto, BorderThickness = new Thickness(0),
+            Background = Brushes.Transparent, Padding = new Thickness(0), FontSize = 13,
+        };
+        private readonly TextBlock _placeholder = new TextBlock
+        {
+            Text = "Ask Claude…   @ attach a file · / commands · Ctrl+↑ history",
+            IsHitTestVisible = false, FontSize = 13, Margin = new Thickness(2, 0, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis,
+        };
+        private readonly Border _inputBox = new Border { CornerRadius = new CornerRadius(6), BorderThickness = new Thickness(1), Padding = new Thickness(10, 8, 6, 6) };
+        private readonly Button _send = ChatTheme.SendButton();
 
         private readonly StringBuilder _pendingText = new StringBuilder();
         private readonly DispatcherTimer _flushTimer;
@@ -82,17 +93,20 @@ namespace ClaudeVS.ToolWindow
             foreach (var e in Enum.GetValues(typeof(EffortChoice))) _effort.Items.Add(e);
             _model.SelectedItem = Options?.DefaultModel ?? ModelChoice.Auto;
             _effort.SelectedItem = EffortChoice.Auto;
-            _model.ToolTip = "Auto picks Haiku / Sonnet / Opus per prompt";
-            _effort.ToolTip = "Thinking effort. Auto follows the model choice";
-
             Content = BuildLayout();
             this.SetResourceReference(BackgroundProperty, EnvironmentColors.ToolWindowBackgroundBrushKey);
             this.SetResourceReference(ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
-            foreach (var tb in new Control[] { _prompt })
-            {
-                tb.SetResourceReference(BackgroundProperty, EnvironmentColors.ToolWindowBackgroundBrushKey);
-                tb.SetResourceReference(ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
-            }
+            ChatTheme.UseEnvironmentFont(this);
+            ChatTheme.Text(_prompt);
+            _prompt.SetResourceReference(TextBoxBase.CaretBrushProperty, EnvironmentColors.ToolWindowTextBrushKey); // default caret is black
+            ChatTheme.Muted(_placeholder);
+            ChatTheme.Muted(_meter);
+            ChatTheme.Muted(_route);
+            ChatTheme.Muted(_attachment);
+            _ctxBar.SetResourceReference(ForegroundProperty, EnvironmentColors.SystemHighlightBrushKey);
+            SetInputFocused(false);
+            _prompt.GotKeyboardFocus += (s, e) => SetInputFocused(true);
+            _prompt.LostKeyboardFocus += (s, e) => SetInputFocused(false);
 
             _send.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); SendFromBox(); };
             _new.Click += (s, e) => NewChat();
@@ -101,7 +115,14 @@ namespace ClaudeVS.ToolWindow
             _compact.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); SendText("/compact", routed: false); };
             _adviceAction.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); if (_adviceCommand != null) SendText(_adviceCommand, routed: false); };
             _prompt.PreviewKeyDown += OnPromptKeyDown;
-            _prompt.TextChanged += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); _routeTimer.Stop(); _routeTimer.Start(); UpdateFilePicker(); };
+            _prompt.TextChanged += (s, e) =>
+            {
+                ThreadHelper.ThrowIfNotOnUIThread();
+                _placeholder.Visibility = _prompt.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+                _routeTimer.Stop();
+                _routeTimer.Start();
+                UpdateFilePicker();
+            };
             _filePopup = BuildFilePicker();
             GotKeyboardFocus += (s, e) => LastActive = this;
             LastActive = LastActive ?? this;
@@ -113,7 +134,7 @@ namespace ClaudeVS.ToolWindow
             _routeTimer.Stop();
 
             ResetMeter();
-            Append("Claude Code for Visual Studio — token saver edition.\nTip: select code and press Ctrl+Alt+K, S to ask about it; only the selection is sent.\n\n");
+            _view.AppendWelcome();
         }
 
         private static ClaudeOptionsPage Options => ClaudeVSPackage.Instance?.Options;
@@ -128,19 +149,29 @@ namespace ClaudeVS.ToolWindow
 
         // ---------------- Layout ----------------
 
+        /// <summary>
+        /// Layout modelled on the Claude Code panel in VS Code:
+        ///   header   — meter line on the left, icon actions on the right, a 2px context bar, /compact advice
+        ///   middle   — transcript
+        ///   bottom   — permission bar, attachments, route hint, then one rounded input box whose footer holds
+        ///              the model / effort pickers and the round send button.
+        /// </summary>
         private UIElement BuildLayout()
         {
-            var toolbar = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 2) };
-            toolbar.Children.Add(_model);
-            toolbar.Children.Add(_effort);
-            toolbar.Children.Add(_new);
-            toolbar.Children.Add(_compact);
-            toolbar.Children.Add(_stop);
-            toolbar.Children.Add(_historyBtn);
+            var actions = new StackPanel { Orientation = Orientation.Horizontal };
+            actions.Children.Add(_new);
+            actions.Children.Add(_historyBtn);
+            actions.Children.Add(_compact);
+            actions.Children.Add(_stop);
+
+            var header = new DockPanel();
+            DockPanel.SetDock(actions, Dock.Right);
+            header.Children.Add(actions);
+            header.Children.Add(_meter);
 
             var adviceRow = new DockPanel();
             _adviceAction.Visibility = Visibility.Collapsed;
-            _adviceAction.Margin = new Thickness(6, 2, 0, 0);
+            _adviceAction.Margin = new Thickness(6, 4, 0, 0);
             DockPanel.SetDock(_adviceAction, Dock.Right);
             adviceRow.Children.Add(_adviceAction);
             adviceRow.Children.Add(_advice);
@@ -153,39 +184,51 @@ namespace ClaudeVS.ToolWindow
             _permission.Children.Add(allow);
             _permission.Children.Add(deny);
 
-            var top = new StackPanel { Margin = new Thickness(6) };
-            top.Children.Add(toolbar);
+            var top = new StackPanel { Margin = new Thickness(10, 6, 6, 4) };
+            top.Children.Add(header);
             top.Children.Add(_ctxBar);
-            top.Children.Add(_meter);
             top.Children.Add(adviceRow);
 
-            var promptRow = new DockPanel();
-            _send.Margin = new Thickness(4, 0, 0, 0);
-            _send.VerticalAlignment = VerticalAlignment.Bottom;
+            // Input box: text (with placeholder) on top, pickers + send in a footer row.
+            var textArea = new Grid();
+            textArea.Children.Add(_prompt);
+            textArea.Children.Add(_placeholder);
+            var footer = new DockPanel { Margin = new Thickness(0, 6, 0, 0) };
             DockPanel.SetDock(_send, Dock.Right);
-            promptRow.Children.Add(_send);
-            promptRow.Children.Add(_prompt);
+            footer.Children.Add(_send);
+            var pickers = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+            pickers.Children.Add(_model);
+            pickers.Children.Add(_effort);
+            footer.Children.Add(pickers);
+            var inputStack = new DockPanel();
+            DockPanel.SetDock(footer, Dock.Bottom);
+            inputStack.Children.Add(footer);
+            inputStack.Children.Add(textArea);
+            _inputBox.Child = inputStack;
+            _inputBox.Background = ChatTheme.Subtle;
+            _inputBox.MouseLeftButtonDown += (s, e) => _prompt.Focus(); // clicking the box's padding focuses the text
 
-            var bottom = new StackPanel { Margin = new Thickness(6) };
+            var bottom = new StackPanel { Margin = new Thickness(10, 4, 10, 10) };
             bottom.Children.Add(_permission);
             bottom.Children.Add(_attachment);
             bottom.Children.Add(_route);
-            bottom.Children.Add(promptRow);
+            bottom.Children.Add(_inputBox);
 
             var root = new DockPanel();
             DockPanel.SetDock(top, Dock.Top);
             DockPanel.SetDock(bottom, Dock.Bottom);
             root.Children.Add(top);
             root.Children.Add(bottom);
-            _view.Box.Margin = new Thickness(6, 0, 6, 0);
+            _view.Box.Margin = new Thickness(10, 0, 6, 0);
             root.Children.Add(_view.Box);
             return root;
         }
 
-        private static Button Btn(string text, string tip) => new Button
-        {
-            Content = text, ToolTip = string.IsNullOrEmpty(tip) ? null : tip, Padding = new Thickness(8, 2, 8, 2), Margin = new Thickness(0, 0, 4, 0), MinWidth = 50,
-        };
+        /// <summary>Input box border: accent color while typing, the normal border otherwise.</summary>
+        private void SetInputFocused(bool focused) =>
+            _inputBox.SetResourceReference(Border.BorderBrushProperty, focused ? EnvironmentColors.SystemHighlightBrushKey : EnvironmentColors.ToolWindowBorderBrushKey);
+
+        private static Button Btn(string text, string tip) => ChatTheme.TextButton(text, tip);
 
         // ---------------- Public API ----------------
 
@@ -422,14 +465,18 @@ namespace ClaudeVS.ToolWindow
                     CharsAvoided = built.CharsAvoided,
                 });
 
+                // Show the message right away; switching model/effort talks to the CLI first.
+                var meta = new List<string>();
+                if (routeNote != null) meta.Add(routeNote);
+                if (built.ReferencedFiles > 0) meta.Add($"{built.ReferencedFiles} file reference(s)");
+                if (built.InlinedLines > 0) meta.Add($"{built.InlinedLines} lines inlined");
+                if (built.AttachedErrors > 0) meta.Add($"{built.AttachedErrors} error(s)");
+                if (built.CharsAvoided > 0) meta.Add($"~{built.CharsAvoided / 4:N0} tokens of file content not sent");
+                _view.AppendUserMessage(userText, string.Join("  ·  ", meta));
+
                 _requestedFamilies.Enqueue(model == ModelChoice.Auto ? null : model.ToCli());
                 await _session.SetModelAsync(model);
                 await _session.SetEffortAsync(effort);
-
-                Append($"\n▶ You{(routeNote != null ? "  [" + routeNote + "]" : "")}\n{userText}\n");
-                if (built.CharsAvoided > 0) Append($"  (context: sent {built.InlinedLines} inline lines, avoided ~{built.CharsAvoided / 4:N0} tokens of file content)\n");
-                if (built.AttachedErrors > 0) Append($"  (attached {built.AttachedErrors} error(s) from the Error List)\n");
-                Append("\n◀ Claude\n");
                 await _session.SendPromptAsync(built.Text);
             });
         }
@@ -560,7 +607,7 @@ namespace ClaudeVS.ToolWindow
             _resumeId = null;
             RefreshCommands(force: true);
             _fileIndex = null; // re-index on the next @ (files may have been added)
-            Append("New conversation.\n");
+            _view.AppendWelcome();
         }
 
         // ---------------- Events from the CLI (background thread) ----------------
@@ -852,7 +899,7 @@ namespace ClaudeVS.ToolWindow
         private void AppendError(string prefix, string text)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            Append("\n" + prefix + text + "\n");
+            _view.AppendPlain(prefix + text, error: true);
             string hint = ClaudeErrorHints.Explain(text);
             if (hint != null && hint != _lastHint) Append("  → " + hint + "\n");
             _lastHint = hint;
