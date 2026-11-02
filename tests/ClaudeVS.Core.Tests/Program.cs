@@ -166,6 +166,45 @@ namespace ClaudeVS.Core.Tests
             Eq(200, UsageRecord.Preview(new string('x', 500)).Length, "preview capped");
         }
 
+        // ---------- Markdown ----------
+        private static void Test_Markdown_Blocks()
+        {
+            string md = "# Title\n\nSome **bold** and `code`.\nNext line.\n\n- one\n  continued\n- two\n  1. nested\n\n> quoted\n\n---\n```csharp\nvar x = 1;\n\nvar y = 2;\n```\nafter";
+            var b = ClaudeVS.Core.Markdown.MarkdownParser.Parse(md);
+            string kinds = string.Join(",", b.Select(x => x.Kind + (x.Kind == ClaudeVS.Core.Markdown.MdBlockKind.ListItem ? x.Indent.ToString() : "")));
+            Eq("Heading,Paragraph,ListItem0,ListItem0,ListItem1,Quote,Rule,Code,Paragraph", kinds, "block kinds");
+            Eq(1, b[0].Level, "h1");
+            Eq("Text:Some ,Bold:bold,Text: and ,Code:code,Text:.\nNext line.", string.Join(",", b[1].Inlines), "inlines keep line break");
+            Eq("Text:one,Text: ,Text:continued", string.Join(",", b[2].Inlines), "list continuation");
+            Eq(1, b[4].Number, "ordered number");
+            Eq("csharp", b[7].Language, "fence lang");
+            Eq("var x = 1;\n\nvar y = 2;", b[7].Code, "code keeps blank line");
+            True(b[7].Closed, "closed fence");
+        }
+
+        private static void Test_Markdown_StreamingUnclosedFence()
+        {
+            var b = ClaudeVS.Core.Markdown.MarkdownParser.Parse("Here:\n```js\nconst a = 1;");
+            Eq(2, b.Count, "para + code");
+            Eq(false, b[1].Closed, "open while streaming");
+            Eq("const a = 1;", b[1].Code, "partial code");
+            // A longer closing fence closes; a shorter one does not.
+            Eq(true, ClaudeVS.Core.Markdown.MarkdownParser.Parse("````\nx\n````")[0].Closed, "4-tick");
+            Eq(false, ClaudeVS.Core.Markdown.MarkdownParser.Parse("````\nx\n```")[0].Closed, "short fence is content");
+        }
+
+        private static void Test_Markdown_Inlines()
+        {
+            string Render(string s) => string.Join(",", ClaudeVS.Core.Markdown.MarkdownParser.ParseInlines(s));
+            Eq("Text:call ,Code:my_func(a_b),Text: now", Render("call `my_func(a_b)` now"), "code");
+            Eq("Text:snake_case_name stays", Render("snake_case_name stays"), "underscores in words are not italic");
+            Eq("Italic:it,Text: and ,Bold:bo", Render("*it* and __bo__"), "italic + bold");
+            Eq("Text:see ,Link:docs", Render("see [docs](https://x.y/z)"), "link");
+            Eq("Text:2 * 3 = 6", Render("2 * 3 = 6"), "lone star literal");
+            Eq("Text:**unclosed", Render("**unclosed"), "unclosed bold literal");
+            Eq("Text:*not italic*", Render("\\*not italic\\*"), "escapes");
+        }
+
         // ---------- Error hints ----------
         private static void Test_ErrorHints_KnownAndUnknown()
         {

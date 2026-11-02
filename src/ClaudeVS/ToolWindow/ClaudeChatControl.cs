@@ -33,11 +33,7 @@ namespace ClaudeVS.ToolWindow
         private readonly TextBlock _meter = new TextBlock { FontSize = 11, TextWrapping = TextWrapping.Wrap };
         private readonly TextBlock _advice = new TextBlock { FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) };
         private readonly Button _adviceAction = Btn("", "");
-        private readonly TextBox _transcript = new TextBox
-        {
-            IsReadOnly = true, TextWrapping = TextWrapping.Wrap, AcceptsReturn = true, BorderThickness = new Thickness(0),
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto, FontFamily = new FontFamily("Cascadia Mono, Consolas"), FontSize = 12,
-        };
+        private readonly TranscriptView _view = new TranscriptView();
         private readonly StackPanel _permission = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 4, 0, 4), Visibility = Visibility.Collapsed };
         private readonly TextBlock _permissionText = new TextBlock { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0), TextWrapping = TextWrapping.Wrap, MaxWidth = 400 };
         private readonly TextBlock _route = new TextBlock { FontSize = 11, Opacity = 0.75, TextWrapping = TextWrapping.Wrap };
@@ -75,7 +71,7 @@ namespace ClaudeVS.ToolWindow
             Content = BuildLayout();
             this.SetResourceReference(BackgroundProperty, EnvironmentColors.ToolWindowBackgroundBrushKey);
             this.SetResourceReference(ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
-            foreach (var tb in new Control[] { _transcript, _prompt })
+            foreach (var tb in new Control[] { _prompt })
             {
                 tb.SetResourceReference(BackgroundProperty, EnvironmentColors.ToolWindowBackgroundBrushKey);
                 tb.SetResourceReference(ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
@@ -123,8 +119,8 @@ namespace ClaudeVS.ToolWindow
 
             var allow = Btn("Allow", "");
             var deny = Btn("Deny", "");
-            allow.Click += (s, e) => AnswerPermission(true);
-            deny.Click += (s, e) => AnswerPermission(false);
+            allow.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); AnswerPermission(true); };
+            deny.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); AnswerPermission(false); };
             _permission.Children.Add(_permissionText);
             _permission.Children.Add(allow);
             _permission.Children.Add(deny);
@@ -153,8 +149,8 @@ namespace ClaudeVS.ToolWindow
             DockPanel.SetDock(bottom, Dock.Bottom);
             root.Children.Add(top);
             root.Children.Add(bottom);
-            _transcript.Margin = new Thickness(6, 0, 6, 0);
-            root.Children.Add(_transcript);
+            _view.Box.Margin = new Thickness(6, 0, 6, 0);
+            root.Children.Add(_view.Box);
             return root;
         }
 
@@ -362,9 +358,10 @@ namespace ClaudeVS.ToolWindow
 
         private void NewChat()
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
             DisposeSession();
             ResetMeter();
-            _transcript.Clear();
+            _view.Clear();
             Append("New conversation.\n");
         }
 
@@ -384,6 +381,7 @@ namespace ClaudeVS.ToolWindow
 
             OnUi(() =>
             {
+                ThreadHelper.ThrowIfNotOnUIThread();
                 _meterModel?.Observe(ev);
                 switch (ev.Kind)
                 {
@@ -473,6 +471,7 @@ namespace ClaudeVS.ToolWindow
 
         private void AnswerPermission(bool allow)
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
             var req = _pendingPermission;
             _pendingPermission = null;
             _permission.Visibility = Visibility.Collapsed;
@@ -493,18 +492,20 @@ namespace ClaudeVS.ToolWindow
 
         private void FlushText()
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
             string chunk;
             lock (_pendingText)
             {
                 chunk = _pendingText.ToString();
                 _pendingText.Clear();
             }
-            if (chunk.Length > 0) Append(chunk);
+            if (chunk.Length > 0) _view.AppendAnswer(chunk);
             _flushTimer.Stop();
         }
 
         private void AppendError(string prefix, string text)
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
             Append("\n" + prefix + text + "\n");
             string hint = ClaudeErrorHints.Explain(text);
             if (hint != null && hint != _lastHint) Append("  → " + hint + "\n");
@@ -519,8 +520,8 @@ namespace ClaudeVS.ToolWindow
 
         private void Append(string text)
         {
-            _transcript.AppendText(text);
-            _transcript.ScrollToEnd();
+            ThreadHelper.ThrowIfNotOnUIThread();
+            _view.AppendPlain(text);
         }
 
         private void OnUi(Action action)
@@ -534,6 +535,7 @@ namespace ClaudeVS.ToolWindow
 
         private void Fire(Func<System.Threading.Tasks.Task> action)
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
             Jtf.RunAsync(async () =>
             {
                 try

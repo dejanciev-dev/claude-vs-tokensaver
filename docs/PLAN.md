@@ -84,10 +84,10 @@ Tick the boxes as you go. Each phase ends with something you can run.
 
 ## Phase 3 — UI that people want to use (1–2 weeks)
 
-- [ ] Replace the plain `TextBox` transcript with a rich view
+- [x] Replace the plain `TextBox` transcript with a rich view (Option A: `TranscriptView` + `MarkdownParser`, re-rendered while streaming)
   - Option A: WPF `FlowDocument` + simple Markdown (headings, code blocks, lists) — no extra dependency
   - Option B: WebView2 + markdown-it — richer, heavier
-- [ ] Code blocks: **Copy** and **Insert at cursor** buttons
+- [x] Code blocks: **Copy** and **Insert at cursor** buttons (insert is one undo step)
 - [ ] Collapsible tool-call rows (`⚙ Read: src/A.cs`) with result size in tokens
 - [ ] File edits: "Open diff" link using `IVsDifferenceService`
 - [ ] Theme check: Light, Dark, Blue in VS 2022 and VS 2026
