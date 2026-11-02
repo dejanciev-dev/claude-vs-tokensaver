@@ -372,6 +372,31 @@ namespace ClaudeVS.Core.Tests
             True(ExitPlanModeTool.RevisionMessage("use README").EndsWith("use README"), "feedback included");
         }
 
+        private static void Test_TimeAgo()
+        {
+            var now = new DateTime(2026, 11, 2, 12, 0, 0, DateTimeKind.Utc);
+            string Ago(TimeSpan t) => ClaudeVS.Core.Chat.SessionHistory.TimeAgo(now - t, now);
+            Eq("now", Ago(TimeSpan.FromSeconds(30)), "now");
+            Eq("5m", Ago(TimeSpan.FromMinutes(5)), "minutes");
+            Eq("3h", Ago(TimeSpan.FromHours(3.5)), "hours");
+            Eq("2d", Ago(TimeSpan.FromDays(2)), "days");
+            Eq("3w", Ago(TimeSpan.FromDays(27)), "weeks");
+            Eq("1y", Ago(TimeSpan.FromDays(400)), "years");
+        }
+
+        private static void Test_PermissionModes()
+        {
+            Eq("auto", PermissionModeChoice.Auto.ToCli(), "auto flag");
+            Eq(null, PermissionModeChoice.Default.ToCli(), "manual = no flag");
+            Eq("default", PermissionModeChoice.Default.ToControl(), "control needs 'default'");
+            Eq("plan", PermissionModeChoice.Plan.ToControl(), "plan");
+            Eq("Edit automatically", PermissionModeChoice.AcceptEdits.Describe().Label, "label");
+            Eq(PermissionModeChoice.AcceptEdits, PermissionModeChoice.Default.Next(), "cycle 1");
+            Eq(PermissionModeChoice.Default, PermissionModeChoice.Auto.Next(), "cycle wraps");
+            Eq(PermissionModeChoice.Default, PermissionModeChoice.BypassPermissions.Next(), "bypass is not in the cycle");
+            True(ClaudeArgsBuilder.Build(new ClaudeLaunchOptions { PermissionMode = PermissionModeChoice.Auto }).Contains("--permission-mode auto"), "launch flag");
+        }
+
         // ---------- Edit diff ----------
         private static void Test_EditDiff_ReconstructBefore()
         {

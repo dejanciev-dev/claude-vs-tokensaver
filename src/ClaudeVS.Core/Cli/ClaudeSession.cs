@@ -98,12 +98,13 @@ namespace ClaudeVS.Core.Cli
         }
 
         /// <summary>Send a user prompt. Starts (or restarts with --resume) the process if needed.</summary>
-        public Task SendPromptAsync(string text, CancellationToken ct = default)
+        public async Task SendPromptAsync(string text, CancellationToken ct = default)
         {
-            EnsureRunning();
+            bool started = EnsureRunning();
+            if (started && !ThinkingEnabled) await SendThinkingAsync().ConfigureAwait(false); // there is no launch flag for it
             IsBusy = true;
             var payload = new { type = "user", message = new { role = "user", content = new[] { new { type = "text", text } } } };
-            return WriteLineAsync(JsonConvert.SerializeObject(payload));
+            await WriteLineAsync(JsonConvert.SerializeObject(payload)).ConfigureAwait(false);
         }
 
         public Task InterruptAsync() => SendControlAsync(new JObject { ["subtype"] = "interrupt" });
@@ -124,6 +125,30 @@ namespace ClaudeVS.Core.Cli
             await SendControlAsync(new JObject { ["subtype"] = "apply_flag_settings", ["settings"] = new JObject { ["effort"] = effort.ToCli() } }).ConfigureAwait(false);
             CurrentEffort = effort;
         }
+
+        /// <summary>
+        /// Switch permission mode on the running process (control request <c>set_permission_mode</c>, verified with
+        /// Claude Code 2.1.316); before the process starts, the mode is used for the launch.
+        /// </summary>
+        public async Task SetPermissionModeAsync(PermissionModeChoice mode)
+        {
+            Options.PermissionMode = mode;
+            if (!IsRunning) return;
+            await SendControlAsync(new JObject { ["subtype"] = "set_permission_mode", ["mode"] = mode.ToControl() }).ConfigureAwait(false);
+        }
+
+        /// <summary>Extended thinking on or off (control request <c>set_max_thinking_tokens</c>; 0 = off, null = default).</summary>
+        public bool ThinkingEnabled { get; private set; } = true;
+
+        public async Task SetThinkingAsync(bool enabled)
+        {
+            ThinkingEnabled = enabled;
+            if (!IsRunning) return; // applied right after the process starts
+            await SendThinkingAsync().ConfigureAwait(false);
+        }
+
+        private Task SendThinkingAsync() =>
+            SendControlAsync(new JObject { ["subtype"] = "set_max_thinking_tokens", ["max_thinking_tokens"] = ThinkingEnabled ? JValue.CreateNull() : new JValue(0) });
 
         /// <summary>Answer a <see cref="ClaudeEventKind.PermissionRequest"/>.</summary>
         public Task RespondToPermissionAsync(string requestId, JObject originalInput, bool allow, string denyMessage = null)
@@ -146,14 +171,16 @@ namespace ClaudeVS.Core.Cli
             return WriteLineAsync(payload.ToString(Formatting.None));
         }
 
-        private void EnsureRunning()
+        /// <summary>Starts the process if needed; true when it was (re)started just now.</summary>
+        private bool EnsureRunning()
         {
-            if (IsRunning) return;
+            if (IsRunning) return false;
             // Relaunch into the same conversation so context (and cache) survive a crash or an interrupt.
             if (_parser?.SessionId != null) Options.ResumeSessionId = _parser.SessionId;
             Options.Model = CurrentModel == ModelChoice.Auto ? Options.Model : CurrentModel;
             Options.Effort = CurrentEffort == EffortChoice.Auto ? Options.Effort : CurrentEffort;
             Start();
+            return true;
         }
 
         private async Task WriteLineAsync(string line)

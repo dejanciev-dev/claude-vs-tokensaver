@@ -27,12 +27,24 @@ namespace ClaudeVS.ToolWindow
     /// </summary>
     public sealed class ClaudeChatControl : UserControl, IDisposable
     {
-        private readonly ComboBox _model = ChatTheme.Combo(76, "Model. Auto picks Haiku / Sonnet / Opus for each prompt");
-        private readonly ComboBox _effort = ChatTheme.Combo(70, "Thinking effort. Auto follows the model choice");
-        private readonly Button _new = ChatTheme.IconButton(ChatTheme.IconAdd, "New conversation (a fresh context is cheapest)");
-        private readonly Button _compact = ChatTheme.IconButton(ChatTheme.IconCompact, "Compact: summarize the conversation to shrink context");
-        private readonly Button _stop = ChatTheme.IconButton(ChatTheme.IconStop, "Stop the current answer");
-        private readonly Button _historyBtn = ChatTheme.IconButton(ChatTheme.IconHistory, "Resume an earlier conversation in this solution");
+        // Header: session title, history, new session.
+        private readonly TextBlock _title = new TextBlock { Text = DefaultTitle, FontWeight = FontWeights.SemiBold, FontSize = 13, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
+        private readonly Button _new = ChatTheme.IconButton(ChatTheme.IconMessage, "New session (a fresh context is cheapest)");
+        private readonly Button _historyBtn = ChatTheme.IconButton(ChatTheme.IconHistory, "Sessions: resume an earlier conversation");
+        // Input footer: + menu, / actions, model chip, mode chip, send/stop.
+        private readonly Button _plusBtn = ChatTheme.IconButton(ChatTheme.IconAdd, "Add: upload files, context, web");
+        private readonly Button _paletteBtn = ChatTheme.IconButton("/", "Actions (Ctrl+/)");
+        private readonly Button _modelChip = ChatTheme.Chip("Model, effort and thinking");
+        private readonly Button _modeChip = ChatTheme.Chip("Mode (Shift+Tab to switch)");
+        private const string DefaultTitle = "New session";
+        private ModelChoice _modelChoice;
+        private EffortChoice _effortChoice = EffortChoice.Auto;
+        private PermissionModeChoice _mode;
+        private bool _thinking = true;
+        private bool _browseWeb;
+        private bool _busy;
+        private ChatPopup _menu, _palette, _sessions;
+        private readonly StackPanel _emptyState = new StackPanel { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(24) };
         private readonly ProgressBar _ctxBar = new ProgressBar { Height = 2, Minimum = 0, Maximum = 100, Margin = new Thickness(0, 5, 0, 0), BorderThickness = new Thickness(0), Background = ChatTheme.Subtle };
         private readonly TextBlock _meter = new TextBlock { FontSize = 11, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
         private readonly TextBlock _advice = new TextBlock { FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 0), VerticalAlignment = VerticalAlignment.Center };
@@ -50,7 +62,7 @@ namespace ClaudeVS.ToolWindow
         };
         private readonly TextBlock _placeholder = new TextBlock
         {
-            Text = "Ask Claude…   @ attach a file · / commands · Ctrl+↑ history",
+            Text = "Ask Claude to edit…",
             IsHitTestVisible = false, FontSize = 13, Margin = new Thickness(2, 0, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis,
         };
         private readonly Border _inputBox = new Border { CornerRadius = new CornerRadius(6), BorderThickness = new Thickness(1), Padding = new Thickness(10, 8, 6, 6) };
@@ -89,10 +101,8 @@ namespace ClaudeVS.ToolWindow
 
         public ClaudeChatControl()
         {
-            foreach (var m in Enum.GetValues(typeof(ModelChoice))) _model.Items.Add(m);
-            foreach (var e in Enum.GetValues(typeof(EffortChoice))) _effort.Items.Add(e);
-            _model.SelectedItem = Options?.DefaultModel ?? ModelChoice.Auto;
-            _effort.SelectedItem = EffortChoice.Auto;
+            _modelChoice = Options?.DefaultModel ?? ModelChoice.Auto;
+            _mode = Options?.PermissionMode ?? PermissionModeChoice.AcceptEdits;
             Content = BuildLayout();
             this.SetResourceReference(BackgroundProperty, EnvironmentColors.ToolWindowBackgroundBrushKey);
             this.SetResourceReference(ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
@@ -108,11 +118,24 @@ namespace ClaudeVS.ToolWindow
             _prompt.GotKeyboardFocus += (s, e) => SetInputFocused(true);
             _prompt.LostKeyboardFocus += (s, e) => SetInputFocused(false);
 
-            _send.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); SendFromBox(); };
+            _send.Click += (s, e) =>
+            {
+                ThreadHelper.ThrowIfNotOnUIThread();
+                if (_busy) Stop(); else SendFromBox();
+            };
             _new.Click += (s, e) => NewChat();
             _historyBtn.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); ShowHistoryMenu(); };
-            _stop.Click += (s, e) => Fire(() => _session?.InterruptAsync());
-            _compact.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); SendText("/compact", routed: false); };
+            _plusBtn.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); ShowPlusMenu(); };
+            _paletteBtn.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); ShowPalette(); };
+            _modelChip.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); ShowModelMenu(); };
+            _modeChip.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); ShowModeMenu(); };
+            _paletteBtn.FontFamily = ChatTheme.Mono;
+            _paletteBtn.FontSize = 13;
+            _menu = new ChatPopup(_inputBox, withFilter: false, width: 320);
+            _palette = new ChatPopup(_inputBox, withFilter: true, filterPlaceholder: "Filter actions…", width: 380);
+            _sessions = new ChatPopup(_historyBtn, withFilter: true, filterPlaceholder: "Search sessions…", width: 340, placement: PlacementMode.Bottom);
+            BuildEmptyState();
+            UpdateChips();
             _adviceAction.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); if (_adviceCommand != null) SendText(_adviceCommand, routed: false); };
             _prompt.PreviewKeyDown += OnPromptKeyDown;
             _prompt.TextChanged += (s, e) =>
@@ -126,7 +149,6 @@ namespace ClaudeVS.ToolWindow
             _filePopup = BuildFilePicker();
             GotKeyboardFocus += (s, e) => LastActive = this;
             LastActive = LastActive ?? this;
-            _model.SelectionChanged += (s, e) => UpdateRouteHint();
 
             _flushTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(60), DispatcherPriority.Background, (s, e) => FlushText(), Dispatcher);
             _routeTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(300), DispatcherPriority.Background, (s, e) => { _routeTimer.Stop(); UpdateRouteHint(); }, Dispatcher);
@@ -134,7 +156,7 @@ namespace ClaudeVS.ToolWindow
             _routeTimer.Stop();
 
             ResetMeter();
-            _view.AppendWelcome();
+            SetEmptyState(true);
         }
 
         private static ClaudeOptionsPage Options => ClaudeVSPackage.Instance?.Options;
@@ -159,15 +181,15 @@ namespace ClaudeVS.ToolWindow
         private UIElement BuildLayout()
         {
             var actions = new StackPanel { Orientation = Orientation.Horizontal };
-            actions.Children.Add(_new);
             actions.Children.Add(_historyBtn);
-            actions.Children.Add(_compact);
-            actions.Children.Add(_stop);
+            actions.Children.Add(_new);
 
             var header = new DockPanel();
             DockPanel.SetDock(actions, Dock.Right);
             header.Children.Add(actions);
-            header.Children.Add(_meter);
+            header.Children.Add(_title);
+            ChatTheme.Text(_title);
+            _meter.Margin = new Thickness(0, 4, 0, 0);
 
             var adviceRow = new DockPanel();
             _adviceAction.Visibility = Visibility.Collapsed;
@@ -186,20 +208,26 @@ namespace ClaudeVS.ToolWindow
 
             var top = new StackPanel { Margin = new Thickness(10, 6, 6, 4) };
             top.Children.Add(header);
+            top.Children.Add(_meter);
             top.Children.Add(_ctxBar);
             top.Children.Add(adviceRow);
 
-            // Input box: text (with placeholder) on top, pickers + send in a footer row.
+            // Input box: text (with placeholder) on top; footer: + / model … mode send.
             var textArea = new Grid();
             textArea.Children.Add(_prompt);
             textArea.Children.Add(_placeholder);
-            var footer = new DockPanel { Margin = new Thickness(0, 6, 0, 0) };
-            DockPanel.SetDock(_send, Dock.Right);
-            footer.Children.Add(_send);
-            var pickers = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-            pickers.Children.Add(_model);
-            pickers.Children.Add(_effort);
-            footer.Children.Add(pickers);
+            var footer = new DockPanel { Margin = new Thickness(-4, 6, 0, 0) };
+            var right = new StackPanel { Orientation = Orientation.Horizontal };
+            right.Children.Add(_modeChip);
+            right.Children.Add(_send);
+            _send.Margin = new Thickness(4, 0, 0, 0);
+            DockPanel.SetDock(right, Dock.Right);
+            footer.Children.Add(right);
+            var left = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+            left.Children.Add(_plusBtn);
+            left.Children.Add(_paletteBtn);
+            left.Children.Add(_modelChip);
+            footer.Children.Add(left);
             var inputStack = new DockPanel();
             DockPanel.SetDock(footer, Dock.Bottom);
             inputStack.Children.Add(footer);
@@ -220,8 +248,207 @@ namespace ClaudeVS.ToolWindow
             root.Children.Add(top);
             root.Children.Add(bottom);
             _view.Box.Margin = new Thickness(10, 0, 6, 0);
-            root.Children.Add(_view.Box);
+            var middle = new Grid();
+            middle.Children.Add(_view.Box);
+            middle.Children.Add(_emptyState); // shown over the transcript until the first message
+            root.Children.Add(middle);
             return root;
+        }
+
+        /// <summary>The empty-session message, like VS Code's (with our own icon, not Anthropic's logo or mascot).</summary>
+        private void BuildEmptyState()
+        {
+            var icon = new TextBlock { Text = ChatTheme.IconMessage, FontFamily = ChatTheme.IconFont, FontSize = 34, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 0, 0, 12) };
+            icon.SetResourceReference(TextBlock.ForegroundProperty, EnvironmentColors.SystemHighlightBrushKey);
+            var text = new TextBlock { Text = "What to do first? Ask about this codebase or we can start writing code.", TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center, MaxWidth = 280, FontSize = 13 };
+            ChatTheme.Text(text);
+            var tips = new TextBlock { Text = "@ attach a file  ·  / actions  ·  Shift+Tab mode  ·  Ctrl+↑ history", TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center, MaxWidth = 300, FontSize = 11, Margin = new Thickness(0, 10, 0, 0) };
+            ChatTheme.Muted(tips);
+            _emptyState.Children.Add(icon);
+            _emptyState.Children.Add(text);
+            _emptyState.Children.Add(tips);
+            _emptyState.IsHitTestVisible = false;
+        }
+
+        private void SetEmptyState(bool empty) => _emptyState.Visibility = empty ? Visibility.Visible : Visibility.Collapsed;
+
+        /// <summary>Model chip ("Auto", "Sonnet · High", "… · no thinking") and mode chip.</summary>
+        private void UpdateChips()
+        {
+            string model = _modelChoice == ModelChoice.Auto ? "Auto" : _modelChoice.ToString();
+            string effort = _effortChoice == EffortChoice.Auto ? null : _effortChoice.ToString();
+            string label = model + (effort != null ? " · " + effort : "") + (_thinking ? "" : " · no thinking");
+            ChatTheme.SetChip(_modelChip, null, label);
+            var (modeLabel, _) = _mode.Describe();
+            ChatTheme.SetChip(_modeChip, ChatTheme.ModeGlyph(_mode), modeLabel);
+            _modeChip.ToolTip = _mode.Describe().Description + " (Shift+Tab to switch)";
+        }
+
+        private void SetBusy(bool busy)
+        {
+            _busy = busy;
+            _send.Content = busy ? ChatTheme.IconStop : ChatTheme.IconSend;
+            _send.ToolTip = busy ? "Stop" : "Send (Enter)";
+            System.Windows.Automation.AutomationProperties.SetName(_send, busy ? "Stop" : "Send");
+        }
+
+        private void Stop()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            Fire(() => _session?.InterruptAsync());
+        }
+
+        private void SetTitle(string text)
+        {
+            string t = (text ?? "").Trim().Replace("\r", " ").Replace("\n", " ");
+            _title.Text = t.Length == 0 ? DefaultTitle : t.Length > 70 ? t.Substring(0, 69) + "…" : t;
+            _title.ToolTip = t.Length > 70 ? t : null;
+        }
+
+        // ---------------- Menus: + , / , model, mode, sessions ----------------
+
+        private void ShowPlusMenu()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            _menu.Footer = null;
+            _menu.Show(new[]
+            {
+                new ChatPopup.Entry { Glyph = ChatTheme.IconUpload, Label = "Upload from computer", Description = "Attach files or images as references", Run = UploadFiles },
+                new ChatPopup.Entry { Glyph = ChatTheme.IconDocument, Label = "Add context", Description = "Mention a file from this solution (@)", Run = StartMention },
+                new ChatPopup.Entry { Glyph = ChatTheme.IconEdit, Label = "Attach current file", Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); AttachFile(VsContext.GetActiveDocumentPath()); } },
+                new ChatPopup.Entry { Glyph = ChatTheme.IconWarning, Label = "Attach Error List", Run = AttachErrorListFromIde },
+                new ChatPopup.Entry { Glyph = ChatTheme.IconGlobe, Label = "Browse the web", Description = "Let Claude search the web for the next prompts", Checked = _browseWeb, Run = () => { _browseWeb = !_browseWeb; UpdateAttachments(focus: true); } },
+            }, _plusBtn);
+        }
+
+        private void ShowModelMenu()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            _menu.Footer = "Auto picks the cheapest model likely to handle each prompt";
+            _menu.Show(ModelEntries(), _modelChip);
+        }
+
+        private IEnumerable<ChatPopup.Entry> ModelEntries()
+        {
+            foreach (ModelChoice m in Enum.GetValues(typeof(ModelChoice)))
+                yield return new ChatPopup.Entry { Group = "Model", Label = m == ModelChoice.Auto ? "Auto (route each prompt)" : m.ToString(), Checked = _modelChoice == m, Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); SetModel(m); } };
+            foreach (EffortChoice ef in Enum.GetValues(typeof(EffortChoice)))
+                yield return new ChatPopup.Entry { Group = "Effort", Label = ef == EffortChoice.Auto ? "Auto (follow the model choice)" : ef.ToString(), Checked = _effortChoice == ef, Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); SetEffort(ef); } };
+            yield return new ChatPopup.Entry { Group = "Thinking", Label = "Extended thinking", Description = "Off answers faster and cheaper on simple tasks", Checked = _thinking, Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); SetThinking(!_thinking); } };
+        }
+
+        private void ShowModeMenu()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            _menu.Footer = "Shift+Tab to switch";
+            _menu.Show(ModeEntries(null), _modeChip);
+        }
+
+        private IEnumerable<ChatPopup.Entry> ModeEntries(string group) =>
+            ChoiceNames.CycleOrder.Select(m => new ChatPopup.Entry
+            {
+                Group = group,
+                Glyph = ChatTheme.ModeGlyph(m),
+                Label = m.Describe().Label,
+                Description = m.Describe().Description,
+                Checked = _mode == m,
+                Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); SetMode(m); },
+            });
+
+        /// <summary>The / actions palette: context, model, mode, session and custom commands, filterable.</summary>
+        private void ShowPalette()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            RefreshCommands();
+            var entries = new List<ChatPopup.Entry>
+            {
+                new ChatPopup.Entry { Group = "Context", Label = "Attach file…", Run = UploadFiles },
+                new ChatPopup.Entry { Group = "Context", Label = "Mention file from this project…", Detail = "@", Run = StartMention },
+                new ChatPopup.Entry { Group = "Context", Label = "Attach current file", Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); AttachFile(VsContext.GetActiveDocumentPath()); } },
+                new ChatPopup.Entry { Group = "Context", Label = "Attach selection", Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); AttachSelection(VsContext.GetSelection()); } },
+                new ChatPopup.Entry { Group = "Context", Label = "Attach Error List", Run = AttachErrorListFromIde },
+                new ChatPopup.Entry { Group = "Context", Label = "Clear conversation", Description = "Start a new session", Run = NewChat },
+                new ChatPopup.Entry { Group = "Context", Label = "Compact conversation", Description = "Summarize to shrink the context", Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); SendText("/compact", routed: false); } },
+                new ChatPopup.Entry { Group = "Context", Label = "Resume a session…", Run = ShowHistoryMenu },
+            };
+            entries.AddRange(ModelEntries().Select(e => { e.Group = "Model · " + e.Group; return e; }));
+            entries.AddRange(ModeEntries("Mode"));
+            entries.AddRange(_commands.Where(c => !string.Equals(c.Name, "compact", StringComparison.OrdinalIgnoreCase)).Select(c => new ChatPopup.Entry
+            {
+                Group = "Commands",
+                Label = "/" + c.Name,
+                Description = c.Description,
+                Detail = c.Source,
+                Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); SendText("/" + c.Name, routed: false); },
+            }));
+            entries.Add(new ChatPopup.Entry { Group = "Other", Label = "Show savings report", Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); VsContext.ExecuteCommand("Tools.ShowSavingsReport"); } });
+            entries.Add(new ChatPopup.Entry { Group = "Other", Label = "Open Output → Claude Code", Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); ClaudeOutputPane.Activate(); } });
+            entries.Add(new ChatPopup.Entry { Group = "Other", Glyph = null, Label = "Settings", Detail = "Tools → Options", Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); ClaudeVSPackage.Instance?.ShowOptionPage(typeof(ClaudeOptionsPage)); } });
+            _palette.Show(entries, _inputBox);
+        }
+
+        private void UploadFiles()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var dlg = new Microsoft.Win32.OpenFileDialog { Multiselect = true, Title = "Attach files for Claude (sent as references)", InitialDirectory = VsContext.GetSolutionDirectory() ?? "" };
+            if (dlg.ShowDialog() != true) return;
+            foreach (var f in dlg.FileNames) AttachFile(f);
+        }
+
+        /// <summary>Puts "@" at the caret, which opens the file picker.</summary>
+        private void StartMention()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            int at = _prompt.CaretIndex;
+            string before = at > 0 && !char.IsWhiteSpace(_prompt.Text[at - 1]) ? " @" : "@";
+            _prompt.Text = _prompt.Text.Insert(at, before);
+            _prompt.CaretIndex = at + before.Length;
+            _prompt.Focus();
+            UpdateFilePicker();
+        }
+
+        private void AttachErrorListFromIde()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var errors = VsContext.GetErrors();
+            if (errors.Count == 0) { Append("The Error List has no errors to attach."); return; }
+            AttachErrors(errors);
+        }
+
+        private void SetModel(ModelChoice m)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            _modelChoice = m;
+            UpdateChips();
+            UpdateRouteHint();
+        }
+
+        private void SetEffort(EffortChoice e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            _effortChoice = e;
+            UpdateChips();
+        }
+
+        private void SetThinking(bool on)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            _thinking = on;
+            UpdateChips();
+            var s = _session;
+            if (s != null) Fire(() => s.SetThinkingAsync(on));
+        }
+
+        /// <summary>Changes the permission mode now; a running session switches without a restart.</summary>
+        private void SetMode(PermissionModeChoice m)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (m == _mode) return;
+            _mode = m;
+            UpdateChips();
+            var s = _session;
+            if (s != null) Fire(() => s.SetPermissionModeAsync(m));
+            ClaudeOutputPane.WriteLine("Mode: " + m.ToControl());
         }
 
         /// <summary>Input box border: accent color while typing, the normal border otherwise.</summary>
@@ -284,6 +511,7 @@ namespace ClaudeVS.ToolWindow
                 int max = Options?.MaxAttachedErrors ?? 20;
                 parts.Add(_attachedErrors.Count > max ? $"{max} of {_attachedErrors.Count} errors" : $"{_attachedErrors.Count} error(s)");
             }
+            if (_browseWeb) parts.Add("🌐 web search allowed");
 
             if (parts.Count == 0) { _attachment.Visibility = Visibility.Collapsed; UpdateRouteHint(); return; }
             _attachment.Text = "📎 " + string.Join(" · ", parts) + " — Esc to remove";
@@ -298,6 +526,18 @@ namespace ClaudeVS.ToolWindow
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             if (_filePopup.IsOpen && HandleFilePickerKey(e.Key)) { e.Handled = true; return; }
+            if (e.Key == Key.Tab && (Keyboard.Modifiers & ModifierKeys.Shift) != 0)
+            {
+                e.Handled = true; // Shift+Tab cycles the mode, like VS Code
+                SetMode(_mode.Next());
+                return;
+            }
+            if (e.Key == Key.Oem2 && (Keyboard.Modifiers & ModifierKeys.Control) != 0)
+            {
+                e.Handled = true; // Ctrl+/ opens the actions palette
+                ShowPalette();
+                return;
+            }
             if (e.Key == Key.Enter && (Keyboard.Modifiers & ModifierKeys.Shift) == 0)
             {
                 e.Handled = true;
@@ -313,6 +553,11 @@ namespace ClaudeVS.ToolWindow
             {
                 e.Handled = true;
                 ClearAttachments();
+            }
+            else if (e.Key == Key.Escape && _busy)
+            {
+                e.Handled = true; // Esc stops the answer, like the CLI
+                Stop();
             }
         }
 
@@ -430,15 +675,19 @@ namespace ClaudeVS.ToolWindow
                 : new BuiltPrompt { Text = userText };
             int attachedLines = _selection == null ? 0 : _selection.EndLine - _selection.StartLine + 1;
             int attachedFiles = routed ? _attachedFiles.Count : 0;
+            if (routed && _browseWeb) built.Text = "You may search the web if it helps with this request.\n\n" + built.Text;
             ClearAttachments();
+            SetEmptyState(false);
+            if (_title.Text == DefaultTitle && routed) SetTitle(userText);
+            SetBusy(true);
 
             Fire(async () =>
             {
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                 EnsureSession(dir);
 
-                ModelChoice model = (ModelChoice)_model.SelectedItem;
-                EffortChoice effort = (EffortChoice)_effort.SelectedItem;
+                ModelChoice model = _modelChoice;
+                EffortChoice effort = _effortChoice;
                 string routeNote = null;
                 RouteDecision decision = null;
                 if (routed && (model == ModelChoice.Auto || effort == EffortChoice.Auto))
@@ -506,7 +755,7 @@ namespace ClaudeVS.ToolWindow
                     : string.Join("   ", matches.Take(6).Select(c => c + (string.IsNullOrEmpty(c.Description) ? "" : " — " + c.Description)));
                 return;
             }
-            if ((ModelChoice)_model.SelectedItem != ModelChoice.Auto || string.IsNullOrWhiteSpace(_prompt.Text) || _prompt.Text.TrimStart().StartsWith("/"))
+            if (_modelChoice != ModelChoice.Auto || string.IsNullOrWhiteSpace(_prompt.Text) || _prompt.Text.TrimStart().StartsWith("/"))
             {
                 _route.Text = "";
                 return;
@@ -527,13 +776,14 @@ namespace ClaudeVS.ToolWindow
             {
                 ClaudePath = o?.ClaudePath ?? "",
                 WorkingDirectory = dir,
-                PermissionMode = o?.PermissionMode ?? PermissionModeChoice.AcceptEdits,
+                PermissionMode = _mode,
                 AppendSystemPrompt = (o?.ConciseAnswers ?? true) ? ClaudeOptionsPage.BrevityPrompt : null,
                 ExtraArguments = o?.ExtraArguments ?? "",
                 ResumeSessionId = _resumeId,
             });
             _resumeId = null;
             _sessionDir = dir;
+            if (!_thinking) { var fresh = _session; Fire(() => fresh.SetThinkingAsync(false)); } // applied when the process starts
             _session.EventReceived += OnEvent;
             if (o?.LogRawCliTraffic == true) _session.RawLine += OnRawLine;
             _session.Exited += (s, code) =>
@@ -545,6 +795,7 @@ namespace ClaudeVS.ToolWindow
                     if (s != _session) return; // an old session we stopped on purpose (New, Resume, solution change)
                     _pendingUsages.Clear();    // its unfinished turns will never complete
                     _requestedFamilies.Clear();
+                    SetBusy(false);
                     FlushText();
                     if (code != 0 && code != 1) Append($"\n[claude exited with code {code}]\n");
                 });
@@ -563,26 +814,20 @@ namespace ClaudeVS.ToolWindow
             _commands = SlashCommands.Discover(dir, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
         }
 
+        /// <summary>Session picker like VS Code's: search box, titles, compact ages ("5m", "2d").</summary>
         private void ShowHistoryMenu()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             string dir = VsContext.GetSolutionDirectory() ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            var sessions = SessionHistory.List(SessionHistory.DefaultProjectsRoot, dir);
-            var menu = new ContextMenu { PlacementTarget = _historyBtn, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom };
-            if (sessions.Count == 0)
-                menu.Items.Add(new MenuItem { Header = "No earlier conversations for this folder", IsEnabled = false });
-            foreach (var s in sessions)
+            var now = DateTime.UtcNow;
+            var entries = SessionHistory.List(SessionHistory.DefaultProjectsRoot, dir, max: 50).Select(s => new ChatPopup.Entry
             {
-                var item = new MenuItem
-                {
-                    Header = $"{s.LastWriteUtc.ToLocalTime():MMM d HH:mm}   {s.Title}",
-                    ToolTip = $"{s.Id} · {s.SizeBytes / 1024:N0} KB on disk",
-                };
-                string id = s.Id, title = s.Title;
-                item.Click += (o, e) => { ThreadHelper.ThrowIfNotOnUIThread(); ResumeSession(id, title); };
-                menu.Items.Add(item);
-            }
-            menu.IsOpen = true;
+                Label = s.Title,
+                Detail = SessionHistory.TimeAgo(s.LastWriteUtc, now),
+                Run = () => ResumeSession(s.Id, s.Title),
+            }).ToList();
+            if (entries.Count == 0) entries.Add(new ChatPopup.Entry { Label = "No earlier sessions for this folder", Enabled = false });
+            _sessions.Show(entries, _historyBtn);
         }
 
         /// <summary>The next prompt continues an earlier conversation (claude --resume). Earlier messages are not redrawn.</summary>
@@ -593,6 +838,9 @@ namespace ClaudeVS.ToolWindow
             ResetMeter();
             _view.Clear();
             _resumeId = sessionId;
+            SetBusy(false);
+            SetEmptyState(false);
+            SetTitle(title);
             Append($"Resuming: {title}\nEarlier messages are not shown here, but Claude has the full context. The meter updates after the first answer.\n");
             ClaudeOutputPane.WriteLine($"Next prompt resumes session {sessionId}");
             _prompt.Focus();
@@ -607,7 +855,9 @@ namespace ClaudeVS.ToolWindow
             _resumeId = null;
             RefreshCommands(force: true);
             _fileIndex = null; // re-index on the next @ (files may have been added)
-            _view.AppendWelcome();
+            SetBusy(false);
+            SetTitle(null);
+            SetEmptyState(true);
         }
 
         // ---------------- Events from the CLI (background thread) ----------------
@@ -693,6 +943,7 @@ namespace ClaudeVS.ToolWindow
                         break;
                     case ClaudeEventKind.TurnCompleted:
                         FlushText();
+                        SetBusy(_pendingUsages.Count > 1); // still busy if more prompts were queued
                         if (ev.IsError && !string.IsNullOrEmpty(ev.Text)) AppendError("[error] ", ev.Text);
                         string used = _turnModel != null ? " · " + _turnModel : "";
                         CheckModelMismatch(_turnModel);
@@ -940,6 +1191,7 @@ namespace ClaudeVS.ToolWindow
                 {
                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                     ClaudeOutputPane.WriteLine("Exception: " + ex);
+                    SetBusy(false);
                     AppendError("[error] ", ex.Message);
                 }
             }).FileAndForget("ClaudeVS/ChatControl/Fire");

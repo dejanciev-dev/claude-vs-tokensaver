@@ -59,6 +59,14 @@ namespace ClaudeVS.Commands
             catch (Exception) { return null; }
         }
 
+        /// <summary>Runs a Visual Studio command by its canonical name (e.g. "Tools.ShowSavingsReport").</summary>
+        public static void ExecuteCommand(string name, string args = "")
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            try { Dte?.ExecuteCommand(name, args); }
+            catch (Exception ex) { Diagnostics.ClaudeOutputPane.WriteLine($"Command {name} failed: {ex.Message}"); }
+        }
+
         /// <summary>Full path of the active document, or null.</summary>
         public static string GetActiveDocumentPath()
         {

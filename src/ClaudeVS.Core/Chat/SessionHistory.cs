@@ -100,6 +100,18 @@ namespace ClaudeVS.Core.Chat
             return text.StartsWith("<") ? null : text;
         }
 
+        /// <summary>Compact age like the VS Code session list: "now", "5m", "3h", "2d", "6w", "1y".</summary>
+        public static string TimeAgo(DateTime utc, DateTime nowUtc)
+        {
+            var d = nowUtc - utc;
+            if (d.TotalMinutes < 1) return "now";
+            if (d.TotalHours < 1) return (int)d.TotalMinutes + "m";
+            if (d.TotalDays < 1) return (int)d.TotalHours + "h";
+            if (d.TotalDays < 14) return (int)d.TotalDays + "d";
+            if (d.TotalDays < 365) return (int)(d.TotalDays / 7) + "w";
+            return (int)(d.TotalDays / 365) + "y";
+        }
+
         private static string Clean(string s)
         {
             s = string.Join(" ", s.Split(new[] { '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries)).Trim();
