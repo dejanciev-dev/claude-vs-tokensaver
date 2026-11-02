@@ -7,8 +7,9 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
-- Warning when the CLI answers with a different model than the one requested. The CLI can accept
-  `--model haiku` and still answer with Sonnet (seen in plan mode), which costs more than routing intended.
+- Warning when the CLI answers with a different model than the one requested. Verified with Claude Code
+  2.1.316: in acceptEdits mode (the default) Haiku answers as routed ($0.002 for a short turn); in plan
+  mode the CLI answers with Sonnet even when Haiku is requested ($0.042 for the same turn).
 - Live smoke test against the real CLI (`--live`, opt-in) and a parser regression test built from
   real Claude Code 2.1.316 output.
 - **Diff** button on Claude's file edits (Edit, MultiEdit, Write) opens Visual Studio's diff window.

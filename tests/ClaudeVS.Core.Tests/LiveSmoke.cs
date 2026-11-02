@@ -17,7 +17,7 @@ namespace ClaudeVS.Core.Tests
     /// </summary>
     internal static class LiveSmoke
     {
-        public static int Run(string rawLogPath)
+        public static int Run(string rawLogPath, PermissionModeChoice mode = PermissionModeChoice.Plan, int turns = 2)
         {
             string exe = ClaudeCliLocator.Resolve("");
             if (exe == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }
@@ -35,7 +35,7 @@ namespace ClaudeVS.Core.Tests
                 WorkingDirectory = dir,
                 Model = ModelChoice.Haiku,
                 Effort = EffortChoice.Low,
-                PermissionMode = PermissionModeChoice.Plan,
+                PermissionMode = mode,
                 AppendSystemPrompt = "Answer in as few words as possible.",
             });
             session.EventReceived += (s, e) => events.Add(e);
@@ -43,7 +43,8 @@ namespace ClaudeVS.Core.Tests
 
             try
             {
-                for (int turn = 1; turn <= 2; turn++)
+                Console.WriteLine($"mode: {mode.ToCli()}, turns: {turns}");
+                for (int turn = 1; turn <= turns; turn++)
                 {
                     Console.WriteLine($"Turn {turn}:");
                     string prompt = turn == 1 ? "Reply with exactly the word: PING" : "Reply with exactly the word: PONG";
