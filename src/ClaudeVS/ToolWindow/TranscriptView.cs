@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
 using System.Windows.Media;
 using ClaudeVS.Commands;
@@ -140,6 +142,118 @@ namespace ClaudeVS.ToolWindow
             _doc.Blocks.Add(new BlockUIContainer(expander) { Margin = new Thickness(0) });
             if (!string.IsNullOrEmpty(toolUseId)) _tools[toolUseId] = header;
             ScrollToEndIfNear();
+        }
+
+        /// <summary>
+        /// A card for Claude's AskUserQuestion: one group per question (radio buttons, or check boxes when several
+        /// answers are allowed), each option's description, an "Other" text field, and an Answer button.
+        /// <paramref name="onSubmit"/> gets question text → chosen labels; the card then locks.
+        /// </summary>
+        public void AppendQuestionCard(IReadOnlyList<Core.Cli.Question> questions, Action<Dictionary<string, IReadOnlyList<string>>> onSubmit)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            EndAnswer();
+            _plain = null;
+
+            var panel = new StackPanel();
+            panel.Children.Add(new TextBlock { Text = "❓ Claude has a question", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 4) });
+            var readers = new List<Func<KeyValuePair<string, IReadOnlyList<string>>>>();
+            string group = "q" + Guid.NewGuid().ToString("N");
+
+            for (int qi = 0; qi < questions.Count; qi++)
+            {
+                var q = questions[qi];
+                panel.Children.Add(new TextBlock
+                {
+                    Text = string.IsNullOrEmpty(q.Header) ? q.Text : q.Header + " — " + q.Text,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(0, qi == 0 ? 0 : 8, 0, 2),
+                });
+                var choices = new List<(ToggleButton Box, string Label)>();
+                foreach (var o in q.Options)
+                {
+                    var content = new TextBlock { TextWrapping = TextWrapping.Wrap };
+                    content.Inlines.Add(new Run(o.Label));
+                    if (!string.IsNullOrEmpty(o.Description)) content.Inlines.Add(new Run(" — " + o.Description) { FontStyle = FontStyles.Italic });
+                    var box = MakeChoice(q.MultiSelect, group + qi, content);
+                    choices.Add((box, o.Label));
+                    panel.Children.Add(box);
+                }
+                var otherText = new TextBox { MinWidth = 160, Margin = new Thickness(4, 0, 0, 0) };
+                var other = MakeChoice(q.MultiSelect, group + qi, new TextBlock { Text = "Other:", VerticalAlignment = VerticalAlignment.Center });
+                otherText.GotKeyboardFocus += (s, e) => other.IsChecked = true;
+                var otherRow = new StackPanel { Orientation = Orientation.Horizontal };
+                otherRow.Children.Add(other);
+                otherRow.Children.Add(otherText);
+                panel.Children.Add(otherRow);
+
+                string text = q.Text;
+                readers.Add(() =>
+                {
+                    var picked = choices.Where(c => c.Box.IsChecked == true).Select(c => c.Label).ToList();
+                    if (other.IsChecked == true && !string.IsNullOrWhiteSpace(otherText.Text)) picked.Add(otherText.Text.Trim());
+                    return new KeyValuePair<string, IReadOnlyList<string>>(text, picked);
+                });
+            }
+
+            var submit = SmallButton("Answer", "Send your answer to Claude");
+            submit.HorizontalAlignment = HorizontalAlignment.Left;
+            submit.Margin = new Thickness(0, 8, 0, 0);
+            submit.Click += (s, e) =>
+            {
+                var answers = readers.Select(r => r()).ToDictionary(kv => kv.Key, kv => kv.Value);
+                panel.IsEnabled = false;
+                submit.Content = "Answered";
+                onSubmit(answers);
+            };
+            panel.Children.Add(submit);
+            AddCard(panel);
+        }
+
+        /// <summary>
+        /// A card for ExitPlanMode: the plan rendered as Markdown, then Approve, or Request changes with feedback.
+        /// </summary>
+        public void AppendPlanCard(string planMarkdown, Action onApprove, Action<string> onRevise)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            EndAnswer();
+            _plain = null;
+
+            _doc.Blocks.Add(new Paragraph(new Run("📋 Plan for approval")) { FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 8, 0, 2) });
+            var section = new Section { BorderBrush = QuoteBar, BorderThickness = new Thickness(3, 0, 0, 0), Padding = new Thickness(8, 0, 0, 0) };
+            foreach (var md in MarkdownParser.Parse(planMarkdown)) section.Blocks.Add(Render(md));
+            _doc.Blocks.Add(section);
+
+            var panel = new StackPanel();
+            var feedback = new TextBox { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 40, ToolTip = "What should change? (only for Request changes)" };
+            var buttons = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 6, 0, 0) };
+            var approve = SmallButton("Approve", "Let Claude leave plan mode and start the work");
+            var revise = SmallButton("Request changes", "Send the feedback above and ask for a new plan");
+            approve.Margin = new Thickness(0);
+            buttons.Children.Add(approve);
+            buttons.Children.Add(revise);
+            panel.Children.Add(new TextBlock { Text = "Feedback (optional):", Opacity = 0.75, FontSize = 11 });
+            panel.Children.Add(feedback);
+            panel.Children.Add(buttons);
+            approve.Click += (s, e) => { panel.IsEnabled = false; approve.Content = "Approved"; onApprove(); };
+            revise.Click += (s, e) => { panel.IsEnabled = false; revise.Content = "Changes requested"; onRevise(feedback.Text); };
+            AddCard(panel);
+        }
+
+        private ToggleButton MakeChoice(bool multi, string group, object content)
+        {
+            ToggleButton box = multi ? (ToggleButton)new CheckBox() : new RadioButton { GroupName = group };
+            box.Content = content;
+            box.Margin = new Thickness(8, 2, 0, 2);
+            box.SetResourceReference(Control.ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
+            return box;
+        }
+
+        private void AddCard(UIElement content)
+        {
+            var border = new Border { Background = CodeBackground, CornerRadius = new CornerRadius(3), Padding = new Thickness(8, 6, 8, 8), Child = content };
+            _doc.Blocks.Add(new BlockUIContainer(border) { Margin = new Thickness(0, 4, 0, 4) });
+            Box.ScrollToEnd(); // the user has to act on it, so always bring it into view
         }
 
         /// <summary>Adds the result size (≈ chars / 4 tokens) to a tool row; marks failed calls.</summary>
