@@ -26,6 +26,7 @@ Claude Code CLI inside a tool window and is built around **spending fewer tokens
 | **Token-saving settings + hooks** | `Core/Setup/TokenSaverSetup.cs` | Merges into `.claude/settings.json`: `Read` deny rules for bin/obj/node_modules/packages/dist, `BASH_MAX_OUTPUT_LENGTH=15000`, and a PreToolUse hook (`.claude/hooks/trim-output.ps1`) that rewrites `dotnet build/test`, `msbuild`, `git log` and `npm test` into quiet forms before they run. |
 | **One persistent CLI process per chat** | `Core/Cli/ClaudeSession.cs` | Keeps the prompt cache warm between prompts. Model and effort are switched live (`set_model`, `apply_flag_settings`), with no restart. |
 | **Local usage log** | `Core/Tokens/UsageLog.cs` | One JSON line per turn (route decision, model used, tokens, cost, tokens avoided) in `%LocalAppData%\claude-vs-tokensaver\usage.jsonl`. Stays on your machine; used to tune routing and for the savings report. Turn off under Options → Diagnostics. |
+| **Savings report** | Tools → Claude Code → *Show Savings Report* | Actual cost vs. the same tokens at Opus prices, tokens saved by file references, cost per model, cache-hit rate by day. With *Log prompt preview* on (off by default), it also re-runs logged prompts through the current router and lists the ones that would now route differently. Prices are editable under Options → Pricing. |
 
 ## Layout
 

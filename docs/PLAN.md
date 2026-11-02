@@ -51,7 +51,7 @@ Tick the boxes as you go. Each phase ends with something you can run.
 
 ### 2.1 Model routing
 - [x] Log every route decision (prompt length, score, reason, chosen model) to the output pane
-- [ ] Collect ~50 real prompts from your own work; tune keyword lists and thresholds in `ModelRouter.cs`
+- [ ] Collect ~50 real prompts from your own work (turn on Options > Diagnostics > *Log prompt preview*); tune keyword lists and thresholds in `ModelRouter.cs`; check the effect with the router replay in *Show Savings Report*
 - [ ] Add those prompts as test cases in `tests/ClaudeVS.Core.Tests`
 - [ ] Verify `set_model` / `apply_flag_settings` take effect mid-session (check `init`/result `modelUsage`)
 - [x] Show the model actually used per turn in the footer
@@ -102,7 +102,7 @@ Tick the boxes as you go. Each phase ends with something you can run.
 
 - [ ] Session history picker: read `~/.claude/projects/<encoded-path>/*.jsonl`, list title/date/tokens, resume with `--resume`
 - [ ] Multiple chat tabs (one `ClaudeSession` each)
-- [ ] **Savings report** panel per session:
+- [x] **Savings report** (Tools > Claude Code > *Show Savings Report*, written to Output > Claude Code; a richer panel can come with Phase 3 UI):
   - tokens avoided by references (from `BuiltPrompt.CharsAvoided`)
   - turns routed to Haiku/Sonnet vs Opus and estimated $ saved
   - cache hit rate trend

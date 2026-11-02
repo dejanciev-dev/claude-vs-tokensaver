@@ -53,6 +53,12 @@
           <ButtonText>Attach Error List</ButtonText>
         </Strings>
       </Button>
+      <Button guid="guidClaudeVSCmdSet" id="cmdidShowSavingsReport" priority="0x0170" type="Button">
+        <Parent guid="guidClaudeVSCmdSet" id="ClaudeSubMenuGroup" />
+        <Strings>
+          <ButtonText>Show Savings Report</ButtonText>
+        </Strings>
+      </Button>
       <Button guid="guidClaudeVSCmdSet" id="cmdidGenerateClaudeMd" priority="0x0200" type="Button">
         <Parent guid="guidClaudeVSCmdSet" id="ClaudeSubMenuGroup" />
         <Strings>
@@ -100,6 +106,7 @@
       <IDSymbol name="cmdidInstallTokenSaver" value="0x0103" />
       <IDSymbol name="cmdidAttachCurrentFile" value="0x0104" />
       <IDSymbol name="cmdidAttachErrorList" value="0x0105" />
+      <IDSymbol name="cmdidShowSavingsReport" value="0x0106" />
     </GuidSymbol>
   </Symbols>
 </CommandTable>
