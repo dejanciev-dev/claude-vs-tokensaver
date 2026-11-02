@@ -51,8 +51,9 @@ namespace ClaudeVS.ToolWindow
 
         public TranscriptView()
         {
-            _doc = new FlowDocument { PagePadding = new Thickness(0), FontSize = 12.5 };
+            _doc = new FlowDocument { PagePadding = new Thickness(0, 4, 0, 12), FontSize = 13, LineHeight = 19 };
             _doc.SetResourceReference(FlowDocument.ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
+            _doc.SetResourceReference(FlowDocument.FontFamilyProperty, VsFonts.EnvironmentFontFamilyKey);
             Box = new RichTextBox
             {
                 Document = _doc,
@@ -67,19 +68,95 @@ namespace ClaudeVS.ToolWindow
 
         public RichTextBox Box { get; }
 
-        /// <summary>Status text (prompt echo, tool calls, footers). Ends any answer being streamed.</summary>
-        public void AppendPlain(string text)
+        /// <summary>
+        /// Quiet status text (footers, notes, hints) in a small muted font; <paramref name="error"/> shows it in the
+        /// error color. Ends any answer being streamed.
+        /// </summary>
+        public void AppendPlain(string text, bool error = false)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             EndAnswer();
             if (string.IsNullOrEmpty(text)) return;
+            // Leading/trailing blank lines were used for spacing in the old layout; margins do that now.
+            text = text.Replace("\r\n", "\n").Trim('\n');
+            if (text.Length == 0) return;
             if (_plain == null)
             {
-                _plain = new Paragraph { FontFamily = Mono, FontSize = 12, Margin = new Thickness(0) };
+                _plain = new Paragraph { FontSize = 11.5, LineHeight = 17, Margin = new Thickness(0, 4, 0, 4) };
+                _plain.SetResourceReference(TextElement.ForegroundProperty, EnvironmentColors.SystemGrayTextBrushKey);
                 _doc.Blocks.Add(_plain);
             }
-            _plain.Inlines.Add(new Run(text.Replace("\r\n", "\n")));
+            if (_plain.Inlines.Count > 0) _plain.Inlines.Add(new LineBreak());
+            var parts = text.Split('\n');
+            for (int i = 0; i < parts.Length; i++)
+            {
+                if (i > 0) _plain.Inlines.Add(new LineBreak());
+                var run = new Run(parts[i].Trim());
+                if (error) run.Foreground = ChatTheme.Error;
+                _plain.Inlines.Add(run);
+            }
             ScrollToEndIfNear();
+        }
+
+        /// <summary>Your prompt as a rounded bubble, with an optional muted line (route, attachments) under it.</summary>
+        public void AppendUserMessage(string text, string meta)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            EndAnswer();
+            _plain = null;
+
+            var body = new TextBox
+            {
+                Text = text ?? "",
+                IsReadOnly = true,
+                TextWrapping = TextWrapping.Wrap,
+                BorderThickness = new Thickness(0),
+                Background = Brushes.Transparent,
+                Padding = new Thickness(0),
+                FontSize = 13,
+            };
+            ChatTheme.UseEnvironmentFont(body);
+            body.FontSize = 13;
+            ChatTheme.Text(body);
+            ForwardMouseWheel(body);
+
+            var stack = new StackPanel();
+            stack.Children.Add(body);
+            if (!string.IsNullOrEmpty(meta))
+            {
+                var m = new TextBlock { Text = meta, FontSize = 11, Margin = new Thickness(0, 4, 0, 0), TextWrapping = TextWrapping.Wrap };
+                ChatTheme.Muted(m);
+                stack.Children.Add(m);
+            }
+            var bubble = new Border { CornerRadius = new CornerRadius(6), Padding = new Thickness(10, 7, 10, 7), Background = ChatTheme.Subtle, Child = stack };
+            bubble.SetResourceReference(Border.BorderBrushProperty, EnvironmentColors.ToolWindowBorderBrushKey);
+            bubble.BorderThickness = new Thickness(1);
+            _doc.Blocks.Add(new BlockUIContainer(bubble) { Margin = new Thickness(0, 14, 0, 6) });
+            Box.ScrollToEnd(); // you just sent it: always show it
+        }
+
+        /// <summary>The empty-chat welcome with a few tips.</summary>
+        public void AppendWelcome()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            EndAnswer();
+            _plain = null;
+            var title = new Paragraph(new Run("Claude Code")) { FontSize = 18, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 8, 0, 2) };
+            var sub = new Paragraph(new Run("Token saver edition · each prompt goes to the cheapest model that can handle it")) { FontSize = 12, Margin = new Thickness(0, 0, 0, 10) };
+            sub.SetResourceReference(TextElement.ForegroundProperty, EnvironmentColors.SystemGrayTextBrushKey);
+            var tips = new List(new ListItem(new Paragraph(new Run("Select code and press Ctrl+Alt+K, S to ask about it; only the selection is sent."))))
+            {
+                MarkerStyle = TextMarkerStyle.Disc,
+                FontSize = 12,
+                Margin = new Thickness(0, 0, 0, 8),
+                Padding = new Thickness(18, 0, 0, 0),
+            };
+            tips.ListItems.Add(new ListItem(new Paragraph(new Run("Type @ to attach a file as a reference, / for commands, Ctrl+↑ for earlier prompts."))));
+            tips.ListItems.Add(new ListItem(new Paragraph(new Run("The meter above shows context, cost and cache use; New starts a fresh, cheap context."))));
+            tips.SetResourceReference(TextElement.ForegroundProperty, EnvironmentColors.SystemGrayTextBrushKey);
+            _doc.Blocks.Add(title);
+            _doc.Blocks.Add(sub);
+            _doc.Blocks.Add(tips);
         }
 
         /// <summary>Streamed answer text; the current answer is re-rendered as Markdown.</summary>
@@ -110,7 +187,8 @@ namespace ClaudeVS.ToolWindow
             EndAnswer();
             _plain = null;
 
-            var header = new TextBlock { Text = "⚙ " + description, FontFamily = Mono, FontSize = 12, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
+            var header = new TextBlock { Text = "⚙  " + description, FontSize = 12, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
+            ChatTheme.Muted(header);
             object headerContent = header;
             if (onDiff != null)
             {
@@ -433,15 +511,14 @@ namespace ClaudeVS.ToolWindow
             return new BlockUIContainer(border) { Margin = new Thickness(0, 4, 0, 4) };
         }
 
-        private static Button SmallButton(string text, string tip) => new Button
+        private static Button SmallButton(string text, string tip)
         {
-            Content = text,
-            ToolTip = tip,
-            FontSize = 11,
-            Padding = new Thickness(6, 0, 6, 0),
-            Margin = new Thickness(4, 0, 0, 0),
-            MinWidth = 0,
-        };
+            var b = ChatTheme.TextButton(text, tip);
+            b.FontSize = 11;
+            b.Padding = new Thickness(7, 1, 7, 1);
+            b.Margin = new Thickness(4, 0, 0, 0);
+            return b;
+        }
 
         private static Brush Freeze(Brush b) { b.Freeze(); return b; }
     }
