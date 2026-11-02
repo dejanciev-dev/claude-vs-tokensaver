@@ -11,7 +11,7 @@ Tick the boxes as you go. Each phase ends with something you can run.
 |---|---|
 | `ClaudeVS.Core` (CLI session, parser, router, meter, context, setup) | ✅ Written, 16/16 tests pass |
 | `ClaudeVS` VSIX (package, tool window, commands, options) | ✅ Builds clean (0 warnings); not yet run in the experimental instance |
-| Real end-to-end run against `claude` CLI | ⚠️ Core verified against CLI 2.1.316 (`--live` smoke test): sessions, streaming, usage, cost, cache OK; requested Haiku was answered by Sonnet in plan mode. VS UI not run yet |
+| Real end-to-end run against `claude` CLI | ⚠️ Core verified against CLI 2.1.316 (`--live` smoke test): sessions, streaming, usage, cost, cache OK; Haiku routing works in acceptEdits ($0.002 vs $0.042 per turn on Sonnet); in plan mode the CLI answers with Sonnet even when Haiku is requested. VS UI not run yet |
 | Markdown transcript, diffs, history, question cards | ❌ Not started |
 
 ---

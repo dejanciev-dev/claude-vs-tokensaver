@@ -14,7 +14,7 @@ namespace ClaudeVS.Options
         [Category("CLI"), DisplayName("Claude executable path"), Description("Leave empty to find claude.exe / claude.cmd automatically.")]
         public string ClaudePath { get; set; } = "";
 
-        [Category("CLI"), DisplayName("Permission mode"), Description("AcceptEdits: file edits are applied, shell commands ask. Plan: read-only planning.")]
+        [Category("CLI"), DisplayName("Permission mode"), Description("AcceptEdits: file edits are applied, shell commands ask. Plan: read-only planning. Note: in Plan mode the CLI answered with Sonnet even when Haiku was requested (Claude Code 2.1.316), so auto-routing to Haiku saves nothing there.")]
         public PermissionModeChoice PermissionMode { get; set; } = PermissionModeChoice.AcceptEdits;
 
         [Category("CLI"), DisplayName("Extra arguments"), Description("Appended to the claude command line, e.g. --add-dir ..\\shared")]

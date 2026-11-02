@@ -15,7 +15,10 @@ namespace ClaudeVS.Core.Tests
     {
         private static int Main(string[] args)
         {
-            if (args.Length > 0 && args[0] == "--live") return LiveSmoke.Run(args.Length > 1 ? args[1] : null);
+            if (args.Length > 0 && args[0] == "--live")
+                return LiveSmoke.Run(args.Length > 1 ? args[1] : null,
+                    args.Length > 2 ? (PermissionModeChoice)Enum.Parse(typeof(PermissionModeChoice), args[2], true) : PermissionModeChoice.Plan,
+                    args.Length > 3 ? int.Parse(args[3]) : 2);
 
             var tests = typeof(Program).GetMethods(BindingFlags.NonPublic | BindingFlags.Static).Where(m => m.Name.StartsWith("Test_")).ToList();
             int failed = 0;
