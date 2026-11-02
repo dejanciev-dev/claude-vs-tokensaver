@@ -1,0 +1,433 @@
+using System;
+using System.Linq;
+using System.Text;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Threading;
+using ClaudeVS.Commands;
+using ClaudeVS.Core.Cli;
+using ClaudeVS.Core.Context;
+using ClaudeVS.Core.Tokens;
+using ClaudeVS.Options;
+using Microsoft.VisualStudio.PlatformUI;
+using Microsoft.VisualStudio.Shell;
+using Newtonsoft.Json.Linq;
+
+namespace ClaudeVS.ToolWindow
+{
+    /// <summary>
+    /// The chat panel. Built in code (no XAML) to keep the project simple; colors come from the
+    /// VS theme so it works in Light, Dark and Blue in both VS 2022 and VS 2026.
+    /// </summary>
+    public sealed class ClaudeChatControl : UserControl, IDisposable
+    {
+        private readonly ComboBox _model = new ComboBox { Width = 90, Margin = new Thickness(0, 0, 4, 0) };
+        private readonly ComboBox _effort = new ComboBox { Width = 80, Margin = new Thickness(0, 0, 4, 0) };
+        private readonly Button _new = Btn("New", "Start a new conversation (fresh context = cheapest)");
+        private readonly Button _compact = Btn("/compact", "Summarize the conversation to shrink context");
+        private readonly Button _stop = Btn("Stop", "Interrupt the current turn");
+        private readonly ProgressBar _ctxBar = new ProgressBar { Height = 6, Minimum = 0, Maximum = 100, Margin = new Thickness(0, 4, 0, 2) };
+        private readonly TextBlock _meter = new TextBlock { FontSize = 11, TextWrapping = TextWrapping.Wrap };
+        private readonly TextBlock _advice = new TextBlock { FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) };
+        private readonly Button _adviceAction = Btn("", "");
+        private readonly TextBox _transcript = new TextBox
+        {
+            IsReadOnly = true, TextWrapping = TextWrapping.Wrap, AcceptsReturn = true, BorderThickness = new Thickness(0),
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto, FontFamily = new FontFamily("Cascadia Mono, Consolas"), FontSize = 12,
+        };
+        private readonly StackPanel _permission = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 4, 0, 4), Visibility = Visibility.Collapsed };
+        private readonly TextBlock _permissionText = new TextBlock { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0), TextWrapping = TextWrapping.Wrap, MaxWidth = 400 };
+        private readonly TextBlock _route = new TextBlock { FontSize = 11, Opacity = 0.75, TextWrapping = TextWrapping.Wrap };
+        private readonly TextBlock _attachment = new TextBlock { FontSize = 11, Visibility = Visibility.Collapsed };
+        private readonly TextBox _prompt = new TextBox { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 54, MaxHeight = 200, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+        private readonly Button _send = Btn("Send", "Enter = send, Shift+Enter = new line");
+
+        private readonly StringBuilder _pendingText = new StringBuilder();
+        private readonly DispatcherTimer _flushTimer;
+        private readonly DispatcherTimer _routeTimer;
+        private readonly ModelRouter _router = new ModelRouter();
+
+        private ClaudeSession _session;
+        private TokenMeter _meterModel;
+        private EditorSelection _selection;
+        private string _sessionDir;
+        private ClaudeEvent _pendingPermission;
+        private string _adviceCommand;
+
+        public ClaudeChatControl()
+        {
+            foreach (var m in Enum.GetValues(typeof(ModelChoice))) _model.Items.Add(m);
+            foreach (var e in Enum.GetValues(typeof(EffortChoice))) _effort.Items.Add(e);
+            _model.SelectedItem = Options?.DefaultModel ?? ModelChoice.Auto;
+            _effort.SelectedItem = EffortChoice.Auto;
+            _model.ToolTip = "Auto picks Haiku / Sonnet / Opus per prompt";
+            _effort.ToolTip = "Thinking effort. Auto follows the model choice";
+
+            Content = BuildLayout();
+            this.SetResourceReference(BackgroundProperty, EnvironmentColors.ToolWindowBackgroundBrushKey);
+            this.SetResourceReference(ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
+            foreach (var tb in new Control[] { _transcript, _prompt })
+            {
+                tb.SetResourceReference(BackgroundProperty, EnvironmentColors.ToolWindowBackgroundBrushKey);
+                tb.SetResourceReference(ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
+            }
+
+            _send.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); SendFromBox(); };
+            _new.Click += (s, e) => NewChat();
+            _stop.Click += (s, e) => Fire(() => _session?.InterruptAsync());
+            _compact.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); SendText("/compact", routed: false); };
+            _adviceAction.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); if (_adviceCommand != null) SendText(_adviceCommand, routed: false); };
+            _prompt.PreviewKeyDown += OnPromptKeyDown;
+            _prompt.TextChanged += (s, e) => { _routeTimer.Stop(); _routeTimer.Start(); };
+            _model.SelectionChanged += (s, e) => UpdateRouteHint();
+
+            _flushTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(60), DispatcherPriority.Background, (s, e) => FlushText(), Dispatcher);
+            _routeTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(300), DispatcherPriority.Background, (s, e) => { _routeTimer.Stop(); UpdateRouteHint(); }, Dispatcher);
+            _flushTimer.Stop();
+            _routeTimer.Stop();
+
+            ResetMeter();
+            Append("Claude Code for Visual Studio — token saver edition.\nTip: select code and press Ctrl+Alt+K, S to ask about it; only the selection is sent.\n\n");
+        }
+
+        private static ClaudeOptionsPage Options => ClaudeVSPackage.Instance?.Options;
+
+        private static Microsoft.VisualStudio.Threading.JoinableTaskFactory Jtf => ClaudeVSPackage.Instance?.JoinableTaskFactory ?? ThreadHelper.JoinableTaskFactory;
+
+        // ---------------- Layout ----------------
+
+        private UIElement BuildLayout()
+        {
+            var toolbar = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 2) };
+            toolbar.Children.Add(_model);
+            toolbar.Children.Add(_effort);
+            toolbar.Children.Add(_new);
+            toolbar.Children.Add(_compact);
+            toolbar.Children.Add(_stop);
+
+            var adviceRow = new DockPanel();
+            _adviceAction.Visibility = Visibility.Collapsed;
+            _adviceAction.Margin = new Thickness(6, 2, 0, 0);
+            DockPanel.SetDock(_adviceAction, Dock.Right);
+            adviceRow.Children.Add(_adviceAction);
+            adviceRow.Children.Add(_advice);
+
+            var allow = Btn("Allow", "");
+            var deny = Btn("Deny", "");
+            allow.Click += (s, e) => AnswerPermission(true);
+            deny.Click += (s, e) => AnswerPermission(false);
+            _permission.Children.Add(_permissionText);
+            _permission.Children.Add(allow);
+            _permission.Children.Add(deny);
+
+            var top = new StackPanel { Margin = new Thickness(6) };
+            top.Children.Add(toolbar);
+            top.Children.Add(_ctxBar);
+            top.Children.Add(_meter);
+            top.Children.Add(adviceRow);
+
+            var promptRow = new DockPanel();
+            _send.Margin = new Thickness(4, 0, 0, 0);
+            _send.VerticalAlignment = VerticalAlignment.Bottom;
+            DockPanel.SetDock(_send, Dock.Right);
+            promptRow.Children.Add(_send);
+            promptRow.Children.Add(_prompt);
+
+            var bottom = new StackPanel { Margin = new Thickness(6) };
+            bottom.Children.Add(_permission);
+            bottom.Children.Add(_attachment);
+            bottom.Children.Add(_route);
+            bottom.Children.Add(promptRow);
+
+            var root = new DockPanel();
+            DockPanel.SetDock(top, Dock.Top);
+            DockPanel.SetDock(bottom, Dock.Bottom);
+            root.Children.Add(top);
+            root.Children.Add(bottom);
+            _transcript.Margin = new Thickness(6, 0, 6, 0);
+            root.Children.Add(_transcript);
+            return root;
+        }
+
+        private static Button Btn(string text, string tip) => new Button
+        {
+            Content = text, ToolTip = string.IsNullOrEmpty(tip) ? null : tip, Padding = new Thickness(8, 2, 8, 2), Margin = new Thickness(0, 0, 4, 0), MinWidth = 50,
+        };
+
+        // ---------------- Public API ----------------
+
+        public void AttachSelection(EditorSelection selection)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            _selection = selection;
+            if (selection == null) { _attachment.Visibility = Visibility.Collapsed; return; }
+            string rel = PromptContextBuilder.Relative(VsContext.GetSolutionDirectory(), selection.FilePath);
+            int lines = selection.EndLine - selection.StartLine + 1;
+            bool inline = lines <= (Options?.InlineMaxLines ?? 60);
+            _attachment.Text = $"📎 {rel}:L{selection.StartLine}-{selection.EndLine} ({lines} lines, {(inline ? "inlined" : "sent as reference")}) — Esc to remove";
+            _attachment.Visibility = Visibility.Visible;
+            _prompt.Focus();
+            UpdateRouteHint();
+        }
+
+        // ---------------- Sending ----------------
+
+        private void OnPromptKeyDown(object sender, KeyEventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (e.Key == Key.Enter && (Keyboard.Modifiers & ModifierKeys.Shift) == 0)
+            {
+                e.Handled = true;
+                SendFromBox();
+            }
+            else if (e.Key == Key.Escape && _selection != null)
+            {
+                e.Handled = true;
+                AttachSelection(null);
+            }
+        }
+
+        private void SendFromBox()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            string text = _prompt.Text.Trim();
+            if (text.Length == 0) return;
+            _prompt.Clear();
+            SendText(text, routed: !text.StartsWith("/"));
+        }
+
+        private void SendText(string userText, bool routed)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var opts = Options;
+            string dir = VsContext.GetSolutionDirectory() ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+            var built = routed
+                ? new PromptContextBuilder(opts?.ToContextSettings()).Build(userText, dir, _selection)
+                : new BuiltPrompt { Text = userText };
+            int attachedLines = _selection == null ? 0 : _selection.EndLine - _selection.StartLine + 1;
+            AttachSelection(null);
+
+            Fire(async () =>
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                EnsureSession(dir);
+
+                ModelChoice model = (ModelChoice)_model.SelectedItem;
+                EffortChoice effort = (EffortChoice)_effort.SelectedItem;
+                string routeNote = null;
+                if (routed && (model == ModelChoice.Auto || effort == EffortChoice.Auto))
+                {
+                    var d = Route(userText, attachedLines);
+                    if (model == ModelChoice.Auto) model = d.Model;
+                    if (effort == EffortChoice.Auto) effort = d.Effort;
+                    routeNote = $"auto → {model.ToCli()}/{effort.ToCli()}";
+                }
+
+                await _session.SetModelAsync(model);
+                await _session.SetEffortAsync(effort);
+
+                Append($"\n▶ You{(routeNote != null ? "  [" + routeNote + "]" : "")}\n{userText}\n");
+                if (built.CharsAvoided > 0) Append($"  (context: sent {built.InlinedLines} inline lines, avoided ~{built.CharsAvoided / 4:N0} tokens of file content)\n");
+                Append("\n◀ Claude\n");
+                await _session.SendPromptAsync(built.Text);
+            });
+        }
+
+        private RouteDecision Route(string prompt, int attachedLines)
+        {
+            _router.StickyContextTokens = Options?.StickyContextTokens ?? 30000;
+            return _router.Route(new RouteRequest
+            {
+                Prompt = prompt,
+                AttachedCodeLines = attachedLines,
+                CurrentModel = _session?.IsRunning == true ? _session.CurrentModel : ModelChoice.Auto,
+                ContextTokens = _meterModel?.ContextTokens ?? 0,
+            });
+        }
+
+        private void UpdateRouteHint()
+        {
+            if ((ModelChoice)_model.SelectedItem != ModelChoice.Auto || string.IsNullOrWhiteSpace(_prompt.Text) || _prompt.Text.TrimStart().StartsWith("/"))
+            {
+                _route.Text = "";
+                return;
+            }
+            int lines = _selection == null ? 0 : _selection.EndLine - _selection.StartLine + 1;
+            var d = Route(_prompt.Text, lines);
+            _route.Text = $"Auto: {d.Model.ToCli()} / {d.Effort.ToCli()} — {d.Reason}";
+        }
+
+        private void EnsureSession(string dir)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (_session != null && string.Equals(_sessionDir, dir, StringComparison.OrdinalIgnoreCase)) return;
+            if (_session != null) { Append("\n— Solution changed, starting a new conversation —\n"); DisposeSession(); }
+
+            var o = Options;
+            _session = new ClaudeSession(new ClaudeLaunchOptions
+            {
+                ClaudePath = o?.ClaudePath ?? "",
+                WorkingDirectory = dir,
+                PermissionMode = o?.PermissionMode ?? PermissionModeChoice.AcceptEdits,
+                AppendSystemPrompt = (o?.ConciseAnswers ?? true) ? ClaudeOptionsPage.BrevityPrompt : null,
+                ExtraArguments = o?.ExtraArguments ?? "",
+            });
+            _sessionDir = dir;
+            _session.EventReceived += OnEvent;
+            _session.Exited += (s, code) => OnUi(() => { FlushText(); if (code != 0 && code != 1) Append($"\n[claude exited with code {code}]\n"); });
+        }
+
+        private void NewChat()
+        {
+            DisposeSession();
+            ResetMeter();
+            _transcript.Clear();
+            Append("New conversation.\n");
+        }
+
+        // ---------------- Events from the CLI (background thread) ----------------
+
+        private void OnEvent(object sender, ClaudeEvent ev)
+        {
+            if (ev.Kind == ClaudeEventKind.TextDelta || ev.Kind == ClaudeEventKind.AssistantText)
+            {
+                lock (_pendingText) _pendingText.Append(ev.Text);
+                OnUi(() => _flushTimer.Start());
+                return;
+            }
+
+            OnUi(() =>
+            {
+                _meterModel?.Observe(ev);
+                switch (ev.Kind)
+                {
+                    case ClaudeEventKind.SessionStarted:
+                        break;
+                    case ClaudeEventKind.ToolUse:
+                        FlushText();
+                        Append($"\n  ⚙ {ev.Text}\n");
+                        break;
+                    case ClaudeEventKind.PermissionRequest:
+                        FlushText();
+                        _pendingPermission = ev;
+                        _permissionText.Text = "Allow " + ev.Text + "?";
+                        _permission.Visibility = Visibility.Visible;
+                        break;
+                    case ClaudeEventKind.Compacted:
+                        Append($"\n  ✂ Compacted ({TokenMeter.Format(ev.PreCompactTokens)} tokens before)\n");
+                        break;
+                    case ClaudeEventKind.TurnCompleted:
+                        FlushText();
+                        if (ev.IsError && !string.IsNullOrEmpty(ev.Text)) Append("\n[error] " + ev.Text + "\n");
+                        Append($"\n  ✓ {ev.DurationMs / 1000.0:0.0}s · {TokenMeter.Format(ev.Usage.Total)} tok · ${_meterModel?.LastTurnCostUsd:0.000}\n");
+                        break;
+                    case ClaudeEventKind.Error:
+                        Append("\n[claude] " + ev.Text + "\n");
+                        break;
+                }
+            });
+        }
+
+        private void OnMeterChanged(object sender, EventArgs e)
+        {
+            var m = _meterModel;
+            if (m == null) return;
+            _ctxBar.Value = Math.Min(100, m.ContextPercent);
+            long window = m.ContextWindow > 0 ? m.ContextWindow : 200_000;
+            _meter.Text = $"Context {m.ContextPercent:0}% ({TokenMeter.Format(m.ContextTokens)}/{TokenMeter.Format(window)})  ·  "
+                        + $"Session {TokenMeter.Format(m.SessionTotal.Total)} tok, ${m.SessionCostUsd:0.00}  ·  Cache {m.CacheHitPercent:0}%  ·  Model {(_session?.CurrentModel.ToCli() ?? "-")}";
+
+            var advice = m.GetAdvice().OrderByDescending(a => a.Level).FirstOrDefault();
+            _advice.Text = advice == null ? "" : (advice.Level == AdviceLevel.Critical ? "⚠ " : "💡 ") + advice.Message;
+            if (advice?.Level == AdviceLevel.Critical) _advice.Foreground = Brushes.OrangeRed;
+            else _advice.ClearValue(TextBlock.ForegroundProperty);
+            _adviceCommand = advice?.SuggestedCommand;
+            _adviceAction.Content = _adviceCommand;
+            _adviceAction.Visibility = _adviceCommand == null ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        private void AnswerPermission(bool allow)
+        {
+            var req = _pendingPermission;
+            _pendingPermission = null;
+            _permission.Visibility = Visibility.Collapsed;
+            if (req == null || _session == null) return;
+            Append(allow ? "  ✔ allowed\n" : "  ✖ denied\n");
+            Fire(() => _session.RespondToPermissionAsync(req.RequestId, req.ToolInput ?? new JObject(), allow));
+        }
+
+        // ---------------- Helpers ----------------
+
+        private void ResetMeter()
+        {
+            if (_meterModel != null) _meterModel.Changed -= OnMeterChanged;
+            _meterModel = new TokenMeter(Options?.ToMeterSettings());
+            _meterModel.Changed += OnMeterChanged;
+            OnMeterChanged(this, EventArgs.Empty);
+        }
+
+        private void FlushText()
+        {
+            string chunk;
+            lock (_pendingText)
+            {
+                chunk = _pendingText.ToString();
+                _pendingText.Clear();
+            }
+            if (chunk.Length > 0) Append(chunk);
+            _flushTimer.Stop();
+        }
+
+        private void Append(string text)
+        {
+            _transcript.AppendText(text);
+            _transcript.ScrollToEnd();
+        }
+
+        private void OnUi(Action action)
+        {
+            Jtf.RunAsync(async () =>
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                action();
+            }).FileAndForget("ClaudeVS/ChatControl/OnUi");
+        }
+
+        private void Fire(Func<System.Threading.Tasks.Task> action)
+        {
+            Jtf.RunAsync(async () =>
+            {
+                try
+                {
+                    var t = action();
+                    if (t != null) await t;
+                }
+                catch (Exception ex)
+                {
+                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                    Append("\n[error] " + ex.Message + "\n");
+                }
+            }).FileAndForget("ClaudeVS/ChatControl/Fire");
+        }
+
+        private void DisposeSession()
+        {
+            if (_session == null) return;
+            _session.EventReceived -= OnEvent;
+            _session.Dispose();
+            _session = null;
+            _sessionDir = null;
+            _permission.Visibility = Visibility.Collapsed;
+        }
+
+        public void Dispose()
+        {
+            _flushTimer.Stop();
+            _routeTimer.Stop();
+            DisposeSession();
+        }
+    }
+}
