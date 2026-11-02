@@ -21,7 +21,9 @@ To check the Core code against the real CLI (costs a few cents, never runs in CI
 dotnet run --project tests/ClaudeVS.Core.Tests -- --live [path-for-raw-output.txt]
 ```
 
-It runs two short turns in read-only plan mode in an empty temp folder. If a new CLI version changes the
+It runs two short turns in read-only plan mode in an empty temp folder. To capture and answer permission
+requests (questions, plan approval), use `--live-ask <rawPath> <PermissionMode> "<prompt>"`. Note that in plan
+mode the CLI also saves the plan under `~/.claude/plans`. If a new CLI version changes the
 event format, add a **sanitized** capture under `tests/ClaudeVS.Core.Tests/Fixtures`, with personal data removed
 (init details, rate-limit info, IDs). See `cli-2.1.316-turn.jsonl` for an example.
 

@@ -83,6 +83,69 @@ namespace ClaudeVS.Core.Tests
             return failures.Count == 0 ? 0 : 1;
         }
 
+        /// <summary>
+        /// One turn that is expected to raise permission requests (AskUserQuestion, ExitPlanMode). Prints each
+        /// request, answers it (first option of every question; plans approved) and prints the final answer, so the
+        /// request shape and the accepted response format can be checked against the real CLI.
+        /// `--live-ask rawPath mode "prompt"`
+        /// </summary>
+        public static int RunInteractive(string rawLogPath, PermissionModeChoice mode, string prompt)
+        {
+            string exe = ClaudeCliLocator.Resolve("");
+            if (exe == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-live-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            var raw = new StringBuilder();
+            var session = new ClaudeSession(new ClaudeLaunchOptions { WorkingDirectory = dir, Model = ModelChoice.Haiku, Effort = EffortChoice.Low, PermissionMode = mode });
+            var events = new BlockingCollection<ClaudeEvent>();
+            session.EventReceived += (s, e) => events.Add(e);
+            session.RawLine += (s, e) => { lock (raw) raw.Append(e.Direction).Append('\t').Append(e.Line).Append('\n'); };
+            int requests = 0;
+            try
+            {
+                Console.WriteLine($"mode: {mode.ToCli()}");
+                session.SendPromptAsync(prompt).GetAwaiter().GetResult();
+                var text = new StringBuilder();
+                var deadline = DateTime.UtcNow.AddSeconds(180);
+                while (DateTime.UtcNow < deadline)
+                {
+                    if (!events.TryTake(out var e, TimeSpan.FromMilliseconds(200))) continue;
+                    if (e.Kind == ClaudeEventKind.TextDelta) text.Append(e.Text);
+                    if (e.Kind == ClaudeEventKind.ToolUse) Console.WriteLine($"  tool_use: {e.ToolName}");
+                    if (e.Kind == ClaudeEventKind.PermissionRequest)
+                    {
+                        requests++;
+                        Console.WriteLine($"  permission request: {e.ToolName} (request {e.RequestId})");
+                        Console.WriteLine("    input: " + e.ToolInput?.ToString(Newtonsoft.Json.Formatting.None));
+                        var answer = (Newtonsoft.Json.Linq.JObject)(e.ToolInput?.DeepClone() ?? new Newtonsoft.Json.Linq.JObject());
+                        if (e.ToolName == "AskUserQuestion" && answer["questions"] is Newtonsoft.Json.Linq.JArray qs)
+                        {
+                            var answers = new Newtonsoft.Json.Linq.JObject();
+                            foreach (var q in qs.OfType<Newtonsoft.Json.Linq.JObject>())
+                                answers[(string)q["question"]] = (string)q["options"]?.First?["label"];
+                            answer["answers"] = answers;
+                            Console.WriteLine("    answering: " + answers.ToString(Newtonsoft.Json.Formatting.None));
+                        }
+                        session.RespondToPermissionAsync(e.RequestId, answer, allow: true).GetAwaiter().GetResult();
+                    }
+                    if (e.Kind == ClaudeEventKind.TurnCompleted)
+                    {
+                        Console.WriteLine($"  turn completed: error={e.IsError}, cost=${e.TotalCostUsd:0.0000}");
+                        break;
+                    }
+                }
+                Console.WriteLine("  final text: \"" + text.ToString().Trim() + "\"");
+            }
+            finally
+            {
+                session.Dispose();
+                if (!string.IsNullOrEmpty(rawLogPath)) File.WriteAllText(rawLogPath, raw.ToString());
+                try { Directory.Delete(dir, true); } catch { }
+            }
+            Console.WriteLine($"permission requests: {requests}");
+            return 0;
+        }
+
         /// <summary>Events until a TurnCompleted (or timeout), skipping leftovers from before.</summary>
         private static List<ClaudeEvent> Collect(BlockingCollection<ClaudeEvent> events, TimeSpan timeout)
         {
