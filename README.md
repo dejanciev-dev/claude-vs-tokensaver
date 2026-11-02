@@ -19,11 +19,13 @@ Claude Code CLI inside a tool window and is built around **spending fewer tokens
 | **Auto model + effort routing** | `Core/Tokens/ModelRouter.cs` | A local classifier (no API call) sends simple prompts to Haiku/low, normal work to Sonnet, and only hard ones (refactor, deadlock, architecture…) to Opus. The live hint under the prompt shows the choice and the reason. |
 | **Cache-aware routing** | `ModelRouter.StickyContextTokens` | The prompt cache is per model. Once the conversation is large (default 30k), routing never downgrades, because re-caching the whole context costs more than the cheaper model saves. |
 | **Smart selection context** | `Core/Context/PromptContextBuilder.cs` | Small selections are inlined and dedented. Large ones are sent as `path:L10-200` references so Claude reads only that range. Whole files are never pasted. |
+| **Attach file / errors** | Tools → Claude Code, `Ctrl+Alt+K, F` / `Ctrl+Alt+K, E` | *Attach Current File* sends only its path. *Attach Error List* sends errors only (no warnings), one `file:line` + message line each, capped at 20 and de-duplicated. |
 | **Live token meter** | `Core/Tokens/TokenMeter.cs` | Shows context fill %, session tokens, cost and cache-hit rate. Suggests `/compact` at 60% and urges it at 85%. Flags huge tool outputs. |
 | **Concise-answer prompt** | Options → *Concise answers* | A one-line `--append-system-prompt`. Output tokens cost about 5× input tokens. |
 | **Lean CLAUDE.md generator** | `Core/Setup/ClaudeMdGenerator.cs` | Writes a short CLAUDE.md (projects, build/test commands, folders to skip) and shows its per-request token cost. It never overwrites yours: if one exists, it writes `CLAUDE.generated.md` for you to compare. |
 | **Token-saving settings + hooks** | `Core/Setup/TokenSaverSetup.cs` | Merges into `.claude/settings.json`: `Read` deny rules for bin/obj/node_modules/packages/dist, `BASH_MAX_OUTPUT_LENGTH=15000`, and a PreToolUse hook (`.claude/hooks/trim-output.ps1`) that rewrites `dotnet build/test`, `msbuild`, `git log` and `npm test` into quiet forms before they run. |
 | **One persistent CLI process per chat** | `Core/Cli/ClaudeSession.cs` | Keeps the prompt cache warm between prompts. Model and effort are switched live (`set_model`, `apply_flag_settings`), with no restart. |
+| **Local usage log** | `Core/Tokens/UsageLog.cs` | One JSON line per turn (route decision, model used, tokens, cost, tokens avoided) in `%LocalAppData%\claude-vs-tokensaver\usage.jsonl`. Stays on your machine; used to tune routing and for the savings report. Turn off under Options → Diagnostics. |
 
 ## Layout
 

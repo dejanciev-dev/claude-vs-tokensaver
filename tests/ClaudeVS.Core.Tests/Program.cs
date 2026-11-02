@@ -55,6 +55,53 @@ namespace ClaudeVS.Core.Tests
             Eq("\"C:\\dir with space\\\\\"", ClaudeArgsBuilder.Quote("C:\\dir with space\\"));
         }
 
+        private static void Test_Context_ErrorsAndFileReference()
+        {
+            var errors = new List<BuildError>();
+            for (int i = 1; i <= 25; i++) errors.Add(new BuildError { FilePath = @"C:\sln\src\A.cs", Line = i, Code = "CS0103", Message = $"The name 'x{i}' does not exist" });
+            errors.Add(new BuildError { FilePath = @"C:\sln\src\A.cs", Line = 1, Code = "CS0103", Message = "The name 'x1' does not exist" }); // duplicate
+            errors.Add(new BuildError { Message = "multi\nline" });
+
+            var b = new PromptContextBuilder(new ContextSettings { MaxErrors = 20 })
+                .Build("fix these", @"C:\sln", extraFiles: new[] { @"C:\sln\src\B.cs" }, errors: errors);
+            Eq(20, b.AttachedErrors, "capped");
+            True(b.Text.Contains("Build errors (first 20 of 26):"), b.Text);
+            True(b.Text.Contains("- `src/A.cs:L3` CS0103: The name 'x3' does not exist"), b.Text);
+            True(b.Text.Contains("Relevant files: `src/B.cs`"), b.Text);
+            True(b.Text.TrimEnd().EndsWith("fix these"), "prompt last");
+
+            Eq("", PromptContextBuilder.FormatErrors(null, null, 20, out int n), "no errors");
+            Eq(0, n, "count");
+            True(PromptContextBuilder.FormatErrors(new[] { new BuildError { Message = "multi\nline" } }, null, 20, out _).Contains("- multi line\n"), "one line per error");
+        }
+
+        // ---------- Usage log ----------
+        private static void Test_UsageLog_RoundTripAndSummary()
+        {
+            string path = Path.Combine(Path.GetTempPath(), "cvs-usage-" + Guid.NewGuid().ToString("N") + ".jsonl");
+            try
+            {
+                var log = new UsageLog(path);
+                log.Append(new UsageRecord { Solution = @"C:\a", ModelUsed = "haiku", InputTokens = 100, CacheReadTokens = 900, OutputTokens = 50, CostUsd = 0.01, CharsAvoided = 4000, Routed = true, RouteScore = -2 });
+                log.Append(new UsageRecord { Solution = @"C:\a", ModelUsed = "opus", InputTokens = 1000, OutputTokens = 200, CostUsd = 0.10 });
+                log.Append(new UsageRecord { Solution = @"C:\b", ModelUsed = "sonnet", InputTokens = 10, CostUsd = 1 });
+                File.AppendAllText(path, "{ partial line\n");
+
+                var all = log.ReadAll();
+                Eq(3, all.Count, "malformed line skipped");
+                Eq(-2.0, all[0].RouteScore, "route score round-trips");
+
+                var a = UsageSummary.From(all, @"c:\A");
+                Eq(2, a.Turns, "turns for solution a (case-insensitive)");
+                True(Math.Abs(a.CostUsd - 0.11) < 1e-9, "cost " + a.CostUsd);
+                Eq(1000L, a.TokensAvoided, "chars/4");
+                Eq(1, a.TurnsByModel["haiku"], "by model");
+                True(Math.Abs(a.CacheHitPercent - 45) < 0.01, "cache % " + a.CacheHitPercent); // 900 / 2000
+                Eq(3, UsageSummary.From(all).Turns, "all solutions");
+            }
+            finally { File.Delete(path); }
+        }
+
         // ---------- Error hints ----------
         private static void Test_ErrorHints_KnownAndUnknown()
         {

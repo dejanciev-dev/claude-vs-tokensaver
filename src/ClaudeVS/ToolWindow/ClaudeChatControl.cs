@@ -58,6 +58,10 @@ namespace ClaudeVS.ToolWindow
         private string _adviceCommand;
         private string _turnModel;
         private string _lastHint;
+        private readonly System.Collections.Generic.List<string> _attachedFiles = new System.Collections.Generic.List<string>();
+        private System.Collections.Generic.IReadOnlyList<BuildError> _attachedErrors;
+        private UsageRecord _pendingUsage;
+        private static readonly UsageLog Usage = new UsageLog(UsageLog.DefaultPath);
 
         public ClaudeChatControl()
         {
@@ -165,13 +169,59 @@ namespace ClaudeVS.ToolWindow
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             _selection = selection;
-            if (selection == null) { _attachment.Visibility = Visibility.Collapsed; return; }
-            string rel = PromptContextBuilder.Relative(VsContext.GetSolutionDirectory(), selection.FilePath);
-            int lines = selection.EndLine - selection.StartLine + 1;
-            bool inline = lines <= (Options?.InlineMaxLines ?? 60);
-            _attachment.Text = $"📎 {rel}:L{selection.StartLine}-{selection.EndLine} ({lines} lines, {(inline ? "inlined" : "sent as reference")}) — Esc to remove";
+            UpdateAttachments(focus: selection != null);
+        }
+
+        /// <summary>Attach a file as a path reference only (Claude reads what it needs).</summary>
+        public void AttachFile(string path)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (string.IsNullOrEmpty(path)) return;
+            if (!_attachedFiles.Contains(path, StringComparer.OrdinalIgnoreCase)) _attachedFiles.Add(path);
+            UpdateAttachments(focus: true);
+        }
+
+        /// <summary>Attach error-list entries (one line each, capped when the prompt is built).</summary>
+        public void AttachErrors(System.Collections.Generic.IReadOnlyList<BuildError> errors)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            _attachedErrors = errors != null && errors.Count > 0 ? errors : null;
+            UpdateAttachments(focus: _attachedErrors != null);
+        }
+
+        private void ClearAttachments()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            _selection = null;
+            _attachedFiles.Clear();
+            _attachedErrors = null;
+            UpdateAttachments(focus: false);
+        }
+
+        private bool HasAttachments => _selection != null || _attachedFiles.Count > 0 || _attachedErrors != null;
+
+        private void UpdateAttachments(bool focus)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var parts = new System.Collections.Generic.List<string>();
+            string dir = VsContext.GetSolutionDirectory();
+            if (_selection != null)
+            {
+                int lines = _selection.EndLine - _selection.StartLine + 1;
+                bool inline = lines <= (Options?.InlineMaxLines ?? 60);
+                parts.Add($"{PromptContextBuilder.Relative(dir, _selection.FilePath)}:L{_selection.StartLine}-{_selection.EndLine} ({lines} lines, {(inline ? "inlined" : "sent as reference")})");
+            }
+            foreach (var f in _attachedFiles) parts.Add(PromptContextBuilder.Relative(dir, f) + " (reference)");
+            if (_attachedErrors != null)
+            {
+                int max = Options?.MaxAttachedErrors ?? 20;
+                parts.Add(_attachedErrors.Count > max ? $"{max} of {_attachedErrors.Count} errors" : $"{_attachedErrors.Count} error(s)");
+            }
+
+            if (parts.Count == 0) { _attachment.Visibility = Visibility.Collapsed; UpdateRouteHint(); return; }
+            _attachment.Text = "📎 " + string.Join(" · ", parts) + " — Esc to remove";
             _attachment.Visibility = Visibility.Visible;
-            _prompt.Focus();
+            if (focus) _prompt.Focus();
             UpdateRouteHint();
         }
 
@@ -185,10 +235,10 @@ namespace ClaudeVS.ToolWindow
                 e.Handled = true;
                 SendFromBox();
             }
-            else if (e.Key == Key.Escape && _selection != null)
+            else if (e.Key == Key.Escape && HasAttachments)
             {
                 e.Handled = true;
-                AttachSelection(null);
+                ClearAttachments();
             }
         }
 
@@ -208,10 +258,11 @@ namespace ClaudeVS.ToolWindow
             string dir = VsContext.GetSolutionDirectory() ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
             var built = routed
-                ? new PromptContextBuilder(opts?.ToContextSettings()).Build(userText, dir, _selection)
+                ? new PromptContextBuilder(opts?.ToContextSettings()).Build(userText, dir, _selection, _attachedFiles, _attachedErrors)
                 : new BuiltPrompt { Text = userText };
             int attachedLines = _selection == null ? 0 : _selection.EndLine - _selection.StartLine + 1;
-            AttachSelection(null);
+            int attachedFiles = routed ? _attachedFiles.Count : 0;
+            ClearAttachments();
 
             Fire(async () =>
             {
@@ -221,32 +272,47 @@ namespace ClaudeVS.ToolWindow
                 ModelChoice model = (ModelChoice)_model.SelectedItem;
                 EffortChoice effort = (EffortChoice)_effort.SelectedItem;
                 string routeNote = null;
+                RouteDecision decision = null;
                 if (routed && (model == ModelChoice.Auto || effort == EffortChoice.Auto))
                 {
-                    var d = Route(userText, attachedLines);
-                    if (model == ModelChoice.Auto) model = d.Model;
-                    if (effort == EffortChoice.Auto) effort = d.Effort;
+                    decision = Route(userText, attachedLines, attachedFiles);
+                    if (model == ModelChoice.Auto) model = decision.Model;
+                    if (effort == EffortChoice.Auto) effort = decision.Effort;
                     routeNote = $"auto → {model.ToCli()}/{effort.ToCli()}";
-                    ClaudeOutputPane.WriteLine($"Route: {d} | prompt {userText.Length} chars, {attachedLines} attached lines, context {_meterModel?.ContextTokens ?? 0} tok → using {model.ToCli()}/{effort.ToCli()}");
+                    ClaudeOutputPane.WriteLine($"Route: {decision} | prompt {userText.Length} chars, {attachedLines} attached lines, {attachedFiles} files, context {_meterModel?.ContextTokens ?? 0} tok → using {model.ToCli()}/{effort.ToCli()}");
                 }
+
+                _pendingUsage = new UsageRecord
+                {
+                    Solution = dir,
+                    Routed = decision != null,
+                    RouteModel = decision != null ? model.ToCli() : null,
+                    RouteEffort = decision != null ? effort.ToCli() : null,
+                    RouteScore = decision?.Score,
+                    RouteReason = decision?.Reason,
+                    PromptChars = userText.Length,
+                    CharsAvoided = built.CharsAvoided,
+                };
 
                 await _session.SetModelAsync(model);
                 await _session.SetEffortAsync(effort);
 
                 Append($"\n▶ You{(routeNote != null ? "  [" + routeNote + "]" : "")}\n{userText}\n");
                 if (built.CharsAvoided > 0) Append($"  (context: sent {built.InlinedLines} inline lines, avoided ~{built.CharsAvoided / 4:N0} tokens of file content)\n");
+                if (built.AttachedErrors > 0) Append($"  (attached {built.AttachedErrors} error(s) from the Error List)\n");
                 Append("\n◀ Claude\n");
                 await _session.SendPromptAsync(built.Text);
             });
         }
 
-        private RouteDecision Route(string prompt, int attachedLines)
+        private RouteDecision Route(string prompt, int attachedLines, int attachedFiles)
         {
             _router.StickyContextTokens = Options?.StickyContextTokens ?? 30000;
             return _router.Route(new RouteRequest
             {
                 Prompt = prompt,
                 AttachedCodeLines = attachedLines,
+                AttachedFiles = attachedFiles,
                 CurrentModel = _session?.IsRunning == true ? _session.CurrentModel : ModelChoice.Auto,
                 ContextTokens = _meterModel?.ContextTokens ?? 0,
             });
@@ -260,7 +326,7 @@ namespace ClaudeVS.ToolWindow
                 return;
             }
             int lines = _selection == null ? 0 : _selection.EndLine - _selection.StartLine + 1;
-            var d = Route(_prompt.Text, lines);
+            var d = Route(_prompt.Text, lines, _attachedFiles.Count);
             _route.Text = $"Auto: {d.Model.ToCli()} / {d.Effort.ToCli()} — {d.Reason}";
         }
 
@@ -288,6 +354,7 @@ namespace ClaudeVS.ToolWindow
                 OnUi(() => { FlushText(); if (code != 0 && code != 1) Append($"\n[claude exited with code {code}]\n"); });
             };
             ClaudeOutputPane.WriteLine($"Starting claude in {dir}");
+            LogUsageSummary(dir);
         }
 
         private void NewChat()
@@ -340,6 +407,7 @@ namespace ClaudeVS.ToolWindow
                         FlushText();
                         if (ev.IsError && !string.IsNullOrEmpty(ev.Text)) AppendError("[error] ", ev.Text);
                         string used = _turnModel != null ? " · " + _turnModel : "";
+                        RecordUsage(ev, _turnModel);
                         _turnModel = null;
                         Append($"\n  ✓ {ev.DurationMs / 1000.0:0.0}s · {TokenMeter.Format(ev.Usage.Total)} tok · ${_meterModel?.LastTurnCostUsd:0.000}{used}\n");
                         break;
@@ -347,6 +415,38 @@ namespace ClaudeVS.ToolWindow
                         AppendError("[claude] ", ev.Text);
                         break;
                 }
+            });
+        }
+
+        /// <summary>Completes the record started in SendText and appends it to the local usage log (off the UI thread).</summary>
+        private void RecordUsage(ClaudeEvent ev, string modelUsed)
+        {
+            var rec = _pendingUsage;
+            _pendingUsage = null;
+            if (rec == null || Options?.KeepUsageLog == false) return;
+            rec.Timestamp = DateTime.UtcNow;
+            rec.ModelUsed = modelUsed;
+            rec.InputTokens = ev.Usage.Input;
+            rec.OutputTokens = ev.Usage.Output;
+            rec.CacheReadTokens = ev.Usage.CacheRead;
+            rec.CacheWriteTokens = ev.Usage.CacheCreation;
+            rec.CostUsd = _meterModel?.LastTurnCostUsd ?? 0;
+            rec.DurationMs = ev.DurationMs;
+            rec.IsError = ev.IsError;
+            _ = System.Threading.Tasks.Task.Run(() =>
+            {
+                try { Usage.Append(rec); }
+                catch (Exception ex) { ClaudeOutputPane.WriteLine("Could not write usage log: " + ex.Message); }
+            });
+        }
+
+        private static void LogUsageSummary(string dir)
+        {
+            if (Options?.KeepUsageLog == false) return;
+            _ = System.Threading.Tasks.Task.Run(() =>
+            {
+                try { ClaudeOutputPane.WriteLine($"Usage for this solution: {UsageSummary.From(Usage.ReadAll(), dir)} (log: {Usage.Path})"); }
+                catch (Exception ex) { ClaudeOutputPane.WriteLine("Could not read usage log: " + ex.Message); }
             });
         }
 

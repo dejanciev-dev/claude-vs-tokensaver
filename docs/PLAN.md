@@ -60,12 +60,12 @@ Tick the boxes as you go. Each phase ends with something you can run.
 - [ ] Confirm context % matches the CLI's own `/context` output (±2%)
 - [ ] Confirm cost resets correctly after interrupt/relaunch
 - [ ] Make the `/compact` advice button work end-to-end; meter drops after `compact_boundary`
-- [ ] Persist session totals per solution (`%LocalAppData%\claude-vs-tokensaver\stats.json`)
+- [x] Persist usage per solution: one line per turn in `%LocalAppData%\claude-vs-tokensaver\usage.jsonl` (`UsageLog`); summary logged to the Output pane on session start
 
 ### 2.3 Smart context
 - [ ] Test **Ask Claude About Selection** for: small selection, 500-line selection, whole-file selection, unsaved file
-- [ ] Add "Attach current file as reference" (path only, no content)
-- [ ] Add "Attach error list" — only errors, file:line + message, max 20
+- [x] Add "Attach current file as reference" (path only, no content) — Ctrl+Alt+K, F
+- [x] Add "Attach error list" — only errors, file:line + message, max 20 — Ctrl+Alt+K, E
 
 ### 2.4 Setup commands
 - [ ] Run **Install Token-Saving Settings and Hooks** on a real solution

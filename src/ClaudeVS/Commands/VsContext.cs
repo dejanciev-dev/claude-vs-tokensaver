@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using ClaudeVS.Core.Context;
 using EnvDTE;
 using EnvDTE80;
@@ -54,6 +56,53 @@ namespace ClaudeVS.Commands
                 };
             }
             catch (Exception) { return null; }
+        }
+
+        /// <summary>Full path of the active document, or null.</summary>
+        public static string GetActiveDocumentPath()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            try
+            {
+                string path = Dte?.ActiveDocument?.FullName;
+                return string.IsNullOrEmpty(path) ? null : path;
+            }
+            catch (Exception) { return null; }
+        }
+
+        /// <summary>Errors (not warnings or messages) currently in the Error List.</summary>
+        public static List<BuildError> GetErrors()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var list = new List<BuildError>();
+            try
+            {
+                ErrorItems items = Dte?.ToolWindows?.ErrorList?.ErrorItems;
+                if (items == null) return list;
+                for (int i = 1; i <= items.Count; i++) // COM collection, 1-based
+                {
+                    ErrorItem item = items.Item(i);
+                    if (item.ErrorLevel != vsBuildErrorLevel.vsBuildErrorLevelHigh) continue;
+                    var (code, message) = SplitCode(item.Description);
+                    list.Add(new BuildError { FilePath = item.FileName, Line = item.Line, Code = code, Message = message });
+                }
+            }
+            catch (Exception) { }
+            return list;
+        }
+
+        /// <summary>DTE has no error-code property; descriptions from some tools start with "CS0103: ...".</summary>
+        private static (string code, string message) SplitCode(string description)
+        {
+            string d = description ?? "";
+            int colon = d.IndexOf(':');
+            if (colon > 1 && colon <= 10)
+            {
+                string head = d.Substring(0, colon);
+                if (head.All(char.IsLetterOrDigit) && head.Any(char.IsDigit) && head.Any(char.IsLetter))
+                    return (head, d.Substring(colon + 1).Trim());
+            }
+            return (null, d);
         }
 
         private static string MapLanguage(string vsLanguage, string path)
