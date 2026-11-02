@@ -88,10 +88,10 @@ Tick the boxes as you go. Each phase ends with something you can run.
   - Option A: WPF `FlowDocument` + simple Markdown (headings, code blocks, lists) — no extra dependency
   - Option B: WebView2 + markdown-it — richer, heavier
 - [x] Code blocks: **Copy** and **Insert at cursor** buttons (insert is one undo step)
-- [ ] Collapsible tool-call rows (`⚙ Read: src/A.cs`) with result size in tokens
+- [x] Collapsible tool-call rows (`⚙ Read: src/A.cs`) with result size in tokens (input shown when expanded; results of 5k+ tokens in bold)
 - [ ] File edits: "Open diff" link using `IVsDifferenceService`
 - [ ] Theme check: Light, Dark, Blue in VS 2022 and VS 2026
-- [ ] Prompt box: history (Ctrl+Up/Down), `@` file picker, `/` command list
+- [ ] Prompt box: history (Ctrl+Up/Down) ✅, `/` command hints incl. custom `.claude/commands` ✅, `@` file picker ⏳
 - [ ] Questions & plan approval cards (`AskUserQuestion`, `ExitPlanMode` over `can_use_tool`)
 
 **Done when:** a colleague can use it without explanation. Tag `v0.3.0`.
@@ -100,7 +100,7 @@ Tick the boxes as you go. Each phase ends with something you can run.
 
 ## Phase 4 — Sessions and savings report (1 week)
 
-- [ ] Session history picker: read `~/.claude/projects/<encoded-path>/*.jsonl`, list title/date/tokens, resume with `--resume`
+- [x] Session history picker: read `~/.claude/projects/<encoded-path>/*.jsonl`, list title/date/size, resume with `--resume` (**History** button)
 - [ ] Multiple chat tabs (one `ClaudeSession` each)
 - [x] **Savings report** (Tools > Claude Code > *Show Savings Report*, written to Output > Claude Code; a richer panel can come with Phase 3 UI):
   - tokens avoided by references (from `BuiltPrompt.CharsAvoided`)

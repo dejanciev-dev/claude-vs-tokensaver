@@ -7,6 +7,11 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **History** button: resume an earlier conversation in the same solution (`claude --resume`).
+- Tool calls appear as collapsible rows showing the call, its input when expanded, and the result
+  size in tokens; results of 5k+ tokens are shown in bold.
+- Prompt history with `Ctrl+Up` / `Ctrl+Down` (an unsent draft is kept).
+- Typing `/` lists matching commands, including custom ones from `.claude/commands` (project and user).
 - Chat answers are rendered as Markdown (headings, lists, quotes, inline code, links) while they stream.
 - Code blocks have **Copy** and **Insert at cursor** buttons; an insert is a single undo step.
 - **Show Savings Report** (Tools → Claude Code): actual cost vs the same tokens at Opus prices,

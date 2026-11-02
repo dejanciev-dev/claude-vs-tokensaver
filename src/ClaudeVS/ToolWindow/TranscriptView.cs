@@ -30,6 +30,7 @@ namespace ClaudeVS.ToolWindow
         private readonly StringBuilder _answer = new StringBuilder();
         private readonly List<Block> _answerBlocks = new List<Block>();
         private Paragraph _plain;
+        private readonly Dictionary<string, TextBlock> _tools = new Dictionary<string, TextBlock>();
 
         public TranscriptView()
         {
@@ -82,6 +83,51 @@ namespace ClaudeVS.ToolWindow
             ScrollToEndIfNear();
         }
 
+        /// <summary>
+        /// A collapsible row for a tool call: the header shows the call, the body its input.
+        /// <see cref="CompleteTool"/> adds the result size when the result arrives.
+        /// </summary>
+        public void AppendTool(string toolUseId, string description, string inputJson)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            EndAnswer();
+            _plain = null;
+
+            var header = new TextBlock { Text = "⚙ " + description, FontFamily = Mono, FontSize = 12, TextTrimming = TextTrimming.CharacterEllipsis };
+            var body = new TextBox
+            {
+                Text = string.IsNullOrWhiteSpace(inputJson) ? "(no input)" : inputJson,
+                IsReadOnly = true,
+                FontFamily = Mono,
+                FontSize = 11,
+                BorderThickness = new Thickness(0),
+                Background = Brushes.Transparent,
+                TextWrapping = TextWrapping.Wrap,
+                MaxHeight = 240,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                Margin = new Thickness(16, 2, 0, 2),
+            };
+            body.SetResourceReference(Control.ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
+            var expander = new Expander { Header = header, Content = body, IsExpanded = false, Margin = new Thickness(0, 1, 0, 1) };
+            expander.SetResourceReference(Control.ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
+
+            _doc.Blocks.Add(new BlockUIContainer(expander) { Margin = new Thickness(0) });
+            if (!string.IsNullOrEmpty(toolUseId)) _tools[toolUseId] = header;
+            ScrollToEndIfNear();
+        }
+
+        /// <summary>Adds the result size (≈ chars / 4 tokens) to a tool row; marks failed calls.</summary>
+        public void CompleteTool(string toolUseId, int resultChars, bool isError)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (string.IsNullOrEmpty(toolUseId) || !_tools.TryGetValue(toolUseId, out TextBlock header)) return;
+            _tools.Remove(toolUseId);
+            string size = resultChars > 0 ? $" · ~{Core.Tokens.TokenMeter.Format(resultChars / 4)} tok" : "";
+            header.Text += isError ? size + " · failed" : size;
+            // Large results are what fill the context window; make them stand out.
+            if (resultChars / 4 >= 5000) header.FontWeight = FontWeights.SemiBold;
+        }
+
         public void EndAnswer()
         {
             _answer.Clear();
@@ -94,6 +140,7 @@ namespace ClaudeVS.ToolWindow
             EndAnswer();
             _plain = null;
             _doc.Blocks.Clear();
+            _tools.Clear();
         }
 
         // Only follow the output when the user hasn't scrolled up to read something.
