@@ -2,91 +2,339 @@
 
 **Claude Code for Visual Studio — Token Saver**
 
-Token-efficient Claude Code extension for Visual Studio 2022/2026 — smart model routing, context trimming and a live token meter.
+[![Build](https://github.com/dejanciev-dev/claude-vs-tokensaver/actions/workflows/build.yml/badge.svg)](https://github.com/dejanciev-dev/claude-vs-tokensaver/actions/workflows/build.yml)
+![VS 2022 | 2026](https://img.shields.io/badge/Visual%20Studio-2022%20%7C%202026-5C2D91)
+![License: MIT](https://img.shields.io/badge/license-MIT-blue)
+
+Claude Code inside Visual Studio 2022 and 2026, built around **spending fewer tokens**. It picks the cheapest
+model likely to handle each prompt, sends file *references* instead of file contents, keeps the prompt cache
+warm, and shows what every turn costs.
 
 > Community project, not affiliated with or endorsed by Anthropic. "Claude" and "Claude Code" are trademarks of Anthropic.
 
-A lean Visual Studio extension (VS 2022 **17.x** and VS 2026 **18.x**, x64 + ARM64) that runs the
-Claude Code CLI inside a tool window and is built around **spending fewer tokens**.
+## Contents
 
-> Status: v0.1 scaffold. The core library is unit tested; the VSIX builds cleanly but has not yet
-> been run end-to-end in the experimental instance.
+- [Status](#status)
+- [Why this exists](#why-this-exists)
+- [Features](#features)
+- [How it works](#how-it-works)
+- [Install and first run](#install-and-first-run)
+- [Commands and shortcuts](#commands-and-shortcuts)
+- [Settings](#settings)
+- [Privacy: what stays on your machine](#privacy-what-stays-on-your-machine)
+- [Project layout](#project-layout)
+- [Building and testing](#building-and-testing)
+- [Known limitations](#known-limitations)
+- [Contributing, changelog and license](#contributing-changelog-and-license)
 
-## What it saves, and how
+## Status
 
-| Feature | Where | Why it saves tokens |
-|---|---|---|
-| **Auto model + effort routing** | `Core/Tokens/ModelRouter.cs` | A local classifier (no API call) sends simple prompts to Haiku/low, normal work to Sonnet, and only hard ones (refactor, deadlock, architecture…) to Opus. The live hint under the prompt shows the choice and the reason. |
-| **Cache-aware routing** | `ModelRouter.StickyContextTokens` | The prompt cache is per model. Once the conversation is large (default 30k), routing never downgrades, because re-caching the whole context costs more than the cheaper model saves. |
-| **Smart selection context** | `Core/Context/PromptContextBuilder.cs` | Small selections are inlined and dedented. Large ones are sent as `path:L10-200` references so Claude reads only that range. Whole files are never pasted. |
-| **Attach file / errors** | Tools → Claude Code, `Ctrl+Alt+K, F` / `Ctrl+Alt+K, E` | *Attach Current File* sends only its path. *Attach Error List* sends errors only (no warnings), one `file:line` + message line each, capped at 20 and de-duplicated. |
-| **Live token meter** | `Core/Tokens/TokenMeter.cs` | Shows context fill %, session tokens, cost and cache-hit rate. Suggests `/compact` at 60% and urges it at 85%. Flags huge tool outputs. |
-| **Concise-answer prompt** | Options → *Concise answers* | A one-line `--append-system-prompt`. Output tokens cost about 5× input tokens. |
-| **Lean CLAUDE.md generator** | `Core/Setup/ClaudeMdGenerator.cs` | Writes a short CLAUDE.md (projects, build/test commands, folders to skip) and shows its per-request token cost. It never overwrites yours: if one exists, it writes `CLAUDE.generated.md` for you to compare. |
-| **Token-saving settings + hooks** | `Core/Setup/TokenSaverSetup.cs` | Merges into `.claude/settings.json`: `Read` deny rules for bin/obj/node_modules/packages/dist, `BASH_MAX_OUTPUT_LENGTH=15000`, and a PreToolUse hook (`.claude/hooks/trim-output.ps1`) that rewrites `dotnet build/test`, `msbuild`, `git log` and `npm test` into quiet forms before they run. |
-| **One persistent CLI process per chat** | `Core/Cli/ClaudeSession.cs` | Keeps the prompt cache warm between prompts. Model and effort are switched live (`set_model`, `apply_flag_settings`), with no restart. |
-| **Local usage log** | `Core/Tokens/UsageLog.cs` | One JSON line per turn (route decision, model used, tokens, cost, tokens avoided) in `%LocalAppData%\claude-vs-tokensaver\usage.jsonl`. Stays on your machine; used to tune routing and for the savings report. Turn off under Options → Diagnostics. |
-| **Savings report** | Tools → Claude Code → *Show Savings Report* | Actual cost vs. the same tokens at Opus prices, tokens saved by file references, cost per model, cache-hit rate by day. With *Log prompt preview* on (off by default), it also re-runs logged prompts through the current router and lists the ones that would now route differently. Prices are editable under Options → Pricing. |
+Pre-release (v0.1 → v0.2).
 
-## Layout
+| Layer | State |
+|---|---|
+| Core library (CLI session, parser, router, meter, context, Markdown, usage log) | ✅ 35 automated tests, plus regression tests built from real CLI output |
+| Core against the real `claude` CLI | ✅ Verified with Claude Code 2.1.316 via the opt-in live test: streaming, usage, cost, prompt cache, question and plan approval |
+| Visual Studio extension (UI) | ⚠️ Builds with zero warnings in CI, but not yet run in the experimental instance |
 
+## Why this exists
+
+Claude Code is billed by tokens, and most tokens in a coding session are not your question. They come from
+three places:
+
+1. **Context.** Every request re-sends the conversation, files Claude has read, tool output and `CLAUDE.md`.
+   Pasting a whole file "for context" is paid on every later turn too.
+2. **Model choice.** Haiku is far cheaper than Opus, but most extensions use one model for everything.
+   A short real turn measured with this extension cost **$0.002 on Haiku vs $0.042 on Sonnet**.
+3. **Output.** Output tokens cost about 5× input tokens, so long explanations and restated code add up quickly.
+
+This extension attacks all three, and shows the numbers so you can see the effect.
+
+## Features
+
+### Spend fewer tokens
+
+| Feature | What it does |
+|---|---|
+| **Auto model and effort routing** | A local classifier (no API call) sends simple prompts to Haiku, normal work to Sonnet, and only hard ones (refactor, deadlock, architecture…) to Opus. The hint under the prompt box shows the choice and the reason before you send. |
+| **Cache-aware routing** | The prompt cache is per model. Once a conversation is large (30k tokens by default), routing never switches to a cheaper model, because re-caching the whole context would cost more than it saves. |
+| **Smart selection context** | Small selections are inlined and dedented. Large ones are sent as `path:L10-200` references, so Claude reads only that range. Whole files are never pasted. |
+| **File references** | **Attach Current File** and the **`@` file picker** send only a path. Claude reads what it needs. |
+| **Compact error list** | **Attach Error List** sends errors only (no warnings), one `file:line` + message line each, de-duplicated and capped at 20. |
+| **One warm process per chat** | The `claude` process stays alive between prompts, so the prompt cache is reused (verified: 18k cache-read tokens on the second turn). Model and effort switch live without a restart. |
+| **Concise answers** | A one-line system prompt asks for short answers and only the changed code. |
+| **Lean `CLAUDE.md` generator** | Writes a short `CLAUDE.md` (projects, build/test commands, folders to skip) and shows its token cost per request. It never overwrites yours. |
+| **Token-saving settings and hooks** | Merges into `.claude/settings.json`: blocks reading `bin/obj/node_modules/packages/dist`, caps shell output, and adds a hook that rewrites `dotnet build/test`, `msbuild`, `git log` and `npm test` into their quiet forms. |
+
+### See what you spend
+
+| Feature | What it does |
+|---|---|
+| **Live token meter** | Context fill %, session tokens and cost, cache-hit rate and the current model. Suggests `/compact` at 60% context and urges it at 85%. |
+| **Per-turn footer** | `✓ 3.1s · 12.4k tok · $0.004 · claude-haiku-5-5`, showing the model that *actually* answered. |
+| **Model mismatch warning** | If the CLI answers with a different model than the one requested (for example in plan mode), the chat tells you. |
+| **Tool rows with sizes** | Every tool call is a collapsible row showing its input and the size of its result in tokens. Results of 5k+ tokens are in bold, because those fill the context. |
+| **Savings report** | Actual cost vs the same tokens at Opus prices, tokens saved by references, cost per model, cache-hit rate by day. |
+| **Router replay** | With the opt-in prompt preview, the report re-runs your real prompts through the current router rules and lists those that would now route differently. |
+
+### Chat
+
+| Feature | What it does |
+|---|---|
+| **Markdown answers** | Headings, lists, quotes, inline code and links, rendered while the answer streams. |
+| **Code blocks** | **Copy** and **Insert** (at the cursor, one undo step). |
+| **Diff for Claude's edits** | Rows for Edit / MultiEdit / Write have a **Diff** button that opens Visual Studio's diff window. |
+| **Question cards** | When Claude asks a question, you get its options (plus "Other") and your answer goes back to Claude. |
+| **Plan approval cards** | Plans render as Markdown with **Approve** or **Request changes** (with feedback). |
+| **Permission bar** | Other tool calls that need approval show **Allow** / **Deny**. |
+| **History** | Resume an earlier conversation for the same solution (`claude --resume`). |
+| **Several chat windows** | Each window has its own conversation, meter and model. |
+| **Prompt box helpers** | `Ctrl+Up/Down` prompt history; `/` lists commands, including your own `.claude/commands`; `@` picks a file. |
+| **Diagnostics** | An **Output → Claude Code** pane with route decisions, errors and plain-language hints (not logged in, rate limited, context too long…), plus optional raw CLI traffic. |
+
+## How it works
+
+### Architecture
+
+All logic lives in a Visual Studio-independent library, `ClaudeVS.Core`, which is tested on its own. The
+extension is a thin WPF layer on top of it. The real work is done by the official `claude` CLI, which the
+extension runs as a child process and talks to with JSON lines.
+
+```mermaid
+flowchart LR
+    subgraph VS["Visual Studio"]
+        direction TB
+        Editor["Editor, Error List,<br/>Solution"]
+        Commands["Commands<br/>Ctrl+Alt+K, …"]
+        Chat["Chat tool window<br/>transcript · meter · cards"]
+        Output["Output pane<br/>Claude Code"]
+    end
+
+    subgraph Core["ClaudeVS.Core (no VS dependency)"]
+        direction TB
+        Context["PromptContextBuilder<br/>FileIndex · EditDiff"]
+        Router["ModelRouter"]
+        Session["ClaudeSession"]
+        Parser["ClaudeStreamParser"]
+        Meter["TokenMeter"]
+        Usage["UsageLog ·<br/>SavingsReport"]
+    end
+
+    CLI["claude CLI<br/>stream-json mode"]
+    API[("Anthropic API")]
+    Disk[("usage.jsonl<br/>(local only)")]
+
+    Editor --> Commands --> Chat
+    Chat --> Context --> Session
+    Chat --> Router --> Session
+    Session -- "stdin: prompts,<br/>control requests" --> CLI
+    CLI -- "stdout: events" --> Parser --> Chat
+    Parser --> Meter --> Chat
+    Chat --> Usage --> Disk
+    CLI <--> API
+    Chat --> Output
 ```
-ClaudeVS.sln
-src/ClaudeVS.Core/          netstandard2.0. All logic, no VS dependency, testable anywhere
-  Cli/      ClaudeArgsBuilder, ClaudeSession (stream-json process), ClaudeStreamParser, ClaudeCliLocator
-  Tokens/   TokenMeter, ModelRouter
-  Context/  PromptContextBuilder
-  Setup/    SolutionScanner, ClaudeMdGenerator, TokenSaverSetup
-src/ClaudeVS/               net472 VSIX (AsyncPackage, tool window, commands, options)
-tests/ClaudeVS.Core.Tests/  dependency-free test runner (dotnet run)
+
+### Life of one prompt
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor You
+    participant Chat as Chat window
+    participant Ctx as PromptContextBuilder
+    participant Router as ModelRouter
+    participant Session as ClaudeSession
+    participant CLI as claude CLI
+
+    You->>Chat: prompt + selection / @file / errors
+    Chat->>Ctx: build the smallest prompt
+    Ctx-->>Chat: inlined snippet or path:L10-200 references
+    Chat->>Router: classify (keywords, length, files, context size)
+    Router-->>Chat: e.g. haiku / low, with the reason
+    Chat->>Session: set_model / effort (only if changed)
+    Session->>CLI: user message as one JSON line on stdin
+    loop streaming
+        CLI-->>Session: text deltas, tool calls, tool results
+        Session-->>Chat: events in order: Markdown, tool rows, Diff buttons
+    end
+    opt Claude asks a question, shows a plan or needs permission
+        CLI-->>Chat: control_request (can_use_tool)
+        Chat-->>You: question card, plan card or Allow/Deny
+        You->>Chat: answer
+        Chat->>CLI: control_response
+    end
+    CLI-->>Session: result (usage, cost, model)
+    Session-->>Chat: footer, meter, /compact advice
+    Chat->>Chat: append one line to usage.jsonl
 ```
 
-## How it talks to Claude Code
+### How the router decides
+
+The router is a fast, local scoring function, so routing itself never costs tokens.
+
+```mermaid
+flowchart TD
+    P["Prompt"] --> S["Score it<br/>+2.5 per hard keyword (refactor, deadlock, architecture…, max 3)<br/>+0.75 per task keyword (implement, fix, endpoint…, max 3)<br/>−2 per simple keyword (rename, typo, explain this…, max 2)<br/>± prompt length · + files mentioned · + large code attachment"]
+    S --> T{"score"}
+    T -- "≤ −1.5" --> H["Haiku · low"]
+    T -- "< 3.5" --> SO["Sonnet · low/medium"]
+    T -- "< 6" --> OM["Opus · medium"]
+    T -- "≥ 6" --> OH["Opus · high"]
+    H & SO & OM & OH --> C{"Conversation ≥ 30k tokens<br/>and a different model?"}
+    C -- "no" --> USE["Use it"]
+    C -- "yes" --> K["Keep the current model to reuse the prompt cache<br/>(unless it is an upgrade with score ≥ 6)"]
+```
+
+Keywords match whole words, so "prefix" does not count as "fix". You can override the choice at any time with
+the model and effort boxes in the toolbar.
+
+### Talking to the CLI
 
 ```
 claude --print --input-format stream-json --output-format stream-json --verbose
        --include-partial-messages --permission-prompt-tool stdio
-       [--model haiku|sonnet|opus] [--effort low..max] [--permission-mode acceptEdits] [--resume <id>]
+       [--model haiku|sonnet|opus] [--effort low..max] [--permission-mode acceptEdits|plan|…]
+       [--resume <session-id>] [--append-system-prompt "…"]
 ```
 
-- Prompts go to stdin as `{"type":"user","message":{...}}` lines.
-- Interrupt, model switch and effort switch are `control_request` lines.
-- Permission prompts arrive as `control_request/can_use_tool` and are answered from the Allow/Deny bar.
-- Context fill is taken from the **last** entry of `result.usage.iterations`; the top-level usage sums every request in the turn and would overstate it.
+- Prompts go to stdin as `{"type":"user","message":{…}}` lines. Interrupt, model switch and effort switch are
+  `control_request` lines.
+- Tool permissions arrive as `control_request` / `can_use_tool`. Questions are answered by allowing the call
+  with `updatedInput` plus an `answers` map. Plans are approved by allowing `ExitPlanMode`, or sent back with
+  feedback by denying it.
+- Context fill is taken from the **last** request of the turn. The top-level usage sums every request in the
+  turn and would overstate it.
+- Unknown event types (status lines, rate-limit events…) are ignored, so newer CLI versions keep working.
 
-## Build and run
+## Install and first run
 
-Requirements: Visual Studio 2022 17.x or 2026 with the **Visual Studio extension development**
-workload, and the Claude Code CLI installed and logged in (`claude` works in a terminal).
+Requirements:
+- Visual Studio 2022 (17.x) or 2026 (18.x), x64 or ARM64
+- [Claude Code](https://claude.com/product/claude-code) installed and logged in, so that `claude` works in a terminal
 
-1. Open `ClaudeVS.sln`, set **ClaudeVS** as the startup project, and press **F5**. An experimental VS instance opens.
-2. Open a solution, then go to **View → Other Windows → Claude Code** (or press `Ctrl+Alt+K, C`).
-3. Go to **Tools → Claude Code → Install Token-Saving Settings and Hooks**, then **Generate Lean CLAUDE.md**.
-4. To ask about code, select it and press `Ctrl+Alt+K, S` (or right-click → *Ask Claude About Selection*).
-5. Settings are under **Tools → Options → Claude Code**.
+There is no Marketplace release yet. Either install the `.vsix` from a
+[GitHub release](https://github.com/dejanciev-dev/claude-vs-tokensaver/releases) or from a CI build's
+artifacts, or build it yourself (see below).
 
-The Release build produces `src/ClaudeVS/bin/Release/ClaudeVS.vsix`. The same file installs into both VS 2022 and VS 2026.
+First run:
+1. Open a solution, then **View → Other Windows → Claude Code** (`Ctrl+Alt+K, C`).
+2. **Tools → Claude Code → Install Token-Saving Settings and Hooks** (once per solution).
+3. **Tools → Claude Code → Generate Lean CLAUDE.md** (once per solution).
+4. Select code and press `Ctrl+Alt+K, S`, or type a prompt and press **Enter**.
 
-To run the core tests: `cd tests/ClaudeVS.Core.Tests && dotnet run`.
+## Commands and shortcuts
 
-## Known gaps / roadmap
+| Command | Where | Shortcut |
+|---|---|---|
+| Open the chat | View → Other Windows · Tools → Claude Code | `Ctrl+Alt+K, C` |
+| New chat window | Tools → Claude Code | `Ctrl+Alt+K, N` |
+| Ask Claude about the selection | Editor right-click | `Ctrl+Alt+K, S` |
+| Attach current file as a reference | Tools → Claude Code · editor right-click | `Ctrl+Alt+K, F` |
+| Attach Error List | Tools → Claude Code | `Ctrl+Alt+K, E` |
+| Show Savings Report | Tools → Claude Code | |
+| Generate Lean CLAUDE.md | Tools → Claude Code | |
+| Install Token-Saving Settings and Hooks | Tools → Claude Code | |
 
-- The transcript is plain text. Next step: a Markdown view (WebView2 or FlowDocument) with diff rendering.
-- Session history / resume picker (`--resume` is already supported in `ClaudeLaunchOptions`).
-- `AskUserQuestion` / plan-approval cards. The permission channel is wired, but the cards are not built yet.
-- Optional "ask Haiku to route" mode, for users who prefer accuracy over a local heuristic.
-- Per-turn savings report: tokens avoided by references, hooks and routing.
-- `trim-output.ps1` assumes Windows PowerShell. Claude Code under WSL would need a bash twin.
+In the prompt box:
 
-Credit: the CLI protocol notes were cross-checked against
-[dliedke/ClaudeCodeExtension](https://github.com/dliedke/ClaudeCodeExtension) (MIT). No code was copied.
+| Key | Action |
+|---|---|
+| `Enter` / `Shift+Enter` | Send / new line |
+| `Ctrl+Up` / `Ctrl+Down` | Previous / next prompt (your unsent text is kept) |
+| `@` + name | Pick a solution file to attach (`↑ ↓`, `Enter` or `Tab`, `Esc`) |
+| `/` | Show matching commands, including `.claude/commands/*.md` |
+| `Esc` | Remove attachments |
 
-## Repository
+Editor commands go to the chat window you used last.
 
-- **Name:** `claude-vs-tokensaver`
-- **Description:** Claude Code inside Visual Studio 2022 & 2026, built to spend fewer tokens: auto model/effort routing (Haiku→Sonnet→Opus), cache-aware sessions, smart selection context, live token/cost meter with /compact hints, and one-click lean CLAUDE.md + output-trimming hooks. Community project, not affiliated with Anthropic.
-- **Topics:** `visual-studio` `visual-studio-extension` `vsix` `vs2022` `vs2026` `claude` `claude-code` `anthropic` `ai-assistant` `llm` `token-optimization` `prompt-caching` `developer-tools` `csharp` `dotnet`
+## Settings
 
-## License
+**Tools → Options → Claude Code → General**
 
-MIT — see [LICENSE](LICENSE).
+| Category | Setting | Default | Notes |
+|---|---|---|---|
+| CLI | Claude executable path | *(auto)* | Finds `claude.exe` / `claude.cmd` automatically. |
+| CLI | Permission mode | AcceptEdits | Edits are applied; shell commands ask. In **Plan** mode the CLI answered with Sonnet even when Haiku was requested. |
+| CLI | Extra arguments | | Appended to the `claude` command line, e.g. `--add-dir ..\shared`. |
+| Token saving | Concise answers | On | One-line brevity prompt. |
+| Token saving | Default model | Auto | Auto = route each prompt. |
+| Token saving | Inline selection up to (lines) | 60 | Larger selections become references. |
+| Token saving | Keep model above context (tokens) | 30000 | Cache-aware routing threshold. |
+| Token saving | Suggest / Urge /compact at (%) | 60 / 85 | Meter advice. |
+| Token saving | Auto-approve quiet rewrites | Off | Hook installer: run rewritten build/test commands without asking. |
+| Token saving | Max attached errors | 20 | For Attach Error List. |
+| Pricing | Opus / Sonnet / Haiku price | 2026-10 list prices | `input, output, cache write, cache read` in USD per million tokens. Used only for the savings estimate. |
+| Diagnostics | Keep local usage log | On | See Privacy. |
+| Diagnostics | Log prompt preview (for router tuning) | Off | Stores the first 200 characters of each prompt locally. |
+| Diagnostics | Log raw CLI traffic | Off | Every JSON line in Output → Claude Code. Large; for debugging. |
+
+## Privacy: what stays on your machine
+
+- **Prompts and code** go only to the `claude` CLI, which sends them to Anthropic exactly as Claude Code does
+  in a terminal. The extension has no server and sends nothing anywhere else. The one exception is that
+  unexpected errors in background work are reported through Visual Studio's own fault reporting
+  (`FileAndForget`), which follows your VS privacy settings.
+- **Usage log**: `%LocalAppData%\claude-vs-tokensaver\usage.jsonl`, one line per turn with the model, tokens,
+  cost and route decision. It never leaves your machine, rotates at 5 MB and can be turned off.
+- **Prompt preview** (off by default): the first 200 characters of each prompt, stored in that same local log.
+- **Conversation history** is the CLI's own (`~/.claude/projects`). The History button only reads it.
+
+## Project layout
+
+```
+ClaudeVS.sln
+src/ClaudeVS.Core/            netstandard2.0, all logic, no Visual Studio dependency
+  Cli/        ClaudeSession (process + stream-json), ClaudeStreamParser, ClaudeOptions/ArgsBuilder,
+              ClaudeCliLocator, ClaudeErrorHints, InteractiveRequests (questions, plans)
+  Tokens/     ModelRouter, TokenMeter, UsageLog, SavingsReport (+ price table, router replay)
+  Context/    PromptContextBuilder, FileIndex (@ picker), EditDiff (Diff button)
+  Chat/       PromptHistory, SlashCommands, SessionHistory
+  Markdown/   MarkdownParser (streaming-tolerant subset)
+  Setup/      SolutionScanner, ClaudeMdGenerator, TokenSaverSetup
+src/ClaudeVS/                 net472 VSIX: package, commands, tool window, options
+  ToolWindow/ ClaudeChatControl, TranscriptView (FlowDocument rendering, cards)
+  Commands/   ClaudeCommands, VsContext (DTE: selection, errors, diff, insert)
+  Diagnostics/ClaudeOutputPane
+tests/ClaudeVS.Core.Tests/    dependency-free test runner, live CLI harness, real-output fixtures
+.github/                      CI build, tag-triggered release, issue templates
+docs/PLAN.md                  roadmap and status
+```
+
+## Building and testing
+
+Requirements: Visual Studio 2022 17.14+ or 2026 with the **Visual Studio extension development** workload, and
+the .NET 8 SDK.
+
+```
+dotnet test tests/ClaudeVS.Core.Tests                                   # 35 offline tests
+msbuild ClaudeVS.sln /restore /p:Configuration=Release /warnaserror     # → src/ClaudeVS/bin/Release/ClaudeVS.vsix
+```
+
+- **Debug in VS:** set **ClaudeVS** as the startup project and press **F5** to open the experimental instance.
+- **Live check against your CLI** (opt-in, costs a few cents, never runs in CI):
+  `dotnet run --project tests/ClaudeVS.Core.Tests -- --live`
+- **CI** builds every push and PR with warnings as errors, runs the tests and uploads the `.vsix`. Pushing a
+  `v*` tag creates a draft GitHub Release.
+
+## Known limitations
+
+- **The VS UI has not been run yet.** Everything builds and the Core is verified against the real CLI, but the
+  first F5 session may still turn up UI issues. Please [open an issue](https://github.com/dejanciev-dev/claude-vs-tokensaver/issues).
+- **Plan mode ignores Haiku.** With Claude Code 2.1.316, plan mode answered with Sonnet even when Haiku was
+  requested. The chat warns you when this happens.
+- **Resume** continues the conversation, but earlier messages are not redrawn in the transcript.
+- **Write diffs** compare against a copy taken when the tool call arrives. If the CLI writes faster, the diff can look empty.
+- Several answers to one multi-select question are sent joined with ", ". That format is not verified against the CLI yet.
+- The output-trimming hook (`trim-output.ps1`) assumes Windows PowerShell. Claude Code under WSL would need a bash version.
+- No Marketplace release yet.
+
+## Contributing, changelog and license
+
+- [CONTRIBUTING.md](CONTRIBUTING.md): setup, where code goes, PR checklist, live tests, releasing
+- [CHANGELOG.md](CHANGELOG.md): what changed
+- [docs/PLAN.md](docs/PLAN.md): roadmap and status
+- Credit: the CLI protocol notes were cross-checked against
+  [dliedke/ClaudeCodeExtension](https://github.com/dliedke/ClaudeCodeExtension) (MIT). No code was copied.
+
+MIT. See [LICENSE](LICENSE).
