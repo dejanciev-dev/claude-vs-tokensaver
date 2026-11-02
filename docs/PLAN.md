@@ -127,6 +127,30 @@ Tag `v1.0.0`.
 
 ---
 
+## Phase 6 — Feature parity with the VS Code Claude Code panel
+
+CLI capabilities were probed with control requests, which make no model call (Claude Code 2.1.316):
+`set_permission_mode` ✅, `set_max_thinking_tokens` ✅, `get_context_usage` ✅, `rewind_files` exists but
+needs file checkpointing ("File rewinding is not enabled").
+
+- [x] Modes: Manual / Edit automatically / Plan / Auto, mode chip, Shift+Tab, switch mid-session
+- [x] Model chip with effort and an extended-thinking toggle
+- [x] `/` actions palette with filter (context, model, mode, session, custom commands, settings)
+- [x] `+` menu: upload from computer, add context, attach current file / Error List, browse the web
+- [x] Header with session title, sessions and new-session icons; sessions popover with search and ages
+- [x] Send turns into Stop while answering; Esc stops
+- [x] Empty-session message (own icon; no Anthropic logo or mascot)
+- [ ] Bookmarks: bookmark button under each answer, bookmarks side panel
+- [ ] Sessions: rename (`--name`) and archive; show the resumed conversation's earlier messages
+- [ ] Export conversation (Markdown)
+- [ ] Context usage breakdown from `get_context_usage` in the meter
+- [ ] Rewind (enable file checkpointing, then `rewind_files`)
+- [ ] Voice input (Windows dictation)
+- [ ] Images: paste screenshots into the prompt (send as image content)
+- Not possible locally: the "Web" sessions tab (cloud sessions are not exposed to the local CLI)
+
+---
+
 ## Working in Visual Studio — daily loop
 
 1. Core logic change → edit in `ClaudeVS.Core` → run tests (`ClaudeVS.Core.Tests` → Set as Startup → Ctrl+F5, or `dotnet run` in its folder).
