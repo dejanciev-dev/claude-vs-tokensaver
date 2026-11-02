@@ -10,7 +10,12 @@ namespace ClaudeVS.Core.Cli
     /// <summary>Values accepted by <c>claude --effort</c>. <see cref="Auto"/> = router decides / CLI default.</summary>
     public enum EffortChoice { Auto, Low, Medium, High, XHigh, Max }
 
-    public enum PermissionModeChoice { Default, AcceptEdits, Plan, BypassPermissions }
+    /// <summary>
+    /// Permission modes, as in the VS Code panel: Default = "Manual" (ask before each edit), AcceptEdits = "Edit
+    /// automatically", Plan, Auto (approve actions that pass the CLI's safety check). New values go at the end:
+    /// the Options page stores the name, but keep the order stable anyway.
+    /// </summary>
+    public enum PermissionModeChoice { Default, AcceptEdits, Plan, BypassPermissions, Auto }
 
     public static class ChoiceNames
     {
@@ -46,8 +51,38 @@ namespace ClaudeVS.Core.Cli
                 case PermissionModeChoice.AcceptEdits: return "acceptEdits";
                 case PermissionModeChoice.Plan: return "plan";
                 case PermissionModeChoice.BypassPermissions: return "bypassPermissions";
+                case PermissionModeChoice.Auto: return "auto";
                 default: return null;
             }
+        }
+
+        /// <summary>
+        /// Name for the <c>set_permission_mode</c> control request. Unlike the command-line flag, which omits the
+        /// default, it needs "default" spelled out (verified with Claude Code 2.1.316).
+        /// </summary>
+        public static string ToControl(this PermissionModeChoice p) => p.ToCli() ?? "default";
+
+        /// <summary>Label and one-line description, as shown in the mode picker.</summary>
+        public static (string Label, string Description) Describe(this PermissionModeChoice p)
+        {
+            switch (p)
+            {
+                case PermissionModeChoice.AcceptEdits: return ("Edit automatically", "Claude edits files without asking; shell commands still ask");
+                case PermissionModeChoice.Plan: return ("Plan", "Claude explores the code and presents a plan before editing");
+                case PermissionModeChoice.Auto: return ("Auto", "Claude approves actions that pass a safety check and pauses for anything risky");
+                case PermissionModeChoice.BypassPermissions: return ("Bypass permissions", "Claude never asks. Use only in a sandbox");
+                default: return ("Manual", "Claude asks for approval before each edit");
+            }
+        }
+
+        /// <summary>The modes Shift+Tab cycles through, in order (bypass is left out on purpose).</summary>
+        public static readonly PermissionModeChoice[] CycleOrder =
+            { PermissionModeChoice.Default, PermissionModeChoice.AcceptEdits, PermissionModeChoice.Plan, PermissionModeChoice.Auto };
+
+        public static PermissionModeChoice Next(this PermissionModeChoice p)
+        {
+            int i = Array.IndexOf(CycleOrder, p);
+            return CycleOrder[(i + 1) % CycleOrder.Length];
         }
     }
 

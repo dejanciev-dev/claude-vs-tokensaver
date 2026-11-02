@@ -22,6 +22,55 @@ namespace ClaudeVS.ToolWindow
         public const string IconStop = "";
         public const string IconCompact = ""; // "back to window": shrinking arrows
         public const string IconSend = "";    // arrow up
+        public const string IconUpload = "";
+        public const string IconGlobe = "";
+        public const string IconDocument = "";
+        public const string IconEdit = "";
+        public const string IconPerson = "";
+        public const string IconBolt = "";
+        public const string IconMessage = "";
+        public const string IconSettings = "";
+        public const string IconWarning = "";
+
+        public static string ModeGlyph(Core.Cli.PermissionModeChoice m)
+        {
+            switch (m)
+            {
+                case Core.Cli.PermissionModeChoice.AcceptEdits: return IconEdit;
+                case Core.Cli.PermissionModeChoice.Plan: return IconDocument;
+                case Core.Cli.PermissionModeChoice.Auto: return IconBolt;
+                case Core.Cli.PermissionModeChoice.BypassPermissions: return IconWarning;
+                default: return IconPerson;
+            }
+        }
+
+        /// <summary>A small rounded "chip" button (model, mode) showing an optional icon and a label.</summary>
+        public static Button Chip(string tooltip)
+        {
+            var b = new Button
+            {
+                ToolTip = tooltip,
+                Padding = new Thickness(7, 2, 7, 2),
+                Margin = new Thickness(2, 0, 2, 0),
+                Template = FlatTemplate(new CornerRadius(4)),
+                Background = Brushes.Transparent,
+                FontSize = 11.5,
+                Cursor = System.Windows.Input.Cursors.Hand,
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            Text(b);
+            return b;
+        }
+
+        public static void SetChip(Button chip, string glyph, string text)
+        {
+            var row = new StackPanel { Orientation = Orientation.Horizontal };
+            if (!string.IsNullOrEmpty(glyph))
+                row.Children.Add(new TextBlock { Text = glyph, FontFamily = IconFont, FontSize = 12, Margin = new Thickness(0, 1, 5, 0), VerticalAlignment = VerticalAlignment.Center });
+            row.Children.Add(new TextBlock { Text = text, VerticalAlignment = VerticalAlignment.Center });
+            chip.Content = row;
+            System.Windows.Automation.AutomationProperties.SetName(chip, text);
+        }
 
         // Translucent overlays read well on light and dark backgrounds.
         public static readonly Brush Subtle = Freeze(Color.FromArgb(0x1E, 0x80, 0x80, 0x80));
