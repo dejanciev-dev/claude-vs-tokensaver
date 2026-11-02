@@ -1,0 +1,44 @@
+name: Bug report
+description: Something does not work as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: input
+    id: vs
+    attributes:
+      label: Visual Studio version
+      placeholder: "e.g. VS 2022 17.14.5 Community, x64"
+    validations:
+      required: true
+  - type: input
+    id: cli
+    attributes:
+      label: Claude Code CLI version
+      description: Output of `claude --version`
+    validations:
+      required: true
+  - type: input
+    id: ext
+    attributes:
+      label: Extension version
+      description: Extensions → Manage Extensions, or the version in the .vsix you installed
+  - type: textarea
+    id: output
+    attributes:
+      label: Output → Claude Code
+      description: Lines from the "Claude Code" Output pane around the problem. Remove code, paths or secrets you do not want to share.
+      render: text
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open a solution
+        2. Select code and press Ctrl+Alt+K, S
+        3. ...

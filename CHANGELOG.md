@@ -1,0 +1,37 @@
+# Changelog
+
+All notable changes to this project are listed here. The format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
+[Semantic Versioning](https://semver.org/).
+
+## [Unreleased]
+
+### Added
+- Chat answers are rendered as Markdown (headings, lists, quotes, inline code, links) while they stream.
+- Code blocks have **Copy** and **Insert at cursor** buttons; an insert is a single undo step.
+- **Show Savings Report** (Tools → Claude Code): actual cost vs the same tokens at Opus prices,
+  tokens saved by file references, cost per model and daily cache-hit rate.
+- Editable price table (Options → Pricing).
+- Optional prompt preview in the usage log, used by the report to replay logged prompts through
+  the current router (off by default).
+- Local usage log (`%LocalAppData%\claude-vs-tokensaver\usage.jsonl`), rotated at 5 MB.
+- **Attach Current File as Reference** (`Ctrl+Alt+K, F`) and **Attach Error List** (`Ctrl+Alt+K, E`).
+- "Claude Code" pane in the Output window: route decisions, errors, optional raw CLI traffic.
+- Plain-language hints for common errors (not logged in, limits, rate limits, overload,
+  context too long, CLI not found).
+- The footer under each answer shows the model that actually answered.
+- GitHub Actions build: Release build with warnings as errors, Core tests, `.vsix` artifact.
+
+### Changed
+- Model router matches keywords as whole words ("prefix" no longer counts as "fix").
+- `dotnet test` runs the Core test runner instead of silently reporting zero tests.
+
+### Fixed
+- Build errors from the `Task` alias and VS threading analyzer warnings.
+
+## [0.1.0]
+
+### Added
+- Initial scaffold: chat tool window running the Claude Code CLI in stream-json mode, automatic
+  model and effort routing, live token meter, smart selection context, lean CLAUDE.md generator,
+  token-saving settings and hooks installer.

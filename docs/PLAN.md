@@ -119,7 +119,7 @@ Tick the boxes as you go. Each phase ends with something you can run.
 - [ ] Test install of the Release `.vsix` on clean VS 2022 **and** VS 2026 (x64; ARM64 if available)
 - [x] GitHub Actions: build on `windows-latest`, run Core tests, upload `.vsix` artifact (`.github/workflows/build.yml`)
 - [ ] `publishManifest.json` + `VsixPublisher.exe` publish step (manual approval)
-- [ ] CHANGELOG.md, issue templates, CONTRIBUTING.md
+- [x] CHANGELOG.md, issue templates, CONTRIBUTING.md
 - [ ] Publish to Visual Studio Marketplace as **Claude Code for Visual Studio — Token Saver**
 
 Tag `v1.0.0`.
