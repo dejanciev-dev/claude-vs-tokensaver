@@ -31,7 +31,9 @@ namespace ClaudeVS.Core.Cli
         public ClaudeLaunchOptions Options { get; }
         public string SessionId => _parser?.SessionId ?? Options.ResumeSessionId;
         public bool IsRunning { get { lock (_gate) return _process != null && !_process.HasExited; } }
-        public bool IsBusy { get; private set; }
+        // Written by the stdout reader and process-exit threads, read from the UI thread.
+        private volatile bool _isBusy;
+        public bool IsBusy { get => _isBusy; private set => _isBusy = value; }
         /// <summary>Model alias the running process uses right now (after any set_model).</summary>
         public ModelChoice CurrentModel { get; private set; }
         public EffortChoice CurrentEffort { get; private set; }

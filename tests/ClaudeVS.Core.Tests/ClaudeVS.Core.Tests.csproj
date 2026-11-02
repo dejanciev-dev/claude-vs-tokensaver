@@ -1,15 +1,27 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project>
 
-  <!-- Dependency-free test runner. Run: dotnet run (from this folder). Exit code 0 = all passed. -->
+  <!-- Dependency-free test runner. Run: dotnet test (or dotnet run). Exit code 0 = all passed. -->
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>disable</Nullable>
     <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\ClaudeVS.Core\ClaudeVS.Core.csproj" />
   </ItemGroup>
+
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+
+  <!-- `dotnet test` calls the VSTest target. This is a console runner, not a VSTest project, so
+       replace that target (defined after Sdk.targets so it wins) with running the runner itself.
+       A non-zero exit code fails the command. -->
+  <Target Name="VSTest" DependsOnTargets="Build">
+    <Exec Command="dotnet &quot;$(TargetPath)&quot;" />
+  </Target>
 
 </Project>
