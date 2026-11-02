@@ -31,6 +31,21 @@ namespace ClaudeVS.ToolWindow
         private readonly List<Block> _answerBlocks = new List<Block>();
         private Paragraph _plain;
         private readonly Dictionary<string, TextBlock> _tools = new Dictionary<string, TextBlock>();
+        private ScrollViewer _scroll;
+
+        /// <summary>
+        /// A TextBox's own ScrollViewer swallows the mouse wheel even when it can't scroll vertically, which stalls
+        /// scrolling the transcript over code blocks. Pass the wheel on to the transcript instead.
+        /// </summary>
+        private void ForwardMouseWheel(UIElement element)
+        {
+            element.PreviewMouseWheel += (s, e) =>
+            {
+                if (e.Handled) return;
+                e.Handled = true;
+                Box.RaiseEvent(new System.Windows.Input.MouseWheelEventArgs(e.MouseDevice, e.Timestamp, e.Delta) { RoutedEvent = UIElement.MouseWheelEvent, Source = s });
+            };
+        }
 
         public TranscriptView()
         {
@@ -157,7 +172,7 @@ namespace ClaudeVS.ToolWindow
         // Only follow the output when the user hasn't scrolled up to read something.
         private void ScrollToEndIfNear()
         {
-            var sv = FindScrollViewer(Box);
+            var sv = _scroll ?? (_scroll = FindScrollViewer(Box)); // template is applied once; cache the lookup
             if (sv == null || sv.VerticalOffset >= sv.ScrollableHeight - 40) Box.ScrollToEnd();
         }
 
@@ -294,6 +309,7 @@ namespace ClaudeVS.ToolWindow
                 TextWrapping = TextWrapping.NoWrap,
             };
             body.SetResourceReference(Control.ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
+            ForwardMouseWheel(body);
 
             var panel = new DockPanel();
             DockPanel.SetDock(header, Dock.Top);

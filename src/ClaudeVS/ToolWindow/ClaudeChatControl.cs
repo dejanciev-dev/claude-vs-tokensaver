@@ -70,7 +70,7 @@ namespace ClaudeVS.ToolWindow
         private string _lastHint;
         private readonly System.Collections.Generic.List<string> _attachedFiles = new System.Collections.Generic.List<string>();
         private System.Collections.Generic.IReadOnlyList<BuildError> _attachedErrors;
-        private UsageRecord _pendingUsage;
+        private readonly Queue<UsageRecord> _pendingUsages = new Queue<UsageRecord>();
         internal static readonly UsageLog Usage = new UsageLog(UsageLog.DefaultPath);
 
         public ClaudeChatControl()
@@ -287,8 +287,9 @@ namespace ClaudeVS.ToolWindow
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             _mention = AtMention.Find(_prompt.Text, _prompt.CaretIndex);
+            if (_mention == null) { _filePopup.IsOpen = false; return; } // common case: no DTE call per keystroke
             string dir = VsContext.GetSolutionDirectory();
-            if (_mention == null || dir == null) { _filePopup.IsOpen = false; return; }
+            if (dir == null) { _filePopup.IsOpen = false; return; }
 
             if (_fileIndex == null || !string.Equals(_fileIndexDir, dir, StringComparison.OrdinalIgnoreCase))
             {
@@ -403,7 +404,7 @@ namespace ClaudeVS.ToolWindow
                     ClaudeOutputPane.WriteLine($"Route: {decision} | prompt {userText.Length} chars, {attachedLines} attached lines, {attachedFiles} files, context {_meterModel?.ContextTokens ?? 0} tok → using {model.ToCli()}/{effort.ToCli()}");
                 }
 
-                _pendingUsage = new UsageRecord
+                _pendingUsages.Enqueue(new UsageRecord
                 {
                     Solution = dir,
                     Routed = decision != null,
@@ -416,7 +417,7 @@ namespace ClaudeVS.ToolWindow
                     AttachedFiles = attachedFiles,
                     PromptPreview = decision != null && Options?.LogPromptPreview == true ? UsageRecord.Preview(userText) : null,
                     CharsAvoided = built.CharsAvoided,
-                };
+                });
 
                 await _session.SetModelAsync(model);
                 await _session.SetEffortAsync(effort);
@@ -487,7 +488,14 @@ namespace ClaudeVS.ToolWindow
             _session.Exited += (s, code) =>
             {
                 ClaudeOutputPane.WriteLine($"claude process exited with code {code}");
-                OnUi(() => { FlushText(); if (code != 0 && code != 1) Append($"\n[claude exited with code {code}]\n"); });
+                OnUi(() =>
+                {
+                    ThreadHelper.ThrowIfNotOnUIThread();
+                    if (s != _session) return; // an old session we stopped on purpose (New, Resume, solution change)
+                    _pendingUsages.Clear();    // its unfinished turns will never complete
+                    FlushText();
+                    if (code != 0 && code != 1) Append($"\n[claude exited with code {code}]\n");
+                });
             };
             ClaudeOutputPane.WriteLine($"Starting claude in {dir}");
             LogUsageSummary(dir);
@@ -552,15 +560,12 @@ namespace ClaudeVS.ToolWindow
 
         // ---------------- Events from the CLI (background thread) ----------------
 
+        /// <summary>
+        /// Reader thread. Every event goes through one FIFO queue that is drained on the UI thread, so text and
+        /// tool rows keep their order, and events from a session that was replaced (New, Resume) are dropped.
+        /// </summary>
         private void OnEvent(object sender, ClaudeEvent ev)
         {
-            if (ev.Kind == ClaudeEventKind.TextDelta || ev.Kind == ClaudeEventKind.AssistantText)
-            {
-                lock (_pendingText) _pendingText.Append(ev.Text);
-                OnUi(() => _flushTimer.Start());
-                return;
-            }
-
             if (ev.Kind == ClaudeEventKind.Error || (ev.Kind == ClaudeEventKind.TurnCompleted && ev.IsError))
                 ClaudeOutputPane.WriteLine("Error: " + ev.Text);
 
@@ -569,7 +574,41 @@ namespace ClaudeVS.ToolWindow
             FileChange change = ev.Kind == ClaudeEventKind.ToolUse ? FileChange.FromToolUse(ev.ToolName, ev.ToolInput) : null;
             string writeSnapshot = change?.IsWrite == true ? ReadSnapshot(change.FilePath) : null;
 
-            OnUi(() =>
+            _events.Enqueue(new QueuedEvent { Session = sender as ClaudeSession, Event = ev, Change = change, WriteSnapshot = writeSnapshot });
+            if (System.Threading.Interlocked.Exchange(ref _drainScheduled, 1) == 0) OnUi(DrainEvents);
+        }
+
+        private sealed class QueuedEvent
+        {
+            public ClaudeSession Session;
+            public ClaudeEvent Event;
+            public FileChange Change;
+            public string WriteSnapshot;
+        }
+
+        private readonly System.Collections.Concurrent.ConcurrentQueue<QueuedEvent> _events = new System.Collections.Concurrent.ConcurrentQueue<QueuedEvent>();
+        private int _drainScheduled;
+
+        private void DrainEvents()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            // Reset first: an event enqueued while draining schedules another drain instead of being missed.
+            System.Threading.Volatile.Write(ref _drainScheduled, 0);
+            while (_events.TryDequeue(out var q))
+            {
+                if (q.Session == null || q.Session != _session) continue; // from a session that was replaced
+                if (q.Event.Kind == ClaudeEventKind.TextDelta || q.Event.Kind == ClaudeEventKind.AssistantText)
+                {
+                    lock (_pendingText) _pendingText.Append(q.Event.Text);
+                    _flushTimer.Start(); // coalesce rendering of fast deltas
+                    continue;
+                }
+                HandleEvent(q.Event, q.Change, q.WriteSnapshot);
+            }
+        }
+
+        private void HandleEvent(ClaudeEvent ev, FileChange change, string writeSnapshot)
+        {
             {
                 ThreadHelper.ThrowIfNotOnUIThread();
                 _meterModel?.Observe(ev);
@@ -611,15 +650,16 @@ namespace ClaudeVS.ToolWindow
                         AppendError("[claude] ", ev.Text);
                         break;
                 }
-            });
+            }
         }
 
         /// <summary>Completes the record started in SendText and appends it to the local usage log (off the UI thread).</summary>
         private void RecordUsage(ClaudeEvent ev, string modelUsed)
         {
-            var rec = _pendingUsage;
-            _pendingUsage = null;
-            if (rec == null || Options?.KeepUsageLog == false) return;
+            // Prompts sent while Claude is still answering are queued by the CLI and finish in order.
+            if (_pendingUsages.Count == 0) return;
+            var rec = _pendingUsages.Dequeue();
+            if (Options?.KeepUsageLog == false) return;
             rec.Timestamp = DateTime.UtcNow;
             rec.ModelUsed = modelUsed;
             rec.InputTokens = ev.Usage.Input;
@@ -799,11 +839,16 @@ namespace ClaudeVS.ToolWindow
         private void DisposeSession()
         {
             if (_session == null) return;
-            _session.EventReceived -= OnEvent;
-            _session.RawLine -= OnRawLine;
-            _session.Dispose();
+            var old = _session;
+            old.EventReceived -= OnEvent;
+            old.RawLine -= OnRawLine;
             _session = null;
+            // Stopping the process can wait up to 2 s for a clean exit; don't block the UI thread for it.
+            // Anything the old session still reports is ignored (DrainEvents and Exited check the session).
+            _ = System.Threading.Tasks.Task.Run(() => old.Dispose());
             _sessionDir = null;
+            _pendingUsages.Clear();
+            lock (_pendingText) _pendingText.Clear();
             _permission.Visibility = Visibility.Collapsed;
         }
 
