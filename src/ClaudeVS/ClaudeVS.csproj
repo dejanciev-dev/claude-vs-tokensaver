@@ -61,6 +61,7 @@
     </Compile>
     <Compile Include="ToolWindow\ClaudeToolWindow.cs" />
     <Compile Include="ToolWindow\ClaudeChatControl.cs" />
+    <Compile Include="ToolWindow\TranscriptView.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

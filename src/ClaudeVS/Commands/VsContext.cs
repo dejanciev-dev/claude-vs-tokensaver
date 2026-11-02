@@ -70,6 +70,27 @@ namespace ClaudeVS.Commands
             catch (Exception) { return null; }
         }
 
+        /// <summary>
+        /// Inserts text at the caret of the active text document, replacing any selection, as one undo step.
+        /// Returns false when no text editor is active.
+        /// </summary>
+        public static bool InsertAtCursor(string text)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            try
+            {
+                if (!(Dte?.ActiveDocument?.Selection is TextSelection sel)) return false;
+                var undo = Dte.UndoContext;
+                bool ownUndo = !undo.IsOpen;
+                if (ownUndo) undo.Open("Insert from Claude Code");
+                try { sel.Insert(text, (int)vsInsertFlags.vsInsertFlagsContainNewText); }
+                finally { if (ownUndo) undo.Close(); }
+                Dte.ActiveDocument.Activate();
+                return true;
+            }
+            catch (Exception) { return false; }
+        }
+
         /// <summary>Errors (not warnings or messages) currently in the Error List.</summary>
         public static List<BuildError> GetErrors()
         {
