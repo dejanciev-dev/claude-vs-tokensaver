@@ -7,6 +7,11 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- `@` file picker: type `@` and part of a file name to attach a solution file as a path reference
+  (bin/obj/node_modules and similar folders are skipped).
+- **New Chat Window** (`Ctrl+Alt+K, N`): several independent chats, each with its own conversation.
+  Editor commands go to the chat used last.
+- Extension icon and preview image.
 - **History** button: resume an earlier conversation in the same solution (`claude --resume`).
 - Tool calls appear as collapsible rows showing the call, its input when expanded, and the result
   size in tokens; results of 5k+ tokens are shown in bold.

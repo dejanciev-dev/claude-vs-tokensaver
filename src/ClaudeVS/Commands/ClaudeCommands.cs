@@ -64,6 +64,7 @@ namespace ClaudeVS.Commands
             }));
 
             Add(mcs, PackageIds.ShowSavingsReport, (s, e) => Run(ShowSavingsReportAsync));
+            Add(mcs, PackageIds.NewChatWindow, (s, e) => Run(async () => await _package.NewChatWindowAsync()));
 
             Add(mcs, PackageIds.GenerateClaudeMd, (s, e) => Run(GenerateClaudeMdAsync));
             Add(mcs, PackageIds.InstallTokenSaver, (s, e) => Run(InstallTokenSaverAsync));

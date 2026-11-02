@@ -40,6 +40,12 @@
           <ButtonText>Ask Claude About Selection</ButtonText>
         </Strings>
       </Button>
+      <Button guid="guidClaudeVSCmdSet" id="cmdidNewChatWindow" priority="0x0060" type="Button">
+        <Parent guid="guidClaudeVSCmdSet" id="ClaudeSubMenuGroup" />
+        <Strings>
+          <ButtonText>New Chat Window</ButtonText>
+        </Strings>
+      </Button>
       <Button guid="guidClaudeVSCmdSet" id="cmdidAttachCurrentFile" priority="0x0150" type="Button">
         <Parent guid="guidClaudeVSCmdSet" id="ClaudeSubMenuGroup" />
         <CommandFlag>DefaultDisabled</CommandFlag>
@@ -91,6 +97,7 @@
     <KeyBinding guid="guidClaudeVSCmdSet" id="cmdidSendSelection" editor="guidVSStd97" key1="K" mod1="Control Alt" key2="S" mod2="Control Alt" />
     <KeyBinding guid="guidClaudeVSCmdSet" id="cmdidAttachCurrentFile" editor="guidVSStd97" key1="K" mod1="Control Alt" key2="F" mod2="Control Alt" />
     <KeyBinding guid="guidClaudeVSCmdSet" id="cmdidAttachErrorList" editor="guidVSStd97" key1="K" mod1="Control Alt" key2="E" mod2="Control Alt" />
+    <KeyBinding guid="guidClaudeVSCmdSet" id="cmdidNewChatWindow" editor="guidVSStd97" key1="K" mod1="Control Alt" key2="N" mod2="Control Alt" />
   </KeyBindings>
 
   <Symbols>
@@ -107,6 +114,7 @@
       <IDSymbol name="cmdidAttachCurrentFile" value="0x0104" />
       <IDSymbol name="cmdidAttachErrorList" value="0x0105" />
       <IDSymbol name="cmdidShowSavingsReport" value="0x0106" />
+      <IDSymbol name="cmdidNewChatWindow" value="0x0107" />
     </GuidSymbol>
   </Symbols>
 </CommandTable>
