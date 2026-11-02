@@ -15,6 +15,16 @@ dotnet test tests/ClaudeVS.Core.Tests        # Core tests (exit code 0 = all pas
 msbuild ClaudeVS.sln /restore /p:Configuration=Release /warnaserror
 ```
 
+To check the Core code against the real CLI (costs a few cents, never runs in CI):
+
+```
+dotnet run --project tests/ClaudeVS.Core.Tests -- --live [path-for-raw-output.txt]
+```
+
+It runs two short turns in read-only plan mode in an empty temp folder. If a new CLI version changes the
+event format, add a **sanitized** capture under `tests/ClaudeVS.Core.Tests/Fixtures`, with personal data removed
+(init details, rate-limit info, IDs). See `cli-2.1.316-turn.jsonl` for an example.
+
 To try the extension, set `ClaudeVS` as the startup project and press F5. This opens the
 experimental instance (`/rootsuffix Exp`). If that instance breaks, run *Reset the Visual Studio
 Experimental Instance* from the Start menu.
