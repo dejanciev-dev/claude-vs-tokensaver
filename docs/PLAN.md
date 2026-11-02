@@ -91,7 +91,7 @@ Tick the boxes as you go. Each phase ends with something you can run.
 - [x] Collapsible tool-call rows (`⚙ Read: src/A.cs`) with result size in tokens (input shown when expanded; results of 5k+ tokens in bold)
 - [ ] File edits: "Open diff" link using `IVsDifferenceService`
 - [ ] Theme check: Light, Dark, Blue in VS 2022 and VS 2026
-- [ ] Prompt box: history (Ctrl+Up/Down) ✅, `/` command hints incl. custom `.claude/commands` ✅, `@` file picker ⏳
+- [x] Prompt box: history (Ctrl+Up/Down), `/` command hints incl. custom `.claude/commands`, `@` file picker (attaches the file as a reference)
 - [ ] Questions & plan approval cards (`AskUserQuestion`, `ExitPlanMode` over `can_use_tool`)
 
 **Done when:** a colleague can use it without explanation. Tag `v0.3.0`.
@@ -101,7 +101,7 @@ Tick the boxes as you go. Each phase ends with something you can run.
 ## Phase 4 — Sessions and savings report (1 week)
 
 - [x] Session history picker: read `~/.claude/projects/<encoded-path>/*.jsonl`, list title/date/size, resume with `--resume` (**History** button)
-- [ ] Multiple chat tabs (one `ClaudeSession` each)
+- [x] Multiple chat windows (one `ClaudeSession` each) — Tools > Claude Code > *New Chat Window*, `Ctrl+Alt+K, N`
 - [x] **Savings report** (Tools > Claude Code > *Show Savings Report*, written to Output > Claude Code; a richer panel can come with Phase 3 UI):
   - tokens avoided by references (from `BuiltPrompt.CharsAvoided`)
   - turns routed to Haiku/Sonnet vs Opus and estimated $ saved
@@ -114,7 +114,7 @@ Tick the boxes as you go. Each phase ends with something you can run.
 
 ## Phase 5 — Release (2–3 days)
 
-- [ ] Icon (128×128 PNG) + preview image, add to manifest
+- [x] Icon (128×128 PNG) + preview image, add to manifest
 - [ ] Screenshots for README and Marketplace (meter, routing hint, setup dialog)
 - [ ] Test install of the Release `.vsix` on clean VS 2022 **and** VS 2026 (x64; ARM64 if available)
 - [x] GitHub Actions: build on `windows-latest`, run Core tests, upload `.vsix` artifact (`.github/workflows/build.yml`)

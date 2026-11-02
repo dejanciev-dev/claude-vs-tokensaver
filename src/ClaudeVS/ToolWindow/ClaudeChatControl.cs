@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -57,6 +58,12 @@ namespace ClaudeVS.ToolWindow
         private readonly PromptHistory _promptHistory = new PromptHistory();
         private List<SlashCommand> _commands = new List<SlashCommand>(SlashCommands.BuiltIn);
         private string _commandsDir;
+        private readonly ListBox _fileList = new ListBox { MaxHeight = 220, FontFamily = new FontFamily("Cascadia Mono, Consolas"), FontSize = 12, BorderThickness = new Thickness(0) };
+        private readonly Popup _filePopup;
+        private FileIndex _fileIndex;
+        private string _fileIndexDir;
+        private string _indexingDir;
+        private AtMention _mention;
         private ClaudeEvent _pendingPermission;
         private string _adviceCommand;
         private string _turnModel;
@@ -91,7 +98,10 @@ namespace ClaudeVS.ToolWindow
             _compact.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); SendText("/compact", routed: false); };
             _adviceAction.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); if (_adviceCommand != null) SendText(_adviceCommand, routed: false); };
             _prompt.PreviewKeyDown += OnPromptKeyDown;
-            _prompt.TextChanged += (s, e) => { _routeTimer.Stop(); _routeTimer.Start(); };
+            _prompt.TextChanged += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); _routeTimer.Stop(); _routeTimer.Start(); UpdateFilePicker(); };
+            _filePopup = BuildFilePicker();
+            GotKeyboardFocus += (s, e) => LastActive = this;
+            LastActive = LastActive ?? this;
             _model.SelectionChanged += (s, e) => UpdateRouteHint();
 
             _flushTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(60), DispatcherPriority.Background, (s, e) => FlushText(), Dispatcher);
@@ -104,6 +114,12 @@ namespace ClaudeVS.ToolWindow
         }
 
         private static ClaudeOptionsPage Options => ClaudeVSPackage.Instance?.Options;
+
+        /// <summary>Tool window instance id (0 = the first "Claude Code" window).</summary>
+        public int InstanceId { get; set; }
+
+        /// <summary>The chat the user interacted with last; editor commands send to it.</summary>
+        public static ClaudeChatControl LastActive { get; private set; }
 
         private static Microsoft.VisualStudio.Threading.JoinableTaskFactory Jtf => ClaudeVSPackage.Instance?.JoinableTaskFactory ?? ThreadHelper.JoinableTaskFactory;
 
@@ -235,6 +251,7 @@ namespace ClaudeVS.ToolWindow
         private void OnPromptKeyDown(object sender, KeyEventArgs e)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
+            if (_filePopup.IsOpen && HandleFilePickerKey(e.Key)) { e.Handled = true; return; }
             if (e.Key == Key.Enter && (Keyboard.Modifiers & ModifierKeys.Shift) == 0)
             {
                 e.Handled = true;
@@ -251,6 +268,98 @@ namespace ClaudeVS.ToolWindow
                 e.Handled = true;
                 ClearAttachments();
             }
+        }
+
+        // ---------------- @ file picker ----------------
+
+        private Popup BuildFilePicker()
+        {
+            _fileList.SetResourceReference(BackgroundProperty, EnvironmentColors.ToolWindowBackgroundBrushKey);
+            _fileList.SetResourceReference(ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
+            _fileList.MouseDoubleClick += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); PickFile(); };
+            var border = new Border { BorderThickness = new Thickness(1), Child = _fileList };
+            border.SetResourceReference(Border.BorderBrushProperty, EnvironmentColors.ToolWindowBorderBrushKey);
+            return new Popup { PlacementTarget = _prompt, Placement = PlacementMode.Top, StaysOpen = false, Child = border };
+        }
+
+        /// <summary>Shows matching solution files while an "@query" is being typed at the caret.</summary>
+        private void UpdateFilePicker()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            _mention = AtMention.Find(_prompt.Text, _prompt.CaretIndex);
+            string dir = VsContext.GetSolutionDirectory();
+            if (_mention == null || dir == null) { _filePopup.IsOpen = false; return; }
+
+            if (_fileIndex == null || !string.Equals(_fileIndexDir, dir, StringComparison.OrdinalIgnoreCase))
+            {
+                StartFileIndex(dir);
+                _fileList.ItemsSource = new[] { "Indexing solution files…" };
+                _fileList.IsEnabled = false;
+                _filePopup.IsOpen = true;
+                return;
+            }
+
+            var hits = _fileIndex.Search(_mention.Query, 10);
+            _fileList.IsEnabled = hits.Count > 0;
+            _fileList.ItemsSource = hits.Count > 0 ? (System.Collections.IEnumerable)hits : new[] { "No matching file" };
+            _fileList.SelectedIndex = hits.Count > 0 ? 0 : -1;
+            _filePopup.Width = Math.Max(260, _prompt.ActualWidth);
+            _filePopup.IsOpen = true;
+        }
+
+        private void StartFileIndex(string dir)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (_indexingDir != null && string.Equals(_indexingDir, dir, StringComparison.OrdinalIgnoreCase)) return;
+            _indexingDir = dir;
+            Jtf.RunAsync(async () =>
+            {
+                var index = await System.Threading.Tasks.Task.Run(() => FileIndex.Build(dir));
+                await Jtf.SwitchToMainThreadAsync();
+                _indexingDir = null;
+                _fileIndex = index;
+                _fileIndexDir = dir;
+                ClaudeOutputPane.WriteLine($"Indexed {index.Count} files for @ picker{(index.Truncated ? " (capped)" : "")}");
+                UpdateFilePicker();
+            }).FileAndForget("ClaudeVS/ChatControl/FileIndex");
+        }
+
+        private bool HandleFilePickerKey(Key key)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            int count = _fileList.IsEnabled ? _fileList.Items.Count : 0;
+            switch (key)
+            {
+                case Key.Down when count > 0:
+                    _fileList.SelectedIndex = (_fileList.SelectedIndex + 1) % count;
+                    _fileList.ScrollIntoView(_fileList.SelectedItem);
+                    return true;
+                case Key.Up when count > 0:
+                    _fileList.SelectedIndex = (_fileList.SelectedIndex - 1 + count) % count;
+                    _fileList.ScrollIntoView(_fileList.SelectedItem);
+                    return true;
+                case Key.Enter when count > 0:
+                case Key.Tab when count > 0:
+                    PickFile();
+                    return true;
+                case Key.Escape:
+                    _filePopup.IsOpen = false;
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        /// <summary>Removes the "@query" text and attaches the chosen file as a path reference.</summary>
+        private void PickFile()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (!(_fileList.SelectedItem is string rel) || _mention == null || _fileIndex == null || !_fileList.IsEnabled) return;
+            var m = _mention;
+            _filePopup.IsOpen = false;
+            _prompt.Text = _prompt.Text.Remove(m.Start, m.Length);
+            _prompt.CaretIndex = m.Start;
+            AttachFile(_fileIndex.FullPath(rel));
         }
 
         private void SendFromBox()
@@ -437,6 +546,7 @@ namespace ClaudeVS.ToolWindow
             _view.Clear();
             _resumeId = null;
             RefreshCommands(force: true);
+            _fileIndex = null; // re-index on the next @ (files may have been added)
             Append("New conversation.\n");
         }
 
@@ -643,6 +753,7 @@ namespace ClaudeVS.ToolWindow
 
         public void Dispose()
         {
+            if (LastActive == this) LastActive = null;
             _flushTimer.Stop();
             _routeTimer.Stop();
             DisposeSession();

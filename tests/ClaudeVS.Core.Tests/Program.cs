@@ -273,6 +273,43 @@ namespace ClaudeVS.Core.Tests
             finally { Directory.Delete(root, true); }
         }
 
+        private static void Test_AtMention_Find()
+        {
+            var m = AtMention.Find("look at @Price", 14);
+            Eq(8, m.Start, "start"); Eq("Price", m.Query, "query"); Eq(6, m.Length, "length");
+            Eq("", AtMention.Find("@", 1).Query, "bare @ at start");
+            Eq(null, AtMention.Find("mail me@host.com", 16), "e-mail ignored");
+            Eq(null, AtMention.Find("@done and more", 14), "caret not in a mention");
+            Eq("src/a", AtMention.Find("x @src/a", 8).Query, "slashes allowed");
+        }
+
+        private static void Test_FileIndex_SkipsNoiseAndRanks()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "cvs-idx-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                foreach (var f in new[] { "src/Services/PriceService.cs", "src/Api/PricesController.cs", "src/Api/OrderController.cs", "README.md",
+                                          "src/bin/Debug/PriceService.dll", "node_modules/price/index.js", "wwwroot/lib/x.js" })
+                {
+                    string full = Path.Combine(root, f.Replace('/', Path.DirectorySeparatorChar));
+                    Directory.CreateDirectory(Path.GetDirectoryName(full));
+                    File.WriteAllText(full, "");
+                }
+                var idx = FileIndex.Build(root);
+                Eq(4, idx.Count, "noise folders skipped (bin, node_modules, wwwroot/lib)");
+                Eq("src/Api/PricesController.cs,src/Services/PriceService.cs", string.Join(",", idx.Search("price")), "both start with 'price': shorter path first");
+                Eq("src/Services/PriceService.cs", idx.Search("service").FirstOrDefault(), "name contains beats path contains");
+                Eq("src/Api/OrderController.cs", idx.Search("ordctl").FirstOrDefault(), "subsequence");
+                Eq("src/Services/PriceService.cs", idx.Search("svc/pri").FirstOrDefault(), "path-segment subsequence");
+                Eq("README.md", idx.Search("").First(), "empty query: top-level files first");
+                Eq(0, idx.Search("zzz").Count, "no match");
+
+                var capped = FileIndex.Build(root, maxFiles: 2);
+                True(capped.Truncated && capped.Count == 2, "cap");
+            }
+            finally { Directory.Delete(root, true); }
+        }
+
         // ---------- Error hints ----------
         private static void Test_ErrorHints_KnownAndUnknown()
         {

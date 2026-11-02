@@ -14,7 +14,7 @@ namespace ClaudeVS
     [Guid(PackageIds.PackageGuidString)]
     [ProvideMenuResource("Menus.ctmenu", 1)]
     // Docked next to Solution Explorer by default.
-    [ProvideToolWindow(typeof(ClaudeToolWindow), Style = VsDockStyle.Tabbed, Window = "3ae79031-e1bc-11d0-8f78-00a0c9110057")]
+    [ProvideToolWindow(typeof(ClaudeToolWindow), Style = VsDockStyle.Tabbed, Window = "3ae79031-e1bc-11d0-8f78-00a0c9110057", MultiInstances = true)]
     [ProvideOptionPage(typeof(ClaudeOptionsPage), "Claude Code", "General", 0, 0, true)]
     public sealed class ClaudeVSPackage : AsyncPackage
     {
@@ -30,12 +30,38 @@ namespace ClaudeVS
             await ClaudeCommands.InitializeAsync(this);
         }
 
+        /// <summary>
+        /// Shows the chat that commands (Send Selection, Attach...) should go to: the chat window used most
+        /// recently, or the first one.
+        /// </summary>
         public async System.Threading.Tasks.Task<ClaudeChatControl> ShowChatAsync()
         {
             await JoinableTaskFactory.SwitchToMainThreadAsync(DisposalToken);
-            ToolWindowPane window = await ShowToolWindowAsync(typeof(ClaudeToolWindow), 0, true, DisposalToken);
+            int id = ClaudeChatControl.LastActive?.InstanceId ?? 0;
+            return await ShowChatInstanceAsync(id);
+        }
+
+        /// <summary>Opens another, independent chat window (its own claude process and conversation).</summary>
+        public async System.Threading.Tasks.Task<ClaudeChatControl> NewChatWindowAsync()
+        {
+            await JoinableTaskFactory.SwitchToMainThreadAsync(DisposalToken);
+            for (int id = 1; id < 100; id++)
+            {
+                if (FindToolWindow(typeof(ClaudeToolWindow), id, false) == null)
+                    return await ShowChatInstanceAsync(id);
+            }
+            throw new InvalidOperationException("Too many Claude Code windows are open.");
+        }
+
+        private async System.Threading.Tasks.Task<ClaudeChatControl> ShowChatInstanceAsync(int id)
+        {
+            await JoinableTaskFactory.SwitchToMainThreadAsync(DisposalToken);
+            ToolWindowPane window = await ShowToolWindowAsync(typeof(ClaudeToolWindow), id, true, DisposalToken);
             if (window?.Frame == null) throw new NotSupportedException("Cannot create the Claude Code window.");
-            return (ClaudeChatControl)window.Content;
+            var chat = (ClaudeChatControl)window.Content;
+            chat.InstanceId = id;
+            if (id > 0) window.Caption = $"Claude Code ({id + 1})";
+            return chat;
         }
     }
 }
