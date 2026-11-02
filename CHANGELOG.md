@@ -41,6 +41,14 @@ All notable changes to this project are listed here. The format follows
 - `dotnet test` runs the Core test runner instead of silently reporting zero tests.
 
 ### Fixed
+- Output from a stopped conversation (after **New**, **History** or a solution change) no longer appears in
+  the new one, including a spurious "claude exited with code -1".
+- Streamed text that arrives right after a tool call no longer appears above that tool row.
+- Sending a prompt while Claude is still answering no longer loses or mislabels a turn in the usage log.
+- **New**, **History** and solution changes no longer freeze the window while the old process stops.
+- The mouse wheel scrolls the chat even when the pointer is over a code block.
+- Chat windows restored by Visual Studio at startup get the right title and receive editor commands.
+- **Attach Current File as Reference** could stay disabled until another Claude command was used.
 - Build errors from the `Task` alias and VS threading analyzer warnings.
 
 ## [0.1.0]

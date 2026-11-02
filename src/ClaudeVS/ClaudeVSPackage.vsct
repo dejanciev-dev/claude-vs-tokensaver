@@ -48,7 +48,6 @@
       </Button>
       <Button guid="guidClaudeVSCmdSet" id="cmdidAttachCurrentFile" priority="0x0150" type="Button">
         <Parent guid="guidClaudeVSCmdSet" id="ClaudeSubMenuGroup" />
-        <CommandFlag>DefaultDisabled</CommandFlag>
         <Strings>
           <ButtonText>Attach Current File as Reference</ButtonText>
         </Strings>
