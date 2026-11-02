@@ -89,7 +89,7 @@ Tick the boxes as you go. Each phase ends with something you can run.
   - Option B: WebView2 + markdown-it — richer, heavier
 - [x] Code blocks: **Copy** and **Insert at cursor** buttons (insert is one undo step)
 - [x] Collapsible tool-call rows (`⚙ Read: src/A.cs`) with result size in tokens (input shown when expanded; results of 5k+ tokens in bold)
-- [ ] File edits: "Open diff" link using `IVsDifferenceService`
+- [x] File edits: **Diff** button on Edit/MultiEdit/Write rows using `IVsDifferenceService` (before rebuilt by undoing the edit; Write uses a snapshot)
 - [ ] Theme check: Light, Dark, Blue in VS 2022 and VS 2026
 - [x] Prompt box: history (Ctrl+Up/Down), `/` command hints incl. custom `.claude/commands`, `@` file picker (attaches the file as a reference)
 - [ ] Questions & plan approval cards (`AskUserQuestion`, `ExitPlanMode` over `can_use_tool`)
@@ -118,7 +118,8 @@ Tick the boxes as you go. Each phase ends with something you can run.
 - [ ] Screenshots for README and Marketplace (meter, routing hint, setup dialog)
 - [ ] Test install of the Release `.vsix` on clean VS 2022 **and** VS 2026 (x64; ARM64 if available)
 - [x] GitHub Actions: build on `windows-latest`, run Core tests, upload `.vsix` artifact (`.github/workflows/build.yml`)
-- [ ] `publishManifest.json` + `VsixPublisher.exe` publish step (manual approval)
+- [x] Tag-triggered release workflow: `v*` tag → build, test, **draft** GitHub Release with the `.vsix` and CHANGELOG notes
+- [ ] `publishManifest.json` + `VsixPublisher.exe` publish step (manual approval) — needs the Marketplace publisher ID
 - [x] CHANGELOG.md, issue templates, CONTRIBUTING.md
 - [ ] Publish to Visual Studio Marketplace as **Claude Code for Visual Studio — Token Saver**
 

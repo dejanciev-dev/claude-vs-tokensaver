@@ -7,6 +7,10 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Diff** button on Claude's file edits (Edit, MultiEdit, Write) opens Visual Studio's diff window.
+  The "before" side is rebuilt by undoing the edit on the current file; if that is not possible, only
+  the changed text is compared.
+- Release workflow: pushing a `v*` tag builds, tests and creates a draft GitHub Release with the `.vsix`.
 - `@` file picker: type `@` and part of a file name to attach a solution file as a path reference
   (bin/obj/node_modules and similar folders are skipped).
 - **New Chat Window** (`Ctrl+Alt+K, N`): several independent chats, each with its own conversation.
