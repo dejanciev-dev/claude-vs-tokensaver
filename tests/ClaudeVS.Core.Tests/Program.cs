@@ -102,6 +102,70 @@ namespace ClaudeVS.Core.Tests
             finally { File.Delete(path); }
         }
 
+        private static void Test_UsageLog_RotatesAndReadsArchive()
+        {
+            string path = Path.Combine(Path.GetTempPath(), "cvs-rot-" + Guid.NewGuid().ToString("N") + ".jsonl");
+            var log = new UsageLog(path, maxBytes: 300);
+            try
+            {
+                for (int i = 0; i < 10; i++) log.Append(new UsageRecord { Solution = "s", ModelUsed = "sonnet", InputTokens = i });
+                True(File.Exists(log.ArchivePath), "archive created");
+                True(new FileInfo(path).Length < 300 + 200, "current file stays small");
+                int n = log.ReadAll().Count;
+                True(n > 1 && n <= 10, "reads archive + current: " + n); // older archives are dropped by design
+                Eq(9L, log.ReadAll().Last().InputTokens, "newest last");
+            }
+            finally { File.Delete(path); File.Delete(log.ArchivePath); }
+        }
+
+        // ---------- Savings report ----------
+        private static void Test_Savings_RoutingAndReferences()
+        {
+            var prices = new PriceTable(); // Opus 4/20, Sonnet 2/10, Haiku 0.1/0.5 per MTok
+            var recs = new[]
+            {
+                // Sonnet turn: 1M input, 0.1M output → actual $3; at Opus prices $6.
+                new UsageRecord { Solution = "s", ModelUsed = "claude-sonnet-5-5", Routed = true, InputTokens = 1_000_000, OutputTokens = 100_000, CostUsd = 3, CharsAvoided = 4_000_000 },
+                // Opus turn counts the same in both.
+                new UsageRecord { Solution = "s", ModelUsed = "claude-opus-5-5", InputTokens = 100_000, CostUsd = 0.4 },
+                new UsageRecord { Solution = "other", ModelUsed = "claude-haiku-5-5", InputTokens = 1, CostUsd = 99 },
+            };
+            var r = SavingsReport.Build(recs, prices, "s");
+            Eq(2, r.Turns, "filtered by solution");
+            True(Math.Abs(r.ActualCostUsd - 3.4) < 1e-9, "actual " + r.ActualCostUsd);
+            True(Math.Abs(r.OpusEquivalentUsd - 6.4) < 1e-9, "opus eq " + r.OpusEquivalentUsd);
+            True(Math.Abs(r.RoutingSavedUsd - 3.0) < 1e-9, "saved " + r.RoutingSavedUsd);
+            Eq(1_000_000L, r.TokensAvoided, "tokens avoided");
+            True(Math.Abs(r.ReferencesSavedUsd - 2.0) < 1e-9, "refs priced at sonnet input " + r.ReferencesSavedUsd);
+            True(r.ToText().Contains("Saved by model routing:     $3.00  (47%)"), r.ToText());
+        }
+
+        private static void Test_Pricing_ParseAndFamily()
+        {
+            var p = ModelPrice.Parse("4, 20, 5, 0.2");
+            Eq(0.2, p.CacheRead, "parse");
+            Eq(null, ModelPrice.Parse("4, 20"), "too few");
+            Eq(null, ModelPrice.Parse("a,b,c,d"), "not numbers");
+            Eq("sonnet", PriceTable.Family("claude-sonnet-5-5"), "family");
+            Eq(null, PriceTable.Family("gpt"), "unknown");
+            Eq(4.0, PriceTable.FromStrings("bad", null, null).Opus.Input, "falls back to default");
+        }
+
+        private static void Test_RouterReplay_FindsChangedDecisions()
+        {
+            var recs = new[]
+            {
+                new UsageRecord { Routed = true, RouteModel = "sonnet", PromptPreview = "fix the typo in this comment" }, // router now says haiku
+                new UsageRecord { Routed = true, RouteModel = "haiku", PromptPreview = "fix the typo in this comment" },  // unchanged
+                new UsageRecord { Routed = true, RouteModel = "opus" },                                                  // no preview: skipped
+            };
+            var diffs = RouterReplay.Compare(recs, R, out int replayed);
+            Eq(2, replayed, "only records with preview");
+            Eq(1, diffs.Count, "one changed");
+            Eq("haiku", diffs[0].NowModel, "now haiku");
+            Eq(200, UsageRecord.Preview(new string('x', 500)).Length, "preview capped");
+        }
+
         // ---------- Error hints ----------
         private static void Test_ErrorHints_KnownAndUnknown()
         {

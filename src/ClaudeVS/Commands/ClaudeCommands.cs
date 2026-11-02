@@ -3,6 +3,8 @@ using System.ComponentModel.Design;
 using System.IO;
 using System.Linq;
 using ClaudeVS.Core.Setup;
+using ClaudeVS.Core.Tokens;
+using ClaudeVS.Diagnostics;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Task = System.Threading.Tasks.Task;
@@ -60,6 +62,8 @@ namespace ClaudeVS.Commands
                 var chat = await _package.ShowChatAsync();
                 chat.AttachErrors(errors);
             }));
+
+            Add(mcs, PackageIds.ShowSavingsReport, (s, e) => Run(ShowSavingsReportAsync));
 
             Add(mcs, PackageIds.GenerateClaudeMd, (s, e) => Run(GenerateClaudeMdAsync));
             Add(mcs, PackageIds.InstallTokenSaver, (s, e) => Run(InstallTokenSaverAsync));
@@ -121,6 +125,50 @@ namespace ClaudeVS.Commands
                 written + "\n\n• Claude won't read bin/obj/node_modules/packages/dist\n• Shell output capped at "
                 + TokenSaverSetup.DefaultBashMaxOutput + " chars\n• dotnet build/test, msbuild and git log run in quiet mode\n\nRestart the chat (New) for the settings to apply. Commit .claude/ to share with your team.",
                 OLEMSGICON.OLEMSGICON_INFO);
+        }
+
+        /// <summary>Writes the savings report (and a router replay, if prompt previews were logged) to Output > Claude Code.</summary>
+        private static async Task ShowSavingsReportAsync()
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            string solution = VsContext.GetSolutionDirectory();
+            var prices = _package.Options.ToPriceTable();
+            var log = ToolWindow.ClaudeChatControl.Usage;
+
+            string text = await Task.Run(() =>
+            {
+                var records = log.ReadAll();
+                var sb = new System.Text.StringBuilder();
+                sb.AppendLine().AppendLine(new string('=', 60));
+                sb.Append(SavingsReport.Build(records, prices, solution).ToText());
+                if (solution != null)
+                {
+                    var all = SavingsReport.Build(records, prices);
+                    if (all.Turns > 0) sb.AppendLine().AppendLine($"All solutions: {all.Turns} turns, ${all.ActualCostUsd:0.00} actual, ~${all.RoutingSavedUsd:0.00} saved by routing.");
+                }
+
+                var diffs = RouterReplay.Compare(records, new ModelRouter(), out int replayed);
+                sb.AppendLine();
+                if (replayed == 0)
+                    sb.AppendLine("Router replay: no prompt previews logged (Options > Diagnostics > Log prompt preview).");
+                else
+                {
+                    sb.AppendLine($"Router replay: {diffs.Count} of {replayed} logged prompts would route differently with the current rules.");
+                    foreach (var d in diffs.Take(15))
+                        sb.AppendLine($"  {d.LoggedModel} → {d.NowModel}: \"{Shorten(d.PromptPreview, 70)}\" ({d.NowReason})");
+                }
+                sb.AppendLine().AppendLine($"Log: {log.Path}");
+                return sb.ToString();
+            });
+
+            ClaudeOutputPane.WriteBlock(text);
+            ClaudeOutputPane.Activate();
+        }
+
+        private static string Shorten(string s, int max)
+        {
+            s = (s ?? "").Replace("\r", " ").Replace("\n", " ");
+            return s.Length <= max ? s : s.Substring(0, max - 1) + "…";
         }
 
         private static void OpenFile(string path)

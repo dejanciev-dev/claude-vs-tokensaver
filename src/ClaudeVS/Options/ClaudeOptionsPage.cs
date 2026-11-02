@@ -47,6 +47,20 @@ namespace ClaudeVS.Options
         [Category("Diagnostics"), DisplayName("Keep local usage log"), Description("Append one line per turn (model, route, tokens, cost) to %LocalAppData%\\claude-vs-tokensaver\\usage.jsonl. Stays on this machine; used for router tuning and the savings report.")]
         public bool KeepUsageLog { get; set; } = true;
 
+        [Category("Diagnostics"), DisplayName("Log prompt preview (for router tuning)"), Description("Also store the first 200 characters of each prompt in the usage log, so the savings report can replay real prompts through the router. Off by default because prompts may contain code or secrets.")]
+        public bool LogPromptPreview { get; set; } = false;
+
+        [Category("Pricing"), DisplayName("Opus price"), Description("USD per million tokens: input, output, cache write, cache read. Used only for the savings estimate.")]
+        public string OpusPrice { get; set; } = PriceTable.DefaultOpus;
+
+        [Category("Pricing"), DisplayName("Sonnet price"), Description("USD per million tokens: input, output, cache write, cache read.")]
+        public string SonnetPrice { get; set; } = PriceTable.DefaultSonnet;
+
+        [Category("Pricing"), DisplayName("Haiku price"), Description("USD per million tokens: input, output, cache write, cache read.")]
+        public string HaikuPrice { get; set; } = PriceTable.DefaultHaiku;
+
+        public PriceTable ToPriceTable() => PriceTable.FromStrings(OpusPrice, SonnetPrice, HaikuPrice);
+
         [Category("Diagnostics"), DisplayName("Log raw CLI traffic"), Description("Write every stream-json line sent to and received from claude to Output > Claude Code. Large; turn on only when debugging.")]
         public bool LogRawCliTraffic { get; set; } = false;
 

@@ -17,5 +17,6 @@ namespace ClaudeVS
         public const int InstallTokenSaver = 0x0103;
         public const int AttachCurrentFile = 0x0104;
         public const int AttachErrorList = 0x0105;
+        public const int ShowSavingsReport = 0x0106;
     }
 }

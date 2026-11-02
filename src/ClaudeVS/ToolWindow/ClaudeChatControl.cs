@@ -61,7 +61,7 @@ namespace ClaudeVS.ToolWindow
         private readonly System.Collections.Generic.List<string> _attachedFiles = new System.Collections.Generic.List<string>();
         private System.Collections.Generic.IReadOnlyList<BuildError> _attachedErrors;
         private UsageRecord _pendingUsage;
-        private static readonly UsageLog Usage = new UsageLog(UsageLog.DefaultPath);
+        internal static readonly UsageLog Usage = new UsageLog(UsageLog.DefaultPath);
 
         public ClaudeChatControl()
         {
@@ -291,6 +291,9 @@ namespace ClaudeVS.ToolWindow
                     RouteScore = decision?.Score,
                     RouteReason = decision?.Reason,
                     PromptChars = userText.Length,
+                    AttachedLines = attachedLines,
+                    AttachedFiles = attachedFiles,
+                    PromptPreview = decision != null && Options?.LogPromptPreview == true ? UsageRecord.Preview(userText) : null,
                     CharsAvoided = built.CharsAvoided,
                 };
 

@@ -19,6 +19,19 @@ namespace ClaudeVS.Core.Tokens
         [JsonProperty("routeScore")] public double? RouteScore { get; set; }
         [JsonProperty("routeReason")] public string RouteReason { get; set; }
         [JsonProperty("promptChars")] public int PromptChars { get; set; }
+        [JsonProperty("attachedLines")] public int AttachedLines { get; set; }
+        [JsonProperty("attachedFiles")] public int AttachedFiles { get; set; }
+        /// <summary>First characters of the prompt. Only written when the user opts in; enables router replay.</summary>
+        [JsonProperty("prompt")] public string PromptPreview { get; set; }
+
+        public const int PromptPreviewLength = 200;
+
+        public static string Preview(string prompt)
+        {
+            if (string.IsNullOrEmpty(prompt)) return null;
+            string p = prompt.Trim();
+            return p.Length <= PromptPreviewLength ? p : p.Substring(0, PromptPreviewLength);
+        }
 
         // Outcome
         [JsonProperty("model")] public string ModelUsed { get; set; }
@@ -87,9 +100,18 @@ namespace ClaudeVS.Core.Tokens
     {
         private static readonly object Gate = new object();
 
-        public UsageLog(string path) { Path = path ?? throw new ArgumentNullException(nameof(path)); }
+        public UsageLog(string path, long maxBytes = DefaultMaxBytes)
+        {
+            Path = path ?? throw new ArgumentNullException(nameof(path));
+            MaxBytes = maxBytes;
+        }
+
+        /// <summary>When the log passes this size it is moved to <see cref="ArchivePath"/> (replacing the previous archive).</summary>
+        public const long DefaultMaxBytes = 5 * 1024 * 1024;
 
         public string Path { get; }
+        public long MaxBytes { get; }
+        public string ArchivePath => System.IO.Path.ChangeExtension(Path, ".1" + System.IO.Path.GetExtension(Path));
 
         public static string DefaultPath => System.IO.Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "claude-vs-tokensaver", "usage.jsonl");
@@ -101,19 +123,24 @@ namespace ClaudeVS.Core.Tokens
             lock (Gate)
             {
                 Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Path));
+                if (MaxBytes > 0 && File.Exists(Path) && new FileInfo(Path).Length >= MaxBytes)
+                {
+                    if (File.Exists(ArchivePath)) File.Delete(ArchivePath);
+                    File.Move(Path, ArchivePath);
+                }
                 File.AppendAllText(Path, line + "\n");
             }
         }
 
-        /// <summary>All readable records; malformed lines (e.g. a partial write) are skipped.</summary>
+        /// <summary>All readable records, archive first; malformed lines (e.g. a partial write) are skipped.</summary>
         public IReadOnlyList<UsageRecord> ReadAll()
         {
             var list = new List<UsageRecord>();
-            string[] lines;
+            var lines = new List<string>();
             lock (Gate)
             {
-                if (!File.Exists(Path)) return list;
-                lines = File.ReadAllLines(Path);
+                if (File.Exists(ArchivePath)) lines.AddRange(File.ReadAllLines(ArchivePath));
+                if (File.Exists(Path)) lines.AddRange(File.ReadAllLines(Path));
             }
             foreach (var l in lines)
             {
