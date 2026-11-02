@@ -6,6 +6,7 @@ using ClaudeVS.Core.Context;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
 
 namespace ClaudeVS.Commands
 {
@@ -89,6 +90,35 @@ namespace ClaudeVS.Commands
                 return true;
             }
             catch (Exception) { return false; }
+        }
+
+        /// <summary>
+        /// Opens Visual Studio's diff window. <paramref name="leftText"/> is written to a temporary file; the right
+        /// side is <paramref name="rightFile"/> as it is on disk (or <paramref name="rightText"/> in a temp file).
+        /// </summary>
+        public static void OpenDiff(string leftText, string leftLabel, string rightFile, string rightText, string rightLabel, string caption)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (!(Package.GetGlobalService(typeof(SVsDifferenceService)) is IVsDifferenceService diff))
+                throw new InvalidOperationException("The Visual Studio diff service is not available.");
+
+            string dir = Path.Combine(Path.GetTempPath(), "claude-vs-tokensaver", "diff");
+            Directory.CreateDirectory(dir);
+            string name = Path.GetFileNameWithoutExtension(rightFile ?? "snippet");
+            string ext = Path.GetExtension(rightFile ?? ".txt");
+            string stamp = DateTime.Now.ToString("HHmmssfff");
+            string left = Path.Combine(dir, $"{name}.before-{stamp}{ext}");
+            File.WriteAllText(left, leftText ?? "");
+
+            uint options = (uint)__VSDIFFSERVICEOPTIONS.VSDIFFOPT_LeftFileIsTemporary;
+            string right = rightFile;
+            if (rightText != null)
+            {
+                right = Path.Combine(dir, $"{name}.after-{stamp}{ext}");
+                File.WriteAllText(right, rightText);
+                options |= (uint)__VSDIFFSERVICEOPTIONS.VSDIFFOPT_RightFileIsTemporary;
+            }
+            diff.OpenComparisonWindow2(left, right, caption, caption, leftLabel, rightLabel, null, null, options);
         }
 
         /// <summary>Errors (not warnings or messages) currently in the Error List.</summary>

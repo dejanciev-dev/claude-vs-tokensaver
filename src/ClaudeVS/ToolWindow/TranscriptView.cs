@@ -87,13 +87,24 @@ namespace ClaudeVS.ToolWindow
         /// A collapsible row for a tool call: the header shows the call, the body its input.
         /// <see cref="CompleteTool"/> adds the result size when the result arrives.
         /// </summary>
-        public void AppendTool(string toolUseId, string description, string inputJson)
+        public void AppendTool(string toolUseId, string description, string inputJson, Action onDiff = null)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             EndAnswer();
             _plain = null;
 
-            var header = new TextBlock { Text = "⚙ " + description, FontFamily = Mono, FontSize = 12, TextTrimming = TextTrimming.CharacterEllipsis };
+            var header = new TextBlock { Text = "⚙ " + description, FontFamily = Mono, FontSize = 12, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
+            object headerContent = header;
+            if (onDiff != null)
+            {
+                var diff = SmallButton("Diff", "Compare the file before and after this change");
+                diff.Click += (s, e) => { onDiff(); e.Handled = true; };
+                var row = new DockPanel();
+                DockPanel.SetDock(diff, Dock.Right);
+                row.Children.Add(diff);
+                row.Children.Add(header);
+                headerContent = row;
+            }
             var body = new TextBox
             {
                 Text = string.IsNullOrWhiteSpace(inputJson) ? "(no input)" : inputJson,
@@ -108,7 +119,7 @@ namespace ClaudeVS.ToolWindow
                 Margin = new Thickness(16, 2, 0, 2),
             };
             body.SetResourceReference(Control.ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
-            var expander = new Expander { Header = header, Content = body, IsExpanded = false, Margin = new Thickness(0, 1, 0, 1) };
+            var expander = new Expander { Header = headerContent, Content = body, IsExpanded = false, Margin = new Thickness(0, 1, 0, 1) };
             expander.SetResourceReference(Control.ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
 
             _doc.Blocks.Add(new BlockUIContainer(expander) { Margin = new Thickness(0) });

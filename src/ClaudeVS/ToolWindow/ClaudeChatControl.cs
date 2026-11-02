@@ -564,6 +564,11 @@ namespace ClaudeVS.ToolWindow
             if (ev.Kind == ClaudeEventKind.Error || (ev.Kind == ClaudeEventKind.TurnCompleted && ev.IsError))
                 ClaudeOutputPane.WriteLine("Error: " + ev.Text);
 
+            // A Write replaces the whole file, so its old content can't be rebuilt afterwards. Copy it now, on the
+            // reader thread, before the CLI runs the tool (best effort: a very fast tool may already have run).
+            FileChange change = ev.Kind == ClaudeEventKind.ToolUse ? FileChange.FromToolUse(ev.ToolName, ev.ToolInput) : null;
+            string writeSnapshot = change?.IsWrite == true ? ReadSnapshot(change.FilePath) : null;
+
             OnUi(() =>
             {
                 ThreadHelper.ThrowIfNotOnUIThread();
@@ -578,7 +583,9 @@ namespace ClaudeVS.ToolWindow
                         break;
                     case ClaudeEventKind.ToolUse:
                         FlushText();
-                        _view.AppendTool(ev.ToolUseId, ev.Text, ev.ToolInput?.ToString());
+                        Action diff = null;
+                        if (change != null) diff = () => { ThreadHelper.ThrowIfNotOnUIThread(); ShowDiff(change, writeSnapshot); };
+                        _view.AppendTool(ev.ToolUseId, ev.Text, ev.ToolInput?.ToString(), diff);
                         break;
                     case ClaudeEventKind.ToolResult:
                         _view.CompleteTool(ev.ToolUseId, ev.ResultChars, ev.IsError);
@@ -637,6 +644,55 @@ namespace ClaudeVS.ToolWindow
                 try { ClaudeOutputPane.WriteLine($"Usage for this solution: {UsageSummary.From(Usage.ReadAll(), dir)} (log: {Usage.Path})"); }
                 catch (Exception ex) { ClaudeOutputPane.WriteLine("Could not read usage log: " + ex.Message); }
             });
+        }
+
+        private const int MaxSnapshotBytes = 2 * 1024 * 1024;
+
+        /// <summary>Current file content for a Write snapshot: "" for a new file, null if unreadable or huge.</summary>
+        private static string ReadSnapshot(string path)
+        {
+            try
+            {
+                if (!System.IO.File.Exists(path)) return "";
+                return new System.IO.FileInfo(path).Length <= MaxSnapshotBytes ? System.IO.File.ReadAllText(path) : null;
+            }
+            catch (Exception) { return null; }
+        }
+
+        /// <summary>
+        /// Diff of one Claude file change. Edit/MultiEdit: the "before" is rebuilt by undoing the replacements on the
+        /// current file; if that fails (file changed again, edit not applied yet), only the changed text is compared.
+        /// Write: compares against the copy taken when the tool call arrived.
+        /// </summary>
+        private void ShowDiff(FileChange change, string writeSnapshot)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            string name = System.IO.Path.GetFileName(change.FilePath);
+            try
+            {
+                bool exists = System.IO.File.Exists(change.FilePath);
+                if (change.IsWrite)
+                {
+                    if (writeSnapshot == null || !exists) { Append($"\n  (no diff for {name}: the earlier content was not captured)\n"); return; }
+                    VsContext.OpenDiff(writeSnapshot, "Before Claude's write", change.FilePath, null, "Current", $"{name}: Claude's write");
+                    return;
+                }
+
+                string current = exists ? System.IO.File.ReadAllText(change.FilePath) : null;
+                string before = change.ReconstructBefore(current);
+                if (before != null)
+                {
+                    VsContext.OpenDiff(before, "Before Claude's edit", change.FilePath, null, "Current", $"{name}: Claude's edit");
+                    return;
+                }
+                string oldText = string.Join("\n…\n", change.Edits.Select(x => x.OldText));
+                string newText = string.Join("\n…\n", change.Edits.Select(x => x.NewText));
+                VsContext.OpenDiff(oldText, "Replaced text", change.FilePath, newText, "New text", $"{name}: changed text only");
+            }
+            catch (Exception ex)
+            {
+                AppendError("[diff] ", ex.Message);
+            }
         }
 
         private void OnMeterChanged(object sender, EventArgs e)

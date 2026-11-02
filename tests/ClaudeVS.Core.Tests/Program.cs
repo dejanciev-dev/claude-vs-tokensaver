@@ -310,6 +310,29 @@ namespace ClaudeVS.Core.Tests
             finally { Directory.Delete(root, true); }
         }
 
+        // ---------- Edit diff ----------
+        private static void Test_EditDiff_ReconstructBefore()
+        {
+            var edit = FileChange.FromToolUse("Edit", JObject.Parse("{\"file_path\":\"C:/a.cs\",\"old_string\":\"int x = 1;\",\"new_string\":\"int x = 2;\"}"));
+            Eq("C:/a.cs", edit.FilePath, "path");
+            Eq("a\nint x = 1;\nb", edit.ReconstructBefore("a\nint x = 2;\nb"), "single edit undone");
+            Eq(null, edit.ReconstructBefore("a\nint x = 3;\nb"), "file changed since: null");
+            Eq(null, edit.ReconstructBefore("int x = 2; int x = 2;"), "ambiguous: null");
+
+            var multi = FileChange.FromToolUse("MultiEdit", JObject.Parse(
+                "{\"file_path\":\"b.cs\",\"edits\":[{\"old_string\":\"foo\",\"new_string\":\"bar\",\"replace_all\":true},{\"old_string\":\"bar()\",\"new_string\":\"baz()\"}]}"));
+            // before: "foo(); foo; x" → all foo→bar: "bar(); bar; x" → bar()→baz(): "baz(); bar; x"
+            Eq("foo(); foo; x", multi.ReconstructBefore("baz(); bar; x"), "multi edit undone in reverse order");
+
+            var lf = FileChange.FromToolUse("Edit", JObject.Parse("{\"file_path\":\"e.cs\",\"old_string\":\"a\\nb\",\"new_string\":\"a\\nc\"}"));
+            Eq("x\r\na\r\nb\r\ny", lf.ReconstructBefore("x\r\na\r\nc\r\ny"), "LF edit text on a CRLF file");
+
+            Eq(true, FileChange.FromToolUse("Write", JObject.Parse("{\"file_path\":\"c.cs\",\"content\":\"x\"}")).IsWrite, "write");
+            Eq(null, FileChange.FromToolUse("Write", JObject.Parse("{\"file_path\":\"c.cs\"}")).ReconstructBefore("x"), "write can't be rebuilt");
+            Eq(null, FileChange.FromToolUse("Read", JObject.Parse("{\"file_path\":\"c.cs\"}")), "read is not a change");
+            Eq(null, FileChange.FromToolUse("Edit", JObject.Parse("{\"file_path\":\"d.cs\",\"old_string\":\"gone\",\"new_string\":\"\"}")).ReconstructBefore("abc"), "deletion: null");
+        }
+
         // ---------- Error hints ----------
         private static void Test_ErrorHints_KnownAndUnknown()
         {
