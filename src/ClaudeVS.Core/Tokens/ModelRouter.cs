@@ -40,26 +40,30 @@ namespace ClaudeVS.Core.Tokens
     {
         public long StickyContextTokens { get; set; } = 30_000;
 
-        private static readonly string[] Hard =
-        {
-            "architect", "architecture", "design pattern", "redesign", "refactor", "migrate", "migration", "rewrite",
-            "race condition", "deadlock", "thread-safe", "thread safe", "concurren", "memory leak", "performance",
-            "optimi", "root cause", "investigate", "why does", "why is", "security", "vulnerab", "algorithm",
-            "across the solution", "whole solution", "entire solution", "all projects", "end-to-end", "plan ",
-        };
+        // Keywords match whole words (plus common endings: -s, -es, -ed, -d, -ing, -er).
+        // A trailing '*' marks a stem that may be followed by any letters ("optimi*" → optimize, optimization).
+        private static readonly Regex[] Hard = Keywords(
+            "architect*", "design pattern", "redesign", "refactor*", "migrat*", "rewrit*",
+            "race condition", "deadlock", "thread-safe", "thread safe", "concurren*", "memory leak", "performance",
+            "optimi*", "root cause", "investigat*", "why does", "why is", "security", "vulnerab*", "algorithm",
+            "across the solution", "whole solution", "entire solution", "all projects", "end-to-end", "plan");
 
-        private static readonly string[] Medium =
-        {
-            "implement", "add a", "add an", "create", "write test", "unit test", "fix", "bug", "endpoint", "controller",
-            "component", "service", "repository", "query", "stored procedure", "migration script", "error", "exception",
-        };
+        private static readonly Regex[] Medium = Keywords(
+            "implement*", "add a", "add an", "creat*", "write test", "unit test", "fix", "bug", "endpoint", "controller",
+            "component", "service", "repositor*", "query", "stored procedure", "migration script", "error", "exception");
 
-        private static readonly string[] Easy =
+        private static readonly Regex[] Easy = Keywords(
+            "renam*", "typo", "format*", "comment", "docstring", "xml doc", "summar*", "explain this", "what does",
+            "what is", "translat*", "convert this", "regex", "spelling", "sort the", "reorder", "one-liner", "simple",
+            "commit message", "add using", "remove unused");
+
+        private static Regex[] Keywords(params string[] words) => words.Select(w =>
         {
-            "rename", "typo", "format", "comment", "docstring", "xml doc", "summar", "explain this", "what does",
-            "what is", "translate", "convert this", "regex", "spelling", "sort the", "reorder", "one-liner", "simple",
-            "commit message", "add using", "remove unused",
-        };
+            bool stem = w.EndsWith("*");
+            string core = Regex.Escape(stem ? w.Substring(0, w.Length - 1) : w);
+            string pattern = @"(?<![\w-])" + core + (stem ? @"[\w-]*" : @"(?:s|es|ed|d|ing|er)?(?![\w-])");
+            return new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+        }).ToArray();
 
         private static readonly Regex FilePath = new Regex(@"[\w\-./\\]+\.(cs|ts|tsx|js|html|scss|css|sql|json|xml|csproj|razor|cshtml|xaml|py|md)\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
@@ -69,9 +73,9 @@ namespace ClaudeVS.Core.Tokens
             var reasons = new List<string>();
             double score = 0;
 
-            int hard = Hard.Count(k => p.Contains(k));
-            int med = Medium.Count(k => p.Contains(k));
-            int easy = Easy.Count(k => p.Contains(k));
+            int hard = Hard.Count(k => k.IsMatch(p));
+            int med = Medium.Count(k => k.IsMatch(p));
+            int easy = Easy.Count(k => k.IsMatch(p));
             if (hard > 0) { score += Math.Min(hard, 3) * 2.5; reasons.Add($"{hard} hard keyword(s)"); }
             if (med > 0) { score += Math.Min(med, 3) * 0.75; reasons.Add($"{med} task keyword(s)"); }
             if (easy > 0) { score -= Math.Min(easy, 2) * 2.0; reasons.Add($"{easy} simple-task keyword(s)"); }

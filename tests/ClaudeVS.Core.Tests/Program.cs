@@ -152,6 +152,21 @@ namespace ClaudeVS.Core.Tests
             Eq(EffortChoice.High, d.Effort, d.ToString());
         }
 
+        private static void Test_Router_WholeWords_NoSubstringFalsePositives()
+        {
+            // "prefix"/"suffix" must not count as "fix", "airplane" not as "plan", "recreated" not as "create", "terror" not as "error".
+            var d = R.Route(new RouteRequest { Prompt = "Show the prefix and suffix used by the airplane recreated terror sample" });
+            True(!d.Reason.Contains("task keyword") && !d.Reason.Contains("hard keyword"), d.ToString());
+        }
+
+        private static void Test_Router_StemsAndEndings_StillMatch()
+        {
+            var hard = R.Route(new RouteRequest { Prompt = "We are optimizing this; investigating why the refactored code is slower" });
+            True(hard.Reason.Contains("3 hard keyword"), hard.ToString());
+            var med = R.Route(new RouteRequest { Prompt = "this fixes bugs and creates errors" });
+            True(med.Reason.Contains("4 task keyword"), med.ToString()); // fixes, bugs, creates, errors
+        }
+
         private static void Test_Router_Sticky_NoDowngradeInBigContext()
         {
             var d = R.Route(new RouteRequest { Prompt = "rename this variable", CurrentModel = ModelChoice.Opus, ContextTokens = 80_000 });
