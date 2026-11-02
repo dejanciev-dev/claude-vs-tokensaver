@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CommandTable xmlns="http://schemas.microsoft.com/VisualStudio/2005-10-18/CommandTable" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <Extern href="stdidcmd.h" />
+  <Extern href="vsshlids.h" />
+
+  <Commands package="guidClaudeVSPackage">
+    <Menus>
+      <!-- Tools > Claude Code -->
+      <Menu guid="guidClaudeVSCmdSet" id="ClaudeToolsMenu" priority="0x0100" type="Menu">
+        <Parent guid="guidClaudeVSCmdSet" id="ToolsMenuGroup" />
+        <Strings>
+          <ButtonText>Claude Code</ButtonText>
+        </Strings>
+      </Menu>
+    </Menus>
+
+    <Groups>
+      <Group guid="guidClaudeVSCmdSet" id="ToolsMenuGroup" priority="0x0600">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_MENU_TOOLS" />
+      </Group>
+      <Group guid="guidClaudeVSCmdSet" id="ClaudeSubMenuGroup" priority="0x0100">
+        <Parent guid="guidClaudeVSCmdSet" id="ClaudeToolsMenu" />
+      </Group>
+      <Group guid="guidClaudeVSCmdSet" id="EditorContextGroup" priority="0x0600">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_CODEWIN" />
+      </Group>
+    </Groups>
+
+    <Buttons>
+      <Button guid="guidClaudeVSCmdSet" id="cmdidOpenWindow" priority="0x0100" type="Button">
+        <Parent guid="guidSHLMainMenu" id="IDG_VS_WNDO_OTRWNDWS1" />
+        <Strings>
+          <ButtonText>Claude Code</ButtonText>
+        </Strings>
+      </Button>
+      <Button guid="guidClaudeVSCmdSet" id="cmdidSendSelection" priority="0x0100" type="Button">
+        <Parent guid="guidClaudeVSCmdSet" id="EditorContextGroup" />
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <Strings>
+          <ButtonText>Ask Claude About Selection</ButtonText>
+        </Strings>
+      </Button>
+      <Button guid="guidClaudeVSCmdSet" id="cmdidGenerateClaudeMd" priority="0x0200" type="Button">
+        <Parent guid="guidClaudeVSCmdSet" id="ClaudeSubMenuGroup" />
+        <Strings>
+          <ButtonText>Generate Lean CLAUDE.md</ButtonText>
+        </Strings>
+      </Button>
+      <Button guid="guidClaudeVSCmdSet" id="cmdidInstallTokenSaver" priority="0x0300" type="Button">
+        <Parent guid="guidClaudeVSCmdSet" id="ClaudeSubMenuGroup" />
+        <Strings>
+          <ButtonText>Install Token-Saving Settings and Hooks</ButtonText>
+        </Strings>
+      </Button>
+    </Buttons>
+  </Commands>
+
+  <CommandPlacements>
+    <!-- Also show "Claude Code" (open window) at the top of Tools > Claude Code. -->
+    <CommandPlacement guid="guidClaudeVSCmdSet" id="cmdidOpenWindow" priority="0x0050">
+      <Parent guid="guidClaudeVSCmdSet" id="ClaudeSubMenuGroup" />
+    </CommandPlacement>
+  </CommandPlacements>
+
+  <KeyBindings>
+    <!-- Ctrl+Alt+K, Ctrl+Alt+C: open the chat. Change in Tools > Options > Keyboard if it clashes. -->
+    <KeyBinding guid="guidClaudeVSCmdSet" id="cmdidOpenWindow" editor="guidVSStd97" key1="K" mod1="Control Alt" key2="C" mod2="Control Alt" />
+    <KeyBinding guid="guidClaudeVSCmdSet" id="cmdidSendSelection" editor="guidVSStd97" key1="K" mod1="Control Alt" key2="S" mod2="Control Alt" />
+  </KeyBindings>
+
+  <Symbols>
+    <GuidSymbol name="guidClaudeVSPackage" value="{a5234be0-66c2-40a1-9e7f-ca291c8100e0}" />
+    <GuidSymbol name="guidClaudeVSCmdSet" value="{9092e8e3-816e-4fb6-8ee2-440557e650c9}">
+      <IDSymbol name="ToolsMenuGroup" value="0x1000" />
+      <IDSymbol name="ClaudeToolsMenu" value="0x1001" />
+      <IDSymbol name="ClaudeSubMenuGroup" value="0x1002" />
+      <IDSymbol name="EditorContextGroup" value="0x1003" />
+      <IDSymbol name="cmdidOpenWindow" value="0x0100" />
+      <IDSymbol name="cmdidSendSelection" value="0x0101" />
+      <IDSymbol name="cmdidGenerateClaudeMd" value="0x0102" />
+      <IDSymbol name="cmdidInstallTokenSaver" value="0x0103" />
+    </GuidSymbol>
+  </Symbols>
+</CommandTable>

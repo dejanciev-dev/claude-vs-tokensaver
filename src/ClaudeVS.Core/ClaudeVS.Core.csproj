@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Everything that does not need Visual Studio lives here, so it can be unit tested on any OS
+       (dotnet test) and reused by the VSIX for both VS 2022 (17.x) and VS 2026 (18.x). -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>8.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <RootNamespace>ClaudeVS.Core</RootNamespace>
+    <AssemblyName>ClaudeVS.Core</AssemblyName>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 13.0.x ships with VS 2022 and VS 2026, so the VSIX does not have to carry its own copy. -->
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+</Project>
