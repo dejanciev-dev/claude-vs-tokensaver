@@ -1,0 +1,11 @@
+# Store text as LF in the repo, check it out as CRLF (Windows / Visual Studio project).
+* text=auto eol=crlf
+
+# Shell scripts must stay LF even on Windows.
+*.sh text eol=lf
+
+# Binary assets.
+*.png binary
+*.ico binary
+*.vsix binary
+*.dll binary
