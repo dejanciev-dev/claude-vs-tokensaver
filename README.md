@@ -9,8 +9,8 @@ Token-efficient Claude Code extension for Visual Studio 2022/2026 — smart mode
 A lean Visual Studio extension (VS 2022 **17.x** and VS 2026 **18.x**, x64 + ARM64) that runs the
 Claude Code CLI inside a tool window and is built around **spending fewer tokens**.
 
-> Status: v0.1 scaffold. The core library is unit tested; the VSIX project has not been built yet —
-> open it in Visual Studio and build (see below).
+> Status: v0.1 scaffold. The core library is unit tested; the VSIX builds cleanly but has not yet
+> been run end-to-end in the experimental instance.
 
 ## What it saves, and how
 

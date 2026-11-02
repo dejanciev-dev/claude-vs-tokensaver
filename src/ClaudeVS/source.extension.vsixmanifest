@@ -4,7 +4,7 @@
     <Identity Id="ClaudeVS.a5234be0-66c2-40a1-9e7f-ca291c8100e0" Version="0.1.0" Language="en-US" Publisher="Dejan" />
     <DisplayName>Claude Code for Visual Studio — Token Saver</DisplayName>
     <Description xml:space="preserve">Claude Code inside Visual Studio 2022 &amp; 2026, built to spend fewer tokens: auto model/effort routing (Haiku→Sonnet→Opus), cache-aware sessions, smart selection context, live token/cost meter with /compact hints, and one-click lean CLAUDE.md + output-trimming hooks. Community project, not affiliated with Anthropic.</Description>
-    <MoreInfo>https://github.com/OWNER/claude-vs-tokensaver</MoreInfo>
+    <MoreInfo>https://github.com/dejanciev-dev/claude-vs-tokensaver</MoreInfo>
     <License>Resources\LICENSE.txt</License>
     <Tags>claude;claude code;ai;llm;tokens;token optimization;ai assistant</Tags>
   </Metadata>

@@ -41,6 +41,9 @@ namespace ClaudeVS.Options
         [Category("Token saving"), DisplayName("Auto-approve quiet rewrites"), Description("When installing hooks: run rewritten dotnet build/test commands without asking.")]
         public bool AutoApproveHookRewrites { get; set; } = false;
 
+        [Category("Diagnostics"), DisplayName("Log raw CLI traffic"), Description("Write every stream-json line sent to and received from claude to Output > Claude Code. Large; turn on only when debugging.")]
+        public bool LogRawCliTraffic { get; set; } = false;
+
         public ContextSettings ToContextSettings() => new ContextSettings { InlineMaxLines = InlineMaxLines };
 
         public TokenMeterSettings ToMeterSettings() => new TokenMeterSettings

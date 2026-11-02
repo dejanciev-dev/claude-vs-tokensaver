@@ -10,6 +10,7 @@ using ClaudeVS.Commands;
 using ClaudeVS.Core.Cli;
 using ClaudeVS.Core.Context;
 using ClaudeVS.Core.Tokens;
+using ClaudeVS.Diagnostics;
 using ClaudeVS.Options;
 using Microsoft.VisualStudio.PlatformUI;
 using Microsoft.VisualStudio.Shell;
@@ -55,6 +56,8 @@ namespace ClaudeVS.ToolWindow
         private string _sessionDir;
         private ClaudeEvent _pendingPermission;
         private string _adviceCommand;
+        private string _turnModel;
+        private string _lastHint;
 
         public ClaudeChatControl()
         {
@@ -224,6 +227,7 @@ namespace ClaudeVS.ToolWindow
                     if (model == ModelChoice.Auto) model = d.Model;
                     if (effort == EffortChoice.Auto) effort = d.Effort;
                     routeNote = $"auto → {model.ToCli()}/{effort.ToCli()}";
+                    ClaudeOutputPane.WriteLine($"Route: {d} | prompt {userText.Length} chars, {attachedLines} attached lines, context {_meterModel?.ContextTokens ?? 0} tok → using {model.ToCli()}/{effort.ToCli()}");
                 }
 
                 await _session.SetModelAsync(model);
@@ -277,7 +281,13 @@ namespace ClaudeVS.ToolWindow
             });
             _sessionDir = dir;
             _session.EventReceived += OnEvent;
-            _session.Exited += (s, code) => OnUi(() => { FlushText(); if (code != 0 && code != 1) Append($"\n[claude exited with code {code}]\n"); });
+            if (o?.LogRawCliTraffic == true) _session.RawLine += OnRawLine;
+            _session.Exited += (s, code) =>
+            {
+                ClaudeOutputPane.WriteLine($"claude process exited with code {code}");
+                OnUi(() => { FlushText(); if (code != 0 && code != 1) Append($"\n[claude exited with code {code}]\n"); });
+            };
+            ClaudeOutputPane.WriteLine($"Starting claude in {dir}");
         }
 
         private void NewChat()
@@ -299,12 +309,19 @@ namespace ClaudeVS.ToolWindow
                 return;
             }
 
+            if (ev.Kind == ClaudeEventKind.Error || (ev.Kind == ClaudeEventKind.TurnCompleted && ev.IsError))
+                ClaudeOutputPane.WriteLine("Error: " + ev.Text);
+
             OnUi(() =>
             {
                 _meterModel?.Observe(ev);
                 switch (ev.Kind)
                 {
                     case ClaudeEventKind.SessionStarted:
+                        ClaudeOutputPane.WriteLine($"Session {ev.SessionId} started, model {ev.Model}");
+                        break;
+                    case ClaudeEventKind.AssistantUsage:
+                        if (!ev.IsSubagent && !string.IsNullOrEmpty(ev.Model)) _turnModel = ev.Model;
                         break;
                     case ClaudeEventKind.ToolUse:
                         FlushText();
@@ -321,11 +338,13 @@ namespace ClaudeVS.ToolWindow
                         break;
                     case ClaudeEventKind.TurnCompleted:
                         FlushText();
-                        if (ev.IsError && !string.IsNullOrEmpty(ev.Text)) Append("\n[error] " + ev.Text + "\n");
-                        Append($"\n  ✓ {ev.DurationMs / 1000.0:0.0}s · {TokenMeter.Format(ev.Usage.Total)} tok · ${_meterModel?.LastTurnCostUsd:0.000}\n");
+                        if (ev.IsError && !string.IsNullOrEmpty(ev.Text)) AppendError("[error] ", ev.Text);
+                        string used = _turnModel != null ? " · " + _turnModel : "";
+                        _turnModel = null;
+                        Append($"\n  ✓ {ev.DurationMs / 1000.0:0.0}s · {TokenMeter.Format(ev.Usage.Total)} tok · ${_meterModel?.LastTurnCostUsd:0.000}{used}\n");
                         break;
                     case ClaudeEventKind.Error:
-                        Append("\n[claude] " + ev.Text + "\n");
+                        AppendError("[claude] ", ev.Text);
                         break;
                 }
             });
@@ -381,6 +400,20 @@ namespace ClaudeVS.ToolWindow
             _flushTimer.Stop();
         }
 
+        private void AppendError(string prefix, string text)
+        {
+            Append("\n" + prefix + text + "\n");
+            string hint = ClaudeErrorHints.Explain(text);
+            if (hint != null && hint != _lastHint) Append("  → " + hint + "\n");
+            _lastHint = hint;
+        }
+
+        private static void OnRawLine(object sender, RawLineEventArgs e)
+        {
+            string arrow = e.Direction == RawLineDirection.Stdin ? ">>" : e.Direction == RawLineDirection.Stdout ? "<<" : "!!";
+            ClaudeOutputPane.WriteLine(arrow + " " + e.Line);
+        }
+
         private void Append(string text)
         {
             _transcript.AppendText(text);
@@ -408,7 +441,8 @@ namespace ClaudeVS.ToolWindow
                 catch (Exception ex)
                 {
                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                    Append("\n[error] " + ex.Message + "\n");
+                    ClaudeOutputPane.WriteLine("Exception: " + ex);
+                    AppendError("[error] ", ex.Message);
                 }
             }).FileAndForget("ClaudeVS/ChatControl/Fire");
         }
@@ -417,6 +451,7 @@ namespace ClaudeVS.ToolWindow
         {
             if (_session == null) return;
             _session.EventReceived -= OnEvent;
+            _session.RawLine -= OnRawLine;
             _session.Dispose();
             _session = null;
             _sessionDir = null;

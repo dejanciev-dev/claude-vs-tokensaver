@@ -55,6 +55,17 @@ namespace ClaudeVS.Core.Tests
             Eq("\"C:\\dir with space\\\\\"", ClaudeArgsBuilder.Quote("C:\\dir with space\\"));
         }
 
+        // ---------- Error hints ----------
+        private static void Test_ErrorHints_KnownAndUnknown()
+        {
+            True(ClaudeErrorHints.Explain("Invalid API key · Please run /login")?.Contains("/login") == true, "login");
+            True(ClaudeErrorHints.Explain("API Error: 429 {\"type\":\"rate_limit_error\"}")?.Contains("Rate limited") == true, "rate limit");
+            True(ClaudeErrorHints.Explain("API Error: 529 {\"type\":\"overloaded_error\"}")?.Contains("overloaded") == true, "overloaded");
+            True(ClaudeErrorHints.Explain("Prompt is too long")?.Contains("/compact") == true, "too long");
+            Eq(null, ClaudeErrorHints.Explain("Build failed at line 401"), "no false positive on numbers");
+            Eq(null, ClaudeErrorHints.Explain(""), "empty");
+        }
+
         // ---------- Parser ----------
         private static void Test_Parser_FullTurn()
         {
@@ -139,6 +150,21 @@ namespace ClaudeVS.Core.Tests
             var d = R.Route(new RouteRequest { Prompt = "Investigate the root cause of the deadlock in the price ingestion pipeline and refactor the concurrency model across the solution." });
             Eq(ModelChoice.Opus, d.Model, d.ToString());
             Eq(EffortChoice.High, d.Effort, d.ToString());
+        }
+
+        private static void Test_Router_WholeWords_NoSubstringFalsePositives()
+        {
+            // "prefix"/"suffix" must not count as "fix", "airplane" not as "plan", "recreated" not as "create", "terror" not as "error".
+            var d = R.Route(new RouteRequest { Prompt = "Show the prefix and suffix used by the airplane recreated terror sample" });
+            True(!d.Reason.Contains("task keyword") && !d.Reason.Contains("hard keyword"), d.ToString());
+        }
+
+        private static void Test_Router_StemsAndEndings_StillMatch()
+        {
+            var hard = R.Route(new RouteRequest { Prompt = "We are optimizing this; investigating why the refactored code is slower" });
+            True(hard.Reason.Contains("3 hard keyword"), hard.ToString());
+            var med = R.Route(new RouteRequest { Prompt = "this fixes bugs and creates errors" });
+            True(med.Reason.Contains("4 task keyword"), med.ToString()); // fixes, bugs, creates, errors
         }
 
         private static void Test_Router_Sticky_NoDowngradeInBigContext()

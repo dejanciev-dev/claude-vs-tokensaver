@@ -55,6 +55,7 @@
     <Compile Include="PackageIds.cs" />
     <Compile Include="Commands\ClaudeCommands.cs" />
     <Compile Include="Commands\VsContext.cs" />
+    <Compile Include="Diagnostics\ClaudeOutputPane.cs" />
     <Compile Include="Options\ClaudeOptionsPage.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -90,8 +91,8 @@
     <PackageReference Include="Microsoft.VisualStudio.SDK" Version="17.14.40265" ExcludeAssets="runtime">
       <IncludeAssets>compile; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <!-- Floating 17.x: newest VSSDK build tools that still build with VS 2022. Pin it once it builds for you. -->
-    <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="17.*">
+    <!-- Pinned to the version verified to build with VS 2022. -->
+    <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="17.14.2142">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
