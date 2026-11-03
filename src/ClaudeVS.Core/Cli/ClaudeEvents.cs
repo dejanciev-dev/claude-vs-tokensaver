@@ -65,6 +65,8 @@ namespace ClaudeVS.Core.Cli
         public int ResultChars { get; set; }
         public bool IsError { get; set; }
         public string RequestId { get; set; }
+        /// <summary>ControlResponse: the CLI's answer to our control request (e.g. the get_context_usage data).</summary>
+        public JObject Payload { get; set; }
 
         // Usage
         public TokenUsage Usage { get; set; }

@@ -145,7 +145,8 @@ needs file checkpointing ("File rewinding is not enabled").
   (verified with 2.1.317: `--name` writes `custom-title` entries; the CLI's own titles are `ai-title` entries)
 - [x] Export conversation (Markdown), from the CLI's session file (verified with 2.1.317: `--resume` in print
   mode keeps the session id, so the file holds the whole conversation)
-- [ ] Context usage breakdown from `get_context_usage` in the meter
+- [x] Context usage breakdown from `get_context_usage` in the meter (response format captured from 2.1.317 in
+  `Fixtures/cli-2.1.317-context-usage.jsonl`)
 - [ ] Rewind (enable file checkpointing, then `rewind_files`)
 - [ ] Voice input (Windows dictation)
 - [ ] Images: paste screenshots into the prompt (send as image content)

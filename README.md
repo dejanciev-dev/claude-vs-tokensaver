@@ -33,7 +33,7 @@ Pre-release (v0.1 → v0.2).
 
 | Layer | State |
 |---|---|
-| Core library (CLI session, parser, router, meter, context, Markdown, usage log) | ✅ 35 automated tests, plus regression tests built from real CLI output |
+| Core library (CLI session, parser, router, meter, context, Markdown, usage log) | ✅ 49 automated tests, plus regression tests built from real CLI output |
 | Core against the real `claude` CLI | ✅ Verified with Claude Code 2.1.316 via the opt-in live test: streaming, usage, cost, prompt cache, question and plan approval |
 | Visual Studio extension (UI) | ⚠️ Builds with zero warnings in CI, but not yet run in the experimental instance |
 
@@ -70,7 +70,7 @@ This extension attacks all three, and shows the numbers so you can see the effec
 
 | Feature | What it does |
 |---|---|
-| **Live token meter** | Context fill %, session tokens and cost, cache-hit rate and the current model. Suggests `/compact` at 60% context and urges it at 85%. |
+| **Live token meter** | Context fill %, session tokens and cost, cache-hit rate and the current model. Suggests `/compact` at 60% context and urges it at 85%. Click it for a breakdown of what fills the context (system prompt, tools, memory files, tool results…), from the CLI with no model call. |
 | **Per-turn footer** | `✓ 3.1s · 12.4k tok · $0.004 · claude-haiku-5-5`, showing the model that *actually* answered. |
 | **Model mismatch warning** | If the CLI answers with a different model than the one requested (for example in plan mode), the chat tells you. |
 | **Tool rows with sizes** | Every tool call is a collapsible row showing its input and the size of its result in tokens. Results of 5k+ tokens are in bold, because those fill the context. |
@@ -291,7 +291,7 @@ ClaudeVS.sln
 src/ClaudeVS.Core/            netstandard2.0, all logic, no Visual Studio dependency
   Cli/        ClaudeSession (process + stream-json), ClaudeStreamParser, ClaudeOptions/ArgsBuilder,
               ClaudeCliLocator, ClaudeErrorHints, InteractiveRequests (questions, plans)
-  Tokens/     ModelRouter, TokenMeter, UsageLog, SavingsReport (+ price table, router replay)
+  Tokens/     ModelRouter, TokenMeter, ContextUsage, UsageLog, SavingsReport (+ price table, router replay)
   Context/    PromptContextBuilder, FileIndex (@ picker), EditDiff (Diff button)
   Chat/       PromptHistory, SlashCommands, SessionHistory, SessionTranscript, SessionMeta, ConversationExport, Bookmarks
   Markdown/   MarkdownParser (streaming-tolerant subset)

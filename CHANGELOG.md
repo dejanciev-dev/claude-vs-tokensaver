@@ -7,6 +7,10 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Context breakdown:** click the meter (or / → Context usage) to see what fills the context window: system
+  prompt, tools, memory files, skills, messages (split into tool results, tool calls, your and Claude's messages),
+  reserved space, plus tips such as compacting when tool results dominate. It comes from the CLI's
+  `get_context_usage`, refreshed after each answer, with no model call.
 - **Export conversation** (/ → Export conversation…): saves the whole conversation as Markdown, including
   messages from before a resume or a compaction, and opens it in Visual Studio. Tool calls are listed as one
   line each (with result size), never their full output.
