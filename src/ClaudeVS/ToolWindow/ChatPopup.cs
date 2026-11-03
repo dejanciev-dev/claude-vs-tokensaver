@@ -31,6 +31,17 @@ namespace ClaudeVS.ToolWindow
             public bool Checked { get; set; }
             public bool Enabled { get; set; } = true;
             public Action Run { get; set; }
+            /// <summary>Small icon buttons shown on the right when the row is hovered or selected (archive…).</summary>
+            public List<EntryAction> Actions { get; set; }
+            /// <summary>When set, a rename button turns the label into a text box; Enter passes the new text here.</summary>
+            public Action<string> Rename { get; set; }
+        }
+
+        public sealed class EntryAction
+        {
+            public string Glyph { get; set; }
+            public string Tooltip { get; set; }
+            public Action Run { get; set; }
         }
 
         private readonly Popup _popup;
@@ -118,11 +129,12 @@ namespace ClaudeVS.ToolWindow
             set { _footer.Text = value; _footer.Visibility = string.IsNullOrEmpty(value) ? Visibility.Collapsed : Visibility.Visible; }
         }
 
-        public void Show(IEnumerable<Entry> entries, UIElement target = null)
+        /// <summary>Opens the popup (or refreshes it if open). <paramref name="keepFilter"/> keeps the typed filter text.</summary>
+        public void Show(IEnumerable<Entry> entries, UIElement target = null, bool keepFilter = false)
         {
             _entries = entries.ToList();
             if (target != null) _popup.PlacementTarget = target;
-            _filter.Text = "";
+            if (!keepFilter) _filter.Text = "";
             Rebuild();
             _popup.IsOpen = true;
         }
@@ -144,7 +156,12 @@ namespace ClaudeVS.ToolWindow
                     lastGroup = e.Group;
                 }
                 var item = new ListBoxItem { Content = Row(e), Tag = e, IsEnabled = e.Enabled, Padding = new Thickness(6, 4, 8, 4), Cursor = Cursors.Hand };
-                item.PreviewMouseLeftButtonUp += (s, ev) => { ev.Handled = true; RunEntry(e); };
+                item.PreviewMouseLeftButtonUp += (s, ev) =>
+                {
+                    if (IsInside<ButtonBase>(ev.OriginalSource) || IsInside<TextBox>(ev.OriginalSource)) return; // a row action or the rename box
+                    ev.Handled = true;
+                    RunEntry(e);
+                };
                 _list.Items.Add(item);
             }
             if (_list.Items.Count == 0)
@@ -162,7 +179,14 @@ namespace ClaudeVS.ToolWindow
             || (e.Description ?? "").IndexOf(f, StringComparison.OrdinalIgnoreCase) >= 0
             || (e.Group ?? "").IndexOf(f, StringComparison.OrdinalIgnoreCase) >= 0;
 
-        private static UIElement Row(Entry e)
+        private static bool IsInside<T>(object source) where T : DependencyObject
+        {
+            for (var d = source as DependencyObject; d != null && !(d is ListBoxItem); d = d is Visual || d is System.Windows.Media.Media3D.Visual3D ? VisualTreeHelper.GetParent(d) : LogicalTreeHelper.GetParent(d))
+                if (d is T) return true;
+            return false;
+        }
+
+        private UIElement Row(Entry e)
         {
             var grid = new Grid();
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -189,7 +213,62 @@ namespace ClaudeVS.ToolWindow
 
             Grid.SetColumn(glyph, 0); Grid.SetColumn(text, 1); Grid.SetColumn(detail, 2); Grid.SetColumn(check, 3);
             grid.Children.Add(glyph); grid.Children.Add(text); grid.Children.Add(detail); grid.Children.Add(check);
+
+            // Row actions (rename, archive…): shown while the mouse is over the row, like VS Code's list actions.
+            var actions = new StackPanel { Orientation = Orientation.Horizontal, Visibility = Visibility.Hidden, Margin = new Thickness(4, -2, 0, -2), VerticalAlignment = VerticalAlignment.Top };
+            if (e.Rename != null)
+                actions.Children.Add(ActionButton(ChatTheme.IconEdit, "Rename", () => StartRename(e, text, label)));
+            foreach (var a in e.Actions ?? Enumerable.Empty<EntryAction>())
+                actions.Children.Add(ActionButton(a.Glyph, a.Tooltip, a.Run));
+            if (actions.Children.Count > 0)
+            {
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                Grid.SetColumn(actions, 4);
+                grid.Children.Add(actions);
+                grid.Background = Brushes.Transparent; // hit-testable everywhere, so hover works across the row
+                grid.MouseEnter += (s, ev) => actions.Visibility = Visibility.Visible;
+                grid.MouseLeave += (s, ev) => actions.Visibility = Visibility.Hidden;
+            }
             return grid;
+        }
+
+        private static Button ActionButton(string glyph, string tooltip, Action run)
+        {
+            var b = ChatTheme.IconButton(glyph, tooltip);
+            b.FontSize = 11;
+            b.Width = 22;
+            b.Height = 20;
+            b.Click += (s, ev) => { ev.Handled = true; run?.Invoke(); };
+            return b;
+        }
+
+        /// <summary>Swaps the row's label for a text box: Enter saves through <see cref="Entry.Rename"/>, Esc cancels.</summary>
+        private void StartRename(Entry e, StackPanel text, TextBlock label)
+        {
+            var box = new TextBox { Text = e.Label, FontSize = 12.5, Padding = new Thickness(1, 0, 1, 0), BorderThickness = new Thickness(1) };
+            ChatTheme.Text(box);
+            box.Background = ChatTheme.Subtle;
+            box.SetResourceReference(Control.BorderBrushProperty, EnvironmentColors.SystemHighlightBrushKey);
+            box.SetResourceReference(TextBoxBase.CaretBrushProperty, EnvironmentColors.ToolWindowTextBrushKey);
+            int at = text.Children.IndexOf(label);
+            text.Children.RemoveAt(at);
+            text.Children.Insert(at, box);
+            bool done = false;
+            void Finish(bool save)
+            {
+                if (done) return;
+                done = true;
+                if (save && box.Text.Trim() != (e.Label ?? "")) e.Rename(box.Text);
+                else { text.Children.Remove(box); text.Children.Insert(at, label); _list.Focus(); }
+            }
+            box.KeyDown += (s, ev) =>
+            {
+                if (ev.Key == Key.Enter) { ev.Handled = true; Finish(true); }
+                else if (ev.Key == Key.Escape) { ev.Handled = true; Finish(false); }
+            };
+            box.LostKeyboardFocus += (s, ev) => { if (_popup.IsOpen) Finish(true); };
+            box.Focus();
+            box.SelectAll();
         }
 
         private void SelectFirst(Func<Entry, bool> preferred)
@@ -212,6 +291,7 @@ namespace ClaudeVS.ToolWindow
 
         private void HandleKey(KeyEventArgs e)
         {
+            if (e.OriginalSource is TextBox box && box != _filter) return; // typing in a rename box
             switch (e.Key)
             {
                 case Key.Down: Move(1); e.Handled = true; break;

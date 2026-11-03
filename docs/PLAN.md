@@ -141,7 +141,8 @@ needs file checkpointing ("File rewinding is not enabled").
 - [x] Send turns into Stop while answering; Esc stops
 - [x] Empty-session message (own icon; no Anthropic logo or mascot)
 - [x] Bookmarks: bookmark button under each answer, bookmarks side panel
-- [ ] Sessions: rename (`--name`) and archive; show the resumed conversation's earlier messages
+- [x] Sessions: rename (`--name`) and archive; show the resumed conversation's earlier messages
+  (verified with 2.1.317: `--name` writes `custom-title` entries; the CLI's own titles are `ai-title` entries)
 - [ ] Export conversation (Markdown)
 - [ ] Context usage breakdown from `get_context_usage` in the meter
 - [ ] Rewind (enable file checkpointing, then `rewind_files`)

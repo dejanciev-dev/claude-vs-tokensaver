@@ -95,6 +95,8 @@ namespace ClaudeVS.Core.Cli
         public EffortChoice Effort { get; set; } = EffortChoice.Auto;
         public PermissionModeChoice PermissionMode { get; set; } = PermissionModeChoice.AcceptEdits;
         public string ResumeSessionId { get; set; }
+        /// <summary>Display name (<c>--name</c>): the CLI stores it as the session's title, shown in its /resume picker.</summary>
+        public string SessionName { get; set; }
         /// <summary>Short extra system prompt (kept tiny on purpose — it is paid on every request).</summary>
         public string AppendSystemPrompt { get; set; }
         public string ExtraArguments { get; set; } = "";
@@ -130,6 +132,8 @@ namespace ClaudeVS.Core.Cli
             if (perm != null) { parts.Add("--permission-mode"); parts.Add(perm); }
 
             if (!string.IsNullOrWhiteSpace(o.ResumeSessionId)) { parts.Add("--resume"); parts.Add(o.ResumeSessionId.Trim()); }
+
+            if (!string.IsNullOrWhiteSpace(o.SessionName)) { parts.Add("--name"); parts.Add(o.SessionName.Trim().Replace('\n', ' ').Replace('\r', ' ')); }
 
             if (!string.IsNullOrWhiteSpace(o.AppendSystemPrompt)) { parts.Add("--append-system-prompt"); parts.Add(o.AppendSystemPrompt.Trim()); }
 

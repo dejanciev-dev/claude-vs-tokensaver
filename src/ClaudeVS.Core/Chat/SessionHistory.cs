@@ -15,6 +15,8 @@ namespace ClaudeVS.Core.Chat
         public DateTime LastWriteUtc { get; set; }
         public long SizeBytes { get; set; }
         public string FilePath { get; set; }
+        /// <summary>Hidden from the sessions list unless archived sessions are shown (see <see cref="SessionMetaStore"/>).</summary>
+        public bool Archived { get; set; }
     }
 
     /// <summary>
@@ -61,32 +63,68 @@ namespace ClaudeVS.Core.Chat
             return result;
         }
 
-        /// <summary>A "summary" entry if present, else the first real user prompt. Reads at most the first 400 lines.</summary>
+        /// <summary>How much of the end of a session file is searched for its name and AI title.</summary>
+        private const int TailBytes = 256 * 1024;
+
+        /// <summary>
+        /// The session's title, best first: the name given with <c>--name</c> ("custom-title" entries), the CLI's own
+        /// generated title ("ai-title"), a "summary" entry, then the first real user prompt. The CLI appends the
+        /// title entries again after each turn, so the latest one is near the end of the file; only the first 400
+        /// lines and the last 256 KB are read. Null when the file has neither a title nor a prompt.
+        /// </summary>
         public static string ReadTitle(string file)
         {
-            string firstPrompt = null;
+            string firstPrompt = null, summary = null, custom = null, ai = null;
             try
             {
                 using (var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
-                using (var reader = new StreamReader(stream, Encoding.UTF8))
                 {
+                    var reader = new StreamReader(stream, Encoding.UTF8);
                     string line;
-                    int n = 0;
-                    while ((line = reader.ReadLine()) != null && n++ < 400)
+                    for (int n = 0; n < 400 && (line = reader.ReadLine()) != null; n++)
                     {
-                        if (line.Length == 0 || line[0] != '{') continue;
-                        JObject o;
-                        try { o = JObject.Parse(line); } catch (JsonException) { continue; }
+                        var o = ParseLine(line);
+                        if (o == null) continue;
                         string type = (string)o["type"];
-                        if (type == "summary" && !string.IsNullOrWhiteSpace((string)o["summary"])) return Clean((string)o["summary"]);
-                        if (firstPrompt == null && type == "user" && o.Value<bool?>("isMeta") != true)
+                        if (type == "summary" && summary == null && !string.IsNullOrWhiteSpace((string)o["summary"])) summary = (string)o["summary"];
+                        else if (firstPrompt == null && type == "user" && o.Value<bool?>("isMeta") != true && o.Value<bool?>("isSidechain") != true)
                             firstPrompt = PromptText(o.SelectToken("message.content"));
+                        else ReadTitleEntry(o, ref custom, ref ai);
+                    }
+
+                    // The rest of the file: all of it when it is small, else only the tail (the reader buffers ahead,
+                    // so seek from the end rather than from the reader's position).
+                    if (stream.Length > TailBytes * 2 && !reader.EndOfStream)
+                    {
+                        stream.Position = stream.Length - TailBytes;
+                        reader = new StreamReader(stream, Encoding.UTF8);
+                        reader.ReadLine(); // probably a partial line
+                    }
+                    while ((line = reader.ReadLine()) != null)
+                    {
+                        if (line.IndexOf("-title\"", StringComparison.Ordinal) < 0) continue; // cheap filter before parsing
+                        var o = ParseLine(line);
+                        if (o != null) ReadTitleEntry(o, ref custom, ref ai);
                     }
                 }
             }
             catch (IOException) { }
             catch (UnauthorizedAccessException) { }
-            return firstPrompt == null ? null : Clean(firstPrompt);
+            string title = new[] { custom, ai, summary, firstPrompt }.FirstOrDefault(t => !string.IsNullOrWhiteSpace(t));
+            return title == null ? null : Clean(title);
+        }
+
+        private static void ReadTitleEntry(JObject o, ref string custom, ref string ai)
+        {
+            string type = (string)o["type"];
+            if (type == "custom-title") custom = (string)o["customTitle"] ?? custom;
+            else if (type == "ai-title") ai = (string)o["aiTitle"] ?? ai;
+        }
+
+        internal static JObject ParseLine(string line)
+        {
+            if (string.IsNullOrEmpty(line) || line[0] != '{') return null;
+            try { return JObject.Parse(line); } catch (JsonException) { return null; }
         }
 
         private static string PromptText(JToken content)

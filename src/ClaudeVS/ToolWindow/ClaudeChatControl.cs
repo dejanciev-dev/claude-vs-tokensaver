@@ -99,6 +99,11 @@ namespace ClaudeVS.ToolWindow
         private readonly Queue<UsageRecord> _pendingUsages = new Queue<UsageRecord>();
         internal static readonly UsageLog Usage = new UsageLog(UsageLog.DefaultPath);
         internal static readonly BookmarkStore Bookmarks = new BookmarkStore(BookmarkStore.DefaultPath);
+        internal static readonly SessionMetaStore SessionMeta = new SessionMetaStore(SessionMetaStore.DefaultPath);
+        // Name given to this conversation (title click or the sessions list); passed to the CLI as --name.
+        private string _sessionName;
+        private bool _showArchived;
+        private readonly TextBox _titleEdit = new TextBox { Visibility = Visibility.Collapsed, FontWeight = FontWeights.SemiBold, FontSize = 13, Padding = new Thickness(1, 0, 1, 0), VerticalAlignment = VerticalAlignment.Center };
         private readonly Button _bookmarksBtn = ChatTheme.IconButton(ChatTheme.IconBookmarks, "Bookmarks");
         private readonly BookmarksPanel _bookmarks = new BookmarksPanel();
         // Answer text of the turn in progress, and the prompts still waiting for their answer (sent while busy).
@@ -200,8 +205,24 @@ namespace ClaudeVS.ToolWindow
             var header = new DockPanel();
             DockPanel.SetDock(actions, Dock.Right);
             header.Children.Add(actions);
-            header.Children.Add(_title);
+            var titleArea = new Grid();
+            titleArea.Children.Add(_title);
+            titleArea.Children.Add(_titleEdit);
+            header.Children.Add(titleArea);
             ChatTheme.Text(_title);
+            _title.Cursor = Cursors.IBeam;
+            _title.MouseLeftButtonUp += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); StartTitleEdit(); };
+            ChatTheme.Text(_titleEdit);
+            _titleEdit.Background = ChatTheme.Subtle;
+            _titleEdit.SetResourceReference(Control.BorderBrushProperty, EnvironmentColors.SystemHighlightBrushKey);
+            _titleEdit.SetResourceReference(TextBoxBase.CaretBrushProperty, EnvironmentColors.ToolWindowTextBrushKey);
+            _titleEdit.KeyDown += (s, e) =>
+            {
+                ThreadHelper.ThrowIfNotOnUIThread();
+                if (e.Key == Key.Enter) { e.Handled = true; EndTitleEdit(save: true); }
+                else if (e.Key == Key.Escape) { e.Handled = true; EndTitleEdit(save: false); }
+            };
+            _titleEdit.LostKeyboardFocus += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); EndTitleEdit(save: true); };
             _meter.Margin = new Thickness(0, 4, 0, 0);
 
             var adviceRow = new DockPanel();
@@ -319,7 +340,48 @@ namespace ClaudeVS.ToolWindow
         {
             string t = (text ?? "").Trim().Replace("\r", " ").Replace("\n", " ");
             _title.Text = t.Length == 0 ? DefaultTitle : t.Length > 70 ? t.Substring(0, 69) + "…" : t;
-            _title.ToolTip = t.Length > 70 ? t : null;
+            _title.ToolTip = (t.Length > 70 ? t + "\n" : "") + "Click to rename";
+        }
+
+        private void StartTitleEdit()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            _titleEdit.Text = _sessionName ?? (_title.Text == DefaultTitle ? "" : _title.Text);
+            _title.Visibility = Visibility.Hidden;
+            _titleEdit.Visibility = Visibility.Visible;
+            _titleEdit.Focus();
+            _titleEdit.SelectAll();
+        }
+
+        private void EndTitleEdit(bool save)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (_titleEdit.Visibility != Visibility.Visible) return;
+            _titleEdit.Visibility = Visibility.Collapsed;
+            _title.Visibility = Visibility.Visible;
+            if (save) RenameCurrentSession(_titleEdit.Text);
+        }
+
+        /// <summary>
+        /// Names this conversation. Saved locally right away when the CLI session id is known (otherwise when the
+        /// session starts) and passed to the CLI with --name the next time the process starts.
+        /// </summary>
+        private void RenameCurrentSession(string name)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            name = SessionMetaStore.Clean(name);
+            if (name == _sessionName) return;
+            _sessionName = name;
+            SetTitle(name ?? _title.Text);
+            string id = _session?.SessionId ?? _resumeId;
+            if (id != null) SaveSessionMeta(() => SessionMeta.SetName(id, name));
+        }
+
+        private void SaveSessionMeta(Action save)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            try { save(); }
+            catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException) { AppendError("[sessions] ", ex.Message); }
         }
 
         // ---------------- Menus: + , / , model, mode, sessions ----------------
@@ -387,6 +449,7 @@ namespace ClaudeVS.ToolWindow
                 new ChatPopup.Entry { Group = "Context", Label = "Clear conversation", Description = "Start a new session", Run = NewChat },
                 new ChatPopup.Entry { Group = "Context", Label = "Compact conversation", Description = "Summarize to shrink the context", Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); SendText("/compact", routed: false); } },
                 new ChatPopup.Entry { Group = "Context", Label = "Resume a session…", Run = ShowHistoryMenu },
+                new ChatPopup.Entry { Group = "Context", Label = "Rename session", Run = StartTitleEdit },
                 new ChatPopup.Entry { Group = "Context", Label = "Bookmarks", Description = "Answers you starred", Run = ToggleBookmarksPanel },
             };
             entries.AddRange(ModelEntries().Select(e => { e.Group = "Model · " + e.Group; return e; }));
@@ -799,6 +862,7 @@ namespace ClaudeVS.ToolWindow
                 AppendSystemPrompt = (o?.ConciseAnswers ?? true) ? ClaudeOptionsPage.BrevityPrompt : null,
                 ExtraArguments = o?.ExtraArguments ?? "",
                 ResumeSessionId = _resumeId,
+                SessionName = _sessionName,
             });
             _resumeId = null;
             _sessionDir = dir;
@@ -835,35 +899,133 @@ namespace ClaudeVS.ToolWindow
         }
 
         /// <summary>Session picker like VS Code's: search box, titles, compact ages ("5m", "2d").</summary>
+        /// <summary>
+        /// Session picker like VS Code's: search box, titles, compact ages ("5m", "2d"). Hovering a row shows Rename and
+        /// Archive; archived sessions are hidden until "Show archived" is chosen.
+        /// </summary>
         private void ShowHistoryMenu()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            ShowHistoryMenu(refresh: false);
+        }
+
+        private void ShowHistoryMenu(bool refresh)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             string dir = VsContext.GetSolutionDirectory() ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             var now = DateTime.UtcNow;
-            var entries = SessionHistory.List(SessionHistory.DefaultProjectsRoot, dir, max: 50).Select(s => new ChatPopup.Entry
+            List<SessionInfo> all;
+            try { all = SessionMeta.Apply(SessionHistory.List(SessionHistory.DefaultProjectsRoot, dir, max: 80)); }
+            catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException) { AppendError("[sessions] ", ex.Message); return; }
+            string currentId = _session?.SessionId ?? _resumeId;
+
+            var entries = all.Where(s => _showArchived || !s.Archived).Select(s => new ChatPopup.Entry
             {
+                Group = s.Archived ? "Archived" : null,
                 Label = s.Title,
                 Detail = SessionHistory.TimeAgo(s.LastWriteUtc, now),
-                Run = () => ResumeSession(s.Id, s.Title),
-            }).ToList();
-            if (entries.Count == 0) entries.Add(new ChatPopup.Entry { Label = "No earlier sessions for this folder", Enabled = false });
-            _sessions.Show(entries, _historyBtn);
+                Checked = s.Id == currentId,
+                Run = () => ResumeSession(s),
+                Rename = name =>
+                {
+                    ThreadHelper.ThrowIfNotOnUIThread();
+                    if (s.Id == currentId) RenameCurrentSession(name);
+                    else SaveSessionMeta(() => SessionMeta.SetName(s.Id, SessionMetaStore.Clean(name)));
+                    ShowHistoryMenu(refresh: true);
+                },
+                Actions = new List<ChatPopup.EntryAction>
+                {
+                    new ChatPopup.EntryAction
+                    {
+                        Glyph = s.Archived ? ChatTheme.IconUnarchive : ChatTheme.IconArchive,
+                        Tooltip = s.Archived ? "Unarchive" : "Archive (hide from this list)",
+                        Run = () =>
+                        {
+                            ThreadHelper.ThrowIfNotOnUIThread();
+                            SaveSessionMeta(() => SessionMeta.SetArchived(s.Id, !s.Archived));
+                            ShowHistoryMenu(refresh: true);
+                        },
+                    },
+                },
+            }).OrderBy(e => e.Group == null ? 0 : 1).ToList(); // archived ones last, under their own header
+
+            if (entries.Count == 0) entries.Add(new ChatPopup.Entry { Label = all.Count == 0 ? "No earlier sessions for this folder" : "All sessions are archived", Enabled = false });
+            int archived = all.Count(s => s.Archived);
+            if (archived > 0)
+                entries.Add(new ChatPopup.Entry
+                {
+                    Glyph = ChatTheme.IconArchive,
+                    Label = _showArchived ? "Hide archived sessions" : $"Show archived sessions ({archived})",
+                    Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); _showArchived = !_showArchived; ShowHistoryMenu(refresh: true); },
+                });
+            _sessions.Footer = "Hover a session to rename or archive it";
+            _sessions.Show(entries, _historyBtn, keepFilter: refresh);
         }
 
-        /// <summary>The next prompt continues an earlier conversation (claude --resume). Earlier messages are not redrawn.</summary>
-        private void ResumeSession(string sessionId, string title)
+        /// <summary>
+        /// The next prompt continues an earlier conversation (claude --resume). Its earlier messages are read from the
+        /// CLI's session file and redrawn (prompts, answers, tool rows), off the UI thread.
+        /// </summary>
+        private void ResumeSession(SessionInfo s)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             DisposeSession();
             ResetMeter();
             ClearTranscript();
-            _resumeId = sessionId;
+            _resumeId = s.Id;
+            _sessionName = SessionMeta.Get(s.Id)?.Name;
             SetBusy(false);
             SetEmptyState(false);
-            SetTitle(title);
-            Append($"Resuming: {title}\nEarlier messages are not shown here, but Claude has the full context. The meter updates after the first answer.\n");
-            ClaudeOutputPane.WriteLine($"Next prompt resumes session {sessionId}");
+            SetTitle(s.Title);
+            ClaudeOutputPane.WriteLine($"Next prompt resumes session {s.Id}");
             _prompt.Focus();
+
+            int generation = ++_resumeGeneration;
+            Jtf.RunAsync(async () =>
+            {
+                var transcript = await System.Threading.Tasks.Task.Run(() => SessionTranscript.Read(s.FilePath));
+                await Jtf.SwitchToMainThreadAsync();
+                if (generation != _resumeGeneration || _session != null) return; // another session was opened, or a prompt already sent
+                RenderTranscript(transcript);
+            }).FileAndForget("ClaudeVS/ChatControl/Resume");
+        }
+
+        private int _resumeGeneration;
+
+        private void RenderTranscript(SessionTranscript t)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (t.Skipped > 0) Append($"{t.Skipped} earlier items are not shown.");
+            string prompt = null;
+            System.Windows.Documents.Block anchor = null;
+            foreach (var item in t.Items)
+            {
+                switch (item.Kind)
+                {
+                    case TranscriptItemKind.User:
+                        _view.AppendUserMessage(item.Text, null);
+                        prompt = item.Text;
+                        anchor = _view.LastUserMessage;
+                        break;
+                    case TranscriptItemKind.Answer:
+                        _view.AppendAnswer(item.Text);
+                        _view.EndAnswer();
+                        // Earlier answers can be bookmarked too.
+                        _view.AppendTurnFooter("", BookmarkToggle(prompt, item.Text, anchor));
+                        break;
+                    case TranscriptItemKind.Tool:
+                        _view.AppendTool(item.ToolUseId, item.Text, item.ToolInput?.ToString());
+                        if (item.ResultChars >= 0) _view.CompleteTool(item.ToolUseId, item.ResultChars, item.IsError);
+                        break;
+                    case TranscriptItemKind.Compacted:
+                        Append("✂ Conversation compacted here; Claude sees a summary of what came before.");
+                        break;
+                }
+            }
+            Append(t.Items.Count == 0
+                ? "Resumed. No earlier messages could be read, but Claude has the full context. The meter updates after the first answer."
+                : "Resumed. Claude has the full context; the meter updates after the first answer.");
+            _view.Box.ScrollToEnd();
         }
 
         private void NewChat()
@@ -873,6 +1035,8 @@ namespace ClaudeVS.ToolWindow
             ResetMeter();
             ClearTranscript();
             _resumeId = null;
+            _sessionName = null;
+            _resumeGeneration++; // drop a resumed transcript that is still being read
             RefreshCommands(force: true);
             _fileIndex = null; // re-index on the next @ (files may have been added)
             SetBusy(false);
@@ -938,6 +1102,9 @@ namespace ClaudeVS.ToolWindow
                 {
                     case ClaudeEventKind.SessionStarted:
                         ClaudeOutputPane.WriteLine($"Session {ev.SessionId} started, model {ev.Model}");
+                        string named = _sessionName;
+                        if (named != null && ev.SessionId != null && SessionMeta.Get(ev.SessionId)?.Name != named)
+                            SaveSessionMeta(() => SessionMeta.SetName(ev.SessionId, named)); // named before the session had an id
                         break;
                     case ClaudeEventKind.AssistantUsage:
                         if (!ev.IsSubagent && !string.IsNullOrEmpty(ev.Model)) _turnModel = ev.Model;
@@ -1205,8 +1372,8 @@ namespace ClaudeVS.ToolWindow
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             string id = null;
-            string dir = _sessionDir;
-            string sessionId = _session?.SessionId;
+            string dir = _sessionDir ?? BookmarkSolution;          // no process yet when redrawing a resumed conversation
+            string sessionId = _session?.SessionId ?? _resumeId;
             return () =>
             {
                 ThreadHelper.ThrowIfNotOnUIThread();

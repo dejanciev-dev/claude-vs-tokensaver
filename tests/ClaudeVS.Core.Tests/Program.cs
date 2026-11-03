@@ -559,6 +559,106 @@ namespace ClaudeVS.Core.Tests
             Eq(0, r.InlinedLines);
         }
 
+        // ---------- Sessions ----------
+        private static string TempFile(params string[] lines)
+        {
+            string f = Path.Combine(Path.GetTempPath(), "claudevs-sess-" + Guid.NewGuid().ToString("N") + ".jsonl");
+            File.WriteAllText(f, string.Join("\n", lines) + "\n");
+            return f;
+        }
+
+        private static void Test_Args_SessionName()
+        {
+            string a = ClaudeArgsBuilder.Build(new ClaudeLaunchOptions { SessionName = "Fix login\nbug" });
+            True(a.Contains("--name \"Fix login bug\""), a);
+            True(!ClaudeArgsBuilder.Build(new ClaudeLaunchOptions()).Contains("--name"), "no name, no flag");
+        }
+
+        private static void Test_SessionTitle_Priority()
+        {
+            const string prompt = "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":\"First prompt\"}}";
+            const string ai = "{\"type\":\"ai-title\",\"aiTitle\":\"AI title\",\"sessionId\":\"s\"}";
+            const string custom = "{\"type\":\"custom-title\",\"customTitle\":\"My name\",\"sessionId\":\"s\"}";
+            var files = new[] { TempFile(prompt), TempFile(prompt, ai), TempFile(prompt, ai, custom, ai), TempFile("{\"type\":\"user\",\"isSidechain\":true,\"message\":{\"content\":\"x\"}}") };
+            try
+            {
+                Eq("First prompt", SessionHistory.ReadTitle(files[0]));
+                Eq("AI title", SessionHistory.ReadTitle(files[1]));
+                Eq("My name", SessionHistory.ReadTitle(files[2]), "custom title wins over a later AI title");
+                Eq(null, SessionHistory.ReadTitle(files[3]), "nothing to resume");
+            }
+            finally { foreach (var f in files) File.Delete(f); }
+        }
+
+        private static void Test_SessionTitle_FoundInTailOfBigFile()
+        {
+            var lines = new List<string> { "{\"type\":\"user\",\"message\":{\"content\":\"First prompt\"}}" };
+            string filler = "{\"type\":\"assistant\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"" + new string('x', 2000) + "\"}]}}";
+            for (int i = 0; i < 600; i++) lines.Add(filler); // ~1.2 MB: head and tail are read separately
+            lines.Add("{\"type\":\"custom-title\",\"customTitle\":\"Named late\",\"sessionId\":\"s\"}");
+            string f = TempFile(lines.ToArray());
+            try { Eq("Named late", SessionHistory.ReadTitle(f)); }
+            finally { File.Delete(f); }
+        }
+
+        private static void Test_SessionMeta_NameArchiveApply()
+        {
+            string dir = Path.Combine(Path.GetTempPath(), "claudevs-meta-" + Guid.NewGuid().ToString("N"));
+            var store = new SessionMetaStore(Path.Combine(dir, "sessions.json"));
+            try
+            {
+                Eq(null, store.Get("a"));
+                store.SetName("a", "  Login\nwork ");
+                store.SetArchived("b", true);
+                Eq("Login work", store.Get("a").Name);
+                var list = store.Apply(new List<SessionInfo> { new SessionInfo { Id = "a", Title = "cli" }, new SessionInfo { Id = "b", Title = "cli b" }, new SessionInfo { Id = "c", Title = "cli c" } });
+                Eq("Login work", list[0].Title);
+                Eq("cli b", list[1].Title);
+                True(list[1].Archived && !list[0].Archived && !list[2].Archived, "archived flag");
+                store.SetName("a", "");
+                Eq(null, store.Get("a"), "clearing the name forgets the session");
+                store.SetArchived("b", false);
+                Eq(null, store.Get("b"));
+            }
+            finally { if (Directory.Exists(dir)) Directory.Delete(dir, true); }
+        }
+
+        private static void Test_SessionTranscript_Read()
+        {
+            string f = TempFile(
+                "{\"type\":\"custom-title\",\"customTitle\":\"n\"}",
+                "{\"type\":\"user\",\"uuid\":\"u1\",\"message\":{\"content\":\"How does login work?\"}}",
+                "{\"type\":\"user\",\"uuid\":\"u0\",\"isMeta\":true,\"message\":{\"content\":\"meta\"}}",
+                "{\"type\":\"user\",\"uuid\":\"u2\",\"message\":{\"content\":\"<local-command-caveat>x</local-command-caveat>\"}}",
+                "{\"type\":\"assistant\",\"uuid\":\"a1\",\"message\":{\"content\":[{\"type\":\"thinking\",\"thinking\":\"hmm\"}]}}",
+                "{\"type\":\"assistant\",\"uuid\":\"a2\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"Let me look.\"}]}}",
+                "{\"type\":\"assistant\",\"uuid\":\"a3\",\"message\":{\"content\":[{\"type\":\"tool_use\",\"id\":\"t1\",\"name\":\"Read\",\"input\":{\"file_path\":\"C:/a/Login.cs\"}}]}}",
+                "{\"type\":\"user\",\"uuid\":\"u3\",\"message\":{\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"t1\",\"content\":\"0123456789\"}]}}",
+                "{\"type\":\"assistant\",\"uuid\":\"a3\",\"message\":{\"content\":[{\"type\":\"tool_use\",\"id\":\"dup\",\"name\":\"Read\",\"input\":{}}]}}",
+                "{\"type\":\"assistant\",\"uuid\":\"a4\",\"isSidechain\":true,\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"subagent\"}]}}",
+                "{\"type\":\"assistant\",\"uuid\":\"a5\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"It uses **JWT**.\"}]}}",
+                "{\"type\":\"assistant\",\"uuid\":\"a6\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"Done.\"}]}}",
+                "{\"type\":\"system\",\"uuid\":\"s1\",\"subtype\":\"compact_boundary\"}",
+                "{\"type\":\"user\",\"uuid\":\"u4\",\"isCompactSummary\":true,\"message\":{\"content\":\"This session is being continued…\"}}",
+                "{\"type\":\"user\",\"uuid\":\"u5\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"[Request interrupted by user]\"}]}}",
+                "not json",
+                "{\"type\":\"user\",\"uuid\":\"u6\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"Thanks\"}]}}");
+            try
+            {
+                var t = SessionTranscript.Read(f);
+                Eq("User|Answer|Tool|Answer|Compacted|User", string.Join("|", t.Items.Select(i => i.Kind)));
+                Eq("How does login work?", t.Items[0].Text);
+                Eq("Read: C:/a/Login.cs", t.Items[2].Text);
+                Eq(10, t.Items[2].ResultChars, "result attached to its tool call");
+                Eq("It uses **JWT**.\n\nDone.", t.Items[3].Text, "consecutive text blocks are one answer");
+
+                var last2 = SessionTranscript.Read(f, maxItems: 2);
+                Eq(4, last2.Skipped);
+                Eq(TranscriptItemKind.Compacted, last2.Items[0].Kind);
+            }
+            finally { File.Delete(f); }
+        }
+
         // ---------- Bookmarks ----------
         private static void Test_Bookmark_Title()
         {

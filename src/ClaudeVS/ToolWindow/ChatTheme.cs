@@ -37,6 +37,8 @@ namespace ClaudeVS.ToolWindow
         public const string IconStar = "";      // outline: not bookmarked
         public const string IconStarFill = "";  // filled: bookmarked
         public const string IconBookmarks = "";
+        public const string IconArchive = "";    // box
+        public const string IconUnarchive = "";  // undo
 
         public static string ModeGlyph(Core.Cli.PermissionModeChoice m)
         {
