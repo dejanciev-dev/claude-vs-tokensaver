@@ -48,6 +48,8 @@ namespace ClaudeVS.Core.Cli
         Compacted,
         TurnCompleted,
         ControlResponse,
+        /// <summary>Plan usage limits (rate_limit_event); the data is in Payload.</summary>
+        RateLimit,
         Error,
     }
 

@@ -7,6 +7,9 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Usage-limit banner** (Pro/Max plans): under the meter, "5-hour limit 86% used. Resets at 3:10 PM." from 80%
+  use or when Claude Code warns, and "… reached" when a limit stops you; the tooltip and the context breakdown
+  list every window (5-hour, weekly, per model). From the CLI's `rate_limit_event`.
 - **Syntax coloring in code blocks:** keywords, strings, comments and numbers (tags and attributes for XML/HTML)
   in light or dark colors to match the VS theme; code stays selectable and long lines scroll sideways.
 - **Message timestamps** (Tools → Options → Claude Code → Chat, on by default): a time above each prompt and at
