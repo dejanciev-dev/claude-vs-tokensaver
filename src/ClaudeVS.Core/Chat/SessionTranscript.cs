@@ -25,6 +25,9 @@ namespace ClaudeVS.Core.Chat
         public bool IsError { get; set; }
         /// <summary>User: the message id in the CLI session (what rewind_files takes).</summary>
         public string Uuid { get; set; }
+        /// <summary>Compacted: context size before compaction, and "auto" or "manual".</summary>
+        public long PreTokens { get; set; }
+        public string Trigger { get; set; }
     }
 
     public sealed class SessionTranscript
@@ -61,7 +64,8 @@ namespace ClaudeVS.Core.Chat
                             case "user": ReadUser(o, t.Items, tools); break;
                             case "assistant": ReadAssistant(o, t.Items, tools); break;
                             case "system":
-                                if ((string)o["subtype"] == "compact_boundary") t.Items.Add(new TranscriptItem { Kind = TranscriptItemKind.Compacted });
+                                if ((string)o["subtype"] == "compact_boundary")
+                                    t.Items.Add(new TranscriptItem { Kind = TranscriptItemKind.Compacted, PreTokens = o.SelectToken("compactMetadata.preTokens")?.Value<long?>() ?? 0, Trigger = (string)o.SelectToken("compactMetadata.trigger") });
                                 break;
                         }
                     }
@@ -80,7 +84,14 @@ namespace ClaudeVS.Core.Chat
 
         private static void ReadUser(JObject o, List<TranscriptItem> items, Dictionary<string, TranscriptItem> tools)
         {
-            if (o.Value<bool?>("isMeta") == true || o.Value<bool?>("isCompactSummary") == true) return;
+            if (o.Value<bool?>("isCompactSummary") == true)
+            {
+                // The summary Claude continues from: attach it to the compaction just before it.
+                var last = items.Count > 0 ? items[items.Count - 1] : null;
+                if (last?.Kind == TranscriptItemKind.Compacted && last.Text == null) last.Text = CleanCompactSummary(MessageText(o.SelectToken("message.content")));
+                return;
+            }
+            if (o.Value<bool?>("isMeta") == true) return;
             var content = o.SelectToken("message.content");
             if (content?.Type == JTokenType.String)
             {
@@ -137,6 +148,60 @@ namespace ClaudeVS.Core.Chat
                         break;
                 }
             }
+        }
+
+        private static string MessageText(JToken content) =>
+            content?.Type == JTokenType.String
+                ? (string)content
+                : string.Join("\n\n", (content as JArray)?.OfType<JObject>().Where(b => (string)b["type"] == "text").Select(b => (string)b["text"]) ?? Enumerable.Empty<string>());
+
+        /// <summary>
+        /// The compaction summary without the CLI's wrapping: the "This session is being continued…" preamble and
+        /// &lt;system-reminder&gt; blocks are removed. Null when nothing is left.
+        /// </summary>
+        public static string CleanCompactSummary(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return null;
+            text = System.Text.RegularExpressions.Regex.Replace(text, @"<system-reminder>[\s\S]*?</system-reminder>", "");
+            var lines = text.Replace("\r\n", "\n").Split('\n').ToList();
+            // The preamble is the first paragraph when it says the session is being continued.
+            int first = lines.FindIndex(l => l.Trim().Length > 0);
+            if (first >= 0 && lines[first].IndexOf("session is being continued", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                int end = lines.FindIndex(first, l => l.Trim().Length == 0);
+                lines.RemoveRange(first, (end < 0 ? lines.Count : end) - first);
+            }
+            string result = string.Join("\n", lines).Trim();
+            return result.Length == 0 ? null : result;
+        }
+
+        /// <summary>
+        /// The newest compaction summary in a session file (read from its last MB), for a compaction that just
+        /// happened in a running session. Null when there is none yet.
+        /// </summary>
+        public static string ReadLastCompactSummary(string file)
+        {
+            try
+            {
+                using (var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+                {
+                    const int tail = 1024 * 1024;
+                    if (stream.Length > tail) stream.Position = stream.Length - tail;
+                    var reader = new StreamReader(stream, Encoding.UTF8);
+                    if (stream.Position > 0) reader.ReadLine(); // partial line
+                    string line, found = null;
+                    while ((line = reader.ReadLine()) != null)
+                    {
+                        // Only a summary written after the newest boundary counts; an older one belongs to an earlier compaction.
+                        if (line.IndexOf("\"compact_boundary\"", StringComparison.Ordinal) >= 0) found = null;
+                        else if (line.IndexOf("\"isCompactSummary\":true", StringComparison.Ordinal) >= 0) found = line;
+                    }
+                    var o = SessionHistory.ParseLine(found);
+                    return o == null ? null : CleanCompactSummary(MessageText(o.SelectToken("message.content")));
+                }
+            }
+            catch (IOException) { return null; }
+            catch (UnauthorizedAccessException) { return null; }
         }
 
         private static void AddPrompt(List<TranscriptItem> items, string text, string uuid)

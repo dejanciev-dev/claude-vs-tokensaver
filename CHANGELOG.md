@@ -7,6 +7,8 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Compaction card:** a compaction shows the context size before it and a **Show summary** link that expands
+  the summary Claude continues from (read from the CLI's session file). Also in resumed sessions and exports.
 - **Invisible characters removed from prompts:** Unicode tag characters (which can hide instructions), bidi
   overrides, zero-width spaces and similar are stripped from pasted text with a notice, and from every prompt
   before it is sent. Long pastes (over 800 characters or 3+ lines) are marked "[Pasted text]" for Claude.
