@@ -88,6 +88,7 @@ This extension attacks all three, and shows the numbers so you can see the effec
 | **Plan approval cards** | Plans render as Markdown with **Approve** or **Request changes** (with feedback). |
 | **Permission bar** | Other tool calls that need approval show **Allow** / **Deny**. |
 | **Sessions** | Resume an earlier conversation for the same solution (`claude --resume`); its earlier prompts, answers and tool calls are redrawn. Click the title to rename a session (also passed to the CLI as `--name`); hover a session in the list to rename or archive it. |
+| **Export** | `/` → *Export conversation…* saves the whole conversation (also what came before a resume or a compaction) as Markdown: your prompts, Claude's answers, and one line per tool call. |
 | **Bookmarks** | Star any answer to keep it. The bookmarks panel lists them per solution with search; clicking one scrolls to it, or shows the saved copy if it came from another conversation. |
 | **Several chat windows** | Each window has its own conversation, meter and model. |
 | **Prompt box helpers** | `Ctrl+Up/Down` prompt history; `/` lists commands, including your own `.claude/commands`; `@` picks a file. |
@@ -292,7 +293,7 @@ src/ClaudeVS.Core/            netstandard2.0, all logic, no Visual Studio depend
               ClaudeCliLocator, ClaudeErrorHints, InteractiveRequests (questions, plans)
   Tokens/     ModelRouter, TokenMeter, UsageLog, SavingsReport (+ price table, router replay)
   Context/    PromptContextBuilder, FileIndex (@ picker), EditDiff (Diff button)
-  Chat/       PromptHistory, SlashCommands, SessionHistory, SessionTranscript, SessionMeta, Bookmarks
+  Chat/       PromptHistory, SlashCommands, SessionHistory, SessionTranscript, SessionMeta, ConversationExport, Bookmarks
   Markdown/   MarkdownParser (streaming-tolerant subset)
   Setup/      SolutionScanner, ClaudeMdGenerator, TokenSaverSetup
 src/ClaudeVS/                 net472 VSIX: package, commands, tool window, options

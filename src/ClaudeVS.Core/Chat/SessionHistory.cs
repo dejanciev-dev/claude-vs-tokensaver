@@ -36,6 +36,10 @@ namespace ClaudeVS.Core.Chat
 
         public static string DefaultProjectsRoot => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".claude", "projects");
 
+        /// <summary>Where the CLI keeps a session's conversation: &lt;projectsRoot&gt;/&lt;encoded folder&gt;/&lt;id&gt;.jsonl.</summary>
+        public static string SessionFile(string projectsRoot, string solutionDir, string sessionId) =>
+            Path.Combine(projectsRoot ?? DefaultProjectsRoot, EncodeProjectPath(solutionDir), sessionId + ".jsonl");
+
         public static List<SessionInfo> List(string projectsRoot, string solutionDir, int max = 15)
         {
             var result = new List<SessionInfo>();

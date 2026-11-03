@@ -339,8 +339,58 @@ namespace ClaudeVS.ToolWindow
         private void SetTitle(string text)
         {
             string t = (text ?? "").Trim().Replace("\r", " ").Replace("\n", " ");
+            _fullTitle = t.Length == 0 ? null : t;
             _title.Text = t.Length == 0 ? DefaultTitle : t.Length > 70 ? t.Substring(0, 69) + "…" : t;
             _title.ToolTip = (t.Length > 70 ? t + "\n" : "") + "Click to rename";
+        }
+
+        private string _fullTitle;
+
+        /// <summary>
+        /// Saves the whole conversation as Markdown. Read from the CLI's session file, so it includes messages from
+        /// before a resume and from before a compaction, not just what this window shows.
+        /// </summary>
+        private void ExportConversation()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            string id = _session?.SessionId ?? _resumeId;
+            if (id == null) { Append("Nothing to export yet: send a prompt first."); return; }
+            string dir = _sessionDir ?? VsContext.GetSolutionDirectory() ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            string source = SessionHistory.SessionFile(null, dir, id);
+            if (!System.IO.File.Exists(source)) { Append("The conversation is not saved by Claude Code yet (no session file). Try again after the first answer."); return; }
+
+            string title = _fullTitle;
+            var dlg = new Microsoft.Win32.SaveFileDialog
+            {
+                Title = "Export conversation as Markdown",
+                FileName = ConversationExport.FileName(title),
+                DefaultExt = ".md",
+                Filter = "Markdown (*.md)|*.md|All files (*.*)|*.*",
+                InitialDirectory = dir,
+            };
+            if (dlg.ShowDialog() != true) return;
+            string target = dlg.FileName;
+
+            Jtf.RunAsync(async () =>
+            {
+                string error = null;
+                int items = 0;
+                try
+                {
+                    await System.Threading.Tasks.Task.Run(() =>
+                    {
+                        var transcript = SessionTranscript.Read(source, maxItems: int.MaxValue);
+                        items = transcript.Items.Count;
+                        System.IO.File.WriteAllText(target, ConversationExport.ToMarkdown(transcript, title, DateTime.Now), new UTF8Encoding(false));
+                    });
+                }
+                catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException) { error = ex.Message; }
+                await Jtf.SwitchToMainThreadAsync();
+                if (error != null) { AppendError("[export] ", error); return; }
+                Append($"Exported {items} items to {target}");
+                try { VsShellUtilities.OpenDocument(ServiceProvider.GlobalProvider, target); }
+                catch (Exception ex) { ClaudeOutputPane.WriteLine("Could not open the export: " + ex.Message); }
+            }).FileAndForget("ClaudeVS/ChatControl/Export");
         }
 
         private void StartTitleEdit()
@@ -450,6 +500,7 @@ namespace ClaudeVS.ToolWindow
                 new ChatPopup.Entry { Group = "Context", Label = "Compact conversation", Description = "Summarize to shrink the context", Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); SendText("/compact", routed: false); } },
                 new ChatPopup.Entry { Group = "Context", Label = "Resume a session…", Run = ShowHistoryMenu },
                 new ChatPopup.Entry { Group = "Context", Label = "Rename session", Run = StartTitleEdit },
+                new ChatPopup.Entry { Group = "Context", Label = "Export conversation…", Description = "Save the whole conversation as Markdown", Run = ExportConversation },
                 new ChatPopup.Entry { Group = "Context", Label = "Bookmarks", Description = "Answers you starred", Run = ToggleBookmarksPanel },
             };
             entries.AddRange(ModelEntries().Select(e => { e.Group = "Model · " + e.Group; return e; }));
