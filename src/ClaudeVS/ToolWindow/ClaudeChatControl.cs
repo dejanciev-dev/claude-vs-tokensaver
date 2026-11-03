@@ -424,11 +424,57 @@ namespace ClaudeVS.ToolWindow
         // ---------------- Rewind ----------------
 
         /// <summary>The Rewind button for a prompt bubble; null (no button) without a message id or with checkpoints off.</summary>
-        private Action RewindAction(string messageId, string prompt)
+        private Action RewindAction(string messageId, string prompt, DateTime? timeUtc = null)
         {
             if (string.IsNullOrEmpty(messageId) || Options?.FileCheckpoints == false) return null;
+            _rewindPoints.Add((messageId, prompt, timeUtc ?? DateTime.UtcNow));
             return () => { ThreadHelper.ThrowIfNotOnUIThread(); RewindTo(messageId, prompt); };
         }
+
+        // Prompts in this transcript that can be rewound, oldest first (for the Esc-Esc picker).
+        private readonly List<(string Id, string Prompt, DateTime TimeUtc)> _rewindPoints = new List<(string, string, DateTime)>();
+        private DateTime _lastEscUtc;
+
+        /// <summary>Esc twice (or / → Rewind…): pick one of your prompts to put the files back to before it, newest first.</summary>
+        private void ShowRewindPicker()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var now = DateTime.UtcNow;
+            var entries = _rewindPoints.AsEnumerable().Reverse().Select(p => new ChatPopup.Entry
+            {
+                Glyph = ChatTheme.IconRewind,
+                Label = SessionMetaStore.Clean(p.Prompt) ?? "(image)",
+                Detail = SessionHistory.TimeAgo(p.TimeUtc, now),
+                Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); RewindTo(p.Id, p.Prompt); },
+            }).ToList();
+            if (entries.Count == 0) entries.Add(new ChatPopup.Entry { Label = Options?.FileCheckpoints == false ? "File checkpoints are off (Tools → Options → Claude Code)" : "No prompts to rewind yet", Enabled = false });
+            _manage.Footer = "Puts the files Claude changed since that prompt back; you confirm first";
+            _manage.Show(entries, _inputBox);
+        }
+
+        /// <summary>
+        /// Continues this conversation in a new session (a copy, <c>--fork-session</c>), leaving the original as it
+        /// was, so you can try another direction. Takes effect with the next prompt.
+        /// </summary>
+        private void ForkSession(string sessionId, string title, bool keepTranscript)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (string.IsNullOrEmpty(sessionId)) { Append("Nothing to fork yet: send a prompt first."); return; }
+            if (_busy) { Append("Stop Claude first (Esc), then fork."); return; }
+            DisposeSession();
+            ResetMeter();
+            if (!keepTranscript) ClearTranscript();
+            _resumeId = sessionId;
+            _forkNext = true;
+            _sessionName = SessionMetaStore.Clean((title ?? "Session") + " (fork)");
+            SetTitle(_sessionName);
+            SetEmptyState(false);
+            Append("Forked: the next prompt continues in a new session with this history; the original stays as it was.");
+            ClaudeOutputPane.WriteLine($"Next prompt forks session {sessionId}");
+            _prompt.Focus();
+        }
+
+        private bool _forkNext;
 
         /// <summary>
         /// Puts the files Claude changed since <paramref name="prompt"/> back the way they were: a dry run lists the
@@ -684,6 +730,8 @@ namespace ClaudeVS.ToolWindow
                 new ChatPopup.Entry { Group = "Context", Label = "Compact conversation", Description = "Summarize to shrink the context", Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); SendText("/compact", routed: false); } },
                 new ChatPopup.Entry { Group = "Context", Label = "Resume a session…", Run = ShowHistoryMenu },
                 new ChatPopup.Entry { Group = "Context", Label = "Rename session", Run = StartTitleEdit },
+                new ChatPopup.Entry { Group = "Context", Label = "Fork this session", Description = "Continue in a new session with this history; the original stays", Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); ForkSession(_session?.SessionId ?? _resumeId, _fullTitle, keepTranscript: true); } },
+                new ChatPopup.Entry { Group = "Context", Label = "Rewind…", Detail = "Esc Esc", Description = "Put files back to before one of your prompts", Run = ShowRewindPicker },
                 new ChatPopup.Entry { Group = "Context", Label = "Copy last response", Description = "Claude's last answer as Markdown", Run = CopyLastAnswer },
                 new ChatPopup.Entry { Group = "Context", Label = "Export conversation…", Description = "Save the whole conversation as Markdown", Run = ExportConversation },
                 new ChatPopup.Entry { Group = "Context", Label = "Bookmarks", Description = "Answers you starred", Run = ToggleBookmarksPanel },
@@ -945,6 +993,13 @@ namespace ClaudeVS.ToolWindow
             {
                 e.Handled = true; // Esc stops the answer, like the CLI
                 Stop();
+            }
+            else if (e.Key == Key.Escape)
+            {
+                // Esc twice opens the rewind picker, like VS Code and the CLI.
+                var now = DateTime.UtcNow;
+                if ((now - _lastEscUtc).TotalMilliseconds < 600) { e.Handled = true; _lastEscUtc = default; ShowRewindPicker(); }
+                else _lastEscUtc = now;
             }
         }
 
@@ -1210,10 +1265,12 @@ namespace ClaudeVS.ToolWindow
                 AppendSystemPrompt = (o?.ConciseAnswers ?? true) ? ClaudeOptionsPage.BrevityPrompt : null,
                 ExtraArguments = o?.ExtraArguments ?? "",
                 ResumeSessionId = _resumeId,
+                ForkSession = _forkNext && _resumeId != null,
                 EnableFileCheckpointing = o?.FileCheckpoints ?? true,
                 SessionName = _sessionName,
             });
             _resumeId = null;
+            _forkNext = false;
             _sessionDir = dir;
             if (!_thinking) { var fresh = _session; Fire(() => fresh.SetThinkingAsync(false)); } // applied when the process starts
             _session.EventReceived += OnEvent;
@@ -1286,6 +1343,12 @@ namespace ClaudeVS.ToolWindow
                 {
                     new ChatPopup.EntryAction
                     {
+                        Glyph = ChatTheme.IconFork,
+                        Tooltip = "Fork: continue in a new session with this history",
+                        Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); _sessions.Close(); ResumeSession(s, fork: true); },
+                    },
+                    new ChatPopup.EntryAction
+                    {
                         Glyph = s.Archived ? ChatTheme.IconUnarchive : ChatTheme.IconArchive,
                         Tooltip = s.Archived ? "Unarchive" : "Archive (hide from this list)",
                         Run = () =>
@@ -1318,15 +1381,22 @@ namespace ClaudeVS.ToolWindow
         private void ResumeSession(SessionInfo s)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
+            ResumeSession(s, fork: false);
+        }
+
+        private void ResumeSession(SessionInfo s, bool fork)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
             DisposeSession();
             ResetMeter();
             ClearTranscript();
             _resumeId = s.Id;
-            _sessionName = SessionMeta.Get(s.Id)?.Name;
+            _forkNext = fork;
+            _sessionName = fork ? SessionMetaStore.Clean(s.Title + " (fork)") : SessionMeta.Get(s.Id)?.Name;
             SetBusy(false);
             SetEmptyState(false);
-            SetTitle(s.Title);
-            ClaudeOutputPane.WriteLine($"Next prompt resumes session {s.Id}");
+            SetTitle(fork ? _sessionName : s.Title);
+            ClaudeOutputPane.WriteLine($"Next prompt {(fork ? "forks" : "resumes")} session {s.Id}");
             _prompt.Focus();
 
             int generation = ++_resumeGeneration;
@@ -1352,7 +1422,7 @@ namespace ClaudeVS.ToolWindow
                 switch (item.Kind)
                 {
                     case TranscriptItemKind.User:
-                        _view.AppendUserMessage(item.Text, null, RewindAction(item.Uuid, item.Text), null, item.TimestampUtc);
+                        _view.AppendUserMessage(item.Text, null, RewindAction(item.Uuid, item.Text, item.TimestampUtc), null, item.TimestampUtc);
                         prompt = item.Text;
                         anchor = _view.LastUserMessage;
                         break;
@@ -1385,6 +1455,7 @@ namespace ClaudeVS.ToolWindow
             ResetMeter();
             ClearTranscript();
             _resumeId = null;
+            _forkNext = false;
             _sessionName = null;
             _resumeGeneration++; // drop a resumed transcript that is still being read
             RefreshCommands(force: true);
@@ -1713,6 +1784,7 @@ namespace ClaudeVS.ToolWindow
             ThreadHelper.ThrowIfNotOnUIThread();
             _view.Clear();
             _bookmarkAnchors.Clear();
+            _rewindPoints.Clear();
             _lastAnswer = null;
         }
 

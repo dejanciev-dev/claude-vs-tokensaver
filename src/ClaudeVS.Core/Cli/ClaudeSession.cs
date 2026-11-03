@@ -296,7 +296,11 @@ namespace ClaudeVS.Core.Cli
         {
             if (IsRunning) return false;
             // Relaunch into the same conversation so context (and cache) survive a crash or an interrupt.
-            if (_parser?.SessionId != null) Options.ResumeSessionId = _parser.SessionId;
+            if (_parser?.SessionId != null)
+            {
+                Options.ResumeSessionId = _parser.SessionId;
+                Options.ForkSession = false; // the fork already happened; relaunch into the forked session itself
+            }
             Options.Model = CurrentModel == ModelChoice.Auto ? Options.Model : CurrentModel;
             Options.Effort = CurrentEffort == EffortChoice.Auto ? Options.Effort : CurrentEffort;
             Start();

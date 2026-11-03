@@ -95,6 +95,8 @@ namespace ClaudeVS.Core.Cli
         public EffortChoice Effort { get; set; } = EffortChoice.Auto;
         public PermissionModeChoice PermissionMode { get; set; } = PermissionModeChoice.AcceptEdits;
         public string ResumeSessionId { get; set; }
+        /// <summary>With <see cref="ResumeSessionId"/>: continue in a new session (a copy), leaving the original as it was (<c>--fork-session</c>).</summary>
+        public bool ForkSession { get; set; }
         /// <summary>
         /// Lets the CLI keep a copy of each file before Claude changes it, so a prompt's edits can be rewound
         /// (<c>rewind_files</c>). Set through an environment variable; there is no command-line flag.
@@ -138,7 +140,11 @@ namespace ClaudeVS.Core.Cli
             string perm = o.PermissionMode.ToCli();
             if (perm != null) { parts.Add("--permission-mode"); parts.Add(perm); }
 
-            if (!string.IsNullOrWhiteSpace(o.ResumeSessionId)) { parts.Add("--resume"); parts.Add(o.ResumeSessionId.Trim()); }
+            if (!string.IsNullOrWhiteSpace(o.ResumeSessionId))
+            {
+                parts.Add("--resume"); parts.Add(o.ResumeSessionId.Trim());
+                if (o.ForkSession) parts.Add("--fork-session");
+            }
 
             if (!string.IsNullOrWhiteSpace(o.SessionName)) { parts.Add("--name"); parts.Add(o.SessionName.Trim().Replace('\n', ' ').Replace('\r', ' ')); }
 
