@@ -172,7 +172,7 @@ Compared against the `[VSCode]` entries; the version in brackets is where the VS
 - [x] Syntax coloring in code blocks (2.1.311): C#, JS/TS, Java/Kotlin, C/C++, Go, Rust, Python, PowerShell, shell, SQL, JSON, YAML, CSS, XML/HTML
 
 **Medium (token saving first)**
-- [ ] Usage-limit banner with the reset time (2.1.84 / 2.1.312), from the CLI's rate-limit events
+- [x] Usage-limit banner with the reset time (2.1.84 / 2.1.312), from the CLI's rate-limit events
 - [ ] Skills dialog with token estimates and on/off (2.1.280); MCP servers dialog (2.1.70 / 2.1.261)
 - [ ] Fork a session (`--fork-session`, 2.1.19); Esc twice opens a rewind picker (2.1.83)
 - [ ] Session list: auto-archive inactive sessions, status filters, groups, marker for sessions open elsewhere (2.1.229–2.1.265)

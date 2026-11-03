@@ -266,6 +266,7 @@ namespace ClaudeVS.ToolWindow
             _meterArea.MouseLeftButtonUp += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); ShowContextBreakdown(); };
             top.Children.Add(_meterArea);
             top.Children.Add(adviceRow);
+            top.Children.Add(_limitBanner);
 
             // Input box: text (with placeholder) on top; footer: + / model … mode send.
             var textArea = new Grid();
@@ -542,6 +543,16 @@ namespace ClaudeVS.ToolWindow
                     Description = c.Kind == "deferred" ? "Loaded only when Claude needs it" : c.Kind == "buffer" ? "Kept free so autocompact has room" : null,
                     Detail = Size(c.Tokens),
                 });
+            var limits = _rateLimits;
+            if (limits != null)
+                foreach (var w in limits.Windows)
+                    entries.Add(new ChatPopup.Entry
+                    {
+                        Group = "Plan usage",
+                        Label = RateLimitInfo.DisplayName(w.Name),
+                        Detail = $"{Math.Round(w.Utilization * 100):0}%",
+                        Description = w.ResetsAtUtc == null ? null : "Resets at " + RateLimitInfo.When(w.ResetsAtUtc.Value, DateTime.UtcNow),
+                    });
             foreach (var tip in u.Tips())
             {
                 int dot = tip.IndexOf(". ", StringComparison.Ordinal); // first sentence as the label ("1.2k" has no space after its dot)
@@ -1465,6 +1476,10 @@ namespace ClaudeVS.ToolWindow
                         _permissionText.Text = "Allow " + ev.Text + "?";
                         _permission.Visibility = Visibility.Visible;
                         break;
+                    case ClaudeEventKind.RateLimit:
+                        _rateLimits = RateLimitInfo.Parse(ev.Payload);
+                        UpdateLimitBanner();
+                        break;
                     case ClaudeEventKind.Compacted:
                         FlushText();
                         LoadCompactSummary(_view.AppendCompaction(ev.PreCompactTokens, null, null));
@@ -1757,6 +1772,31 @@ namespace ClaudeVS.ToolWindow
             _queuedPanel.Visibility = _queuedBubbles.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         }
 
+        // ---------------- Usage limits ----------------
+
+        // Latest plan usage from the CLI (rate_limit_event); null for API-key users, who never get one.
+        private RateLimitInfo _rateLimits;
+        private readonly TextBlock _limitBanner = new TextBlock { FontSize = 11.5, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 0), Visibility = Visibility.Collapsed };
+
+        /// <summary>
+        /// "5-hour limit 86% used. Resets at 3:10 PM." under the meter (orange), or "… reached" (red); hidden below
+        /// 80% and once the reset time has passed. The tooltip lists every window.
+        /// </summary>
+        private void UpdateLimitBanner()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var now = DateTime.UtcNow;
+            var r = _rateLimits;
+            var (level, text) = r?.Banner(now) ?? (LimitLevel.None, null);
+            if (level != LimitLevel.None && r.ResetsAtUtc != null && r.ResetsAtUtc < now && r.Windows.All(w => w.ResetsAtUtc == null || w.ResetsAtUtc < now))
+                level = LimitLevel.None; // everything has reset since the CLI last told us
+            if (level == LimitLevel.None) { _limitBanner.Visibility = Visibility.Collapsed; return; }
+            _limitBanner.Text = (level == LimitLevel.Reached ? "⛔ " : "⚠ ") + text;
+            _limitBanner.Foreground = level == LimitLevel.Reached ? ChatTheme.Error : Brushes.DarkOrange;
+            _limitBanner.ToolTip = r.Details(now) + "\nFrom Claude Code; updated with each answer.";
+            _limitBanner.Visibility = Visibility.Visible;
+        }
+
         // ---------------- "Not responding" ----------------
 
         // Last time the CLI said anything (UTC ticks; written on the reader thread).
@@ -1772,6 +1812,7 @@ namespace ClaudeVS.ToolWindow
             ThreadHelper.ThrowIfNotOnUIThread();
             var quiet = DateTime.UtcNow - new DateTime(System.Threading.Interlocked.Read(ref _lastOutputTicks), DateTimeKind.Utc);
             SetStalled(_busy && !_waitingForUser && quiet >= StallAfter, quiet);
+            if (_limitBanner.Visibility == Visibility.Visible) UpdateLimitBanner(); // hide it once the limit has reset
         }
 
         private void SetStalled(bool stalled, TimeSpan quiet = default)

@@ -792,6 +792,43 @@ namespace ClaudeVS.Core.Tests
             True(Colored("a.b(1)", "cs").Contains("N:1") && !Colored("x1 = 2", "cs").Contains("N:1"), "digits inside names are not numbers");
         }
 
+        // ---------- Usage limits ----------
+        private static void Test_RateLimit_FromRealEvent()
+        {
+            string line = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.317-rate-limit.jsonl")).Trim();
+            var ev = new ClaudeStreamParser().Parse(line).Single();
+            Eq(ClaudeEventKind.RateLimit, ev.Kind);
+            var r = RateLimitInfo.Parse(ev.Payload);
+            Eq("allowed", r.Status);
+            Eq("five_hour", r.RateLimitType);
+            Eq(new DateTime(2026, 11, 3, 15, 0, 0, DateTimeKind.Utc), r.ResetsAtUtc);
+            Eq(2, r.Windows.Count);
+            Eq(0.47, r.Windows.Single(w => w.Name == "seven_day").Utilization);
+            Eq(LimitLevel.None, r.Banner(new DateTime(2026, 11, 3, 12, 0, 0, DateTimeKind.Utc)).Level, "19% and 47%: no banner");
+            True(r.Details(DateTime.UtcNow).StartsWith("5-hour limit: 19% · resets at "), r.Details(DateTime.UtcNow));
+        }
+
+        private static void Test_RateLimit_Banners()
+        {
+            var now = new DateTime(2026, 11, 3, 12, 0, 0, DateTimeKind.Utc);
+            long reset = (long)(now.AddHours(2) - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalSeconds;
+            RateLimitInfo Make(string status, double fiveHour, string windowStatus = "allowed") => RateLimitInfo.Parse(JObject.Parse(
+                $"{{\"status\":\"{status}\",\"rateLimitType\":\"five_hour\",\"resetsAt\":{reset},\"unifiedWindows\":{{\"five_hour\":{{\"utilization\":{fiveHour.ToString(System.Globalization.CultureInfo.InvariantCulture)},\"resetsAt\":{reset},\"status\":\"{windowStatus}\"}},\"seven_day\":{{\"utilization\":0.3,\"status\":\"allowed\"}}}}}}"));
+
+            var high = Make("allowed", 0.86).Banner(now);
+            Eq(LimitLevel.Warning, high.Level, "86% shows before the CLI warns");
+            True(high.Text.StartsWith("5-hour limit 86% used. Resets at "), high.Text);
+
+            var warned = Make("allowed_warning", 0.5).Banner(now);
+            Eq(LimitLevel.Warning, warned.Level, "the CLI's warning always shows");
+
+            var reached = Make("rejected", 1.0, "rejected").Banner(now);
+            Eq(LimitLevel.Reached, reached.Level);
+            True(reached.Text.StartsWith("5-hour limit reached. Resets at "), reached.Text);
+
+            Eq("Weekly Opus limit", RateLimitInfo.DisplayName("seven_day_opus"));
+        }
+
         // ---------- Images ----------
         private static void Test_Images_TokensAndFit()
         {

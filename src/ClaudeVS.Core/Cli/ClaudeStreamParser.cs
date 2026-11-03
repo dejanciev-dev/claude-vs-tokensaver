@@ -43,6 +43,8 @@ namespace ClaudeVS.Core.Cli
                 case "user": return ParseUser(json);
                 case "result": return ParseResult(json);
                 case "control_request": return ParseControlRequest(json);
+                case "rate_limit_event":
+                    return json["rate_limit_info"] is JObject limits ? new[] { new ClaudeEvent { Kind = ClaudeEventKind.RateLimit, Payload = limits } } : None;
                 case "control_response":
                     return new[] { new ClaudeEvent { Kind = ClaudeEventKind.ControlResponse, RequestId = (string)json.SelectToken("response.request_id"), IsError = (string)json.SelectToken("response.subtype") == "error", Text = (string)json.SelectToken("response.error"), Payload = json.SelectToken("response.response") as JObject } };
                 default: return None;
