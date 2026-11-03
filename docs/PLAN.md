@@ -143,7 +143,8 @@ needs file checkpointing ("File rewinding is not enabled").
 - [x] Bookmarks: bookmark button under each answer, bookmarks side panel
 - [x] Sessions: rename (`--name`) and archive; show the resumed conversation's earlier messages
   (verified with 2.1.317: `--name` writes `custom-title` entries; the CLI's own titles are `ai-title` entries)
-- [ ] Export conversation (Markdown)
+- [x] Export conversation (Markdown), from the CLI's session file (verified with 2.1.317: `--resume` in print
+  mode keeps the session id, so the file holds the whole conversation)
 - [ ] Context usage breakdown from `get_context_usage` in the meter
 - [ ] Rewind (enable file checkpointing, then `rewind_files`)
 - [ ] Voice input (Windows dictation)

@@ -7,6 +7,9 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Export conversation** (/ → Export conversation…): saves the whole conversation as Markdown, including
+  messages from before a resume or a compaction, and opens it in Visual Studio. Tool calls are listed as one
+  line each (with result size), never their full output.
 - **Resumed sessions show their history:** earlier prompts, answers and tool calls are read from the CLI's
   session file and redrawn (the last 300 items). Earlier answers can be bookmarked too.
 - **Rename sessions:** click the title (or / → Rename session), or hover a session in the list. The name is

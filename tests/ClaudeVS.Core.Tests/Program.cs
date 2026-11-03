@@ -659,6 +659,37 @@ namespace ClaudeVS.Core.Tests
             finally { File.Delete(f); }
         }
 
+        private static void Test_Export_Markdown()
+        {
+            var t = new SessionTranscript();
+            t.Items.Add(new TranscriptItem { Kind = TranscriptItemKind.User, Text = "How does login work?" });
+            t.Items.Add(new TranscriptItem { Kind = TranscriptItemKind.Answer, Text = "Let me look." });
+            t.Items.Add(new TranscriptItem { Kind = TranscriptItemKind.Tool, Text = "Read: C:/a/Login.cs", ResultChars = 8000 });
+            t.Items.Add(new TranscriptItem { Kind = TranscriptItemKind.Tool, Text = "Bash: echo `x`", ResultChars = 0, IsError = true });
+            t.Items.Add(new TranscriptItem { Kind = TranscriptItemKind.Answer, Text = "It uses **JWT**." });
+            t.Items.Add(new TranscriptItem { Kind = TranscriptItemKind.Compacted });
+            t.Items.Add(new TranscriptItem { Kind = TranscriptItemKind.User, Text = "Thanks" });
+            string md = ConversationExport.ToMarkdown(t, "Login\nquestions", new DateTime(2026, 11, 3, 10, 5, 0));
+            string expected =
+                "# Login questions\n\n*Exported from Claude Code in Visual Studio on 2026-11-03 10:05*\n" +
+                "\n## You\n\nHow does login work?\n" +
+                "\n## Claude\n\nLet me look.\n" +
+                "\n- 🔧 `Read: C:/a/Login.cs` · ~2.0k tok\n- 🔧 `Bash: echo 'x'` · failed\n" +
+                "\nIt uses **JWT**.\n" +
+                "\n---\n\n*Conversation compacted here; Claude continued from a summary of the part above.*\n" +
+                "\n## You\n\nThanks\n";
+            Eq(expected, md);
+            True(!ConversationExport.ToMarkdown(t, "x", DateTime.Now, includeTools: false).Contains("🔧"), "tools left out");
+        }
+
+        private static void Test_Export_FileName()
+        {
+            Eq("Fix - the bug.md", ConversationExport.FileName("Fix / the bug?"));
+            Eq("claude-conversation.md", ConversationExport.FileName("  "));
+            Eq(63, ConversationExport.FileName(new string('a', 100)).Length);
+            True(SessionHistory.SessionFile(@"C:\p", @"C:\src\Shop", "abc").EndsWith(@"C--src-Shop\abc.jsonl"), "session file path");
+        }
+
         // ---------- Bookmarks ----------
         private static void Test_Bookmark_Title()
         {
