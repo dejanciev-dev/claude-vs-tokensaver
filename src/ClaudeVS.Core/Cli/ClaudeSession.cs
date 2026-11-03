@@ -253,6 +253,31 @@ namespace ClaudeVS.Core.Cli
             return r == null ? null : ContextUsage.Parse(r);
         }
 
+        /// <summary>The /skills rows (no model call; starts the process if needed). Null when the CLI does not answer.</summary>
+        public async Task<List<SkillRow>> GetSkillsAsync()
+        {
+            EnsureRunning();
+            var r = await RequestAsync(new JObject { ["subtype"] = "get_skills_dialog" }, TimeSpan.FromSeconds(20)).ConfigureAwait(false);
+            return r == null ? null : SkillRow.ParseDialog(r);
+        }
+
+        /// <summary>Re-reads skills after their settings changed, so this session uses the new states.</summary>
+        public Task<JObject> ReloadSkillsAsync() => RequestAsync(new JObject { ["subtype"] = "reload_skills" }, TimeSpan.FromSeconds(20));
+
+        /// <summary>MCP servers and their status (no model call; starts the process if needed).</summary>
+        public async Task<List<McpServerRow>> GetMcpServersAsync()
+        {
+            EnsureRunning();
+            var r = await RequestAsync(new JObject { ["subtype"] = "mcp_status" }, TimeSpan.FromSeconds(20)).ConfigureAwait(false);
+            return r == null ? null : McpServerRow.ParseStatus(r);
+        }
+
+        public Task<JObject> SetMcpServerEnabledAsync(string serverName, bool enabled) =>
+            RequestAsync(new JObject { ["subtype"] = "mcp_toggle", ["serverName"] = serverName, ["enabled"] = enabled }, TimeSpan.FromSeconds(30));
+
+        public Task<JObject> ReconnectMcpServerAsync(string serverName) =>
+            RequestAsync(new JObject { ["subtype"] = "mcp_reconnect", ["serverName"] = serverName }, TimeSpan.FromSeconds(60));
+
         private void CompletePending(ClaudeEvent ev)
         {
             if (ev.RequestId == null || !_pending.TryRemove(ev.RequestId, out var tcs)) return;

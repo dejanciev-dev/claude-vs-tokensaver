@@ -7,6 +7,10 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Skills and MCP servers lists** (/ → Skills… / MCP servers…, or click those rows in the context breakdown):
+  each skill with its source and what its listing costs on every request, and each MCP server with its status.
+  Click to turn one on or off; failed servers can be reconnected. Skills are changed with Claude Code's own
+  `edit-skill-overrides` and reloaded into the running session.
 - **Usage-limit banner** (Pro/Max plans): under the meter, "5-hour limit 86% used. Resets at 3:10 PM." from 80%
   use or when Claude Code warns, and "… reached" when a limit stops you; the tooltip and the context breakdown
   list every window (5-hour, weekly, per model). From the CLI's `rate_limit_event`.

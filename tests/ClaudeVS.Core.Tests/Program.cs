@@ -792,6 +792,35 @@ namespace ClaudeVS.Core.Tests
             True(Colored("a.b(1)", "cs").Contains("N:1") && !Colored("x1 = 2", "cs").Contains("N:1"), "digits inside names are not numbers");
         }
 
+        // ---------- Skills and MCP ----------
+        private static void Test_SkillsAndMcp_FromRealResponses()
+        {
+            var lines = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.317-skills-mcp.jsonl")).Where(l => l.Trim().Length > 0).ToList();
+            var parser = new ClaudeStreamParser();
+            var skills = SkillRow.ParseDialog(parser.Parse(lines[0]).Single().Payload);
+            Eq(3, skills.Count);
+            Eq("anthropic-skills:artifact-emulator", skills[0].Name);
+            Eq("artifact-emulator", skills[0].DisplayName);
+            Eq("claude.ai sync", skills[0].Source);
+            Eq(240, skills[0].Tokens);
+            True(skills[0].IsOn && skills[0].LockedBy == null, "on, not locked");
+
+            var servers = McpServerRow.ParseStatus(parser.Parse(lines[1]).Single().Payload);
+            Eq(2, servers.Count);
+            Eq("needs-auth", servers[1].Status);
+            Eq("Needs sign-in", McpServerRow.StatusText(servers[1].Status));
+            Eq("claudeai-proxy", servers[0].Transport);
+            Eq(-1, servers[0].ToolCount, "no tool list while pending");
+        }
+
+        private static void Test_Skills_EditAndLocks()
+        {
+            Eq("{\"name\":\"pdf\",\"state\":\"off\"}", SkillRow.OverrideEdit("pdf", "off"));
+            var locked = SkillRow.ParseDialog(JObject.Parse("{\"skills\":[{\"name\":\"x\",\"state\":\"off\",\"locked_by\":\"policy\"}]}")).Single();
+            True(!locked.IsOn, "off");
+            Eq("set by your organization", SkillRow.LockReason(locked.LockedBy));
+        }
+
         // ---------- Usage limits ----------
         private static void Test_RateLimit_FromRealEvent()
         {
