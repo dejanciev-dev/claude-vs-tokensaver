@@ -95,6 +95,48 @@ namespace ClaudeVS.ToolWindow
         public static readonly Brush Pressed = Freeze(Color.FromArgb(0x4D, 0x80, 0x80, 0x80));
         public static readonly Brush Error = Freeze(Color.FromRgb(0xE0, 0x6C, 0x5C));
 
+        /// <summary>
+        /// Accent colors in the spirit of the Claude Code panel in VS Code and the terminal: status dots on tool
+        /// calls, colored inline code, readable links, Claude's orange for headers of cards.
+        /// </summary>
+        public sealed class AccentSet
+        {
+            public Brush Success, Failure, Running, Code, CodeBack, Link, Brand, Path;
+        }
+
+        public static readonly AccentSet DarkAccents = new AccentSet
+        {
+            Success = Hex("#4EC27A"),
+            Failure = Hex("#F1707B"),
+            Running = Hex("#E2B93D"),
+            Code = Hex("#B1B9F9"),     // the terminal's periwinkle for code
+            CodeBack = Freeze(Color.FromArgb(0x2A, 0xB1, 0xB9, 0xF9)),
+            Link = Hex("#4DAAFC"),
+            Brand = Hex("#D97757"),    // Claude orange
+            Path = Hex("#9CDCFE"),
+        };
+
+        public static readonly AccentSet LightAccents = new AccentSet
+        {
+            Success = Hex("#2E8B57"),
+            Failure = Hex("#C72E3A"),
+            Running = Hex("#B07D00"),
+            Code = Hex("#5363D6"),
+            CodeBack = Freeze(Color.FromArgb(0x1E, 0x57, 0x69, 0xF7)),
+            Link = Hex("#005FB8"),
+            Brand = Hex("#C15F3C"),
+            Path = Hex("#0451A5"),
+        };
+
+        /// <summary>Dark or light accents, from the brightness of the tool window background.</summary>
+        public static AccentSet Accents(FrameworkElement probe)
+        {
+            var bg = (probe?.TryFindResource(EnvironmentColors.ToolWindowBackgroundBrushKey) as SolidColorBrush)?.Color ?? Colors.White;
+            return 0.299 * bg.R + 0.587 * bg.G + 0.114 * bg.B < 128 ? DarkAccents : LightAccents;
+        }
+
+        private static Brush Hex(string hex) => Freeze((Color)ColorConverter.ConvertFromString(hex));
+
         /// <summary>Use the IDE's UI font (Segoe UI by default) and size.</summary>
         public static void UseEnvironmentFont(FrameworkElement e)
         {
