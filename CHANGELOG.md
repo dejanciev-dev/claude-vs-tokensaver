@@ -7,6 +7,10 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Copy response:** a copy button under each answer (also for redrawn answers), and / → Copy last response.
+- **Option previews in question cards:** when Claude's question options carry a preview (a mockup or code
+  snippet), it shows under the options for the hovered or chosen option, and the chosen preview is sent back
+  with the answer, as the CLI's own dialog does.
 - **Images:** paste a screenshot or copied image files with `Ctrl+V`, or choose image files under + → Upload from
   computer; they are sent with the prompt as image content (up to 10). Thumbnails with their estimated token cost
   show above the input box and in your message. Images are scaled to 1568 px on the long edge and sent as PNG,

@@ -162,8 +162,8 @@ needs file checkpointing ("File rewinding is not enabled").
 Compared against the `[VSCode]` entries; the version in brackets is where the VS Code panel got it.
 
 **Small**
-- [ ] Copy response button under each answer, and a `/copy` action (2.1.277)
-- [ ] Option previews in question cards: show `AskUserQuestion`'s `preview` (2.1.286)
+- [x] Copy response button under each answer, and a `/copy` action (2.1.277)
+- [x] Option previews in question cards: show `AskUserQuestion`'s `preview` (2.1.286); the chosen preview goes back in `annotations`
 - [ ] Strip invisible Unicode formatting and tag characters from prompts, with a notice; mark pastes over 800 characters (2.1.280)
 - [ ] Compaction as a collapsible card with the summary (2.1.69)
 - [ ] "Not responding" status when the CLI has sent nothing for 60 s during a turn (2.1.83)

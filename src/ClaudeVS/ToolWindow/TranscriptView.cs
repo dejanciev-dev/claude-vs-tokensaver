@@ -183,7 +183,7 @@ namespace ClaudeVS.ToolWindow
         /// The muted "✓ 3.2s · 12k tok · $0.004" line after an answer, with a star that bookmarks the answer.
         /// <paramref name="toggleBookmark"/> returns whether the answer is bookmarked now; null hides the star.
         /// </summary>
-        public void AppendTurnFooter(string text, Func<bool> toggleBookmark)
+        public void AppendTurnFooter(string text, Func<bool> toggleBookmark, string answerToCopy = null)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             EndAnswer();
@@ -208,6 +208,23 @@ namespace ClaudeVS.ToolWindow
                 };
                 DockPanel.SetDock(star, Dock.Left);
                 row.Children.Add(star);
+            }
+            if (!string.IsNullOrWhiteSpace(answerToCopy))
+            {
+                var copy = ChatTheme.IconButton(ChatTheme.IconCopy, "Copy response (Markdown)");
+                copy.FontSize = 12;
+                copy.Width = 24;
+                copy.Height = 22;
+                copy.Margin = new Thickness(0, 0, 4, 0);
+                ChatTheme.Muted(copy);
+                string answer = answerToCopy.Trim();
+                copy.Click += (s, e) =>
+                {
+                    try { Clipboard.SetText(answer); copy.Content = ChatTheme.IconCheck; copy.ToolTip = "Copied"; }
+                    catch (Exception) { copy.ToolTip = "Clipboard busy, try again"; }
+                };
+                DockPanel.SetDock(copy, Dock.Left);
+                row.Children.Add(copy);
             }
             row.Children.Add(label);
             _doc.Blocks.Add(new BlockUIContainer(row) { Margin = new Thickness(0, 2, 0, 4) });
@@ -365,6 +382,21 @@ namespace ClaudeVS.ToolWindow
                     Margin = new Thickness(0, qi == 0 ? 0 : 8, 0, 2),
                 });
                 var choices = new List<(ToggleButton Box, string Label)>();
+                // Options can carry a preview (mockup or snippet): show the hovered one, else the checked one.
+                var preview = new TextBox
+                {
+                    IsReadOnly = true, FontFamily = Mono, FontSize = 11.5, TextWrapping = TextWrapping.NoWrap, MaxHeight = 220,
+                    HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                    Background = CodeBackground, BorderThickness = new Thickness(0), Padding = new Thickness(6, 4, 6, 4),
+                    Margin = new Thickness(8, 4, 0, 2), Visibility = Visibility.Collapsed,
+                };
+                preview.SetResourceReference(Control.ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
+                void ShowPreview(string text)
+                {
+                    preview.Text = text ?? "";
+                    preview.Visibility = string.IsNullOrEmpty(text) ? Visibility.Collapsed : Visibility.Visible;
+                }
+                string CheckedPreview() => q.Options.Zip(choices, (o, c) => (o, c)).Where(p => p.c.Box.IsChecked == true).Select(p => p.o.Preview).FirstOrDefault(p => !string.IsNullOrEmpty(p));
                 foreach (var o in q.Options)
                 {
                     var content = new TextBlock { TextWrapping = TextWrapping.Wrap };
@@ -373,7 +405,17 @@ namespace ClaudeVS.ToolWindow
                     var box = MakeChoice(q.MultiSelect, group + qi, content);
                     choices.Add((box, o.Label));
                     panel.Children.Add(box);
+                    if (!string.IsNullOrEmpty(o.Preview))
+                    {
+                        string p = o.Preview;
+                        box.MouseEnter += (s, e) => ShowPreview(p);
+                        box.GotKeyboardFocus += (s, e) => ShowPreview(p);
+                    }
+                    box.MouseLeave += (s, e) => ShowPreview(CheckedPreview());
+                    box.Checked += (s, e) => ShowPreview(CheckedPreview());
+                    box.Unchecked += (s, e) => ShowPreview(CheckedPreview());
                 }
+                if (q.Options.Any(o => !string.IsNullOrEmpty(o.Preview))) ForwardMouseWheel(preview);
                 var otherText = new TextBox { MinWidth = 160, Margin = new Thickness(4, 0, 0, 0) };
                 var other = MakeChoice(q.MultiSelect, group + qi, new TextBlock { Text = "Other:", VerticalAlignment = VerticalAlignment.Center });
                 otherText.GotKeyboardFocus += (s, e) => other.IsChecked = true;
@@ -381,6 +423,7 @@ namespace ClaudeVS.ToolWindow
                 otherRow.Children.Add(other);
                 otherRow.Children.Add(otherText);
                 panel.Children.Add(otherRow);
+                panel.Children.Add(preview);
 
                 string text = q.Text;
                 readers.Add(() =>

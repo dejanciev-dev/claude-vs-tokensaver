@@ -8,6 +8,8 @@ namespace ClaudeVS.Core.Cli
     {
         public string Label { get; set; }
         public string Description { get; set; }
+        /// <summary>Optional mockup or code snippet to show while this option is highlighted (2.1.317).</summary>
+        public string Preview { get; set; }
     }
 
     public sealed class Question
@@ -41,7 +43,7 @@ namespace ClaudeVS.Core.Cli
                     MultiSelect = q.Value<bool?>("multiSelect") ?? false,
                 };
                 if (q["options"] is JArray opts)
-                    question.Options.AddRange(opts.OfType<JObject>().Select(o => new QuestionOption { Label = (string)o["label"] ?? "", Description = (string)o["description"] }));
+                    question.Options.AddRange(opts.OfType<JObject>().Select(o => new QuestionOption { Label = (string)o["label"] ?? "", Description = (string)o["description"], Preview = (string)o["preview"] }));
                 list.Add(question);
             }
             return list;
@@ -55,12 +57,19 @@ namespace ClaudeVS.Core.Cli
         {
             var result = (JObject)(input?.DeepClone() ?? new JObject());
             var answers = new JObject();
+            var annotations = new JObject();
+            var questions = Parse(input);
             foreach (var kv in chosen ?? new Dictionary<string, IReadOnlyList<string>>())
             {
                 var labels = (kv.Value ?? new string[0]).Where(l => !string.IsNullOrWhiteSpace(l)).Select(l => l.Trim()).ToList();
-                if (labels.Count > 0) answers[kv.Key] = string.Join(", ", labels);
+                if (labels.Count == 0) continue;
+                answers[kv.Key] = string.Join(", ", labels);
+                // Like the CLI's own dialog: tell Claude which preview was picked, when the question had previews.
+                var picked = questions.FirstOrDefault(q => q.Text == kv.Key)?.Options.Where(o => labels.Contains(o.Label) && !string.IsNullOrEmpty(o.Preview)).ToList();
+                if (picked != null && picked.Count == 1 && labels.Count == 1) annotations[kv.Key] = new JObject { ["preview"] = picked[0].Preview };
             }
             result["answers"] = answers;
+            if (annotations.Count > 0) result["annotations"] = annotations;
             return result;
         }
     }
