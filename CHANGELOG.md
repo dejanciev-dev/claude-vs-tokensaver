@@ -7,6 +7,11 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Resumed sessions show their history:** earlier prompts, answers and tool calls are read from the CLI's
+  session file and redrawn (the last 300 items). Earlier answers can be bookmarked too.
+- **Rename sessions:** click the title (or / → Rename session), or hover a session in the list. The name is
+  passed to the CLI with `--name`, so its own `/resume` picker shows it too.
+- **Archive sessions:** hide sessions from the list; "Show archived sessions" brings them back.
 - **Bookmarks:** a star under each answer saves it (prompt and answer) to a local file. The bookmarks
   panel (header icon, or / → Bookmarks) lists them for the solution with search; clicking one scrolls to the
   answer, or shows the saved copy when it is from another conversation. Hover a row to remove it.

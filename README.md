@@ -87,7 +87,7 @@ This extension attacks all three, and shows the numbers so you can see the effec
 | **Question cards** | When Claude asks a question, you get its options (plus "Other") and your answer goes back to Claude. |
 | **Plan approval cards** | Plans render as Markdown with **Approve** or **Request changes** (with feedback). |
 | **Permission bar** | Other tool calls that need approval show **Allow** / **Deny**. |
-| **History** | Resume an earlier conversation for the same solution (`claude --resume`). |
+| **Sessions** | Resume an earlier conversation for the same solution (`claude --resume`); its earlier prompts, answers and tool calls are redrawn. Click the title to rename a session (also passed to the CLI as `--name`); hover a session in the list to rename or archive it. |
 | **Bookmarks** | Star any answer to keep it. The bookmarks panel lists them per solution with search; clicking one scrolls to it, or shows the saved copy if it came from another conversation. |
 | **Several chat windows** | Each window has its own conversation, meter and model. |
 | **Prompt box helpers** | `Ctrl+Up/Down` prompt history; `/` lists commands, including your own `.claude/commands`; `@` picks a file. |
@@ -279,7 +279,8 @@ Editor commands go to the chat window you used last.
 - **Usage log**: `%LocalAppData%\claude-vs-tokensaver\usage.jsonl`, one line per turn with the model, tokens,
   cost and route decision. It never leaves your machine, rotates at 5 MB and can be turned off.
 - **Prompt preview** (off by default): the first 200 characters of each prompt, stored in that same local log.
-- **Conversation history** is the CLI's own (`~/.claude/projects`). The History button only reads it.
+- **Conversation history** is the CLI's own (`~/.claude/projects`). The sessions list only reads it.
+- **Session names and archive flags**: `%LocalAppData%\claude-vs-tokensaver\sessions.json`. Local only.
 - **Bookmarks**: `%LocalAppData%\claude-vs-tokensaver\bookmarks.json`, the prompt and answer text of each starred answer. Local only.
 
 ## Project layout
@@ -291,7 +292,7 @@ src/ClaudeVS.Core/            netstandard2.0, all logic, no Visual Studio depend
               ClaudeCliLocator, ClaudeErrorHints, InteractiveRequests (questions, plans)
   Tokens/     ModelRouter, TokenMeter, UsageLog, SavingsReport (+ price table, router replay)
   Context/    PromptContextBuilder, FileIndex (@ picker), EditDiff (Diff button)
-  Chat/       PromptHistory, SlashCommands, SessionHistory, Bookmarks
+  Chat/       PromptHistory, SlashCommands, SessionHistory, SessionTranscript, SessionMeta, Bookmarks
   Markdown/   MarkdownParser (streaming-tolerant subset)
   Setup/      SolutionScanner, ClaudeMdGenerator, TokenSaverSetup
 src/ClaudeVS/                 net472 VSIX: package, commands, tool window, options
@@ -325,7 +326,10 @@ msbuild ClaudeVS.sln /restore /p:Configuration=Release /warnaserror     # → sr
   first F5 session may still turn up UI issues. Please [open an issue](https://github.com/dejanciev-dev/claude-vs-tokensaver/issues).
 - **Plan mode ignores Haiku.** With Claude Code 2.1.316, plan mode answered with Sonnet even when Haiku was
   requested. The chat warns you when this happens.
-- **Resume** continues the conversation, but earlier messages are not redrawn in the transcript.
+- **Resume** redraws at most the last 300 items (prompts, answers, tool calls) of a conversation. Redrawn tool
+  rows have no Diff button.
+- **Renaming a running session** shows the new name here at once, but the CLI only records it (`--name`) the next
+  time that session's process starts. Archiving is local to this extension; the CLI's own `/resume` still lists the session.
 - **Write diffs** compare against a copy taken when the tool call arrives. If the CLI writes faster, the diff can look empty.
 - Several answers to one multi-select question are sent joined with ", ". That format is not verified against the CLI yet.
 - The output-trimming hook (`trim-output.ps1`) assumes Windows PowerShell. Claude Code under WSL would need a bash version.
