@@ -110,7 +110,17 @@ namespace ClaudeVS.ToolWindow
         private readonly BookmarksPanel _bookmarks = new BookmarksPanel();
         // Answer text of the turn in progress, and the prompts still waiting for their answer (sent while busy).
         private readonly StringBuilder _turnAnswer = new StringBuilder();
-        private readonly Queue<(string Prompt, System.Windows.Documents.Block Anchor)> _turnPrompts = new Queue<(string, System.Windows.Documents.Block)>();
+        private readonly Queue<TurnPrompt> _turnPrompts = new Queue<TurnPrompt>();
+        // Prompts sent while Claude was answering: shown above the input box until Claude starts on them.
+        private readonly Queue<TurnPrompt> _queuedBubbles = new Queue<TurnPrompt>();
+        private readonly StackPanel _queuedPanel = new StackPanel { Visibility = Visibility.Collapsed, Margin = new Thickness(0, 0, 0, 4) };
+        private sealed class TurnPrompt
+        {
+            public string Prompt;
+            public System.Windows.Documents.Block Anchor;
+            /// <summary>Draws the prompt bubble in the transcript (deferred for a queued prompt).</summary>
+            public Action Render;
+        }
         // Bookmark id → its prompt bubble in this transcript, so the panel can scroll there.
         private readonly Dictionary<string, System.Windows.Documents.Block> _bookmarkAnchors = new Dictionary<string, System.Windows.Documents.Block>();
 
@@ -176,6 +186,7 @@ namespace ClaudeVS.ToolWindow
             _routeTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(300), DispatcherPriority.Background, (s, e) => { _routeTimer.Stop(); UpdateRouteHint(); }, Dispatcher);
             _flushTimer.Stop();
             _routeTimer.Stop();
+            _stallTimer = new DispatcherTimer(TimeSpan.FromSeconds(5), DispatcherPriority.Background, (s, e) => CheckStalled(), Dispatcher);
 
             ResetMeter();
             SetEmptyState(true);
@@ -280,6 +291,8 @@ namespace ClaudeVS.ToolWindow
             _inputBox.MouseLeftButtonDown += (s, e) => _prompt.Focus(); // clicking the box's padding focuses the text
 
             var bottom = new StackPanel { Margin = new Thickness(10, 4, 10, 10) };
+            bottom.Children.Add(_stall);
+            bottom.Children.Add(_queuedPanel);
             bottom.Children.Add(_permission);
             bottom.Children.Add(_imageStrip);
             bottom.Children.Add(_attachment);
@@ -334,7 +347,9 @@ namespace ClaudeVS.ToolWindow
 
         private void SetBusy(bool busy)
         {
+            if (busy && !_busy) System.Threading.Interlocked.Exchange(ref _lastOutputTicks, DateTime.UtcNow.Ticks); // the 60 s count starts now
             _busy = busy;
+            if (!busy) SetStalled(false);
             _send.Content = busy ? ChatTheme.IconStop : ChatTheme.IconSend;
             _send.ToolTip = busy ? "Stop" : "Send (Enter)";
             System.Windows.Automation.AutomationProperties.SetName(_send, busy ? "Stop" : "Send");
@@ -1064,6 +1079,7 @@ namespace ClaudeVS.ToolWindow
             ClearAttachments();
             SetEmptyState(false);
             if (_title.Text == DefaultTitle && routed) SetTitle(userText.Length > 0 ? userText : images.Count == 1 ? images[0].Image.Name : "Images");
+            bool queued = _busy;
             SetBusy(true);
 
             Fire(async () =>
@@ -1109,8 +1125,18 @@ namespace ClaudeVS.ToolWindow
                 if (images.Count > 0) meta.Add(ImageSummary(images));
                 // Our own id for the message, so its file changes can be rewound later (slash commands edit nothing).
                 string messageId = userText.StartsWith("/") ? null : Guid.NewGuid().ToString();
-                _view.AppendUserMessage(userText, string.Join("  ·  ", meta), RewindAction(messageId, userText), images.Select(i => (ImageSource)i.Preview).ToList());
-                _turnPrompts.Enqueue((userText, _view.LastUserMessage));
+                var previews = images.Select(i => (ImageSource)i.Preview).ToList();
+                var turn = new TurnPrompt { Prompt = userText };
+                turn.Render = () =>
+                {
+                    ThreadHelper.ThrowIfNotOnUIThread();
+                    _view.AppendUserMessage(userText, string.Join("  ·  ", meta), RewindAction(messageId, userText), previews);
+                    turn.Anchor = _view.LastUserMessage;
+                };
+                _turnPrompts.Enqueue(turn);
+                // Like VS Code: a prompt sent while Claude works waits at the bottom until Claude starts on it.
+                if (queued && _turnPrompts.Count > 1) { _queuedBubbles.Enqueue(turn); RefreshQueuedPanel(); }
+                else turn.Render();
 
                 _requestedFamilies.Enqueue(model == ModelChoice.Auto ? null : model.ToCli());
                 await _session.SetModelAsync(model);
@@ -1370,6 +1396,7 @@ namespace ClaudeVS.ToolWindow
             string writeSnapshot = change?.IsWrite == true ? ReadSnapshot(change.FilePath) : null;
 
             _events.Enqueue(new QueuedEvent { Session = sender as ClaudeSession, Event = ev, Change = change, WriteSnapshot = writeSnapshot });
+            System.Threading.Interlocked.Exchange(ref _lastOutputTicks, DateTime.UtcNow.Ticks);
             if (System.Threading.Interlocked.Exchange(ref _drainScheduled, 1) == 0) OnUi(DrainEvents);
         }
 
@@ -1430,6 +1457,8 @@ namespace ClaudeVS.ToolWindow
                         break;
                     case ClaudeEventKind.PermissionRequest:
                         FlushText();
+                        _waitingForUser = true; // Claude waits for you; not a stall
+                        SetStalled(false);
                         if (ShowInteractiveCard(ev)) break;
                         _pendingPermission = ev;
                         _permissionText.Text = "Allow " + ev.Text + "?";
@@ -1448,12 +1477,13 @@ namespace ClaudeVS.ToolWindow
                         RecordUsage(ev, _turnModel);
                         RefreshContextUsage(show: false); // control request, no model call
                         _turnModel = null;
-                        var turn = _turnPrompts.Count > 0 ? _turnPrompts.Dequeue() : default;
+                        var turn = _turnPrompts.Count > 0 ? _turnPrompts.Dequeue() : new TurnPrompt();
                         string answer = _turnAnswer.ToString();
                         _turnAnswer.Clear();
                         _view.AppendTurnFooter($"✓ {ev.DurationMs / 1000.0:0.0}s · {TokenMeter.Format(ev.Usage.Total)} tok · ${_meterModel?.LastTurnCostUsd:0.000}{used}",
                             string.IsNullOrWhiteSpace(answer) ? null : BookmarkToggle(turn.Prompt, answer, turn.Anchor), answer);
                         if (!string.IsNullOrWhiteSpace(answer)) _lastAnswer = answer;
+                        if (_queuedBubbles.Count > 0) { _queuedBubbles.Dequeue().Render(); RefreshQueuedPanel(); } // Claude starts on the next one now
                         break;
                     case ClaudeEventKind.Error:
                         AppendError("[claude] ", ev.Text);
@@ -1590,6 +1620,8 @@ namespace ClaudeVS.ToolWindow
             {
                 ThreadHelper.ThrowIfNotOnUIThread();
                 if (session != _session || session == null) { Append("\n  (that conversation has ended; the answer was not sent)\n"); return; }
+                _waitingForUser = false;
+                System.Threading.Interlocked.Exchange(ref _lastOutputTicks, DateTime.UtcNow.Ticks);
                 Append($"  {note}\n");
                 Fire(() => session.RespondToPermissionAsync(ev.RequestId, input ?? ev.ToolInput ?? new JObject(), allow, denyMessage));
             }
@@ -1623,6 +1655,8 @@ namespace ClaudeVS.ToolWindow
             var req = _pendingPermission;
             _pendingPermission = null;
             _permission.Visibility = Visibility.Collapsed;
+            _waitingForUser = false;
+            System.Threading.Interlocked.Exchange(ref _lastOutputTicks, DateTime.UtcNow.Ticks);
             if (req == null || _session == null) return;
             Append(allow ? "  ✔ allowed\n" : "  ✖ denied\n");
             Fire(() => _session.RespondToPermissionAsync(req.RequestId, req.ToolInput ?? new JObject(), allow));
@@ -1702,6 +1736,47 @@ namespace ClaudeVS.ToolWindow
         {
             _turnPrompts.Clear();
             _turnAnswer.Clear();
+            _queuedBubbles.Clear();
+            RefreshQueuedPanel();
+            _waitingForUser = false;
+            SetStalled(false);
+        }
+
+        private void RefreshQueuedPanel()
+        {
+            _queuedPanel.Children.Clear();
+            foreach (var q in _queuedBubbles)
+            {
+                string text = SessionMetaStore.Clean(q.Prompt) ?? "(image)";
+                var label = new TextBlock { Text = "Queued · " + text, FontSize = 11.5, TextTrimming = TextTrimming.CharacterEllipsis, ToolTip = q.Prompt };
+                ChatTheme.Muted(label);
+                var box = new Border { Child = label, CornerRadius = new CornerRadius(4), Padding = new Thickness(8, 3, 8, 3), Margin = new Thickness(0, 0, 0, 2), BorderThickness = new Thickness(1), BorderBrush = ChatTheme.Hover };
+                _queuedPanel.Children.Add(box);
+            }
+            _queuedPanel.Visibility = _queuedBubbles.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        // ---------------- "Not responding" ----------------
+
+        // Last time the CLI said anything (UTC ticks; written on the reader thread).
+        private long _lastOutputTicks = DateTime.UtcNow.Ticks;
+        // A permission bar or question/plan card is waiting for you: silence is expected then.
+        private bool _waitingForUser;
+        private DispatcherTimer _stallTimer;
+        private readonly TextBlock _stall = new TextBlock { FontSize = 11.5, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(2, 0, 0, 4), Visibility = Visibility.Collapsed, Foreground = ChatTheme.Error };
+        private static readonly TimeSpan StallAfter = TimeSpan.FromSeconds(60);
+
+        private void CheckStalled()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var quiet = DateTime.UtcNow - new DateTime(System.Threading.Interlocked.Read(ref _lastOutputTicks), DateTimeKind.Utc);
+            SetStalled(_busy && !_waitingForUser && quiet >= StallAfter, quiet);
+        }
+
+        private void SetStalled(bool stalled, TimeSpan quiet = default)
+        {
+            _stall.Visibility = stalled ? Visibility.Visible : Visibility.Collapsed;
+            if (stalled) _stall.Text = $"⚠ Not responding: no output from Claude Code for {(int)quiet.TotalMinutes} min. A long command may still be running; Esc stops it.";
         }
 
         // ---------------- Bookmarks ----------------
@@ -1863,6 +1938,7 @@ namespace ClaudeVS.ToolWindow
             if (LastActive == this) LastActive = null;
             _flushTimer.Stop();
             _routeTimer.Stop();
+            _stallTimer.Stop();
             DisposeSession();
         }
     }
