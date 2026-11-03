@@ -157,6 +157,40 @@ needs file checkpointing ("File rewinding is not enabled").
 
 ---
 
+## Phase 7 — More of the VS Code panel (from the Claude Code CHANGELOG up to 2.1.317)
+
+Compared against the `[VSCode]` entries; the version in brackets is where the VS Code panel got it.
+
+**Small**
+- [ ] Copy response button under each answer, and a `/copy` action (2.1.277)
+- [ ] Option previews in question cards: show `AskUserQuestion`'s `preview` (2.1.286)
+- [ ] Strip invisible Unicode formatting and tag characters from prompts, with a notice; mark pastes over 800 characters (2.1.280)
+- [ ] Compaction as a collapsible card with the summary (2.1.69)
+- [ ] "Not responding" status when the CLI has sent nothing for 60 s during a turn (2.1.83)
+- [ ] A message sent while Claude is working waits at the bottom until Claude starts on it (2.1.275)
+- [ ] Optional message timestamps, with a date line where the day changes (2.1.284 / 2.1.290)
+- [ ] Syntax coloring in code blocks (2.1.311)
+
+**Medium (token saving first)**
+- [ ] Usage-limit banner with the reset time (2.1.84 / 2.1.312), from the CLI's rate-limit events
+- [ ] Skills dialog with token estimates and on/off (2.1.280); MCP servers dialog (2.1.70 / 2.1.261)
+- [ ] Fork a session (`--fork-session`, 2.1.19); Esc twice opens a rewind picker (2.1.83)
+- [ ] Session list: auto-archive inactive sessions, status filters, groups, marker for sessions open elsewhere (2.1.229–2.1.265)
+- [ ] Plan as a full Markdown document with comments (2.1.70)
+- [ ] Focus view: hide tool rows behind a per-turn summary (2.1.221)
+
+**Large**
+- [ ] Subagents: agent map, background tasks, Run in background, Stop per agent (2.1.269–2.1.287)
+- [ ] Accept or reject each change in the diff (2.1.275)
+- [ ] On-demand diagnostics: Claude reads the Error List when it wants, through an MCP server in the extension (2.1.285)
+- [ ] Dialogs: Status, Permission rules, Hooks, Memory/Instructions, Output styles, Account & usage (2.1.120–2.1.280)
+- [ ] Accessibility: screen reader announcements, "Focus last message" command (2.1.236 / 2.1.268 / 2.1.274)
+
+Left out: Claude in Chrome, Remote Control, plugin marketplace, gateway sign-in, Python venv activation, LaTeX,
+telemetry and editor-group settings, reopen closed tab, continue after reload.
+
+---
+
 ## Working in Visual Studio — daily loop
 
 1. Core logic change → edit in `ClaudeVS.Core` → run tests (`ClaudeVS.Core.Tests` → Set as Startup → Ctrl+F5, or `dotnet run` in its folder).
