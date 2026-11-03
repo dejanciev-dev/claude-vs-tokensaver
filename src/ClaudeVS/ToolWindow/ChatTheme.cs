@@ -38,6 +38,8 @@ namespace ClaudeVS.ToolWindow
         public const string IconStarFill = "";  // filled: bookmarked
         public const string IconBookmarks = "";
         public const string IconLightbulb = "";
+        public const string IconCopy = "";
+        public const string IconCheck = "";
         public const string IconRewind = "";     // undo arrow
         public const string IconArchive = "";    // box
         public const string IconUnarchive = "";  // undo

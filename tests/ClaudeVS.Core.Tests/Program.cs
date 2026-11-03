@@ -691,6 +691,21 @@ namespace ClaudeVS.Core.Tests
             True(SessionHistory.SessionFile(@"C:\p", @"C:\src\Shop", "abc").EndsWith(@"C--src-Shop\abc.jsonl"), "session file path");
         }
 
+        // ---------- Phase 7 ----------
+        private static void Test_Question_PreviewsParsedAndAnnotated()
+        {
+            var input = JObject.Parse("{\"questions\":[{\"question\":\"Layout?\",\"header\":\"Layout\",\"multiSelect\":false,\"options\":[" +
+                "{\"label\":\"Grid\",\"description\":\"cards\",\"preview\":\"[ ][ ]\\n[ ][ ]\"},{\"label\":\"List\",\"description\":\"rows\"}]}]}");
+            var q = AskUserQuestionTool.Parse(input).Single();
+            Eq("[ ][ ]\n[ ][ ]", q.Options[0].Preview);
+            Eq(null, q.Options[1].Preview);
+            var withPreview = AskUserQuestionTool.BuildAnswer(input, new Dictionary<string, IReadOnlyList<string>> { ["Layout?"] = new[] { "Grid" } });
+            Eq("Grid", (string)withPreview["answers"]["Layout?"]);
+            Eq("[ ][ ]\n[ ][ ]", (string)withPreview.SelectToken("annotations['Layout?'].preview"));
+            var without = AskUserQuestionTool.BuildAnswer(input, new Dictionary<string, IReadOnlyList<string>> { ["Layout?"] = new[] { "List" } });
+            True(without["annotations"] == null, "no preview, no annotations");
+        }
+
         // ---------- Images ----------
         private static void Test_Images_TokensAndFit()
         {

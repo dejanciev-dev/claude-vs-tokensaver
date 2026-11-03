@@ -652,6 +652,7 @@ namespace ClaudeVS.ToolWindow
                 new ChatPopup.Entry { Group = "Context", Label = "Compact conversation", Description = "Summarize to shrink the context", Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); SendText("/compact", routed: false); } },
                 new ChatPopup.Entry { Group = "Context", Label = "Resume a session…", Run = ShowHistoryMenu },
                 new ChatPopup.Entry { Group = "Context", Label = "Rename session", Run = StartTitleEdit },
+                new ChatPopup.Entry { Group = "Context", Label = "Copy last response", Description = "Claude's last answer as Markdown", Run = CopyLastAnswer },
                 new ChatPopup.Entry { Group = "Context", Label = "Export conversation…", Description = "Save the whole conversation as Markdown", Run = ExportConversation },
                 new ChatPopup.Entry { Group = "Context", Label = "Bookmarks", Description = "Answers you starred", Run = ToggleBookmarksPanel },
             };
@@ -1289,7 +1290,8 @@ namespace ClaudeVS.ToolWindow
                         _view.AppendAnswer(item.Text);
                         _view.EndAnswer();
                         // Earlier answers can be bookmarked too.
-                        _view.AppendTurnFooter("", BookmarkToggle(prompt, item.Text, anchor));
+                        _view.AppendTurnFooter("", BookmarkToggle(prompt, item.Text, anchor), item.Text);
+                        _lastAnswer = item.Text;
                         break;
                     case TranscriptItemKind.Tool:
                         _view.AppendTool(item.ToolUseId, item.Text, item.ToolInput?.ToString());
@@ -1420,7 +1422,8 @@ namespace ClaudeVS.ToolWindow
                         string answer = _turnAnswer.ToString();
                         _turnAnswer.Clear();
                         _view.AppendTurnFooter($"✓ {ev.DurationMs / 1000.0:0.0}s · {TokenMeter.Format(ev.Usage.Total)} tok · ${_meterModel?.LastTurnCostUsd:0.000}{used}",
-                            string.IsNullOrWhiteSpace(answer) ? null : BookmarkToggle(turn.Prompt, answer, turn.Anchor));
+                            string.IsNullOrWhiteSpace(answer) ? null : BookmarkToggle(turn.Prompt, answer, turn.Anchor), answer);
+                        if (!string.IsNullOrWhiteSpace(answer)) _lastAnswer = answer;
                         break;
                     case ClaudeEventKind.Error:
                         AppendError("[claude] ", ev.Text);
@@ -1627,6 +1630,18 @@ namespace ClaudeVS.ToolWindow
             ThreadHelper.ThrowIfNotOnUIThread();
             _view.Clear();
             _bookmarkAnchors.Clear();
+            _lastAnswer = null;
+        }
+
+        private string _lastAnswer;
+
+        /// <summary>/ → Copy last response (like /copy in VS Code): Claude's last answer as Markdown.</summary>
+        private void CopyLastAnswer()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (string.IsNullOrWhiteSpace(_lastAnswer)) { Append("No response to copy yet."); return; }
+            try { Clipboard.SetText(_lastAnswer.Trim()); Append("Copied the last response."); }
+            catch (Exception) { Append("The clipboard is busy; try again."); }
         }
 
         private void ClearTurns()
