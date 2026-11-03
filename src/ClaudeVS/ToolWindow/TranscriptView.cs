@@ -424,7 +424,14 @@ namespace ClaudeVS.ToolWindow
             var expander = new Expander { Header = headerContent, Content = body, IsExpanded = false, Margin = new Thickness(0, 1, 0, 1) };
             expander.SetResourceReference(Control.ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
 
-            _doc.Blocks.Add(new BlockUIContainer(expander) { Margin = new Thickness(0) });
+            if (FocusView())
+            {
+                var group = CurrentToolGroup();
+                group.Rows.Children.Add(expander);
+                group.Add(toolUseId, description);
+                if (!string.IsNullOrEmpty(toolUseId)) _toolGroupOf[toolUseId] = group;
+            }
+            else _doc.Blocks.Add(new BlockUIContainer(expander) { Margin = new Thickness(0) });
             if (!string.IsNullOrEmpty(toolUseId)) _tools[toolUseId] = header;
             ScrollToEndIfNear();
         }
@@ -573,10 +580,85 @@ namespace ClaudeVS.ToolWindow
             Box.ScrollToEnd(); // the user has to act on it, so always bring it into view
         }
 
+        // ---------------- Focus view ----------------
+
+        /// <summary>Focus view: consecutive tool calls collapse into one summary row (read on each tool call).</summary>
+        public Func<bool> FocusView { get; set; } = () => false;
+        private ToolGroup _toolGroup;
+        private readonly Dictionary<string, ToolGroup> _toolGroupOf = new Dictionary<string, ToolGroup>();
+
+        /// <summary>The group the next tool call joins: the last one, while nothing else was added after it.</summary>
+        private ToolGroup CurrentToolGroup()
+        {
+            if (_toolGroup != null && _doc.Blocks.LastBlock == _toolGroup.Block) return _toolGroup;
+            _toolGroup = new ToolGroup();
+            _doc.Blocks.Add(_toolGroup.Block);
+            return _toolGroup;
+        }
+
+        /// <summary>
+        /// "⚙ 4 tool calls · Read ×3, Edit · ~6.2k tok", with "running Edit: Foo.cs" while one is pending;
+        /// expands to the usual tool rows.
+        /// </summary>
+        private sealed class ToolGroup
+        {
+            private readonly TextBlock _header = new TextBlock { FontSize = 12, TextTrimming = TextTrimming.CharacterEllipsis };
+            private readonly List<string> _names = new List<string>();
+            private readonly Dictionary<string, string> _running = new Dictionary<string, string>();
+            private long _tokens;
+            private int _failed;
+
+            public ToolGroup()
+            {
+                ChatTheme.Muted(_header);
+                Rows = new StackPanel { Margin = new Thickness(12, 0, 0, 0) };
+                var expander = new Expander { Header = _header, Content = Rows, IsExpanded = false, Margin = new Thickness(0, 1, 0, 1) };
+                expander.SetResourceReference(Control.ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
+                Block = new BlockUIContainer(expander) { Margin = new Thickness(0) };
+            }
+
+            public BlockUIContainer Block { get; }
+            public StackPanel Rows { get; }
+
+            public void Add(string id, string description)
+            {
+                string d = description ?? "";
+                int colon = d.IndexOf(':');
+                _names.Add(colon > 0 ? d.Substring(0, colon) : d);
+                if (!string.IsNullOrEmpty(id)) _running[id] = d;
+                Update();
+            }
+
+            public void Complete(string id, int resultChars, bool isError)
+            {
+                _running.Remove(id);
+                _tokens += resultChars / 4;
+                if (isError) _failed++;
+                Update();
+            }
+
+            private void Update()
+            {
+                var counts = _names.GroupBy(n => n).Select(g => g.Count() > 1 ? $"{g.Key} ×{g.Count()}" : g.Key);
+                string text = $"⚙  {_names.Count} tool call{(_names.Count == 1 ? "" : "s")} · {string.Join(", ", counts)}";
+                if (_tokens > 0) text += $" · ~{Core.Tokens.TokenMeter.Format(_tokens)} tok";
+                if (_failed > 0) text += $" · {_failed} failed";
+                if (_running.Count > 0) text += " · running " + _running.Values.Last();
+                _header.Text = text;
+                _header.ToolTip = text;
+                _header.FontWeight = _tokens >= 5000 ? FontWeights.SemiBold : FontWeights.Normal;
+            }
+        }
+
         /// <summary>Adds the result size (≈ chars / 4 tokens) to a tool row; marks failed calls.</summary>
         public void CompleteTool(string toolUseId, int resultChars, bool isError)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
+            if (!string.IsNullOrEmpty(toolUseId) && _toolGroupOf.TryGetValue(toolUseId, out var group))
+            {
+                _toolGroupOf.Remove(toolUseId);
+                group.Complete(toolUseId, resultChars, isError);
+            }
             if (string.IsNullOrEmpty(toolUseId) || !_tools.TryGetValue(toolUseId, out TextBlock header)) return;
             _tools.Remove(toolUseId);
             string size = resultChars > 0 ? $" · ~{Core.Tokens.TokenMeter.Format(resultChars / 4)} tok" : "";
@@ -598,6 +680,8 @@ namespace ClaudeVS.ToolWindow
             _plain = null;
             _doc.Blocks.Clear();
             _tools.Clear();
+            _toolGroupOf.Clear();
+            _toolGroup = null;
             LastUserMessage = null;
             _lastDay = null;
         }

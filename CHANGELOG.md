@@ -7,6 +7,8 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Focus view** (/ → Focus view, or Tools → Options → Claude Code → Chat): consecutive tool calls collapse into
+  one row, such as "⚙ 4 tool calls · Read ×3, Edit · ~6.2k tok", showing what is running; expand it for each call.
 - **Plan as a document:** the plan card's **Open as document** opens the plan in the editor (Markdown preview
   included). Type comments anywhere or delete lines; **Request changes** sends them to Claude, each comment
   quoted with the plan line it follows, together with the feedback box.

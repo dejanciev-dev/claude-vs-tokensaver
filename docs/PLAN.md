@@ -177,7 +177,7 @@ Compared against the `[VSCode]` entries; the version in brackets is where the VS
 - [x] Fork a session (`--fork-session`, 2.1.19; verified with 2.1.317: new id and file, history kept, original unchanged); Esc twice opens a rewind picker (2.1.83)
 - [x] Session list: auto-archive inactive sessions, status filters, groups, marker for sessions open elsewhere (2.1.229–2.1.265). "Open elsewhere" comes from the CLI's registry `~/.claude/sessions/<pid>.json` (live processes only); filter is All / Open / Closed
 - [x] Plan as a full Markdown document with comments (2.1.70): opened in the VS editor; added and deleted lines become feedback on Request changes
-- [ ] Focus view: hide tool rows behind a per-turn summary (2.1.221)
+- [x] Focus view: hide tool rows behind a per-turn summary (2.1.221); here one summary row per run of consecutive tool calls, live "running …"
 
 **Large**
 - [ ] Subagents: agent map, background tasks, Run in background, Stop per agent (2.1.269–2.1.287)
