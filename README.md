@@ -260,6 +260,7 @@ Editor commands go to the chat window you used last.
 |---|---|---|---|
 | CLI | Claude executable path | *(auto)* | Finds `claude.exe` / `claude.cmd` automatically. |
 | CLI | Permission mode | AcceptEdits | Edits are applied; shell commands ask. In **Plan** mode the CLI answered with Sonnet even when Haiku was requested. |
+| Chat | Archive inactive sessions after (days) | 14 | Unused sessions move to the Archived group of the sessions list; 0 = never. |
 | Chat | Show message timestamps | On | Time above each prompt and at the end of each answer line; a date line where the day changes. |
 | CLI | File checkpoints (rewind) | On | Claude Code keeps a copy of each file before Claude changes it, so prompts can be rewound. Applies to new sessions. |
 | CLI | Extra arguments | | Appended to the `claude` command line, e.g. `--add-dir ..\shared`. |

@@ -17,6 +17,10 @@ namespace ClaudeVS.Core.Chat
         public string FilePath { get; set; }
         /// <summary>Hidden from the sessions list unless archived sessions are shown (see <see cref="SessionMetaStore"/>).</summary>
         public bool Archived { get; set; }
+        /// <summary>Archived because it was inactive too long, not by you.</summary>
+        public bool AutoArchived { get; set; }
+        /// <summary>Your group for it (from <see cref="SessionMetaStore"/>); null when ungrouped.</summary>
+        public string Group { get; set; }
     }
 
     /// <summary>

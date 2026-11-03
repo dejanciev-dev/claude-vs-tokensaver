@@ -175,7 +175,7 @@ Compared against the `[VSCode]` entries; the version in brackets is where the VS
 - [x] Usage-limit banner with the reset time (2.1.84 / 2.1.312), from the CLI's rate-limit events
 - [x] Skills dialog with token estimates and on/off (2.1.280); MCP servers dialog (2.1.70 / 2.1.261). Read with `get_skills_dialog` / `mcp_status`; skills set with `claude edit-skill-overrides --json` then `reload_skills` (where it writes not verified: the CLI refuses inside a Claude Code session); servers with `mcp_toggle` / `mcp_reconnect`
 - [x] Fork a session (`--fork-session`, 2.1.19; verified with 2.1.317: new id and file, history kept, original unchanged); Esc twice opens a rewind picker (2.1.83)
-- [ ] Session list: auto-archive inactive sessions, status filters, groups, marker for sessions open elsewhere (2.1.229–2.1.265)
+- [x] Session list: auto-archive inactive sessions, status filters, groups, marker for sessions open elsewhere (2.1.229–2.1.265). "Open elsewhere" comes from the CLI's registry `~/.claude/sessions/<pid>.json` (live processes only); filter is All / Open / Closed
 - [ ] Plan as a full Markdown document with comments (2.1.70)
 - [ ] Focus view: hide tool rows behind a per-turn summary (2.1.221)
 

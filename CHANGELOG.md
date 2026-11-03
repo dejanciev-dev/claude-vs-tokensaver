@@ -7,6 +7,10 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Sessions list:** groups (hover → Move to group…, type a name to create one; rename or delete groups there),
+  a ring and "open in VS Code · working" for sessions open elsewhere (read from Claude Code's running-session
+  registry), an All / Open / Closed filter, Unarchive all, and automatic archiving of sessions unused for 14 days
+  (option *Archive inactive sessions after (days)*, 0 = never).
 - **Fork a session:** hover a session in the list → Fork, or / → Fork this session. The next prompt continues in
   a new session with the same history (`--fork-session`); the original stays as it was.
 - **Rewind picker:** press Esc twice in the prompt box (or / → Rewind…) to pick one of your prompts and put the
