@@ -7,6 +7,9 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Rewind:** hover one of your messages and click Rewind to put the files Claude changed since that prompt back
+  the way they were. A dry run shows the files and line counts first. Uses Claude Code's file checkpoints
+  (new option *File checkpoints (rewind)*, on by default). The conversation itself is not rewound.
 - **Context breakdown:** click the meter (or / → Context usage) to see what fills the context window: system
   prompt, tools, memory files, skills, messages (split into tool results, tool calls, your and Claude's messages),
   reserved space, plus tips such as compacting when tool results dominate. It comes from the CLI's

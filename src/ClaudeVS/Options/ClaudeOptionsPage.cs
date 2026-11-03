@@ -17,6 +17,9 @@ namespace ClaudeVS.Options
         [Category("CLI"), DisplayName("Permission mode"), Description("AcceptEdits: file edits are applied, shell commands ask. Plan: read-only planning. Note: in Plan mode the CLI answered with Sonnet even when Haiku was requested (Claude Code 2.1.316), so auto-routing to Haiku saves nothing there.")]
         public PermissionModeChoice PermissionMode { get; set; } = PermissionModeChoice.AcceptEdits;
 
+        [Category("CLI"), DisplayName("File checkpoints (rewind)"), Description("Lets Claude Code keep a copy of each file before Claude changes it, so you can rewind a prompt's file changes (hover your message → Rewind). Applies to new sessions.")]
+        public bool FileCheckpoints { get; set; } = true;
+
         [Category("CLI"), DisplayName("Extra arguments"), Description("Appended to the claude command line, e.g. --add-dir ..\\shared")]
         public string ExtraArguments { get; set; } = "";
 

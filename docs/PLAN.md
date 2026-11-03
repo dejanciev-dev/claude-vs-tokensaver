@@ -147,7 +147,9 @@ needs file checkpointing ("File rewinding is not enabled").
   mode keeps the session id, so the file holds the whole conversation)
 - [x] Context usage breakdown from `get_context_usage` in the meter (response format captured from 2.1.317 in
   `Fixtures/cli-2.1.317-context-usage.jsonl`)
-- [ ] Rewind (enable file checkpointing, then `rewind_files`)
+- [x] Rewind (enable file checkpointing, then `rewind_files`). Verified with 2.1.317: the env var
+  `CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING=1` turns it on; the CLI keeps the `uuid` we put on a user message,
+  which `rewind_files` takes; a dry run lists files and line counts. Files only, the conversation is not rewound.
 - [ ] Voice input (Windows dictation)
 - [ ] Images: paste screenshots into the prompt (send as image content)
 - Not possible locally: the "Web" sessions tab (cloud sessions are not exposed to the local CLI)
