@@ -20,6 +20,9 @@ namespace ClaudeVS.Options
         [Category("Chat"), DisplayName("Archive inactive sessions after (days)"), Description("Sessions not used for this many days move to the Archived group of the sessions list (0 = never). Unarchiving one keeps it visible until it is inactive that long again.")]
         public int AutoArchiveDays { get; set; } = 14;
 
+        [Category("Chat"), DisplayName("Focus view"), Description("Collapse consecutive tool calls into one summary row (expand it to see each call). Also toggled with / → Focus view.")]
+        public bool FocusView { get; set; }
+
         [Category("Chat"), DisplayName("Show message timestamps"), Description("A small time above each prompt and at the end of each answer's line, with a date line where the day changes.")]
         public bool ShowTimestamps { get; set; } = true;
 

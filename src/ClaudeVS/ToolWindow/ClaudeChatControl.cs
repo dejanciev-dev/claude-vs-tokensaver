@@ -130,6 +130,7 @@ namespace ClaudeVS.ToolWindow
             _mode = Options?.PermissionMode ?? PermissionModeChoice.AcceptEdits;
             Content = BuildLayout();
             _view.ShowTimestamps = () => Options?.ShowTimestamps ?? true;
+            _view.FocusView = () => Options?.FocusView ?? false;
             this.SetResourceReference(BackgroundProperty, EnvironmentColors.ToolWindowBackgroundBrushKey);
             this.SetResourceReference(ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
             ChatTheme.UseEnvironmentFont(this);
@@ -736,6 +737,7 @@ namespace ClaudeVS.ToolWindow
                 new ChatPopup.Entry { Group = "Context", Label = "Rename session", Run = StartTitleEdit },
                 new ChatPopup.Entry { Group = "Context", Label = "Fork this session", Description = "Continue in a new session with this history; the original stays", Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); ForkSession(_session?.SessionId ?? _resumeId, _fullTitle, keepTranscript: true); } },
                 new ChatPopup.Entry { Group = "Context", Label = "Rewind…", Detail = "Esc Esc", Description = "Put files back to before one of your prompts", Run = ShowRewindPicker },
+                new ChatPopup.Entry { Group = "Context", Label = "Focus view", Description = "Collapse tool calls into one summary row", Checked = Options?.FocusView == true, Run = ToggleFocusView },
                 new ChatPopup.Entry { Group = "Context", Label = "Copy last response", Description = "Claude's last answer as Markdown", Run = CopyLastAnswer },
                 new ChatPopup.Entry { Group = "Context", Label = "Export conversation…", Description = "Save the whole conversation as Markdown", Run = ExportConversation },
                 new ChatPopup.Entry { Group = "Context", Label = "Bookmarks", Description = "Answers you starred", Run = ToggleBookmarksPanel },
@@ -1925,6 +1927,17 @@ namespace ClaudeVS.ToolWindow
         }
 
         private string _lastAnswer;
+
+        /// <summary>/ → Focus view: flips the option (saved like any Tools → Options change); applies to new tool calls.</summary>
+        private void ToggleFocusView()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var o = Options;
+            if (o == null) return;
+            o.FocusView = !o.FocusView;
+            o.SaveSettingsToStorage();
+            Append(o.FocusView ? "Focus view on: tool calls from now on collapse into one row each run." : "Focus view off: each tool call gets its own row again.");
+        }
 
         /// <summary>
         /// The CLI writes the compaction summary to its session file around the time it reports the compaction; read
