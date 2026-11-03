@@ -68,6 +68,22 @@ namespace ClaudeVS.ToolWindow
 
         public RichTextBox Box { get; }
 
+        /// <summary>Whether to show message times (read on each message, so the option applies right away).</summary>
+        public Func<bool> ShowTimestamps { get; set; } = () => true;
+        private DateTime? _lastDay;
+
+        /// <summary>A date line when the day changed since the last time shown.</summary>
+        private void AddDayLine(DateTime local)
+        {
+            if (_lastDay == local.Date) return;
+            bool first = _lastDay == null;
+            _lastDay = local.Date;
+            if (first && local.Date == DateTime.Today) return; // today's first message needs no date
+            var p = new Paragraph(new Run(local.ToString("D"))) { FontSize = 11, TextAlignment = TextAlignment.Center, Margin = new Thickness(0, 12, 0, 0) };
+            p.SetResourceReference(TextElement.ForegroundProperty, EnvironmentColors.SystemGrayTextBrushKey);
+            _doc.Blocks.Add(p);
+        }
+
         /// <summary>
         /// Quiet status text (footers, notes, hints) in a small muted font; <paramref name="error"/> shows it in the
         /// error color. Ends any answer being streamed.
@@ -102,11 +118,21 @@ namespace ClaudeVS.ToolWindow
         /// Your prompt as a rounded bubble, with an optional muted line (route, attachments) under it.
         /// <paramref name="onRewind"/> adds a Rewind button, shown while the mouse is over the bubble.
         /// </summary>
-        public void AppendUserMessage(string text, string meta, Action onRewind = null, IReadOnlyList<ImageSource> images = null)
+        public void AppendUserMessage(string text, string meta, Action onRewind = null, IReadOnlyList<ImageSource> images = null, DateTime? timeUtc = null)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             EndAnswer();
             _plain = null;
+            bool stamped = false;
+            if (ShowTimestamps())
+            {
+                var local = (timeUtc ?? DateTime.UtcNow).ToLocalTime();
+                AddDayLine(local);
+                var time = new Paragraph(new Run(local.ToString("t"))) { FontSize = 10.5, Margin = new Thickness(2, 12, 0, 0) };
+                time.SetResourceReference(TextElement.ForegroundProperty, EnvironmentColors.SystemGrayTextBrushKey);
+                _doc.Blocks.Add(time);
+                stamped = true;
+            }
 
             var body = new TextBox
             {
@@ -171,7 +197,7 @@ namespace ClaudeVS.ToolWindow
             }
             bubble.SetResourceReference(Border.BorderBrushProperty, EnvironmentColors.ToolWindowBorderBrushKey);
             bubble.BorderThickness = new Thickness(1);
-            LastUserMessage = new BlockUIContainer(bubble) { Margin = new Thickness(0, 14, 0, 6) };
+            LastUserMessage = new BlockUIContainer(bubble) { Margin = new Thickness(0, stamped ? 2 : 14, 0, 6) };
             _doc.Blocks.Add(LastUserMessage);
             Box.ScrollToEnd(); // you just sent it: always show it
         }
@@ -183,12 +209,19 @@ namespace ClaudeVS.ToolWindow
         /// The muted "✓ 3.2s · 12k tok · $0.004" line after an answer, with a star that bookmarks the answer.
         /// <paramref name="toggleBookmark"/> returns whether the answer is bookmarked now; null hides the star.
         /// </summary>
-        public void AppendTurnFooter(string text, Func<bool> toggleBookmark, string answerToCopy = null)
+        public void AppendTurnFooter(string text, Func<bool> toggleBookmark, string answerToCopy = null, DateTime? timeUtc = null)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             EndAnswer();
             _plain = null;
-            var label = new TextBlock { Text = (text ?? "").Trim(), FontSize = 11.5, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
+            text = (text ?? "").Trim();
+            if (ShowTimestamps())
+            {
+                var local = (timeUtc ?? DateTime.UtcNow).ToLocalTime();
+                AddDayLine(local);
+                text = text.Length == 0 ? local.ToString("t") : text + " · " + local.ToString("t");
+            }
+            var label = new TextBlock { Text = text, FontSize = 11.5, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
             ChatTheme.Muted(label);
             var row = new DockPanel();
             if (toggleBookmark != null)
@@ -560,6 +593,7 @@ namespace ClaudeVS.ToolWindow
             _doc.Blocks.Clear();
             _tools.Clear();
             LastUserMessage = null;
+            _lastDay = null;
         }
 
         // Only follow the output when the user hasn't scrolled up to read something.

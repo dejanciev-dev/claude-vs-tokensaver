@@ -129,6 +129,7 @@ namespace ClaudeVS.ToolWindow
             _modelChoice = Options?.DefaultModel ?? ModelChoice.Auto;
             _mode = Options?.PermissionMode ?? PermissionModeChoice.AcceptEdits;
             Content = BuildLayout();
+            _view.ShowTimestamps = () => Options?.ShowTimestamps ?? true;
             this.SetResourceReference(BackgroundProperty, EnvironmentColors.ToolWindowBackgroundBrushKey);
             this.SetResourceReference(ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
             ChatTheme.UseEnvironmentFont(this);
@@ -1337,7 +1338,7 @@ namespace ClaudeVS.ToolWindow
                 switch (item.Kind)
                 {
                     case TranscriptItemKind.User:
-                        _view.AppendUserMessage(item.Text, null, RewindAction(item.Uuid, item.Text));
+                        _view.AppendUserMessage(item.Text, null, RewindAction(item.Uuid, item.Text), null, item.TimestampUtc);
                         prompt = item.Text;
                         anchor = _view.LastUserMessage;
                         break;
@@ -1345,7 +1346,7 @@ namespace ClaudeVS.ToolWindow
                         _view.AppendAnswer(item.Text);
                         _view.EndAnswer();
                         // Earlier answers can be bookmarked too.
-                        _view.AppendTurnFooter("", BookmarkToggle(prompt, item.Text, anchor), item.Text);
+                        _view.AppendTurnFooter("", BookmarkToggle(prompt, item.Text, anchor), item.Text, item.TimestampUtc);
                         _lastAnswer = item.Text;
                         break;
                     case TranscriptItemKind.Tool:

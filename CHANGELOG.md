@@ -7,6 +7,8 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Message timestamps** (Tools → Options → Claude Code → Chat, on by default): a time above each prompt and at
+  the end of each answer's line, with a date line where the day changes; resumed sessions use their saved times.
 - **Not responding:** when Claude is working and the CLI has sent nothing for 60 seconds (and is not waiting
   for your answer), a red line above the input says so, and that Esc stops it.
 - **Queued messages:** a message sent while Claude is answering waits above the input box ("Queued · …") and
