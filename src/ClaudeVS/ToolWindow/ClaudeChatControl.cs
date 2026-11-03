@@ -98,6 +98,14 @@ namespace ClaudeVS.ToolWindow
         private System.Collections.Generic.IReadOnlyList<BuildError> _attachedErrors;
         private readonly Queue<UsageRecord> _pendingUsages = new Queue<UsageRecord>();
         internal static readonly UsageLog Usage = new UsageLog(UsageLog.DefaultPath);
+        internal static readonly BookmarkStore Bookmarks = new BookmarkStore(BookmarkStore.DefaultPath);
+        private readonly Button _bookmarksBtn = ChatTheme.IconButton(ChatTheme.IconBookmarks, "Bookmarks");
+        private readonly BookmarksPanel _bookmarks = new BookmarksPanel();
+        // Answer text of the turn in progress, and the prompts still waiting for their answer (sent while busy).
+        private readonly StringBuilder _turnAnswer = new StringBuilder();
+        private readonly Queue<(string Prompt, System.Windows.Documents.Block Anchor)> _turnPrompts = new Queue<(string, System.Windows.Documents.Block)>();
+        // Bookmark id → its prompt bubble in this transcript, so the panel can scroll there.
+        private readonly Dictionary<string, System.Windows.Documents.Block> _bookmarkAnchors = new Dictionary<string, System.Windows.Documents.Block>();
 
         public ClaudeChatControl()
         {
@@ -125,6 +133,10 @@ namespace ClaudeVS.ToolWindow
             };
             _new.Click += (s, e) => NewChat();
             _historyBtn.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); ShowHistoryMenu(); };
+            _bookmarksBtn.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); ToggleBookmarksPanel(); };
+            _bookmarks.Close += (s, e) => { _bookmarks.Hide(); _prompt.Focus(); };
+            _bookmarks.OpenRequested += (s, b) => { ThreadHelper.ThrowIfNotOnUIThread(); OpenBookmark(b); };
+            _bookmarks.RemoveRequested += (s, b) => { ThreadHelper.ThrowIfNotOnUIThread(); RemoveBookmark(b.Id); };
             _plusBtn.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); ShowPlusMenu(); };
             _paletteBtn.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); ShowPalette(); };
             _modelChip.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); ShowModelMenu(); };
@@ -181,6 +193,7 @@ namespace ClaudeVS.ToolWindow
         private UIElement BuildLayout()
         {
             var actions = new StackPanel { Orientation = Orientation.Horizontal };
+            actions.Children.Add(_bookmarksBtn);
             actions.Children.Add(_historyBtn);
             actions.Children.Add(_new);
 
@@ -248,9 +261,13 @@ namespace ClaudeVS.ToolWindow
             root.Children.Add(top);
             root.Children.Add(bottom);
             _view.Box.Margin = new Thickness(10, 0, 6, 0);
-            var middle = new Grid();
-            middle.Children.Add(_view.Box);
-            middle.Children.Add(_emptyState); // shown over the transcript until the first message
+            var transcript = new Grid();
+            transcript.Children.Add(_view.Box);
+            transcript.Children.Add(_emptyState); // shown over the transcript until the first message
+            var middle = new DockPanel();
+            DockPanel.SetDock(_bookmarks.View, Dock.Right);
+            middle.Children.Add(_bookmarks.View);
+            middle.Children.Add(transcript);
             root.Children.Add(middle);
             return root;
         }
@@ -370,6 +387,7 @@ namespace ClaudeVS.ToolWindow
                 new ChatPopup.Entry { Group = "Context", Label = "Clear conversation", Description = "Start a new session", Run = NewChat },
                 new ChatPopup.Entry { Group = "Context", Label = "Compact conversation", Description = "Summarize to shrink the context", Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); SendText("/compact", routed: false); } },
                 new ChatPopup.Entry { Group = "Context", Label = "Resume a session…", Run = ShowHistoryMenu },
+                new ChatPopup.Entry { Group = "Context", Label = "Bookmarks", Description = "Answers you starred", Run = ToggleBookmarksPanel },
             };
             entries.AddRange(ModelEntries().Select(e => { e.Group = "Model · " + e.Group; return e; }));
             entries.AddRange(ModeEntries("Mode"));
@@ -722,6 +740,7 @@ namespace ClaudeVS.ToolWindow
                 if (built.AttachedErrors > 0) meta.Add($"{built.AttachedErrors} error(s)");
                 if (built.CharsAvoided > 0) meta.Add($"~{built.CharsAvoided / 4:N0} tokens of file content not sent");
                 _view.AppendUserMessage(userText, string.Join("  ·  ", meta));
+                _turnPrompts.Enqueue((userText, _view.LastUserMessage));
 
                 _requestedFamilies.Enqueue(model == ModelChoice.Auto ? null : model.ToCli());
                 await _session.SetModelAsync(model);
@@ -795,6 +814,7 @@ namespace ClaudeVS.ToolWindow
                     if (s != _session) return; // an old session we stopped on purpose (New, Resume, solution change)
                     _pendingUsages.Clear();    // its unfinished turns will never complete
                     _requestedFamilies.Clear();
+                    ClearTurns();
                     SetBusy(false);
                     FlushText();
                     if (code != 0 && code != 1) Append($"\n[claude exited with code {code}]\n");
@@ -836,7 +856,7 @@ namespace ClaudeVS.ToolWindow
             ThreadHelper.ThrowIfNotOnUIThread();
             DisposeSession();
             ResetMeter();
-            _view.Clear();
+            ClearTranscript();
             _resumeId = sessionId;
             SetBusy(false);
             SetEmptyState(false);
@@ -851,7 +871,7 @@ namespace ClaudeVS.ToolWindow
             ThreadHelper.ThrowIfNotOnUIThread();
             DisposeSession();
             ResetMeter();
-            _view.Clear();
+            ClearTranscript();
             _resumeId = null;
             RefreshCommands(force: true);
             _fileIndex = null; // re-index on the next @ (files may have been added)
@@ -924,6 +944,7 @@ namespace ClaudeVS.ToolWindow
                         break;
                     case ClaudeEventKind.ToolUse:
                         FlushText();
+                        if (_turnAnswer.Length > 0) _turnAnswer.Append("\n\n"); // text before and after a tool call are separate paragraphs
                         Action diff = null;
                         if (change != null) diff = () => { ThreadHelper.ThrowIfNotOnUIThread(); ShowDiff(change, writeSnapshot); };
                         _view.AppendTool(ev.ToolUseId, ev.Text, ev.ToolInput?.ToString(), diff);
@@ -949,7 +970,11 @@ namespace ClaudeVS.ToolWindow
                         CheckModelMismatch(_turnModel);
                         RecordUsage(ev, _turnModel);
                         _turnModel = null;
-                        Append($"\n  ✓ {ev.DurationMs / 1000.0:0.0}s · {TokenMeter.Format(ev.Usage.Total)} tok · ${_meterModel?.LastTurnCostUsd:0.000}{used}\n");
+                        var turn = _turnPrompts.Count > 0 ? _turnPrompts.Dequeue() : default;
+                        string answer = _turnAnswer.ToString();
+                        _turnAnswer.Clear();
+                        _view.AppendTurnFooter($"✓ {ev.DurationMs / 1000.0:0.0}s · {TokenMeter.Format(ev.Usage.Total)} tok · ${_meterModel?.LastTurnCostUsd:0.000}{used}",
+                            string.IsNullOrWhiteSpace(answer) ? null : BookmarkToggle(turn.Prompt, answer, turn.Anchor));
                         break;
                     case ClaudeEventKind.Error:
                         AppendError("[claude] ", ev.Text);
@@ -1143,8 +1168,108 @@ namespace ClaudeVS.ToolWindow
                 chunk = _pendingText.ToString();
                 _pendingText.Clear();
             }
-            if (chunk.Length > 0) _view.AppendAnswer(chunk);
+            if (chunk.Length > 0)
+            {
+                _view.AppendAnswer(chunk);
+                _turnAnswer.Append(chunk);
+            }
             _flushTimer.Stop();
+        }
+
+        private void ClearTranscript()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            _view.Clear();
+            _bookmarkAnchors.Clear();
+        }
+
+        private void ClearTurns()
+        {
+            _turnPrompts.Clear();
+            _turnAnswer.Clear();
+        }
+
+        // ---------------- Bookmarks ----------------
+
+        private static string BookmarkSolution
+        {
+            get
+            {
+                ThreadHelper.ThrowIfNotOnUIThread();
+                return VsContext.GetSolutionDirectory() ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            }
+        }
+
+        /// <summary>The star under an answer: the first click saves a bookmark, the next one removes it.</summary>
+        private Func<bool> BookmarkToggle(string prompt, string answer, System.Windows.Documents.Block anchor)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            string id = null;
+            string dir = _sessionDir;
+            string sessionId = _session?.SessionId;
+            return () =>
+            {
+                ThreadHelper.ThrowIfNotOnUIThread();
+                try
+                {
+                    if (id != null)
+                    {
+                        RemoveBookmark(id);
+                        id = null;
+                        return false;
+                    }
+                    var b = Bookmark.Create(dir, sessionId, prompt, answer, DateTime.UtcNow);
+                    Bookmarks.Add(b);
+                    id = b.Id;
+                    if (anchor != null) _bookmarkAnchors[id] = anchor;
+                    RefreshBookmarksPanel();
+                    return true;
+                }
+                catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException)
+                {
+                    AppendError("[bookmarks] ", ex.Message);
+                    return id != null;
+                }
+            };
+        }
+
+        private void ToggleBookmarksPanel()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (_bookmarks.IsOpen) { _bookmarks.Hide(); return; }
+            _bookmarks.Show(Bookmarks.List(BookmarkSolution));
+        }
+
+        private void RefreshBookmarksPanel()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (_bookmarks.IsOpen) _bookmarks.SetItems(Bookmarks.List(BookmarkSolution));
+        }
+
+        /// <summary>Scrolls to the answer when it is in this transcript; otherwise shows the saved copy at the end.</summary>
+        private void OpenBookmark(Bookmark b)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (_bookmarkAnchors.TryGetValue(b.Id, out var anchor) && _view.ScrollTo(anchor)) return;
+            SetEmptyState(false);
+            var head = _view.AppendBookmark(b);
+            _bookmarkAnchors[b.Id] = head;
+            // Scroll once the new blocks are laid out.
+            Jtf.RunAsync(async () =>
+            {
+                await Jtf.SwitchToMainThreadAsync(alwaysYield: true);
+                _view.Box.UpdateLayout();
+                _view.ScrollTo(head);
+            }).FileAndForget("ClaudeVS/ChatControl/OpenBookmark");
+        }
+
+        private void RemoveBookmark(string id)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            try { Bookmarks.Remove(id); }
+            catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException) { AppendError("[bookmarks] ", ex.Message); return; }
+            _bookmarkAnchors.Remove(id);
+            RefreshBookmarksPanel();
         }
 
         private void AppendError(string prefix, string text)
@@ -1210,6 +1335,7 @@ namespace ClaudeVS.ToolWindow
             _sessionDir = null;
             _pendingUsages.Clear();
             _requestedFamilies.Clear();
+            ClearTurns();
             _warnedModelMismatch = false;
             lock (_pendingText) _pendingText.Clear();
             _permission.Visibility = Visibility.Collapsed;

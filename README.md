@@ -88,6 +88,7 @@ This extension attacks all three, and shows the numbers so you can see the effec
 | **Plan approval cards** | Plans render as Markdown with **Approve** or **Request changes** (with feedback). |
 | **Permission bar** | Other tool calls that need approval show **Allow** / **Deny**. |
 | **History** | Resume an earlier conversation for the same solution (`claude --resume`). |
+| **Bookmarks** | Star any answer to keep it. The bookmarks panel lists them per solution with search; clicking one scrolls to it, or shows the saved copy if it came from another conversation. |
 | **Several chat windows** | Each window has its own conversation, meter and model. |
 | **Prompt box helpers** | `Ctrl+Up/Down` prompt history; `/` lists commands, including your own `.claude/commands`; `@` picks a file. |
 | **Diagnostics** | An **Output → Claude Code** pane with route decisions, errors and plain-language hints (not logged in, rate limited, context too long…), plus optional raw CLI traffic. |
@@ -279,6 +280,7 @@ Editor commands go to the chat window you used last.
   cost and route decision. It never leaves your machine, rotates at 5 MB and can be turned off.
 - **Prompt preview** (off by default): the first 200 characters of each prompt, stored in that same local log.
 - **Conversation history** is the CLI's own (`~/.claude/projects`). The History button only reads it.
+- **Bookmarks**: `%LocalAppData%\claude-vs-tokensaver\bookmarks.json`, the prompt and answer text of each starred answer. Local only.
 
 ## Project layout
 
@@ -289,7 +291,7 @@ src/ClaudeVS.Core/            netstandard2.0, all logic, no Visual Studio depend
               ClaudeCliLocator, ClaudeErrorHints, InteractiveRequests (questions, plans)
   Tokens/     ModelRouter, TokenMeter, UsageLog, SavingsReport (+ price table, router replay)
   Context/    PromptContextBuilder, FileIndex (@ picker), EditDiff (Diff button)
-  Chat/       PromptHistory, SlashCommands, SessionHistory
+  Chat/       PromptHistory, SlashCommands, SessionHistory, Bookmarks
   Markdown/   MarkdownParser (streaming-tolerant subset)
   Setup/      SolutionScanner, ClaudeMdGenerator, TokenSaverSetup
 src/ClaudeVS/                 net472 VSIX: package, commands, tool window, options

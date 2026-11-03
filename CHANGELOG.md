@@ -7,6 +7,9 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Bookmarks:** a star under each answer saves it (prompt and answer) to a local file. The bookmarks
+  panel (header icon, or / → Bookmarks) lists them for the solution with search; clicking one scrolls to the
+  answer, or shows the saved copy when it is from another conversation. Hover a row to remove it.
 - **Question cards:** when Claude asks a question (AskUserQuestion), the chat shows its options as
   choices with descriptions plus an "Other" field, and sends your answer back to Claude.
 - **Plan approval cards:** when Claude presents a plan (ExitPlanMode), the chat renders it and offers
