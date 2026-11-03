@@ -22,6 +22,25 @@ namespace ClaudeVS.Commands
             }
         }
 
+        /// <summary>Opens a file in the editor (Markdown files get VS's Markdown editor and preview).</summary>
+        public static void OpenFile(string path)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            VsShellUtilities.OpenDocument(ServiceProvider.GlobalProvider, path);
+        }
+
+        /// <summary>Saves the file if it is open with unsaved changes, so its content on disk is current.</summary>
+        public static void SaveIfOpen(string path)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            try
+            {
+                foreach (Document d in Dte.Documents)
+                    if (string.Equals(d.FullName, path, StringComparison.OrdinalIgnoreCase) && !d.Saved) { d.Save(); return; }
+            }
+            catch (Exception) { } // best effort: the file on disk is used as it is
+        }
+
         /// <summary>Folder of the open .sln, or the open folder (Open Folder mode), or null.</summary>
         public static string GetSolutionDirectory()
         {
