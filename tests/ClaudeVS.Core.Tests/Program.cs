@@ -770,6 +770,28 @@ namespace ClaudeVS.Core.Tests
             finally { File.Delete(f); }
         }
 
+        private static string Colored(string code, string lang) =>
+            string.Join(" ", ClaudeVS.Core.Markdown.SyntaxHighlighter.Tokenize(code, lang).Select(s => s.Kind.ToString()[0] + ":" + code.Substring(s.Start, s.Length)));
+
+        private static void Test_Syntax_CSharp()
+        {
+            Eq("K:public K:class K:int N:42 K:var S:\"a \\\" b\" C:// done", Colored("public class Foo { int x = 42; var s = \"a \\\" b\"; } // done", "csharp"));
+            Eq("S:@\"C:\\x\"\"y\" C:/* multi\nline */", Colored("@\"C:\\x\"\"y\" /* multi\nline */", "cs"));
+            Eq("", Colored("public class X", "text"), "plain text is not colored");
+        }
+
+        private static void Test_Syntax_OtherLanguages()
+        {
+            Eq("K:def S:'''doc''' C:# note K:return K:None", Colored("def f():\n    '''doc'''  # note\n    return None", "python"));
+            Eq("K:SELECT K:from K:where S:'x' C:-- all", Colored("SELECT * from t where a = 'x' -- all", "sql"));
+            Eq("T:<Project A:Sdk S:\"Microsoft.NET.Sdk\" T:> C:<!-- c --> T:</Project T:>", Colored("<Project Sdk=\"Microsoft.NET.Sdk\"><!-- c --></Project>", "xml"));
+            Eq("S:\"a\" K:true S:\"b\" N:1.5", Colored("{\"a\": true, \"b\": 1.5}", "json"));
+            Eq("K:const S:`t ${x}`", Colored("const s = `t ${x}`;", "ts"));
+            Eq("S:\"s\" N:7 C:// c", Colored("x := \"s\" + 7 // c", "unknownlang"), "unknown languages still get strings, numbers and comments");
+            Eq("K:$true K:-eq C:# c", Colored("$x = $true -eq $y # c", "powershell"));
+            True(Colored("a.b(1)", "cs").Contains("N:1") && !Colored("x1 = 2", "cs").Contains("N:1"), "digits inside names are not numbers");
+        }
+
         // ---------- Images ----------
         private static void Test_Images_TokensAndFit()
         {
