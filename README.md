@@ -33,7 +33,7 @@ Pre-release (v0.1 → v0.2).
 
 | Layer | State |
 |---|---|
-| Core library (CLI session, parser, router, meter, context, Markdown, usage log) | ✅ 53 automated tests, plus regression tests built from real CLI output |
+| Core library (CLI session, parser, router, meter, context, Markdown, usage log) | ✅ 60 automated tests, plus regression tests built from real CLI output |
 | Core against the real `claude` CLI | ✅ Verified with Claude Code 2.1.316 via the opt-in live test: streaming, usage, cost, prompt cache, question and plan approval |
 | Visual Studio extension (UI) | ⚠️ Builds with zero warnings in CI, but not yet run in the experimental instance |
 

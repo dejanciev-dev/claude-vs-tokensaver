@@ -723,19 +723,7 @@ namespace ClaudeVS.ToolWindow
             }
             header.Children.Add(new TextBlock { Text = string.IsNullOrEmpty(b.Language) ? "code" : b.Language, Opacity = 0.7, FontSize = 11, VerticalAlignment = VerticalAlignment.Center });
 
-            var body = new TextBox
-            {
-                Text = code,
-                IsReadOnly = true,
-                FontFamily = Mono,
-                FontSize = 12,
-                BorderThickness = new Thickness(0),
-                Background = Brushes.Transparent,
-                HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
-                VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
-                TextWrapping = TextWrapping.NoWrap,
-            };
-            body.SetResourceReference(Control.ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
+            var body = CodeView(code, b.Language);
             ForwardMouseWheel(body);
 
             var panel = new DockPanel();
@@ -744,6 +732,78 @@ namespace ClaudeVS.ToolWindow
             panel.Children.Add(body);
             var border = new Border { Background = CodeBackground, CornerRadius = new CornerRadius(3), Padding = new Thickness(6, 4, 6, 6), Child = panel };
             return new BlockUIContainer(border) { Margin = new Thickness(0, 4, 0, 4) };
+        }
+
+        // ---------------- Syntax coloring ----------------
+
+        private static readonly Dictionary<SyntaxKind, Brush> DarkPalette = Palette("#569CD6", "#CE9178", "#6A9955", "#B5CEA8", "#4EC9B0", "#9CDCFE");
+        private static readonly Dictionary<SyntaxKind, Brush> LightPalette = Palette("#0000FF", "#A31515", "#008000", "#098658", "#800000", "#E50000");
+
+        private static Dictionary<SyntaxKind, Brush> Palette(string keyword, string str, string comment, string number, string tag, string attribute)
+        {
+            Brush B(string hex) => Freeze(new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex)));
+            return new Dictionary<SyntaxKind, Brush>
+            {
+                [SyntaxKind.Keyword] = B(keyword), [SyntaxKind.String] = B(str), [SyntaxKind.Comment] = B(comment),
+                [SyntaxKind.Number] = B(number), [SyntaxKind.Tag] = B(tag), [SyntaxKind.Attribute] = B(attribute),
+            };
+        }
+
+        /// <summary>Dark or light colors, from the brightness of the tool window background (VS Light, Blue, Dark…).</summary>
+        private Dictionary<SyntaxKind, Brush> CurrentPalette()
+        {
+            var bg = (Box.TryFindResource(EnvironmentColors.ToolWindowBackgroundBrushKey) as SolidColorBrush)?.Color ?? Colors.White;
+            return 0.299 * bg.R + 0.587 * bg.G + 0.114 * bg.B < 128 ? DarkPalette : LightPalette;
+        }
+
+        /// <summary>
+        /// A read-only, selectable code view with colored tokens and no wrapping. Its page is as wide as the longest
+        /// line, so long lines scroll sideways like the plain text box did.
+        /// </summary>
+        private RichTextBox CodeView(string code, string language)
+        {
+            var palette = CurrentPalette();
+            var para = new Paragraph { Margin = new Thickness(0) };
+            int pos = 0;
+            foreach (var s in SyntaxHighlighter.Tokenize(code, language))
+            {
+                if (s.Start > pos) AddCode(para.Inlines, code.Substring(pos, s.Start - pos), null);
+                AddCode(para.Inlines, code.Substring(s.Start, s.Length), palette[s.Kind]);
+                pos = s.Start + s.Length;
+            }
+            if (pos < code.Length) AddCode(para.Inlines, code.Substring(pos), null);
+
+            double dip = VisualTreeHelper.GetDpi(Box).PixelsPerDip;
+            var typeface = new Typeface(Mono, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
+            double widest = code.Split('\n').Select(l => new FormattedText(l.TrimEnd('\r'), System.Globalization.CultureInfo.CurrentCulture, FlowDirection.LeftToRight, typeface, 12, Brushes.Black, dip).WidthIncludingTrailingWhitespace).DefaultIfEmpty(0).Max();
+
+            var doc = new FlowDocument(para) { FontFamily = Mono, FontSize = 12, PagePadding = new Thickness(0, 0, 4, 0), PageWidth = Math.Max(40, widest + 12) };
+            var view = new RichTextBox
+            {
+                Document = doc,
+                IsReadOnly = true,
+                IsReadOnlyCaretVisible = false,
+                BorderThickness = new Thickness(0),
+                Background = Brushes.Transparent,
+                Padding = new Thickness(0),
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            };
+            view.SetResourceReference(Control.ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
+            return view;
+        }
+
+        private static void AddCode(InlineCollection target, string text, Brush color)
+        {
+            var parts = text.Replace("\r\n", "\n").Split('\n');
+            for (int k = 0; k < parts.Length; k++)
+            {
+                if (k > 0) target.Add(new LineBreak());
+                if (parts[k].Length == 0) continue;
+                var run = new Run(parts[k]);
+                if (color != null) run.Foreground = color;
+                target.Add(run);
+            }
         }
 
         private static Button SmallButton(string text, string tip)
