@@ -23,6 +23,8 @@ namespace ClaudeVS.Core.Chat
         /// <summary>Tool result size; -1 when no result was recorded (the call was interrupted).</summary>
         public int ResultChars { get; set; } = -1;
         public bool IsError { get; set; }
+        /// <summary>User: the message id in the CLI session (what rewind_files takes).</summary>
+        public string Uuid { get; set; }
     }
 
     public sealed class SessionTranscript
@@ -82,7 +84,7 @@ namespace ClaudeVS.Core.Chat
             var content = o.SelectToken("message.content");
             if (content?.Type == JTokenType.String)
             {
-                AddPrompt(items, (string)content);
+                AddPrompt(items, (string)content, (string)o["uuid"]);
                 return;
             }
             if (!(content is JArray blocks)) return;
@@ -91,7 +93,7 @@ namespace ClaudeVS.Core.Chat
                 switch ((string)b["type"])
                 {
                     case "text":
-                        AddPrompt(items, (string)b["text"]);
+                        AddPrompt(items, (string)b["text"], (string)o["uuid"]);
                         break;
                     case "tool_result":
                         if ((string)b["tool_use_id"] is string id && tools.TryGetValue(id, out var tool))
@@ -137,12 +139,12 @@ namespace ClaudeVS.Core.Chat
             }
         }
 
-        private static void AddPrompt(List<TranscriptItem> items, string text)
+        private static void AddPrompt(List<TranscriptItem> items, string text, string uuid)
         {
             text = text?.Trim();
             // CLI-generated wrappers and notes, not something you typed.
             if (string.IsNullOrEmpty(text) || text.StartsWith("<") || text.StartsWith("[Request interrupted")) return;
-            items.Add(new TranscriptItem { Kind = TranscriptItemKind.User, Text = text });
+            items.Add(new TranscriptItem { Kind = TranscriptItemKind.User, Text = text, Uuid = uuid });
         }
     }
 }

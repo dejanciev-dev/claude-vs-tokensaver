@@ -95,6 +95,13 @@ namespace ClaudeVS.Core.Cli
         public EffortChoice Effort { get; set; } = EffortChoice.Auto;
         public PermissionModeChoice PermissionMode { get; set; } = PermissionModeChoice.AcceptEdits;
         public string ResumeSessionId { get; set; }
+        /// <summary>
+        /// Lets the CLI keep a copy of each file before Claude changes it, so a prompt's edits can be rewound
+        /// (<c>rewind_files</c>). Set through an environment variable; there is no command-line flag.
+        /// </summary>
+        public bool EnableFileCheckpointing { get; set; }
+        public const string FileCheckpointingVariable = "CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING";
+
         /// <summary>Display name (<c>--name</c>): the CLI stores it as the session's title, shown in its /resume picker.</summary>
         public string SessionName { get; set; }
         /// <summary>Short extra system prompt (kept tiny on purpose — it is paid on every request).</summary>

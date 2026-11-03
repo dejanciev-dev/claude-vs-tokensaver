@@ -400,6 +400,65 @@ namespace ClaudeVS.ToolWindow
             }).FileAndForget("ClaudeVS/ChatControl/Export");
         }
 
+        // ---------------- Rewind ----------------
+
+        /// <summary>The Rewind button for a prompt bubble; null (no button) without a message id or with checkpoints off.</summary>
+        private Action RewindAction(string messageId, string prompt)
+        {
+            if (string.IsNullOrEmpty(messageId) || Options?.FileCheckpoints == false) return null;
+            return () => { ThreadHelper.ThrowIfNotOnUIThread(); RewindTo(messageId, prompt); };
+        }
+
+        /// <summary>
+        /// Puts the files Claude changed since <paramref name="prompt"/> back the way they were: a dry run lists the
+        /// files, you confirm, then the CLI restores them from its checkpoints. The conversation is left as it is.
+        /// </summary>
+        private void RewindTo(string messageId, string prompt)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (_busy) { Append("Stop Claude first (Esc), then rewind."); return; }
+            string dir = _sessionDir ?? VsContext.GetSolutionDirectory() ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            EnsureSession(dir); // a resumed conversation has no process yet; starting one makes no model call
+            var session = _session;
+            string shortPrompt = SessionMetaStore.Clean(prompt) ?? "";
+            if (shortPrompt.Length > 60) shortPrompt = shortPrompt.Substring(0, 59) + "…";
+
+            Jtf.RunAsync(async () =>
+            {
+                var dry = await session.RewindFilesAsync(messageId, dryRun: true);
+                await Jtf.SwitchToMainThreadAsync();
+                if (session != _session) return;
+                if (!dry.Ok) { AppendError("[rewind] ", RewindError(dry.Error)); return; }
+                if (dry.FilesChanged.Count == 0) { Append($"Nothing to rewind: Claude has not changed any files since \"{shortPrompt}\"."); return; }
+
+                string files = string.Join("\n", dry.FilesChanged.Take(15).Select(f => "  " + PromptContextBuilder.Relative(dir, f)))
+                             + (dry.FilesChanged.Count > 15 ? $"\n  … and {dry.FilesChanged.Count - 15} more" : "");
+                int answer = VsShellUtilities.ShowMessageBox(ClaudeVSPackage.Instance ?? (IServiceProvider)ServiceProvider.GlobalProvider,
+                    $"Put these files back the way they were before \"{shortPrompt}\"?\n\n{files}\n\n({dry.Summary()}). Later changes to them, also your own, are undone too. "
+                    + "The conversation is not changed, so tell Claude what you rewound.",
+                    "Rewind file changes",
+                    Microsoft.VisualStudio.Shell.Interop.OLEMSGICON.OLEMSGICON_QUERY,
+                    Microsoft.VisualStudio.Shell.Interop.OLEMSGBUTTON.OLEMSGBUTTON_OKCANCEL,
+                    Microsoft.VisualStudio.Shell.Interop.OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_SECOND);
+                if (answer != 1 /* IDOK */) return;
+
+                var done = await session.RewindFilesAsync(messageId, dryRun: false);
+                await Jtf.SwitchToMainThreadAsync();
+                if (!done.Ok) { AppendError("[rewind] ", RewindError(done.Error)); return; }
+                Append($"↶ Rewound {dry.Summary()} to before \"{shortPrompt}\". Claude still remembers its edits; tell it what you rewound.");
+                ClaudeOutputPane.WriteLine("Rewound: " + string.Join(", ", dry.FilesChanged));
+            }).FileAndForget("ClaudeVS/ChatControl/Rewind");
+        }
+
+        private static string RewindError(string error)
+        {
+            if (error != null && error.IndexOf("not enabled", StringComparison.OrdinalIgnoreCase) >= 0)
+                return error + " Turn on Tools → Options → Claude Code → File checkpoints, then start a new session.";
+            if (error != null && error.IndexOf("No file checkpoint", StringComparison.OrdinalIgnoreCase) >= 0)
+                return error + " Checkpoints exist only for prompts sent while file checkpoints were on.";
+            return error ?? "Rewind failed.";
+        }
+
         // ---------------- Context usage breakdown ----------------
 
         /// <summary>
@@ -945,13 +1004,15 @@ namespace ClaudeVS.ToolWindow
                 if (built.InlinedLines > 0) meta.Add($"{built.InlinedLines} lines inlined");
                 if (built.AttachedErrors > 0) meta.Add($"{built.AttachedErrors} error(s)");
                 if (built.CharsAvoided > 0) meta.Add($"~{built.CharsAvoided / 4:N0} tokens of file content not sent");
-                _view.AppendUserMessage(userText, string.Join("  ·  ", meta));
+                // Our own id for the message, so its file changes can be rewound later (slash commands edit nothing).
+                string messageId = userText.StartsWith("/") ? null : Guid.NewGuid().ToString();
+                _view.AppendUserMessage(userText, string.Join("  ·  ", meta), RewindAction(messageId, userText));
                 _turnPrompts.Enqueue((userText, _view.LastUserMessage));
 
                 _requestedFamilies.Enqueue(model == ModelChoice.Auto ? null : model.ToCli());
                 await _session.SetModelAsync(model);
                 await _session.SetEffortAsync(effort);
-                await _session.SendPromptAsync(built.Text);
+                await _session.SendPromptAsync(built.Text, messageId);
             });
         }
 
@@ -1005,6 +1066,7 @@ namespace ClaudeVS.ToolWindow
                 AppendSystemPrompt = (o?.ConciseAnswers ?? true) ? ClaudeOptionsPage.BrevityPrompt : null,
                 ExtraArguments = o?.ExtraArguments ?? "",
                 ResumeSessionId = _resumeId,
+                EnableFileCheckpointing = o?.FileCheckpoints ?? true,
                 SessionName = _sessionName,
             });
             _resumeId = null;
@@ -1146,7 +1208,7 @@ namespace ClaudeVS.ToolWindow
                 switch (item.Kind)
                 {
                     case TranscriptItemKind.User:
-                        _view.AppendUserMessage(item.Text, null);
+                        _view.AppendUserMessage(item.Text, null, RewindAction(item.Uuid, item.Text));
                         prompt = item.Text;
                         anchor = _view.LastUserMessage;
                         break;

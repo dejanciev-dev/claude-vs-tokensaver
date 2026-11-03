@@ -648,6 +648,7 @@ namespace ClaudeVS.Core.Tests
                 var t = SessionTranscript.Read(f);
                 Eq("User|Answer|Tool|Answer|Compacted|User", string.Join("|", t.Items.Select(i => i.Kind)));
                 Eq("How does login work?", t.Items[0].Text);
+                Eq("u1", t.Items[0].Uuid, "prompt keeps its message id (for rewind)");
                 Eq("Read: C:/a/Login.cs", t.Items[2].Text);
                 Eq(10, t.Items[2].ResultChars, "result attached to its tool call");
                 Eq("It uses **JWT**.\n\nDone.", t.Items[3].Text, "consecutive text blocks are one answer");
@@ -688,6 +689,34 @@ namespace ClaudeVS.Core.Tests
             Eq("claude-conversation.md", ConversationExport.FileName("  "));
             Eq(63, ConversationExport.FileName(new string('a', 100)).Length);
             True(SessionHistory.SessionFile(@"C:\p", @"C:\src\Shop", "abc").EndsWith(@"C--src-Shop\abc.jsonl"), "session file path");
+        }
+
+        // ---------- Rewind ----------
+        private static void Test_Rewind_UserMessageCarriesId()
+        {
+            var o = JObject.Parse(ClaudeSession.BuildUserMessage("Fix it", "abc-1"));
+            Eq("user", (string)o["type"]);
+            Eq("abc-1", (string)o["uuid"]);
+            Eq("Fix it", (string)o.SelectToken("message.content[0].text"));
+            True(JObject.Parse(ClaudeSession.BuildUserMessage("x", null))["uuid"] == null, "no id, no uuid field");
+        }
+
+        private static void Test_Rewind_ParseRealResponses()
+        {
+            // Captured from Claude Code 2.1.317 (paths shortened): dry run, real rewind, and the errors it can return.
+            var parser = new ClaudeStreamParser();
+            var dry = parser.Parse("{\"type\":\"control_response\",\"response\":{\"subtype\":\"success\",\"request_id\":\"r1\",\"response\":{\"canRewind\":true,\"filesChanged\":[\"C:\\\\w\\\\a.txt\"],\"insertions\":1,\"deletions\":1}}}").Single();
+            var r = RewindResult.Parse(dry.Payload);
+            True(r.Ok, "dry run ok");
+            Eq(@"C:\w\a.txt", r.FilesChanged.Single());
+            Eq("1 file, +1 −1", r.Summary());
+
+            var real = RewindResult.Parse(JObject.Parse("{\"canRewind\":true,\"skippedLinks\":0}"));
+            True(real.Ok && real.FilesChanged.Count == 0, "real rewind has no file list");
+
+            var off = RewindResult.Parse(JObject.Parse("{\"canRewind\":false,\"error\":\"File rewinding is not enabled.\"}"));
+            True(!off.Ok, "not enabled");
+            Eq("File rewinding is not enabled.", off.Error);
         }
 
         // ---------- Context usage ----------

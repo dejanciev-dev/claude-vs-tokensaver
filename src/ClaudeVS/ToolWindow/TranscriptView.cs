@@ -98,8 +98,11 @@ namespace ClaudeVS.ToolWindow
             ScrollToEndIfNear();
         }
 
-        /// <summary>Your prompt as a rounded bubble, with an optional muted line (route, attachments) under it.</summary>
-        public void AppendUserMessage(string text, string meta)
+        /// <summary>
+        /// Your prompt as a rounded bubble, with an optional muted line (route, attachments) under it.
+        /// <paramref name="onRewind"/> adds a Rewind button, shown while the mouse is over the bubble.
+        /// </summary>
+        public void AppendUserMessage(string text, string meta, Action onRewind = null)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             EndAnswer();
@@ -128,7 +131,31 @@ namespace ClaudeVS.ToolWindow
                 ChatTheme.Muted(m);
                 stack.Children.Add(m);
             }
-            var bubble = new Border { CornerRadius = new CornerRadius(6), Padding = new Thickness(10, 7, 10, 7), Background = ChatTheme.Subtle, Child = stack };
+            UIElement content = stack;
+            Button rewind = null;
+            if (onRewind != null)
+            {
+                rewind = ChatTheme.IconButton(ChatTheme.IconRewind, "Rewind: put the files Claude changed since this prompt back the way they were");
+                rewind.FontSize = 11;
+                rewind.Width = 22;
+                rewind.Height = 20;
+                rewind.Margin = new Thickness(6, -3, -6, 0);
+                rewind.VerticalAlignment = VerticalAlignment.Top;
+                rewind.Visibility = Visibility.Hidden;
+                ChatTheme.Muted(rewind);
+                rewind.Click += (s, e) => { e.Handled = true; onRewind(); };
+                var row = new DockPanel();
+                DockPanel.SetDock(rewind, Dock.Right);
+                row.Children.Add(rewind);
+                row.Children.Add(stack);
+                content = row;
+            }
+            var bubble = new Border { CornerRadius = new CornerRadius(6), Padding = new Thickness(10, 7, 10, 7), Background = ChatTheme.Subtle, Child = content };
+            if (rewind != null)
+            {
+                bubble.MouseEnter += (s, e) => rewind.Visibility = Visibility.Visible;
+                bubble.MouseLeave += (s, e) => rewind.Visibility = Visibility.Hidden;
+            }
             bubble.SetResourceReference(Border.BorderBrushProperty, EnvironmentColors.ToolWindowBorderBrushKey);
             bubble.BorderThickness = new Thickness(1);
             LastUserMessage = new BlockUIContainer(bubble) { Margin = new Thickness(0, 14, 0, 6) };

@@ -68,6 +68,8 @@ namespace ClaudeVS.Core.Cli
                     StandardOutputEncoding = new UTF8Encoding(false),
                     StandardErrorEncoding = new UTF8Encoding(false),
                 };
+                // File checkpoints for rewind: off by default in headless mode, turned on by this variable (2.1.317).
+                if (Options.EnableFileCheckpointing) psi.EnvironmentVariables[ClaudeLaunchOptions.FileCheckpointingVariable] = "1";
 
                 // npm installs a .cmd shim on Windows, which cannot be started directly without a shell.
                 if (exe.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase) || exe.EndsWith(".bat", StringComparison.OrdinalIgnoreCase))
@@ -100,13 +102,42 @@ namespace ClaudeVS.Core.Cli
         }
 
         /// <summary>Send a user prompt. Starts (or restarts with --resume) the process if needed.</summary>
-        public async Task SendPromptAsync(string text, CancellationToken ct = default)
+        public async Task SendPromptAsync(string text, CancellationToken ct = default) => await SendPromptAsync(text, null, ct).ConfigureAwait(false);
+
+        /// <summary>
+        /// Sends a prompt with our own message id. The CLI keeps it as the message's uuid (verified with 2.1.317), so
+        /// it can later be passed to <see cref="RewindFilesAsync"/>.
+        /// </summary>
+        public async Task SendPromptAsync(string text, string messageId, CancellationToken ct = default)
         {
             bool started = EnsureRunning();
             if (started && !ThinkingEnabled) await SendThinkingAsync().ConfigureAwait(false); // there is no launch flag for it
             IsBusy = true;
-            var payload = new { type = "user", message = new { role = "user", content = new[] { new { type = "text", text } } } };
-            await WriteLineAsync(JsonConvert.SerializeObject(payload)).ConfigureAwait(false);
+            await WriteLineAsync(BuildUserMessage(text, messageId)).ConfigureAwait(false);
+        }
+
+        public static string BuildUserMessage(string text, string messageId)
+        {
+            var o = new JObject { ["type"] = "user" };
+            if (!string.IsNullOrEmpty(messageId)) o["uuid"] = messageId;
+            o["message"] = new JObject { ["role"] = "user", ["content"] = new JArray { new JObject { ["type"] = "text", ["text"] = text ?? "" } } };
+            return o.ToString(Formatting.None);
+        }
+
+        /// <summary>
+        /// Puts files back the way they were before the prompt with id <paramref name="messageId"/> (control request
+        /// <c>rewind_files</c>; needs <see cref="ClaudeLaunchOptions.EnableFileCheckpointing"/>). A dry run reports
+        /// which files would change without touching them. The conversation itself is not rewound.
+        /// </summary>
+        public async Task<RewindResult> RewindFilesAsync(string messageId, bool dryRun)
+        {
+            try
+            {
+                EnsureRunning(); // e.g. a resumed conversation before its first prompt; starting makes no model call
+                var r = await RequestAsync(new JObject { ["subtype"] = "rewind_files", ["user_message_id"] = messageId, ["dry_run"] = dryRun }, TimeSpan.FromSeconds(30)).ConfigureAwait(false);
+                return r == null ? new RewindResult { Error = "Claude did not answer the rewind request." } : RewindResult.Parse(r);
+            }
+            catch (InvalidOperationException ex) { return new RewindResult { Error = ex.Message }; }
         }
 
         public Task InterruptAsync() => SendControlAsync(new JObject { ["subtype"] = "interrupt" });

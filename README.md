@@ -33,7 +33,7 @@ Pre-release (v0.1 → v0.2).
 
 | Layer | State |
 |---|---|
-| Core library (CLI session, parser, router, meter, context, Markdown, usage log) | ✅ 49 automated tests, plus regression tests built from real CLI output |
+| Core library (CLI session, parser, router, meter, context, Markdown, usage log) | ✅ 51 automated tests, plus regression tests built from real CLI output |
 | Core against the real `claude` CLI | ✅ Verified with Claude Code 2.1.316 via the opt-in live test: streaming, usage, cost, prompt cache, question and plan approval |
 | Visual Studio extension (UI) | ⚠️ Builds with zero warnings in CI, but not yet run in the experimental instance |
 
@@ -88,6 +88,7 @@ This extension attacks all three, and shows the numbers so you can see the effec
 | **Plan approval cards** | Plans render as Markdown with **Approve** or **Request changes** (with feedback). |
 | **Permission bar** | Other tool calls that need approval show **Allow** / **Deny**. |
 | **Sessions** | Resume an earlier conversation for the same solution (`claude --resume`); its earlier prompts, answers and tool calls are redrawn. Click the title to rename a session (also passed to the CLI as `--name`); hover a session in the list to rename or archive it. |
+| **Rewind** | Hover one of your messages → **Rewind** puts the files Claude changed since that prompt back the way they were. You see the list of files first; the conversation stays as it is. |
 | **Export** | `/` → *Export conversation…* saves the whole conversation (also what came before a resume or a compaction) as Markdown: your prompts, Claude's answers, and one line per tool call. |
 | **Bookmarks** | Star any answer to keep it. The bookmarks panel lists them per solution with search; clicking one scrolls to it, or shows the saved copy if it came from another conversation. |
 | **Several chat windows** | Each window has its own conversation, meter and model. |
@@ -258,6 +259,7 @@ Editor commands go to the chat window you used last.
 |---|---|---|---|
 | CLI | Claude executable path | *(auto)* | Finds `claude.exe` / `claude.cmd` automatically. |
 | CLI | Permission mode | AcceptEdits | Edits are applied; shell commands ask. In **Plan** mode the CLI answered with Sonnet even when Haiku was requested. |
+| CLI | File checkpoints (rewind) | On | Claude Code keeps a copy of each file before Claude changes it, so prompts can be rewound. Applies to new sessions. |
 | CLI | Extra arguments | | Appended to the `claude` command line, e.g. `--add-dir ..\shared`. |
 | Token saving | Concise answers | On | One-line brevity prompt. |
 | Token saving | Default model | Auto | Auto = route each prompt. |
@@ -331,6 +333,8 @@ msbuild ClaudeVS.sln /restore /p:Configuration=Release /warnaserror     # → sr
   rows have no Diff button.
 - **Renaming a running session** shows the new name here at once, but the CLI only records it (`--name`) the next
   time that session's process starts. Archiving is local to this extension; the CLI's own `/resume` still lists the session.
+- **Rewind** restores files only; Claude still remembers its edits, so tell it what you rewound. Rewinding a prompt from
+  an earlier session (after a resume) has not been verified yet; if the CLI has no checkpoint for it, the chat says so.
 - **Write diffs** compare against a copy taken when the tool call arrives. If the CLI writes faster, the diff can look empty.
 - Several answers to one multi-select question are sent joined with ", ". That format is not verified against the CLI yet.
 - The output-trimming hook (`trim-output.ps1`) assumes Windows PowerShell. Claude Code under WSL would need a bash version.
