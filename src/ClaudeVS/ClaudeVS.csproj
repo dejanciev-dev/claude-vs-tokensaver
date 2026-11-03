@@ -60,6 +60,7 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="ToolWindow\ClaudeToolWindow.cs" />
+    <Compile Include="ToolWindow\BookmarksPanel.cs" />
     <Compile Include="ToolWindow\ChatPopup.cs" />
     <Compile Include="ToolWindow\ChatTheme.cs" />
     <Compile Include="ToolWindow\ClaudeChatControl.cs" />

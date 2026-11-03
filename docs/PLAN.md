@@ -140,7 +140,7 @@ needs file checkpointing ("File rewinding is not enabled").
 - [x] Header with session title, sessions and new-session icons; sessions popover with search and ages
 - [x] Send turns into Stop while answering; Esc stops
 - [x] Empty-session message (own icon; no Anthropic logo or mascot)
-- [ ] Bookmarks: bookmark button under each answer, bookmarks side panel
+- [x] Bookmarks: bookmark button under each answer, bookmarks side panel
 - [ ] Sessions: rename (`--name`) and archive; show the resumed conversation's earlier messages
 - [ ] Export conversation (Markdown)
 - [ ] Context usage breakdown from `get_context_usage` in the meter

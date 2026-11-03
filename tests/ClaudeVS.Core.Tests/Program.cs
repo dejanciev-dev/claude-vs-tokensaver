@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using ClaudeVS.Core.Chat;
 using ClaudeVS.Core.Cli;
 using ClaudeVS.Core.Context;
 using ClaudeVS.Core.Setup;
@@ -556,6 +557,51 @@ namespace ClaudeVS.Core.Tests
             var r = b.Build("Review", "/repo", new EditorSelection { FilePath = "/repo/B.cs", StartLine = 1, EndLine = 50, Text = text });
             True(r.Text.Contains("not inlined") && !r.Text.Contains("line25"), r.Text);
             Eq(0, r.InlinedLines);
+        }
+
+        // ---------- Bookmarks ----------
+        private static void Test_Bookmark_Title()
+        {
+            Eq("Fix the login bug", Bookmark.MakeTitle("\n  Fix the login bug\nmore", "answer"));
+            Eq("Summary", Bookmark.MakeTitle("", "## Summary\nText"));
+            Eq("Bookmark", Bookmark.MakeTitle(null, null));
+            Eq(80, Bookmark.MakeTitle(new string('x', 200), null).Length);
+        }
+
+        private static void Test_Bookmark_StoreAddListRemove()
+        {
+            string dir = Path.Combine(Path.GetTempPath(), "claudevs-bm-" + Guid.NewGuid().ToString("N"));
+            var store = new BookmarkStore(Path.Combine(dir, "bookmarks.json"));
+            try
+            {
+                Eq(0, store.List().Count, "empty when missing");
+                var t0 = new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc);
+                var a = Bookmark.Create(@"C:\src\Shop", "s1", "How does checkout work?", "It uses **Stripe**.", t0);
+                var b = Bookmark.Create(@"C:\src\Shop\", "s1", "Rename Foo", "Done.", t0.AddMinutes(5));
+                var c = Bookmark.Create(@"C:\src\Other", "s2", "Hi", "Hello", t0);
+                store.Add(a); store.Add(b); store.Add(c);
+                var shop = store.List(@"c:\src\shop");
+                Eq(2, shop.Count, "per solution, case and trailing slash ignored");
+                Eq(b.Id, shop[0].Id, "newest first");
+                Eq(3, store.List().Count);
+                True(shop[1].Matches("stripe checkout"), "matches answer and prompt words");
+                True(!shop[1].Matches("paypal"), "no match");
+                True(store.Remove(a.Id), "removed");
+                True(!store.Remove(a.Id), "second remove is a no-op");
+                Eq(1, store.List(@"C:\src\Shop").Count);
+
+                File.WriteAllText(store.Path, "{ not json");
+                Eq(0, store.List().Count, "damaged file reads as empty");
+                store.Add(a);
+                Eq(1, store.List().Count, "and is replaced on the next save");
+            }
+            finally { if (Directory.Exists(dir)) Directory.Delete(dir, true); }
+        }
+
+        private static void Test_Bookmark_LongAnswerIsCut()
+        {
+            var b = Bookmark.Create("d", null, "p", new string('a', Bookmark.MaxAnswerChars + 10), DateTime.UtcNow);
+            True(b.Answer.Length < Bookmark.MaxAnswerChars + 20 && b.Answer.EndsWith("(cut)"), "cut");
         }
 
         // ---------- Setup ----------

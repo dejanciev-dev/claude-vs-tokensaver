@@ -131,8 +131,85 @@ namespace ClaudeVS.ToolWindow
             var bubble = new Border { CornerRadius = new CornerRadius(6), Padding = new Thickness(10, 7, 10, 7), Background = ChatTheme.Subtle, Child = stack };
             bubble.SetResourceReference(Border.BorderBrushProperty, EnvironmentColors.ToolWindowBorderBrushKey);
             bubble.BorderThickness = new Thickness(1);
-            _doc.Blocks.Add(new BlockUIContainer(bubble) { Margin = new Thickness(0, 14, 0, 6) });
+            LastUserMessage = new BlockUIContainer(bubble) { Margin = new Thickness(0, 14, 0, 6) };
+            _doc.Blocks.Add(LastUserMessage);
             Box.ScrollToEnd(); // you just sent it: always show it
+        }
+
+        /// <summary>The bubble of the prompt sent last (where a bookmark of its answer scrolls to).</summary>
+        public Block LastUserMessage { get; private set; }
+
+        /// <summary>
+        /// The muted "✓ 3.2s · 12k tok · $0.004" line after an answer, with a star that bookmarks the answer.
+        /// <paramref name="toggleBookmark"/> returns whether the answer is bookmarked now; null hides the star.
+        /// </summary>
+        public void AppendTurnFooter(string text, Func<bool> toggleBookmark)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            EndAnswer();
+            _plain = null;
+            var label = new TextBlock { Text = (text ?? "").Trim(), FontSize = 11.5, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
+            ChatTheme.Muted(label);
+            var row = new DockPanel();
+            if (toggleBookmark != null)
+            {
+                var star = ChatTheme.IconButton(ChatTheme.IconStar, "Bookmark this answer");
+                star.FontSize = 12;
+                star.Width = 24;
+                star.Height = 22;
+                star.Margin = new Thickness(0, 0, 4, 0);
+                ChatTheme.Muted(star);
+                star.Click += (s, e) =>
+                {
+                    bool on = toggleBookmark();
+                    star.Content = on ? ChatTheme.IconStarFill : ChatTheme.IconStar;
+                    star.ToolTip = on ? "Remove bookmark" : "Bookmark this answer";
+                    System.Windows.Automation.AutomationProperties.SetName(star, (string)star.ToolTip);
+                };
+                DockPanel.SetDock(star, Dock.Left);
+                row.Children.Add(star);
+            }
+            row.Children.Add(label);
+            _doc.Blocks.Add(new BlockUIContainer(row) { Margin = new Thickness(0, 2, 0, 4) });
+            ScrollToEndIfNear();
+        }
+
+        /// <summary>A saved answer from another conversation: title, the prompt, then the answer as Markdown.</summary>
+        public Block AppendBookmark(Core.Chat.Bookmark b)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            EndAnswer();
+            _plain = null;
+            var head = new Paragraph { FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 14, 0, 2) };
+            head.Inlines.Add(new Run(ChatTheme.IconStarFill + "  ") { FontFamily = ChatTheme.IconFont, FontWeight = FontWeights.Normal });
+            head.Inlines.Add(new Run(b.Title));
+            var when = new Run("  ·  bookmarked " + b.CreatedUtc.ToLocalTime().ToString("g")) { FontWeight = FontWeights.Normal, FontSize = 11 };
+            when.SetResourceReference(TextElement.ForegroundProperty, EnvironmentColors.SystemGrayTextBrushKey);
+            head.Inlines.Add(when);
+            _doc.Blocks.Add(head);
+
+            var section = new Section { BorderBrush = QuoteBar, BorderThickness = new Thickness(3, 0, 0, 0), Padding = new Thickness(8, 0, 0, 0), Margin = new Thickness(0, 0, 0, 8) };
+            if (!string.IsNullOrWhiteSpace(b.Prompt))
+            {
+                var prompt = new Paragraph(new Run(b.Prompt.Trim())) { FontStyle = FontStyles.Italic, Margin = new Thickness(0, 2, 0, 6) };
+                prompt.SetResourceReference(TextElement.ForegroundProperty, EnvironmentColors.SystemGrayTextBrushKey);
+                section.Blocks.Add(prompt);
+            }
+            foreach (var md in MarkdownParser.Parse(b.Answer ?? "")) section.Blocks.Add(Render(md));
+            _doc.Blocks.Add(section);
+            return head;
+        }
+
+        /// <summary>Scrolls so <paramref name="block"/> is at the top of the transcript, if it is still shown.</summary>
+        public bool ScrollTo(Block block)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (block == null || !_doc.Blocks.Contains(block)) return false;
+            // The rect is relative to the visible area, so add it to the current offset.
+            var rect = block.ContentStart.GetCharacterRect(LogicalDirection.Forward);
+            if (!rect.IsEmpty) Box.ScrollToVerticalOffset(Math.Max(0, Box.VerticalOffset + rect.Top - 8));
+            else block.BringIntoView();
+            return true;
         }
 
         /// <summary>The empty-chat welcome with a few tips.</summary>
@@ -359,6 +436,7 @@ namespace ClaudeVS.ToolWindow
             _plain = null;
             _doc.Blocks.Clear();
             _tools.Clear();
+            LastUserMessage = null;
         }
 
         // Only follow the output when the user hasn't scrolled up to read something.
