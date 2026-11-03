@@ -792,6 +792,13 @@ namespace ClaudeVS.Core.Tests
             True(Colored("a.b(1)", "cs").Contains("N:1") && !Colored("x1 = 2", "cs").Contains("N:1"), "digits inside names are not numbers");
         }
 
+        private static void Test_Args_ForkSession()
+        {
+            string a = ClaudeArgsBuilder.Build(new ClaudeLaunchOptions { ResumeSessionId = "abc", ForkSession = true });
+            True(a.Contains("--resume abc --fork-session"), a);
+            True(!ClaudeArgsBuilder.Build(new ClaudeLaunchOptions { ForkSession = true }).Contains("--fork-session"), "fork needs a session to resume");
+        }
+
         // ---------- Skills and MCP ----------
         private static void Test_SkillsAndMcp_FromRealResponses()
         {

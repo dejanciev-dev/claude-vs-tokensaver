@@ -7,6 +7,10 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Fork a session:** hover a session in the list → Fork, or / → Fork this session. The next prompt continues in
+  a new session with the same history (`--fork-session`); the original stays as it was.
+- **Rewind picker:** press Esc twice in the prompt box (or / → Rewind…) to pick one of your prompts and put the
+  files back to before it.
 - **Skills and MCP servers lists** (/ → Skills… / MCP servers…, or click those rows in the context breakdown):
   each skill with its source and what its listing costs on every request, and each MCP server with its status.
   Click to turn one on or off; failed servers can be reconnected. Skills are changed with Claude Code's own
