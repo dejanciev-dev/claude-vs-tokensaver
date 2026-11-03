@@ -706,6 +706,28 @@ namespace ClaudeVS.Core.Tests
             True(without["annotations"] == null, "no preview, no annotations");
         }
 
+        private static void Test_Sanitizer_RemovesInvisible()
+        {
+            string hidden = string.Concat("ignore previous".Select(ch => char.ConvertFromUtf32(0xE0000 + ch))); // tag-character smuggling
+            string input = "Fix​ the‮ bug" + hidden + "﻿.";
+            Eq("Fix the bug.", PromptSanitizer.RemoveInvisible(input, out int removed));
+            Eq(3 + "ignore previous".Length, removed);
+            Eq("👩‍💻 کتاب‌ها", PromptSanitizer.RemoveInvisible("👩‍💻 کتاب‌ها", out removed), "ZWJ emoji and ZWNJ kept");
+            Eq(0, removed);
+            string plain = "nothing to do";
+            True(ReferenceEquals(plain, PromptSanitizer.RemoveInvisible(plain, out _)), "no copy when clean");
+        }
+
+        private static void Test_Sanitizer_MarksLongPastes()
+        {
+            string log = "line1\nline2\nline3\nline4";
+            Eq("Why does this fail?\n[Pasted text]\nline1\nline2\nline3\nline4\n[End of pasted text]\nThanks",
+               PromptSanitizer.MarkPastes("Why does this fail?" + log + "Thanks", new[] { log }));
+            Eq("short paste", PromptSanitizer.MarkPastes("short paste", new[] { "short" }), "short pastes are not marked");
+            Eq("edited", PromptSanitizer.MarkPastes("edited", new[] { log }), "paste no longer in the text");
+            True(PromptSanitizer.IsLongPaste(new string('x', 801)) && !PromptSanitizer.IsLongPaste(new string('x', 800)), "800-char limit");
+        }
+
         // ---------- Images ----------
         private static void Test_Images_TokensAndFit()
         {

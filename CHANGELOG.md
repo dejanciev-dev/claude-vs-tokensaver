@@ -7,6 +7,9 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Invisible characters removed from prompts:** Unicode tag characters (which can hide instructions), bidi
+  overrides, zero-width spaces and similar are stripped from pasted text with a notice, and from every prompt
+  before it is sent. Long pastes (over 800 characters or 3+ lines) are marked "[Pasted text]" for Claude.
 - **Copy response:** a copy button under each answer (also for redrawn answers), and / → Copy last response.
 - **Option previews in question cards:** when Claude's question options carry a preview (a mockup or code
   snippet), it shows under the options for the hovered or chosen option, and the chosen preview is sent back
