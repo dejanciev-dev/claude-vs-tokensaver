@@ -28,6 +28,8 @@ namespace ClaudeVS.Core.Chat
         /// <summary>Compacted: context size before compaction, and "auto" or "manual".</summary>
         public long PreTokens { get; set; }
         public string Trigger { get; set; }
+        /// <summary>When the prompt was sent, or when the answer's last part arrived (from the session file).</summary>
+        public DateTime? TimestampUtc { get; set; }
     }
 
     public sealed class SessionTranscript
@@ -95,7 +97,7 @@ namespace ClaudeVS.Core.Chat
             var content = o.SelectToken("message.content");
             if (content?.Type == JTokenType.String)
             {
-                AddPrompt(items, (string)content, (string)o["uuid"]);
+                AddPrompt(items, (string)content, (string)o["uuid"], Time(o));
                 return;
             }
             if (!(content is JArray blocks)) return;
@@ -104,7 +106,7 @@ namespace ClaudeVS.Core.Chat
                 switch ((string)b["type"])
                 {
                     case "text":
-                        AddPrompt(items, (string)b["text"], (string)o["uuid"]);
+                        AddPrompt(items, (string)b["text"], (string)o["uuid"], Time(o));
                         break;
                     case "tool_result":
                         if ((string)b["tool_use_id"] is string id && tools.TryGetValue(id, out var tool))
@@ -130,8 +132,8 @@ namespace ClaudeVS.Core.Chat
                         if (string.IsNullOrWhiteSpace(text)) break;
                         // The CLI writes one line per content block; consecutive text belongs to one answer.
                         var last = items.Count > 0 ? items[items.Count - 1] : null;
-                        if (last?.Kind == TranscriptItemKind.Answer) last.Text += "\n\n" + text;
-                        else items.Add(new TranscriptItem { Kind = TranscriptItemKind.Answer, Text = text });
+                        if (last?.Kind == TranscriptItemKind.Answer) { last.Text += "\n\n" + text; last.TimestampUtc = Time(o) ?? last.TimestampUtc; }
+                        else items.Add(new TranscriptItem { Kind = TranscriptItemKind.Answer, Text = text, TimestampUtc = Time(o) });
                         break;
                     case "tool_use":
                         var input = b["input"] as JObject;
@@ -148,6 +150,16 @@ namespace ClaudeVS.Core.Chat
                         break;
                 }
             }
+        }
+
+        /// <summary>The line's "timestamp" (ISO 8601, UTC), or null.</summary>
+        private static DateTime? Time(JObject o)
+        {
+            var t = o["timestamp"];
+            if (t == null) return null;
+            if (t.Type == JTokenType.Date) return ((DateTime)t).ToUniversalTime();
+            return DateTime.TryParse((string)t, System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal, out var d) ? d : (DateTime?)null;
         }
 
         private static string MessageText(JToken content) =>
@@ -204,12 +216,12 @@ namespace ClaudeVS.Core.Chat
             catch (UnauthorizedAccessException) { return null; }
         }
 
-        private static void AddPrompt(List<TranscriptItem> items, string text, string uuid)
+        private static void AddPrompt(List<TranscriptItem> items, string text, string uuid, DateTime? time)
         {
             text = text?.Trim();
             // CLI-generated wrappers and notes, not something you typed.
             if (string.IsNullOrEmpty(text) || text.StartsWith("<") || text.StartsWith("[Request interrupted")) return;
-            items.Add(new TranscriptItem { Kind = TranscriptItemKind.User, Text = text, Uuid = uuid });
+            items.Add(new TranscriptItem { Kind = TranscriptItemKind.User, Text = text, Uuid = uuid, TimestampUtc = time });
         }
     }
 }

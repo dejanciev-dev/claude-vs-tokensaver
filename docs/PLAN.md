@@ -168,7 +168,7 @@ Compared against the `[VSCode]` entries; the version in brackets is where the VS
 - [x] Compaction as a collapsible card with the summary (2.1.69); also in redrawn sessions and exports
 - [x] "Not responding" status when the CLI has sent nothing for 60 s during a turn (2.1.83)
 - [x] A message sent while Claude is working waits at the bottom until Claude starts on it (2.1.275)
-- [ ] Optional message timestamps, with a date line where the day changes (2.1.284 / 2.1.290)
+- [x] Optional message timestamps, with a date line where the day changes (2.1.284 / 2.1.290)
 - [ ] Syntax coloring in code blocks (2.1.311)
 
 **Medium (token saving first)**

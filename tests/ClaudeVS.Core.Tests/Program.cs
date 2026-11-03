@@ -752,6 +752,24 @@ namespace ClaudeVS.Core.Tests
             finally { File.Delete(f); }
         }
 
+        private static void Test_Transcript_Timestamps()
+        {
+            string f = TempFile(
+                "{\"type\":\"user\",\"uuid\":\"u1\",\"timestamp\":\"2026-11-02T09:42:22.258Z\",\"message\":{\"content\":\"Hi\"}}",
+                "{\"type\":\"assistant\",\"uuid\":\"a1\",\"timestamp\":\"2026-11-02T09:42:25.000Z\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"Hello\"}]}}",
+                "{\"type\":\"assistant\",\"uuid\":\"a2\",\"timestamp\":\"2026-11-02T09:42:31.500Z\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"there\"}]}}",
+                "{\"type\":\"user\",\"uuid\":\"u2\",\"message\":{\"content\":\"No time\"}}");
+            try
+            {
+                var t = SessionTranscript.Read(f);
+                Eq(new DateTime(2026, 11, 2, 9, 42, 22, 258, DateTimeKind.Utc), t.Items[0].TimestampUtc);
+                Eq(DateTimeKind.Utc, t.Items[0].TimestampUtc.Value.Kind);
+                Eq(new DateTime(2026, 11, 2, 9, 42, 31, 500, DateTimeKind.Utc), t.Items[1].TimestampUtc, "answer: time of its last part");
+                Eq(null, t.Items[2].TimestampUtc);
+            }
+            finally { File.Delete(f); }
+        }
+
         // ---------- Images ----------
         private static void Test_Images_TokensAndFit()
         {
