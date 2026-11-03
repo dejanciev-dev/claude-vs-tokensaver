@@ -618,7 +618,7 @@ namespace ClaudeVS.Core.Tests
                 store.SetName("a", "");
                 Eq(null, store.Get("a"), "clearing the name forgets the session");
                 store.SetArchived("b", false);
-                Eq(null, store.Get("b"));
+                True(!store.Get("b").Archived && store.Get("b").UnarchivedUtc != null, "unarchived, and remembered so auto-archive waits");
             }
             finally { if (Directory.Exists(dir)) Directory.Delete(dir, true); }
         }
@@ -797,6 +797,60 @@ namespace ClaudeVS.Core.Tests
             string a = ClaudeArgsBuilder.Build(new ClaudeLaunchOptions { ResumeSessionId = "abc", ForkSession = true });
             True(a.Contains("--resume abc --fork-session"), a);
             True(!ClaudeArgsBuilder.Build(new ClaudeLaunchOptions { ForkSession = true }).Contains("--fork-session"), "fork needs a session to resume");
+        }
+
+        private static void Test_SessionMeta_GroupsAndAutoArchive()
+        {
+            string dir = Path.Combine(Path.GetTempPath(), "claudevs-meta2-" + Guid.NewGuid().ToString("N"));
+            var store = new SessionMetaStore(Path.Combine(dir, "sessions.json"));
+            try
+            {
+                var now = new DateTime(2026, 11, 3, 12, 0, 0, DateTimeKind.Utc);
+                List<SessionInfo> List() => store.Apply(new List<SessionInfo>
+                {
+                    new SessionInfo { Id = "fresh", Title = "a", LastWriteUtc = now.AddDays(-2) },
+                    new SessionInfo { Id = "old", Title = "b", LastWriteUtc = now.AddDays(-20) },
+                }, autoArchiveDays: 14, nowUtc: now);
+
+                var l = List();
+                True(!l[0].Archived && l[1].Archived && l[1].AutoArchived, "20 days idle is auto-archived");
+                True(!store.Apply(new List<SessionInfo> { new SessionInfo { Id = "old", LastWriteUtc = now.AddDays(-20) } }, 0, now)[0].Archived, "0 days = off");
+
+                store.SetArchived("old", false); // unarchiving restarts the clock (UnarchivedUtc = real now, after 'now - 20 days')
+                True(!List()[1].Archived, "unarchived stays visible");
+
+                store.SetGroup("fresh", " Work ");
+                store.SetGroup("old", "Work");
+                store.SetGroup("x", "Personal");
+                Eq("Personal|Work", string.Join("|", store.Groups()));
+                Eq("Work", List()[0].Group);
+                store.RenameGroup("work", "Client");
+                Eq("Client", List()[1].Group, "rename is case-insensitive");
+                store.RenameGroup("Personal", "");
+                Eq(null, store.Get("x"), "deleting the group forgets a session with nothing else stored");
+            }
+            finally { if (Directory.Exists(dir)) Directory.Delete(dir, true); }
+        }
+
+        private static void Test_RunningSessions_Registry()
+        {
+            string dir = Path.Combine(Path.GetTempPath(), "claudevs-run-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            try
+            {
+                File.WriteAllText(Path.Combine(dir, "100.json"), "{\"pid\":100,\"sessionId\":\"s1\",\"cwd\":\"C:\\\\src\",\"status\":\"busy\",\"entrypoint\":\"claude-vscode\"}");
+                File.WriteAllText(Path.Combine(dir, "200.json"), "{\"pid\":200,\"sessionId\":\"s2\",\"status\":\"idle\",\"entrypoint\":\"cli\"}");
+                File.WriteAllText(Path.Combine(dir, "300.json"), "{ broken");
+                File.WriteAllText(Path.Combine(dir, "100.abc.key"), "{}");
+                var running = RunningSessions.Read(dir, pid => pid == 100);
+                Eq(1, running.Count, "dead process and broken file skipped");
+                Eq("s1", running[0].SessionId);
+                Eq("VS Code", running[0].Where);
+                Eq("working", running[0].StatusText);
+                Eq("a terminal", new RunningSession { Entrypoint = "cli" }.Where);
+                Eq("needs input", new RunningSession { Status = "waiting" }.StatusText);
+            }
+            finally { Directory.Delete(dir, true); }
         }
 
         // ---------- Skills and MCP ----------

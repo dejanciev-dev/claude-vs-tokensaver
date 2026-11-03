@@ -43,6 +43,9 @@ namespace ClaudeVS.ToolWindow
         public const string IconRewind = "";     // undo arrow
         public const string IconRefresh = "";
         public const string IconFork = "";       // branch-like "switch" arrows
+        public const string IconOpenRing = "";   // hollow ring: open somewhere else
+        public const string IconFolder = "";
+        public const string IconFilter = "";
         public const string IconArchive = "";    // box
         public const string IconUnarchive = "";  // undo
 

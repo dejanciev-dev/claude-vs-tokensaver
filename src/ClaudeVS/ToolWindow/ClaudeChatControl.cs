@@ -182,6 +182,7 @@ namespace ClaudeVS.ToolWindow
             };
             _filePopup = BuildFilePicker();
             GotKeyboardFocus += (s, e) => LastActive = this;
+            lock (Instances) Instances.Add(this);
             LastActive = LastActive ?? this;
 
             _flushTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(60), DispatcherPriority.Background, (s, e) => FlushText(), Dispatcher);
@@ -201,6 +202,9 @@ namespace ClaudeVS.ToolWindow
 
         /// <summary>The chat the user interacted with last; editor commands send to it.</summary>
         public static ClaudeChatControl LastActive { get; private set; }
+
+        /// <summary>All open chat windows (to recognize our own claude processes in the CLI's session registry).</summary>
+        private static readonly List<ClaudeChatControl> Instances = new List<ClaudeChatControl>();
 
         private static Microsoft.VisualStudio.Threading.JoinableTaskFactory Jtf => ClaudeVSPackage.Instance?.JoinableTaskFactory ?? ThreadHelper.JoinableTaskFactory;
 
@@ -1315,63 +1319,156 @@ namespace ClaudeVS.ToolWindow
             ShowHistoryMenu(refresh: false);
         }
 
+        private enum SessionFilter { All, Open, Closed }
+        private SessionFilter _sessionFilter;
+
         private void ShowHistoryMenu(bool refresh)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             string dir = VsContext.GetSolutionDirectory() ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             var now = DateTime.UtcNow;
             List<SessionInfo> all;
-            try { all = SessionMeta.Apply(SessionHistory.List(SessionHistory.DefaultProjectsRoot, dir, max: 80)); }
+            try { all = SessionMeta.Apply(SessionHistory.List(SessionHistory.DefaultProjectsRoot, dir, max: 80), Options?.AutoArchiveDays ?? 14, now); }
             catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException) { AppendError("[sessions] ", ex.Message); return; }
             string currentId = _session?.SessionId ?? _resumeId;
+            // Sessions open in another process right now (a terminal, VS Code, another chat window here…), from the CLI's registry.
+            int? ownPid = _session?.ProcessId;
+            HashSet<int> ourPids;
+            lock (Instances) ourPids = new HashSet<int>(Instances.Select(i => i._session?.ProcessId).Where(p => p.HasValue).Select(p => p.Value));
+            var open = RunningSessions.Read().Where(r => r.Pid != ownPid).GroupBy(r => r.SessionId).ToDictionary(g => g.Key, g => g.First());
 
-            var entries = all.Where(s => _showArchived || !s.Archived).Select(s => new ChatPopup.Entry
+            var visible = all.Where(s => _showArchived || !s.Archived)
+                .Where(s => _sessionFilter == SessionFilter.All || (_sessionFilter == SessionFilter.Open) == (open.ContainsKey(s.Id) || s.Id == currentId))
+                .ToList();
+            var entries = visible.Select(s =>
             {
-                Group = s.Archived ? "Archived" : null,
-                Label = s.Title,
-                Detail = SessionHistory.TimeAgo(s.LastWriteUtc, now),
-                Checked = s.Id == currentId,
-                Run = () => ResumeSession(s),
-                Rename = name =>
+                open.TryGetValue(s.Id, out var elsewhere);
+                return new ChatPopup.Entry
                 {
-                    ThreadHelper.ThrowIfNotOnUIThread();
-                    if (s.Id == currentId) RenameCurrentSession(name);
-                    else SaveSessionMeta(() => SessionMeta.SetName(s.Id, SessionMetaStore.Clean(name)));
-                    ShowHistoryMenu(refresh: true);
-                },
-                Actions = new List<ChatPopup.EntryAction>
-                {
-                    new ChatPopup.EntryAction
+                    // Ungrouped first (no header), then your groups, archived last.
+                    Group = s.Archived ? "Archived" : s.Group,
+                    Glyph = elsewhere != null ? ChatTheme.IconOpenRing : null,
+                    Label = s.Title,
+                    Description = elsewhere != null ? $"open in {(ourPids.Contains(elsewhere.Pid) ? "another chat window here" : elsewhere.Where)} · {elsewhere.StatusText}" : s.AutoArchived ? $"archived after {Options?.AutoArchiveDays ?? 14} days without use" : null,
+                    Detail = SessionHistory.TimeAgo(s.LastWriteUtc, now),
+                    Checked = s.Id == currentId,
+                    Run = () => ResumeSession(s),
+                    Rename = name =>
                     {
-                        Glyph = ChatTheme.IconFork,
-                        Tooltip = "Fork: continue in a new session with this history",
-                        Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); _sessions.Close(); ResumeSession(s, fork: true); },
+                        ThreadHelper.ThrowIfNotOnUIThread();
+                        if (s.Id == currentId) RenameCurrentSession(name);
+                        else SaveSessionMeta(() => SessionMeta.SetName(s.Id, SessionMetaStore.Clean(name)));
+                        ShowHistoryMenu(refresh: true);
                     },
-                    new ChatPopup.EntryAction
+                    Actions = new List<ChatPopup.EntryAction>
                     {
-                        Glyph = s.Archived ? ChatTheme.IconUnarchive : ChatTheme.IconArchive,
-                        Tooltip = s.Archived ? "Unarchive" : "Archive (hide from this list)",
-                        Run = () =>
+                        new ChatPopup.EntryAction
                         {
-                            ThreadHelper.ThrowIfNotOnUIThread();
-                            SaveSessionMeta(() => SessionMeta.SetArchived(s.Id, !s.Archived));
-                            ShowHistoryMenu(refresh: true);
+                            Glyph = ChatTheme.IconFork,
+                            Tooltip = "Fork: continue in a new session with this history",
+                            Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); _sessions.Close(); ResumeSession(s, fork: true); },
+                        },
+                        new ChatPopup.EntryAction
+                        {
+                            Glyph = ChatTheme.IconFolder,
+                            Tooltip = "Move to group…",
+                            Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); _sessions.Close(); ShowGroupPicker(s); },
+                        },
+                        new ChatPopup.EntryAction
+                        {
+                            Glyph = s.Archived ? ChatTheme.IconUnarchive : ChatTheme.IconArchive,
+                            Tooltip = s.Archived ? "Unarchive" : "Archive (hide from this list)",
+                            Run = () =>
+                            {
+                                ThreadHelper.ThrowIfNotOnUIThread();
+                                SaveSessionMeta(() => SessionMeta.SetArchived(s.Id, !s.Archived));
+                                ShowHistoryMenu(refresh: true);
+                            },
                         },
                     },
-                },
-            }).OrderBy(e => e.Group == null ? 0 : 1).ToList(); // archived ones last, under their own header
+                };
+            })
+            .OrderBy(e => e.Group == "Archived" ? 2 : e.Group == null ? 0 : 1)
+            .ThenBy(e => e.Group ?? "", StringComparer.OrdinalIgnoreCase)
+            .ToList(); // OrderBy is stable: newest first within each group
 
-            if (entries.Count == 0) entries.Add(new ChatPopup.Entry { Label = all.Count == 0 ? "No earlier sessions for this folder" : "All sessions are archived", Enabled = false });
+            if (entries.Count == 0)
+                entries.Add(new ChatPopup.Entry { Label = all.Count == 0 ? "No earlier sessions for this folder" : _sessionFilter != SessionFilter.All ? "No sessions match the filter" : "All sessions are archived", Enabled = false });
+
+            // Commands at the end, under a blank header (a separator).
+            const string More = " ";
+            entries.Add(new ChatPopup.Entry
+            {
+                Group = More,
+                Glyph = ChatTheme.IconFilter,
+                Label = _sessionFilter == SessionFilter.All ? "Showing all sessions" : _sessionFilter == SessionFilter.Open ? "Showing open sessions" : "Showing closed sessions",
+                Description = "Click to switch: all, open (here or elsewhere), closed",
+                Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); _sessionFilter = (SessionFilter)(((int)_sessionFilter + 1) % 3); ShowHistoryMenu(refresh: true); },
+            });
             int archived = all.Count(s => s.Archived);
             if (archived > 0)
                 entries.Add(new ChatPopup.Entry
                 {
+                    Group = More,
                     Glyph = ChatTheme.IconArchive,
                     Label = _showArchived ? "Hide archived sessions" : $"Show archived sessions ({archived})",
                     Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); _showArchived = !_showArchived; ShowHistoryMenu(refresh: true); },
                 });
-            _sessions.Footer = "Hover a session to rename or archive it";
+            if (_showArchived && archived > 0)
+                entries.Add(new ChatPopup.Entry
+                {
+                    Group = More,
+                    Glyph = ChatTheme.IconUnarchive,
+                    Label = "Unarchive all",
+                    Run = () =>
+                    {
+                        ThreadHelper.ThrowIfNotOnUIThread();
+                        SaveSessionMeta(() => { foreach (var s in all.Where(x => x.Archived)) SessionMeta.SetArchived(s.Id, false); });
+                        ShowHistoryMenu(refresh: true);
+                    },
+                });
+            _sessions.Footer = "Hover a session to rename, fork, group or archive it";
             _sessions.Show(entries, _historyBtn, keepFilter: refresh);
+        }
+
+        /// <summary>Move a session to a group: pick one, type a new name to create it, rename or delete groups.</summary>
+        private void ShowGroupPicker(SessionInfo s)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            void Done(Action change)
+            {
+                ThreadHelper.ThrowIfNotOnUIThread();
+                SaveSessionMeta(change);
+                ShowHistoryMenu(refresh: false);
+            }
+            var entries = new List<ChatPopup.Entry>
+            {
+                new ChatPopup.Entry { Label = "No group", Checked = string.IsNullOrEmpty(s.Group), Run = () => Done(() => SessionMeta.SetGroup(s.Id, null)) },
+            };
+            foreach (var g in SessionMeta.Groups())
+            {
+                string group = g;
+                entries.Add(new ChatPopup.Entry
+                {
+                    Group = "Groups",
+                    Glyph = ChatTheme.IconFolder,
+                    Label = group,
+                    Checked = string.Equals(group, s.Group, StringComparison.OrdinalIgnoreCase),
+                    Run = () => Done(() => SessionMeta.SetGroup(s.Id, group)),
+                    Rename = name => Done(() => SessionMeta.RenameGroup(group, name)),
+                    Actions = new List<ChatPopup.EntryAction>
+                    {
+                        new ChatPopup.EntryAction { Glyph = ChatTheme.IconDelete, Tooltip = "Delete group (its sessions stay, ungrouped)", Run = () => Done(() => SessionMeta.RenameGroup(group, null)) },
+                    },
+                });
+            }
+            _manage.Footer = "Type a name to create a new group";
+            _manage.Show(entries, _historyBtn, fromFilter: text => new ChatPopup.Entry
+            {
+                Glyph = ChatTheme.IconAdd,
+                Label = $"Create group “{SessionMetaStore.Clean(text)}”",
+                Run = () => Done(() => SessionMeta.SetGroup(s.Id, text)),
+            });
         }
 
         /// <summary>
@@ -2196,6 +2293,7 @@ namespace ClaudeVS.ToolWindow
         public void Dispose()
         {
             if (LastActive == this) LastActive = null;
+            lock (Instances) Instances.Remove(this);
             _flushTimer.Stop();
             _routeTimer.Stop();
             _stallTimer.Stop();

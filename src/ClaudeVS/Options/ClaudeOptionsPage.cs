@@ -17,6 +17,9 @@ namespace ClaudeVS.Options
         [Category("CLI"), DisplayName("Permission mode"), Description("AcceptEdits: file edits are applied, shell commands ask. Plan: read-only planning. Note: in Plan mode the CLI answered with Sonnet even when Haiku was requested (Claude Code 2.1.316), so auto-routing to Haiku saves nothing there.")]
         public PermissionModeChoice PermissionMode { get; set; } = PermissionModeChoice.AcceptEdits;
 
+        [Category("Chat"), DisplayName("Archive inactive sessions after (days)"), Description("Sessions not used for this many days move to the Archived group of the sessions list (0 = never). Unarchiving one keeps it visible until it is inactive that long again.")]
+        public int AutoArchiveDays { get; set; } = 14;
+
         [Category("Chat"), DisplayName("Show message timestamps"), Description("A small time above each prompt and at the end of each answer's line, with a date line where the day changes.")]
         public bool ShowTimestamps { get; set; } = true;
 

@@ -33,6 +33,8 @@ namespace ClaudeVS.Core.Cli
         public ClaudeLaunchOptions Options { get; }
         public string SessionId => _parser?.SessionId ?? Options.ResumeSessionId;
         public bool IsRunning { get { lock (_gate) return _process != null && !_process.HasExited; } }
+        /// <summary>The claude process id while it runs (to tell our own sessions apart in the CLI's registry).</summary>
+        public int? ProcessId { get { lock (_gate) { try { return _process != null && !_process.HasExited ? _process.Id : (int?)null; } catch (InvalidOperationException) { return null; } } } }
         // Written by the stdout reader and process-exit threads, read from the UI thread.
         private volatile bool _isBusy;
         public bool IsBusy { get => _isBusy; private set => _isBusy = value; }

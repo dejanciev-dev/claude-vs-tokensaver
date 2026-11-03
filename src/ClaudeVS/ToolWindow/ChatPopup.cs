@@ -129,10 +129,17 @@ namespace ClaudeVS.ToolWindow
             set { _footer.Text = value; _footer.Visibility = string.IsNullOrEmpty(value) ? Visibility.Collapsed : Visibility.Visible; }
         }
 
+        /// <summary>
+        /// Optional: an extra first row built from the typed filter text (e.g. Create group "…"); null for none.
+        /// Cleared by every <see cref="Show"/> that does not pass one.
+        /// </summary>
+        private Func<string, Entry> _fromFilter;
+
         /// <summary>Opens the popup (or refreshes it if open). <paramref name="keepFilter"/> keeps the typed filter text.</summary>
-        public void Show(IEnumerable<Entry> entries, UIElement target = null, bool keepFilter = false)
+        public void Show(IEnumerable<Entry> entries, UIElement target = null, bool keepFilter = false, Func<string, Entry> fromFilter = null)
         {
             _entries = entries.ToList();
+            _fromFilter = fromFilter;
             if (target != null) _popup.PlacementTarget = target;
             if (!keepFilter) _filter.Text = "";
             Rebuild();
@@ -146,7 +153,8 @@ namespace ClaudeVS.ToolWindow
             _list.Items.Clear();
             string f = _filter.Text.Trim();
             string lastGroup = null;
-            foreach (var e in _entries.Where(e => Matches(e, f)))
+            var typed = f.Length > 0 ? _fromFilter?.Invoke(f) : null;
+            foreach (var e in (typed != null ? new[] { typed } : Enumerable.Empty<Entry>()).Concat(_entries.Where(e => Matches(e, f))))
             {
                 if (!string.IsNullOrEmpty(e.Group) && e.Group != lastGroup)
                 {
@@ -170,7 +178,7 @@ namespace ClaudeVS.ToolWindow
                 ChatTheme.Muted(none);
                 _list.Items.Add(new ListBoxItem { Content = none, IsEnabled = false, Focusable = false });
             }
-            SelectFirst(e => e.Checked);
+            SelectFirst(e => typed != null ? e == typed : e.Checked); // Enter on a typed name creates it
         }
 
         private static bool Matches(Entry e, string f) =>

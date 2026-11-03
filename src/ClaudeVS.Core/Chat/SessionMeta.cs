@@ -6,11 +6,14 @@ using Newtonsoft.Json;
 
 namespace ClaudeVS.Core.Chat
 {
-    /// <summary>What this extension remembers about a CLI session: the name you gave it and whether it is archived.</summary>
+    /// <summary>What this extension remembers about a CLI session: your name for it, archive state and group.</summary>
     public sealed class SessionMeta
     {
         public string Name { get; set; }
         public bool Archived { get; set; }
+        /// <summary>When you last unarchived it; auto-archiving counts inactivity from here at the earliest.</summary>
+        public DateTime? UnarchivedUtc { get; set; }
+        public string Group { get; set; }
     }
 
     /// <summary>
@@ -42,18 +45,64 @@ namespace ClaudeVS.Core.Chat
             Update(sessionId, m => m.Name = name);
         }
 
-        public void SetArchived(string sessionId, bool archived) => Update(sessionId, m => m.Archived = archived);
+        public void SetArchived(string sessionId, bool archived) => Update(sessionId, m =>
+        {
+            m.Archived = archived;
+            if (!archived) m.UnarchivedUtc = DateTime.UtcNow; // so auto-archive does not take it straight back
+        });
 
-        /// <summary>Applies names and archive flags to a session list (in place) and returns it.</summary>
-        public List<SessionInfo> Apply(List<SessionInfo> sessions)
+        /// <summary>Puts the session in a group, or (empty) takes it out.</summary>
+        public void SetGroup(string sessionId, string group)
+        {
+            group = Clean(group);
+            Update(sessionId, m => m.Group = group);
+        }
+
+        /// <summary>All group names in use, sorted.</summary>
+        public List<string> Groups()
+        {
+            lock (Gate) return Read().Values.Select(m => m.Group).Where(g => !string.IsNullOrEmpty(g)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(g => g, StringComparer.OrdinalIgnoreCase).ToList();
+        }
+
+        /// <summary>Renames a group for every session in it; an empty new name ungroups them (deletes the group).</summary>
+        public void RenameGroup(string oldName, string newName)
+        {
+            newName = Clean(newName);
+            lock (Gate)
+            {
+                var all = Read();
+                foreach (var kv in all.ToList())
+                    if (string.Equals(kv.Value.Group, oldName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        kv.Value.Group = newName;
+                        if (IsEmpty(kv.Value)) all.Remove(kv.Key);
+                    }
+                Write(all);
+            }
+        }
+
+        /// <summary>
+        /// Applies names, groups and archive flags to a session list (in place) and returns it. With
+        /// <paramref name="autoArchiveDays"/> &gt; 0, a session untouched for that many days counts as archived
+        /// (<see cref="SessionInfo.AutoArchived"/>), unless you unarchived it since; like VS Code (default 14 days).
+        /// </summary>
+        public List<SessionInfo> Apply(List<SessionInfo> sessions, int autoArchiveDays = 0, DateTime? nowUtc = null)
         {
             Dictionary<string, SessionMeta> all;
             lock (Gate) all = Read();
+            var now = nowUtc ?? DateTime.UtcNow;
             foreach (var s in sessions)
             {
-                if (s?.Id == null || !all.TryGetValue(s.Id, out var m)) continue;
-                if (!string.IsNullOrEmpty(m.Name)) s.Title = m.Name;
-                s.Archived = m.Archived;
+                if (s?.Id == null) continue;
+                all.TryGetValue(s.Id, out var m);
+                if (!string.IsNullOrEmpty(m?.Name)) s.Title = m.Name;
+                s.Group = m?.Group;
+                s.Archived = m?.Archived == true;
+                if (!s.Archived && autoArchiveDays > 0)
+                {
+                    var lastActive = m?.UnarchivedUtc > s.LastWriteUtc ? m.UnarchivedUtc.Value : s.LastWriteUtc;
+                    if ((now - lastActive).TotalDays > autoArchiveDays) s.Archived = s.AutoArchived = true;
+                }
             }
             return sessions;
         }
@@ -74,10 +123,12 @@ namespace ClaudeVS.Core.Chat
                 var all = Read();
                 if (!all.TryGetValue(sessionId, out var m)) all[sessionId] = m = new SessionMeta();
                 change(m);
-                if (string.IsNullOrEmpty(m.Name) && !m.Archived) all.Remove(sessionId); // nothing left to remember
+                if (IsEmpty(m)) all.Remove(sessionId); // nothing left to remember
                 Write(all);
             }
         }
+
+        private static bool IsEmpty(SessionMeta m) => string.IsNullOrEmpty(m.Name) && !m.Archived && string.IsNullOrEmpty(m.Group) && m.UnarchivedUtc == null;
 
         private Dictionary<string, SessionMeta> Read()
         {
