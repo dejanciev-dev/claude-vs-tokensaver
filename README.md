@@ -33,7 +33,7 @@ Pre-release (v0.1 → v0.2).
 
 | Layer | State |
 |---|---|
-| Core library (CLI session, parser, router, meter, context, Markdown, usage log) | ✅ 51 automated tests, plus regression tests built from real CLI output |
+| Core library (CLI session, parser, router, meter, context, Markdown, usage log) | ✅ 53 automated tests, plus regression tests built from real CLI output |
 | Core against the real `claude` CLI | ✅ Verified with Claude Code 2.1.316 via the opt-in live test: streaming, usage, cost, prompt cache, question and plan approval |
 | Visual Studio extension (UI) | ⚠️ Builds with zero warnings in CI, but not yet run in the experimental instance |
 
@@ -88,6 +88,7 @@ This extension attacks all three, and shows the numbers so you can see the effec
 | **Plan approval cards** | Plans render as Markdown with **Approve** or **Request changes** (with feedback). |
 | **Permission bar** | Other tool calls that need approval show **Allow** / **Deny**. |
 | **Sessions** | Resume an earlier conversation for the same solution (`claude --resume`); its earlier prompts, answers and tool calls are redrawn. Click the title to rename a session (also passed to the CLI as `--name`); hover a session in the list to rename or archive it. |
+| **Images** | Paste a screenshot (`Ctrl+V`) or pick image files with **+ → Upload** and they are sent with the prompt. Thumbnails show above the input box with their token cost (≈ width × height / 750); images are scaled to 1568 px first, since the API would scale larger ones down anyway. |
 | **Rewind** | Hover one of your messages → **Rewind** puts the files Claude changed since that prompt back the way they were. You see the list of files first; the conversation stays as it is. |
 | **Export** | `/` → *Export conversation…* saves the whole conversation (also what came before a resume or a compaction) as Markdown: your prompts, Claude's answers, and one line per tool call. |
 | **Bookmarks** | Star any answer to keep it. The bookmarks panel lists them per solution with search; clicking one scrolls to it, or shows the saved copy if it came from another conversation. |

@@ -691,6 +691,33 @@ namespace ClaudeVS.Core.Tests
             True(SessionHistory.SessionFile(@"C:\p", @"C:\src\Shop", "abc").EndsWith(@"C--src-Shop\abc.jsonl"), "session file path");
         }
 
+        // ---------- Images ----------
+        private static void Test_Images_TokensAndFit()
+        {
+            Eq(1600, ImageTokens.Estimate(1000, 1200)); // 1,200,000 / 750
+            Eq(0, ImageTokens.Estimate(0, 100));
+            Eq((1568, 882), ImageTokens.FitWithin(3840, 2160), "4K screenshot scaled to the API limit");
+            Eq((800, 600), ImageTokens.FitWithin(800, 600), "small image unchanged");
+            Eq((441, 1568), ImageTokens.FitWithin(1080, 3840), "tall image: long edge is the height");
+            Eq("image/jpeg", ImageTokens.MediaTypeFor(@"C:\a\Photo.JPEG"));
+            Eq(null, ImageTokens.MediaTypeFor("x.bmp"));
+        }
+
+        private static void Test_Images_InUserMessage()
+        {
+            var img = new PromptImage { MediaType = "image/png", Base64 = "iVBORw0KGgo=", Width = 10, Height = 10 };
+            var o = JObject.Parse(ClaudeSession.BuildUserMessage("What is this?", "id1", new[] { img, new PromptImage() }));
+            var content = (JArray)o.SelectToken("message.content");
+            Eq(2, content.Count, "empty image skipped; image first, then text");
+            Eq("image", (string)content[0]["type"]);
+            Eq("base64", (string)content[0].SelectToken("source.type"));
+            Eq("image/png", (string)content[0].SelectToken("source.media_type"));
+            Eq("iVBORw0KGgo=", (string)content[0].SelectToken("source.data"));
+            Eq("What is this?", (string)content[1]["text"]);
+            var alone = (JArray)JObject.Parse(ClaudeSession.BuildUserMessage("", null, new[] { img })).SelectToken("message.content");
+            Eq(1, alone.Count, "image without text: no empty text block");
+        }
+
         // ---------- Rewind ----------
         private static void Test_Rewind_UserMessageCarriesId()
         {

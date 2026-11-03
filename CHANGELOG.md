@@ -7,6 +7,10 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Images:** paste a screenshot or copied image files with `Ctrl+V`, or choose image files under + → Upload from
+  computer; they are sent with the prompt as image content (up to 10). Thumbnails with their estimated token cost
+  show above the input box and in your message. Images are scaled to 1568 px on the long edge and sent as PNG,
+  or as JPEG when the PNG would pass the 5 MB limit.
 - **Rewind:** hover one of your messages and click Rewind to put the files Claude changed since that prompt back
   the way they were. A dry run shows the files and line counts first. Uses Claude Code's file checkpoints
   (new option *File checkpoints (rewind)*, on by default). The conversation itself is not rewound.

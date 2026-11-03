@@ -108,19 +108,35 @@ namespace ClaudeVS.Core.Cli
         /// Sends a prompt with our own message id. The CLI keeps it as the message's uuid (verified with 2.1.317), so
         /// it can later be passed to <see cref="RewindFilesAsync"/>.
         /// </summary>
-        public async Task SendPromptAsync(string text, string messageId, CancellationToken ct = default)
+        public async Task SendPromptAsync(string text, string messageId, CancellationToken ct = default) =>
+            await SendPromptAsync(text, messageId, null, ct).ConfigureAwait(false);
+
+        /// <summary>Sends a prompt with images (base64 content blocks before the text, as the API recommends).</summary>
+        public async Task SendPromptAsync(string text, string messageId, IReadOnlyList<Context.PromptImage> images, CancellationToken ct = default)
         {
             bool started = EnsureRunning();
             if (started && !ThinkingEnabled) await SendThinkingAsync().ConfigureAwait(false); // there is no launch flag for it
             IsBusy = true;
-            await WriteLineAsync(BuildUserMessage(text, messageId)).ConfigureAwait(false);
+            await WriteLineAsync(BuildUserMessage(text, messageId, images)).ConfigureAwait(false);
         }
 
-        public static string BuildUserMessage(string text, string messageId)
+        public static string BuildUserMessage(string text, string messageId, IReadOnlyList<Context.PromptImage> images = null)
         {
             var o = new JObject { ["type"] = "user" };
             if (!string.IsNullOrEmpty(messageId)) o["uuid"] = messageId;
-            o["message"] = new JObject { ["role"] = "user", ["content"] = new JArray { new JObject { ["type"] = "text", ["text"] = text ?? "" } } };
+            var content = new JArray();
+            foreach (var img in images ?? Array.Empty<Context.PromptImage>())
+            {
+                if (string.IsNullOrEmpty(img?.Base64) || string.IsNullOrEmpty(img.MediaType)) continue;
+                content.Add(new JObject
+                {
+                    ["type"] = "image",
+                    ["source"] = new JObject { ["type"] = "base64", ["media_type"] = img.MediaType, ["data"] = img.Base64 },
+                });
+            }
+            if (!string.IsNullOrWhiteSpace(text) || content.Count == 0) // an image alone needs no (empty) text block
+                content.Add(new JObject { ["type"] = "text", ["text"] = text ?? "" });
+            o["message"] = new JObject { ["role"] = "user", ["content"] = content };
             return o.ToString(Formatting.None);
         }
 

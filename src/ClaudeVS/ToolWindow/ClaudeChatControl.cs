@@ -279,6 +279,7 @@ namespace ClaudeVS.ToolWindow
 
             var bottom = new StackPanel { Margin = new Thickness(10, 4, 10, 10) };
             bottom.Children.Add(_permission);
+            bottom.Children.Add(_imageStrip);
             bottom.Children.Add(_attachment);
             bottom.Children.Add(_route);
             bottom.Children.Add(_inputBox);
@@ -673,10 +674,76 @@ namespace ClaudeVS.ToolWindow
         private void UploadFiles()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            var dlg = new Microsoft.Win32.OpenFileDialog { Multiselect = true, Title = "Attach files for Claude (sent as references)", InitialDirectory = VsContext.GetSolutionDirectory() ?? "" };
+            var dlg = new Microsoft.Win32.OpenFileDialog { Multiselect = true, Title = "Attach files for Claude (images are sent with the prompt, other files as references)", InitialDirectory = VsContext.GetSolutionDirectory() ?? "" };
             if (dlg.ShowDialog() != true) return;
-            foreach (var f in dlg.FileNames) AttachFile(f);
+            var images = dlg.FileNames.Where(f => ImageTokens.MediaTypeFor(f) != null).ToList();
+            foreach (var f in dlg.FileNames.Except(images)) AttachFile(f);
+            if (images.Count > 0) AddImages(() => images.Select(ImageAttachments.FromFile).ToList());
         }
+
+        // ---------------- Images ----------------
+
+        private const int MaxImages = 10;
+        private readonly List<ImageAttachment> _images = new List<ImageAttachment>();
+        private readonly WrapPanel _imageStrip = new WrapPanel { Visibility = Visibility.Collapsed, Margin = new Thickness(0, 0, 0, 4) };
+
+        /// <summary>Ctrl+V / Shift+Insert with an image (or image files) on the clipboard attaches it instead of pasting text.</summary>
+        private bool TryPasteImage(KeyEventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            bool paste = (e.Key == Key.V && (Keyboard.Modifiers & ModifierKeys.Control) != 0) || (e.Key == Key.Insert && (Keyboard.Modifiers & ModifierKeys.Shift) != 0);
+            if (!paste || !ImageAttachments.ClipboardHasImage()) return false;
+            AddImages(ImageAttachments.FromClipboard);
+            return true;
+        }
+
+        /// <summary>Encodes images (scaled to the API's 1568 px limit) and shows them above the input box.</summary>
+        private void AddImages(Func<List<ImageAttachment>> load)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            List<ImageAttachment> added;
+            try { added = load(); }
+            catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException || ex is NotSupportedException || ex is InvalidOperationException || ex is System.Runtime.InteropServices.COMException || ex is System.IO.FileFormatException)
+            {
+                AppendError("[image] ", ex.Message);
+                return;
+            }
+            foreach (var img in added)
+            {
+                if (_images.Count >= MaxImages) { Append($"At most {MaxImages} images per prompt; the rest were not attached."); break; }
+                _images.Add(img);
+            }
+            RefreshImageStrip();
+            UpdateAttachments(focus: true);
+        }
+
+        private void RefreshImageStrip()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            _imageStrip.Children.Clear();
+            foreach (var img in _images)
+            {
+                var picture = new Image { Source = img.Preview, MaxHeight = 56, MaxWidth = 96, Stretch = Stretch.Uniform };
+                var remove = ChatTheme.IconButton(ChatTheme.IconClose, "Remove image");
+                remove.FontSize = 8;
+                remove.Width = 16;
+                remove.Height = 16;
+                remove.Background = ChatTheme.Pressed;
+                remove.HorizontalAlignment = HorizontalAlignment.Right;
+                remove.VerticalAlignment = VerticalAlignment.Top;
+                var item = img;
+                remove.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); _images.Remove(item); RefreshImageStrip(); UpdateAttachments(focus: true); };
+                var cell = new Grid { Margin = new Thickness(0, 0, 6, 0) };
+                cell.Children.Add(new Border { Child = picture, CornerRadius = new CornerRadius(4), BorderThickness = new Thickness(1), BorderBrush = ChatTheme.Hover });
+                cell.Children.Add(remove);
+                cell.ToolTip = $"{img.Image.Name} · {img.Image.Width}×{img.Image.Height} · ~{TokenMeter.Format(img.Image.EstimatedTokens)} tokens";
+                _imageStrip.Children.Add(cell);
+            }
+            _imageStrip.Visibility = _images.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private static string ImageSummary(IReadOnlyCollection<ImageAttachment> images) =>
+            $"🖼 {images.Count} image{(images.Count == 1 ? "" : "s")} (~{TokenMeter.Format(images.Sum(i => i.Image.EstimatedTokens))} tok)";
 
         /// <summary>Puts "@" at the caret, which opens the file picker.</summary>
         private void StartMention()
@@ -772,10 +839,12 @@ namespace ClaudeVS.ToolWindow
             _selection = null;
             _attachedFiles.Clear();
             _attachedErrors = null;
+            _images.Clear();
+            RefreshImageStrip();
             UpdateAttachments(focus: false);
         }
 
-        private bool HasAttachments => _selection != null || _attachedFiles.Count > 0 || _attachedErrors != null;
+        private bool HasAttachments => _selection != null || _attachedFiles.Count > 0 || _attachedErrors != null || _images.Count > 0;
 
         private void UpdateAttachments(bool focus)
         {
@@ -794,6 +863,7 @@ namespace ClaudeVS.ToolWindow
                 int max = Options?.MaxAttachedErrors ?? 20;
                 parts.Add(_attachedErrors.Count > max ? $"{max} of {_attachedErrors.Count} errors" : $"{_attachedErrors.Count} error(s)");
             }
+            if (_images.Count > 0) parts.Add(ImageSummary(_images));
             if (_browseWeb) parts.Add("🌐 web search allowed");
 
             if (parts.Count == 0) { _attachment.Visibility = Visibility.Collapsed; UpdateRouteHint(); return; }
@@ -809,6 +879,7 @@ namespace ClaudeVS.ToolWindow
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             if (_filePopup.IsOpen && HandleFilePickerKey(e.Key)) { e.Handled = true; return; }
+            if (TryPasteImage(e)) { e.Handled = true; return; }
             if (e.Key == Key.Tab && (Keyboard.Modifiers & ModifierKeys.Shift) != 0)
             {
                 e.Handled = true; // Shift+Tab cycles the mode, like VS Code
@@ -941,7 +1012,7 @@ namespace ClaudeVS.ToolWindow
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             string text = _prompt.Text.Trim();
-            if (text.Length == 0) return;
+            if (text.Length == 0 && _images.Count == 0) return; // an image alone is a valid prompt
             _promptHistory.Add(text);
             _prompt.Clear();
             SendText(text, routed: !text.StartsWith("/"));
@@ -959,9 +1030,10 @@ namespace ClaudeVS.ToolWindow
             int attachedLines = _selection == null ? 0 : _selection.EndLine - _selection.StartLine + 1;
             int attachedFiles = routed ? _attachedFiles.Count : 0;
             if (routed && _browseWeb) built.Text = "You may search the web if it helps with this request.\n\n" + built.Text;
+            var images = routed ? _images.ToList() : new List<ImageAttachment>(); // slash commands take no images
             ClearAttachments();
             SetEmptyState(false);
-            if (_title.Text == DefaultTitle && routed) SetTitle(userText);
+            if (_title.Text == DefaultTitle && routed) SetTitle(userText.Length > 0 ? userText : images.Count == 1 ? images[0].Image.Name : "Images");
             SetBusy(true);
 
             Fire(async () =>
@@ -1004,15 +1076,16 @@ namespace ClaudeVS.ToolWindow
                 if (built.InlinedLines > 0) meta.Add($"{built.InlinedLines} lines inlined");
                 if (built.AttachedErrors > 0) meta.Add($"{built.AttachedErrors} error(s)");
                 if (built.CharsAvoided > 0) meta.Add($"~{built.CharsAvoided / 4:N0} tokens of file content not sent");
+                if (images.Count > 0) meta.Add(ImageSummary(images));
                 // Our own id for the message, so its file changes can be rewound later (slash commands edit nothing).
                 string messageId = userText.StartsWith("/") ? null : Guid.NewGuid().ToString();
-                _view.AppendUserMessage(userText, string.Join("  ·  ", meta), RewindAction(messageId, userText));
+                _view.AppendUserMessage(userText, string.Join("  ·  ", meta), RewindAction(messageId, userText), images.Select(i => (ImageSource)i.Preview).ToList());
                 _turnPrompts.Enqueue((userText, _view.LastUserMessage));
 
                 _requestedFamilies.Enqueue(model == ModelChoice.Auto ? null : model.ToCli());
                 await _session.SetModelAsync(model);
                 await _session.SetEffortAsync(effort);
-                await _session.SendPromptAsync(built.Text, messageId);
+                await _session.SendPromptAsync(built.Text, messageId, images.Select(i => i.Image).ToList());
             });
         }
 

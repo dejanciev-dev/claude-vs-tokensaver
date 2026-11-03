@@ -151,7 +151,8 @@ needs file checkpointing ("File rewinding is not enabled").
   `CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING=1` turns it on; the CLI keeps the `uuid` we put on a user message,
   which `rewind_files` takes; a dry run lists files and line counts. Files only, the conversation is not rewound.
 - [ ] Voice input (Windows dictation)
-- [ ] Images: paste screenshots into the prompt (send as image content)
+- [x] Images: paste screenshots into the prompt (send as image content). Verified with 2.1.317: base64 `image`
+  blocks in a stream-json user message work. Scaled to 1568 px (the API's own limit), PNG or JPEG under 5 MB.
 - Not possible locally: the "Web" sessions tab (cloud sessions are not exposed to the local CLI)
 
 ---

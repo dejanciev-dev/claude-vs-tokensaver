@@ -102,7 +102,7 @@ namespace ClaudeVS.ToolWindow
         /// Your prompt as a rounded bubble, with an optional muted line (route, attachments) under it.
         /// <paramref name="onRewind"/> adds a Rewind button, shown while the mouse is over the bubble.
         /// </summary>
-        public void AppendUserMessage(string text, string meta, Action onRewind = null)
+        public void AppendUserMessage(string text, string meta, Action onRewind = null, IReadOnlyList<ImageSource> images = null)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             EndAnswer();
@@ -124,7 +124,20 @@ namespace ClaudeVS.ToolWindow
             ForwardMouseWheel(body);
 
             var stack = new StackPanel();
-            stack.Children.Add(body);
+            if (images != null && images.Count > 0)
+            {
+                var strip = new WrapPanel { Margin = new Thickness(0, 0, 0, string.IsNullOrEmpty(text) ? 0 : 6) };
+                foreach (var src in images)
+                    strip.Children.Add(new Border
+                    {
+                        Child = new Image { Source = src, MaxHeight = 72, MaxWidth = 128, Stretch = Stretch.Uniform },
+                        CornerRadius = new CornerRadius(4),
+                        Margin = new Thickness(0, 0, 6, 0),
+                        ClipToBounds = true,
+                    });
+                stack.Children.Add(strip);
+            }
+            if (!string.IsNullOrEmpty(text)) stack.Children.Add(body);
             if (!string.IsNullOrEmpty(meta))
             {
                 var m = new TextBlock { Text = meta, FontSize = 11, Margin = new Thickness(0, 4, 0, 0), TextWrapping = TextWrapping.Wrap };
