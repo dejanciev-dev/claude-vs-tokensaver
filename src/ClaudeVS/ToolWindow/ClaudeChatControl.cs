@@ -43,7 +43,9 @@ namespace ClaudeVS.ToolWindow
         private bool _thinking = true;
         private bool _browseWeb;
         private bool _busy;
-        private ChatPopup _menu, _palette, _sessions;
+        private ChatPopup _menu, _palette, _sessions, _contextPopup;
+        private ContextUsage _contextUsage;
+        private readonly Border _meterArea = new Border { Background = Brushes.Transparent, Cursor = Cursors.Hand, ToolTip = "Click for what fills the context window" };
         private readonly StackPanel _emptyState = new StackPanel { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(24) };
         private readonly ProgressBar _ctxBar = new ProgressBar { Height = 2, Minimum = 0, Maximum = 100, Margin = new Thickness(0, 5, 0, 0), BorderThickness = new Thickness(0), Background = ChatTheme.Subtle };
         private readonly TextBlock _meter = new TextBlock { FontSize = 11, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
@@ -151,6 +153,7 @@ namespace ClaudeVS.ToolWindow
             _menu = new ChatPopup(_inputBox, withFilter: false, width: 320);
             _palette = new ChatPopup(_inputBox, withFilter: true, filterPlaceholder: "Filter actions…", width: 380);
             _sessions = new ChatPopup(_historyBtn, withFilter: true, filterPlaceholder: "Search sessions…", width: 340, placement: PlacementMode.Bottom);
+            _contextPopup = new ChatPopup(_meterArea, withFilter: false, width: 360, placement: PlacementMode.Bottom);
             BuildEmptyState();
             UpdateChips();
             _adviceAction.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); if (_adviceCommand != null) SendText(_adviceCommand, routed: false); };
@@ -242,8 +245,12 @@ namespace ClaudeVS.ToolWindow
 
             var top = new StackPanel { Margin = new Thickness(10, 6, 6, 4) };
             top.Children.Add(header);
-            top.Children.Add(_meter);
-            top.Children.Add(_ctxBar);
+            var meterStack = new StackPanel();
+            meterStack.Children.Add(_meter);
+            meterStack.Children.Add(_ctxBar);
+            _meterArea.Child = meterStack; // meter line and bar together: click for the breakdown
+            _meterArea.MouseLeftButtonUp += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); ShowContextBreakdown(); };
+            top.Children.Add(_meterArea);
             top.Children.Add(adviceRow);
 
             // Input box: text (with placeholder) on top; footer: + / model … mode send.
@@ -393,6 +400,90 @@ namespace ClaudeVS.ToolWindow
             }).FileAndForget("ClaudeVS/ChatControl/Export");
         }
 
+        // ---------------- Context usage breakdown ----------------
+
+        /// <summary>
+        /// Asks the running CLI what fills the context (get_context_usage: no model call, nothing billed) and keeps
+        /// the answer for the breakdown popup; <paramref name="show"/> opens the popup when it arrives.
+        /// </summary>
+        private void RefreshContextUsage(bool show)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var s = _session;
+            if (s == null || !s.IsRunning) { if (show) ShowContextBreakdownNow(); return; }
+            Jtf.RunAsync(async () =>
+            {
+                ContextUsage u = null;
+                string error = null;
+                try { u = await s.GetContextUsageAsync(); }
+                catch (InvalidOperationException ex) { error = ex.Message; } // an older CLI without get_context_usage
+                await Jtf.SwitchToMainThreadAsync();
+                if (s != _session) return;
+                if (error != null) ClaudeOutputPane.WriteLine("Context usage not available: " + error);
+                if (u != null)
+                {
+                    _contextUsage = u;
+                    _meterArea.ToolTip = ContextTooltip(u);
+                }
+                if (show) ShowContextBreakdownNow();
+            }).FileAndForget("ClaudeVS/ChatControl/ContextUsage");
+        }
+
+        private void ShowContextBreakdown()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (_busy || _session?.IsRunning != true) ShowContextBreakdownNow(); // while answering, show the last one instead of waiting
+            else RefreshContextUsage(show: true);
+        }
+
+        /// <summary>The breakdown popup: used categories, what is in "Messages", reserved space, and tips.</summary>
+        private void ShowContextBreakdownNow()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var u = _contextUsage;
+            var entries = new List<ChatPopup.Entry>();
+            if (u == null)
+            {
+                entries.Add(new ChatPopup.Entry { Label = "No breakdown yet", Description = "It comes from the running Claude process, so it appears after the first answer.", Enabled = false });
+                _contextPopup.Footer = null;
+                _contextPopup.Show(entries, _meterArea);
+                return;
+            }
+
+            string Size(long tokens) => $"{TokenMeter.Format(tokens)} · {u.PercentOfWindow(tokens):0.#}%";
+            string window = $"In use: {TokenMeter.Format(u.TotalTokens)} of {TokenMeter.Format(u.MaxTokens)} ({u.Percentage:0}%)";
+            foreach (var c in u.Categories.Where(c => c.IsUsed && c.Tokens > 0).OrderByDescending(c => c.Tokens))
+                entries.Add(new ChatPopup.Entry { Group = window, Label = c.Name, Detail = Size(c.Tokens) });
+            foreach (var p in u.MessageParts())
+                entries.Add(new ChatPopup.Entry { Group = "Inside Messages", Label = p.Key, Detail = Size(p.Value) });
+            foreach (var c in u.Categories.Where(c => !c.IsUsed && c.Tokens > 0))
+                entries.Add(new ChatPopup.Entry
+                {
+                    Group = "Not in use",
+                    Label = c.Name,
+                    Description = c.Kind == "deferred" ? "Loaded only when Claude needs it" : c.Kind == "buffer" ? "Kept free so autocompact has room" : null,
+                    Detail = Size(c.Tokens),
+                });
+            foreach (var tip in u.Tips())
+            {
+                int dot = tip.IndexOf(". ", StringComparison.Ordinal); // first sentence as the label ("1.2k" has no space after its dot)
+                entries.Add(new ChatPopup.Entry { Group = "Tips", Glyph = ChatTheme.IconLightbulb, Label = dot < 0 ? tip : tip.Substring(0, dot), Description = dot < 0 ? null : tip.Substring(dot + 2) });
+            }
+            if (u.Percentage >= 30)
+                entries.Add(new ChatPopup.Entry { Group = "Tips", Glyph = ChatTheme.IconCompact, Label = "Compact now", Description = "Summarize the conversation to free space", Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); SendText("/compact", routed: false); } });
+
+            _contextPopup.Footer = (u.IsAutoCompactEnabled && u.AutoCompactThreshold > 0 ? $"Autocompact at {TokenMeter.Format(u.AutoCompactThreshold)} · " : "")
+                                 + (_busy ? "as of the last answer" : "from Claude Code, no model call");
+            _contextPopup.Show(entries, _meterArea);
+        }
+
+        private static string ContextTooltip(ContextUsage u)
+        {
+            var lines = u.Categories.Where(c => c.IsUsed && c.Tokens > 0).OrderByDescending(c => c.Tokens).Take(5)
+                .Select(c => $"{c.Name}: {TokenMeter.Format(c.Tokens)}");
+            return $"Context {TokenMeter.Format(u.TotalTokens)} of {TokenMeter.Format(u.MaxTokens)}\n" + string.Join("\n", lines) + "\nClick for the full breakdown";
+        }
+
         private void StartTitleEdit()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -497,6 +588,7 @@ namespace ClaudeVS.ToolWindow
                 new ChatPopup.Entry { Group = "Context", Label = "Attach selection", Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); AttachSelection(VsContext.GetSelection()); } },
                 new ChatPopup.Entry { Group = "Context", Label = "Attach Error List", Run = AttachErrorListFromIde },
                 new ChatPopup.Entry { Group = "Context", Label = "Clear conversation", Description = "Start a new session", Run = NewChat },
+                new ChatPopup.Entry { Group = "Context", Label = "Context usage", Description = "What fills the context window", Run = ShowContextBreakdown },
                 new ChatPopup.Entry { Group = "Context", Label = "Compact conversation", Description = "Summarize to shrink the context", Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); SendText("/compact", routed: false); } },
                 new ChatPopup.Entry { Group = "Context", Label = "Resume a session…", Run = ShowHistoryMenu },
                 new ChatPopup.Entry { Group = "Context", Label = "Rename session", Run = StartTitleEdit },
@@ -1187,6 +1279,7 @@ namespace ClaudeVS.ToolWindow
                         string used = _turnModel != null ? " · " + _turnModel : "";
                         CheckModelMismatch(_turnModel);
                         RecordUsage(ev, _turnModel);
+                        RefreshContextUsage(show: false); // control request, no model call
                         _turnModel = null;
                         var turn = _turnPrompts.Count > 0 ? _turnPrompts.Dequeue() : default;
                         string answer = _turnAnswer.ToString();
@@ -1555,6 +1648,8 @@ namespace ClaudeVS.ToolWindow
             _requestedFamilies.Clear();
             ClearTurns();
             _warnedModelMismatch = false;
+            _contextUsage = null;
+            _meterArea.ToolTip = "Click for what fills the context window";
             lock (_pendingText) _pendingText.Clear();
             _permission.Visibility = Visibility.Collapsed;
         }

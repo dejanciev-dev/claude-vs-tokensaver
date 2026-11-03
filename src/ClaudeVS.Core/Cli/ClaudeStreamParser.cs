@@ -44,7 +44,7 @@ namespace ClaudeVS.Core.Cli
                 case "result": return ParseResult(json);
                 case "control_request": return ParseControlRequest(json);
                 case "control_response":
-                    return new[] { new ClaudeEvent { Kind = ClaudeEventKind.ControlResponse, RequestId = (string)json.SelectToken("response.request_id"), IsError = (string)json.SelectToken("response.subtype") == "error", Text = (string)json.SelectToken("response.error") } };
+                    return new[] { new ClaudeEvent { Kind = ClaudeEventKind.ControlResponse, RequestId = (string)json.SelectToken("response.request_id"), IsError = (string)json.SelectToken("response.subtype") == "error", Text = (string)json.SelectToken("response.error"), Payload = json.SelectToken("response.response") as JObject } };
                 default: return None;
             }
         }

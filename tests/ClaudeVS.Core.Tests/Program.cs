@@ -690,6 +690,41 @@ namespace ClaudeVS.Core.Tests
             True(SessionHistory.SessionFile(@"C:\p", @"C:\src\Shop", "abc").EndsWith(@"C--src-Shop\abc.jsonl"), "session file path");
         }
 
+        // ---------- Context usage ----------
+        private static void Test_ContextUsage_FromRealResponse()
+        {
+            string line = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.317-context-usage.jsonl")).Trim();
+            var ev = new ClaudeStreamParser().Parse(line).Single();
+            Eq(ClaudeEventKind.ControlResponse, ev.Kind);
+            Eq("ctx1", ev.RequestId);
+            True(!ev.IsError && ev.Payload != null, "payload");
+            var u = ContextUsage.Parse(ev.Payload);
+            Eq(16798L, u.TotalTokens);
+            Eq(1_000_000L, u.MaxTokens);
+            Eq(967_000L, u.AutoCompactThreshold);
+            True(u.IsAutoCompactEnabled, "autocompact");
+            Eq(16798L, u.Categories.Where(c => c.IsUsed).Sum(c => c.Tokens), "used categories add up to the total");
+            Eq("deferred", u.Categories.Single(c => c.Id == "system_tools_deferred").Kind);
+            Eq(1, u.MemoryFileCount);
+            Eq(57L, u.MemoryFileTokens);
+            Eq(0, u.Tips().Count(), "a fresh session needs no tips");
+        }
+
+        private static void Test_ContextUsage_TipsAndDefaults()
+        {
+            var u = ContextUsage.Parse(JObject.Parse("{\"categories\":[{\"id\":\"messages\",\"name\":\"Messages\",\"tokens\":120000}],\"maxTokens\":200000," +
+                "\"autoCompactThreshold\":167000,\"isAutoCompactEnabled\":true,\"memoryFiles\":[{\"tokens\":6000}]," +
+                "\"messageBreakdown\":{\"toolResultTokens\":90000,\"userMessageTokens\":5000,\"assistantMessageTokens\":25000}}"));
+            Eq(120000L, u.TotalTokens, "total from categories when missing");
+            Eq(60.0, u.Percentage, "percentage computed when missing");
+            Eq("Tool results|Claude's messages|Your messages", string.Join("|", u.MessageParts().Select(p => p.Key)));
+            var tips = u.Tips().ToList();
+            Eq(2, tips.Count, string.Join(" / ", tips));
+            True(tips[0].StartsWith("Tool results are 90"), tips[0]);
+            True(tips[1].Contains("memory files"), tips[1]);
+            True(ContextUsage.Parse(new JObject()).Categories.Count == 0, "empty response parses");
+        }
+
         // ---------- Bookmarks ----------
         private static void Test_Bookmark_Title()
         {

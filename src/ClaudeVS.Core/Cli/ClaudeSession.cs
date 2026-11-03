@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using ClaudeVS.Core.Tokens;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -81,7 +83,7 @@ namespace ClaudeVS.Core.Cli
 
                 _parser = new ClaudeStreamParser();
                 var p = new Process { StartInfo = psi, EnableRaisingEvents = true };
-                p.Exited += (s, e) => { IsBusy = false; Exited?.Invoke(this, SafeExitCode(p)); };
+                p.Exited += (s, e) => { IsBusy = false; FailPending(); Exited?.Invoke(this, SafeExitCode(p)); };
                 p.Start();
                 // stdin must be UTF-8 without BOM. .NET Framework would otherwise use the console code page
                 // (netstandard2.0 has no StandardInputEncoding), so wrap the raw stream ourselves.
@@ -171,6 +173,52 @@ namespace ClaudeVS.Core.Cli
             return WriteLineAsync(payload.ToString(Formatting.None));
         }
 
+        // Control requests waiting for their control_response, by request id.
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<string, TaskCompletionSource<JObject>> _pending =
+            new System.Collections.Concurrent.ConcurrentDictionary<string, TaskCompletionSource<JObject>>();
+
+        /// <summary>
+        /// Sends a control request and waits for the CLI's answer. Null when the process is not running, exits, or
+        /// does not answer in time; throws <see cref="InvalidOperationException"/> when the CLI answers with an error.
+        /// </summary>
+        public async Task<JObject> RequestAsync(JObject request, TimeSpan timeout)
+        {
+            if (!IsRunning) return null;
+            string id = Guid.NewGuid().ToString("N");
+            var tcs = new TaskCompletionSource<JObject>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _pending[id] = tcs;
+            try
+            {
+                await WriteLineAsync(new JObject { ["type"] = "control_request", ["request_id"] = id, ["request"] = request }.ToString(Formatting.None)).ConfigureAwait(false);
+                var done = await Task.WhenAny(tcs.Task, Task.Delay(timeout)).ConfigureAwait(false);
+                return done == tcs.Task ? await tcs.Task.ConfigureAwait(false) : null;
+            }
+            finally { _pending.TryRemove(id, out _); }
+        }
+
+        /// <summary>
+        /// What fills the context window, by category (control request <c>get_context_usage</c>; no model call,
+        /// verified with 2.1.317). Null when the process is not running.
+        /// </summary>
+        public async Task<ContextUsage> GetContextUsageAsync()
+        {
+            var r = await RequestAsync(new JObject { ["subtype"] = "get_context_usage" }, TimeSpan.FromSeconds(10)).ConfigureAwait(false);
+            return r == null ? null : ContextUsage.Parse(r);
+        }
+
+        private void CompletePending(ClaudeEvent ev)
+        {
+            if (ev.RequestId == null || !_pending.TryRemove(ev.RequestId, out var tcs)) return;
+            if (ev.IsError) tcs.TrySetException(new InvalidOperationException(ev.Text ?? "The CLI rejected the request."));
+            else tcs.TrySetResult(ev.Payload ?? new JObject());
+        }
+
+        private void FailPending()
+        {
+            foreach (var id in _pending.Keys.ToList())
+                if (_pending.TryRemove(id, out var tcs)) tcs.TrySetResult(null);
+        }
+
         /// <summary>Starts the process if needed; true when it was (re)started just now.</summary>
         private bool EnsureRunning()
         {
@@ -211,6 +259,7 @@ namespace ClaudeVS.Core.Cli
                     foreach (var ev in events)
                     {
                         if (ev.Kind == ClaudeEventKind.TurnCompleted) IsBusy = false;
+                        if (ev.Kind == ClaudeEventKind.ControlResponse) CompletePending(ev);
                         Raise(ev);
                     }
                 }
