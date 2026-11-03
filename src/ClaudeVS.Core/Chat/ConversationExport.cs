@@ -47,6 +47,8 @@ namespace ClaudeVS.Core.Chat
                         break;
                     case TranscriptItemKind.Compacted:
                         sb.Append("\n---\n\n*Conversation compacted here; Claude continued from a summary of the part above.*\n");
+                        if (!string.IsNullOrWhiteSpace(item.Text))
+                            sb.Append("\n<details>\n<summary>Summary Claude continued from</summary>\n\n").Append(item.Text.Trim()).Append("\n\n</details>\n");
                         claudeOpen = false;
                         break;
                 }

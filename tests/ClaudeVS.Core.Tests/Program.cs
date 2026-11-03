@@ -728,6 +728,30 @@ namespace ClaudeVS.Core.Tests
             True(PromptSanitizer.IsLongPaste(new string('x', 801)) && !PromptSanitizer.IsLongPaste(new string('x', 800)), "800-char limit");
         }
 
+        private static void Test_Compaction_SummaryReadAndCleaned()
+        {
+            string summary = "This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion.\\n\\n<system-reminder>\\n<tools-used-before-summary>Read</tools-used-before-summary>\\n</system-reminder>\\n\\n## Summary\\n1. Fixed the login bug.";
+            string f = TempFile(
+                "{\"type\":\"user\",\"uuid\":\"u1\",\"message\":{\"content\":\"Fix login\"}}",
+                "{\"type\":\"system\",\"uuid\":\"s1\",\"subtype\":\"compact_boundary\",\"compactMetadata\":{\"trigger\":\"auto\",\"preTokens\":697718}}",
+                "{\"type\":\"user\",\"uuid\":\"u2\",\"isCompactSummary\":true,\"message\":{\"role\":\"user\",\"content\":\"" + summary + "\"}}",
+                "{\"type\":\"user\",\"uuid\":\"u3\",\"message\":{\"content\":\"Next\"}}");
+            try
+            {
+                var t = SessionTranscript.Read(f);
+                Eq("User|Compacted|User", string.Join("|", t.Items.Select(i => i.Kind)));
+                var c = t.Items[1];
+                Eq(697718L, c.PreTokens);
+                Eq("auto", c.Trigger);
+                Eq("## Summary\n1. Fixed the login bug.", c.Text, "preamble and system-reminder removed");
+                Eq(c.Text, SessionTranscript.ReadLastCompactSummary(f), "live read from the tail");
+                True(ConversationExport.ToMarkdown(t, "x", DateTime.Now).Contains("<summary>Summary Claude continued from</summary>\n\n## Summary"), "export includes the summary");
+                File.AppendAllText(f, "{\"type\":\"system\",\"uuid\":\"s2\",\"subtype\":\"compact_boundary\"}\n");
+                Eq(null, SessionTranscript.ReadLastCompactSummary(f), "a new compaction whose summary is not written yet");
+            }
+            finally { File.Delete(f); }
+        }
+
         // ---------- Images ----------
         private static void Test_Images_TokensAndFit()
         {

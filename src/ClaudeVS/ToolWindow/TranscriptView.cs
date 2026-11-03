@@ -231,6 +231,46 @@ namespace ClaudeVS.ToolWindow
             ScrollToEndIfNear();
         }
 
+        /// <summary>
+        /// "✂ Compacted · 698k tokens before" with a Show summary / Hide summary link that expands the summary Claude
+        /// continues from, as Markdown. Returns a setter for when the summary is only read later (a live session).
+        /// </summary>
+        public Action<string> AppendCompaction(long preTokens, string trigger, string summary)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            EndAnswer();
+            _plain = null;
+            var head = new Paragraph { FontSize = 12, Margin = new Thickness(0, 10, 0, 4) };
+            head.SetResourceReference(TextElement.ForegroundProperty, EnvironmentColors.SystemGrayTextBrushKey);
+            head.Inlines.Add(new Run("✂ Compacted" + (preTokens > 0 ? $" · {Core.Tokens.TokenMeter.Format(preTokens)} tokens before" : "") + (trigger == "auto" ? " · automatic" : "")));
+            _doc.Blocks.Add(head);
+
+            Section body = null;
+            string text = null;
+            Hyperlink link = null;
+            void SetSummary(string s)
+            {
+                ThreadHelper.ThrowIfNotOnUIThread();
+                if (string.IsNullOrWhiteSpace(s) || link != null || !_doc.Blocks.Contains(head)) return;
+                text = s;
+                link = new Hyperlink(new Run("Show summary")) { ToolTip = "What Claude kept from the conversation above" };
+                link.Click += (o, e) =>
+                {
+                    ThreadHelper.ThrowIfNotOnUIThread();
+                    if (body != null && _doc.Blocks.Contains(body)) { _doc.Blocks.Remove(body); ((Run)link.Inlines.FirstInline).Text = "Show summary"; return; }
+                    body = new Section { BorderBrush = QuoteBar, BorderThickness = new Thickness(3, 0, 0, 0), Padding = new Thickness(8, 0, 0, 0), Margin = new Thickness(0, 0, 0, 8), FontSize = 12.5 };
+                    foreach (var md in MarkdownParser.Parse(text)) body.Blocks.Add(Render(md));
+                    _doc.Blocks.InsertAfter(head, body);
+                    ((Run)link.Inlines.FirstInline).Text = "Hide summary";
+                };
+                head.Inlines.Add(new Run("  ·  "));
+                head.Inlines.Add(link);
+            }
+            SetSummary(summary);
+            ScrollToEndIfNear();
+            return SetSummary;
+        }
+
         /// <summary>A saved answer from another conversation: title, the prompt, then the answer as Markdown.</summary>
         public Block AppendBookmark(Core.Chat.Bookmark b)
         {

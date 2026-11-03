@@ -1327,7 +1327,7 @@ namespace ClaudeVS.ToolWindow
                         if (item.ResultChars >= 0) _view.CompleteTool(item.ToolUseId, item.ResultChars, item.IsError);
                         break;
                     case TranscriptItemKind.Compacted:
-                        Append("✂ Conversation compacted here; Claude sees a summary of what came before.");
+                        _view.AppendCompaction(item.PreTokens, item.Trigger, item.Text);
                         break;
                 }
             }
@@ -1436,7 +1436,8 @@ namespace ClaudeVS.ToolWindow
                         _permission.Visibility = Visibility.Visible;
                         break;
                     case ClaudeEventKind.Compacted:
-                        Append($"\n  ✂ Compacted ({TokenMeter.Format(ev.PreCompactTokens)} tokens before)\n");
+                        FlushText();
+                        LoadCompactSummary(_view.AppendCompaction(ev.PreCompactTokens, null, null));
                         break;
                     case ClaudeEventKind.TurnCompleted:
                         FlushText();
@@ -1663,6 +1664,30 @@ namespace ClaudeVS.ToolWindow
         }
 
         private string _lastAnswer;
+
+        /// <summary>
+        /// The CLI writes the compaction summary to its session file around the time it reports the compaction; read
+        /// it from there (a few tries, off the UI thread) and add it to the card.
+        /// </summary>
+        private void LoadCompactSummary(Action<string> setSummary)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var session = _session;
+            string id = session?.SessionId, dir = _sessionDir;
+            if (id == null || dir == null) return;
+            string file = SessionHistory.SessionFile(null, dir, id);
+            Jtf.RunAsync(async () =>
+            {
+                string summary = null;
+                for (int attempt = 0; attempt < 5 && summary == null; attempt++)
+                {
+                    if (attempt > 0) await System.Threading.Tasks.Task.Delay(1000);
+                    summary = await System.Threading.Tasks.Task.Run(() => SessionTranscript.ReadLastCompactSummary(file));
+                }
+                await Jtf.SwitchToMainThreadAsync();
+                if (summary != null && session == _session) setSummary(summary);
+            }).FileAndForget("ClaudeVS/ChatControl/CompactSummary");
+        }
 
         /// <summary>/ → Copy last response (like /copy in VS Code): Claude's last answer as Markdown.</summary>
         private void CopyLastAnswer()
