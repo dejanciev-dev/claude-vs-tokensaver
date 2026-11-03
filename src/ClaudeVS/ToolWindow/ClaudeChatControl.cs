@@ -158,10 +158,12 @@ namespace ClaudeVS.ToolWindow
             UpdateChips();
             _adviceAction.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); if (_adviceCommand != null) SendText(_adviceCommand, routed: false); };
             _prompt.PreviewKeyDown += OnPromptKeyDown;
+            DataObject.AddPastingHandler(_prompt, OnPromptPasting);
             _prompt.TextChanged += (s, e) =>
             {
                 ThreadHelper.ThrowIfNotOnUIThread();
                 _placeholder.Visibility = _prompt.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+                if (_prompt.Text.Length == 0) _pastes.Clear();
                 _routeTimer.Stop();
                 _routeTimer.Start();
                 UpdateFilePicker();
@@ -1016,18 +1018,45 @@ namespace ClaudeVS.ToolWindow
             if (text.Length == 0 && _images.Count == 0) return; // an image alone is a valid prompt
             _promptHistory.Add(text);
             _prompt.Clear();
-            SendText(text, routed: !text.StartsWith("/"));
+            // Long pastes are marked only in what Claude gets; your message shows the text as you typed it.
+            string forClaude = PromptSanitizer.MarkPastes(text, _pastes);
+            _pastes.Clear();
+            SendText(text, routed: !text.StartsWith("/"), forClaude);
         }
 
-        private void SendText(string userText, bool routed)
+        // Long texts pasted into the prompt box since it was last empty (marked when sent).
+        private readonly List<string> _pastes = new List<string>();
+
+        /// <summary>Removes invisible characters from pasted text (with a notice) and remembers long pastes.</summary>
+        private void OnPromptPasting(object sender, DataObjectPastingEventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (!(e.SourceDataObject.GetData(DataFormats.UnicodeText, true) is string pasted)) return;
+            string clean = PromptSanitizer.RemoveInvisible(pasted, out int removed);
+            if (removed > 0)
+            {
+                var data = new DataObject();
+                data.SetData(DataFormats.UnicodeText, clean);
+                e.DataObject = data;
+                Append($"Removed {removed} invisible character{(removed == 1 ? "" : "s")} (formatting or hidden tag characters) from the pasted text.");
+            }
+            if (PromptSanitizer.IsLongPaste(clean)) _pastes.Add(clean);
+        }
+
+        private void SendText(string userText, bool routed, string forClaude = null)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             var opts = Options;
             string dir = VsContext.GetSolutionDirectory() ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
+            // Typed text can carry invisible characters too (e.g. from autocomplete or IME); never send them.
+            forClaude = PromptSanitizer.RemoveInvisible(forClaude ?? userText, out int hidden);
+            userText = PromptSanitizer.RemoveInvisible(userText, out _);
+            if (hidden > 0) ClaudeOutputPane.WriteLine($"Removed {hidden} invisible characters from the prompt");
+
             var built = routed
-                ? new PromptContextBuilder(opts?.ToContextSettings()).Build(userText, dir, _selection, _attachedFiles, _attachedErrors)
-                : new BuiltPrompt { Text = userText };
+                ? new PromptContextBuilder(opts?.ToContextSettings()).Build(forClaude, dir, _selection, _attachedFiles, _attachedErrors)
+                : new BuiltPrompt { Text = forClaude };
             int attachedLines = _selection == null ? 0 : _selection.EndLine - _selection.StartLine + 1;
             int attachedFiles = routed ? _attachedFiles.Count : 0;
             if (routed && _browseWeb) built.Text = "You may search the web if it helps with this request.\n\n" + built.Text;
