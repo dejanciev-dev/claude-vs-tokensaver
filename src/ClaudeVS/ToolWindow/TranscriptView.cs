@@ -524,7 +524,7 @@ namespace ClaudeVS.ToolWindow
         /// <summary>
         /// A card for ExitPlanMode: the plan rendered as Markdown, then Approve, or Request changes with feedback.
         /// </summary>
-        public void AppendPlanCard(string planMarkdown, Action onApprove, Action<string> onRevise)
+        public void AppendPlanCard(string planMarkdown, Action onApprove, Action<string> onRevise, Action onOpenDocument = null)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             EndAnswer();
@@ -543,7 +543,13 @@ namespace ClaudeVS.ToolWindow
             approve.Margin = new Thickness(0);
             buttons.Children.Add(approve);
             buttons.Children.Add(revise);
-            panel.Children.Add(new TextBlock { Text = "Feedback (optional):", Opacity = 0.75, FontSize = 11 });
+            if (onOpenDocument != null)
+            {
+                var open = SmallButton("Open as document", "Open the plan in the editor. Type comments anywhere or delete lines; Request changes sends them to Claude.");
+                open.Click += (s, e) => onOpenDocument();
+                buttons.Children.Add(open);
+            }
+            panel.Children.Add(new TextBlock { Text = onOpenDocument != null ? "Feedback (optional; comments in the plan document are sent too):" : "Feedback (optional):", Opacity = 0.75, FontSize = 11, TextWrapping = TextWrapping.Wrap });
             panel.Children.Add(feedback);
             panel.Children.Add(buttons);
             approve.Click += (s, e) => { panel.IsEnabled = false; approve.Content = "Approved"; onApprove(); };

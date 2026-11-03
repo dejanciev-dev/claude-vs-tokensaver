@@ -853,6 +853,23 @@ namespace ClaudeVS.Core.Tests
             finally { Directory.Delete(dir, true); }
         }
 
+        private static void Test_PlanComments_FromEdits()
+        {
+            string plan = "# Plan\n\n## Step 1\nAdd the API.\n\n## Step 2\nWrite tests.\nUpdate docs.";
+            string edited = "# Plan\nKeep it small please.\n\n## Step 1\n  Add the API.\nUse minimal APIs, not controllers.\n\n## Step 2\nWrite tests.";
+            var c = PlanComments.Extract(plan, edited);
+            Eq(3, c.Count, string.Join(" | ", c.Select(x => x.After + ">" + (x.Text ?? "-" + x.Removed))));
+            Eq("# Plan", c[0].After);
+            Eq("Keep it small please.", c[0].Text);
+            Eq("Add the API.", c[1].After, "re-indenting a line is not a change");
+            Eq("Use minimal APIs, not controllers.", c[1].Text);
+            Eq("Update docs.", c[2].Removed);
+            Eq("Comments on the plan (from the plan document):\n- After \"# Plan\": Keep it small please.\n- After \"Add the API.\": Use minimal APIs, not controllers.\n- Remove: \"Update docs.\"",
+               PlanComments.ToFeedback(c));
+            Eq(0, PlanComments.Extract(plan, plan.Replace("\n", "\r\n")).Count, "line endings alone are no change");
+            Eq(null, PlanComments.ToFeedback(new List<PlanComments.Comment>()));
+        }
+
         // ---------- Skills and MCP ----------
         private static void Test_SkillsAndMcp_FromRealResponses()
         {

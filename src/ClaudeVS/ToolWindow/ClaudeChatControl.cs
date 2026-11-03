@@ -1828,12 +1828,51 @@ namespace ClaudeVS.ToolWindow
 
             if (ev.ToolName == ExitPlanModeTool.Name)
             {
-                _view.AppendPlanCard(ExitPlanModeTool.Plan(ev.ToolInput),
+                string plan = ExitPlanModeTool.Plan(ev.ToolInput);
+                string docPath = null; // the plan as a document, once opened
+                _view.AppendPlanCard(plan,
                     () => { ThreadHelper.ThrowIfNotOnUIThread(); Respond(true, null, null, "✔ plan approved — Claude starts the work"); },
-                    feedback => { ThreadHelper.ThrowIfNotOnUIThread(); Respond(false, null, ExitPlanModeTool.RevisionMessage(feedback), "✎ changes requested"); });
+                    feedback =>
+                    {
+                        ThreadHelper.ThrowIfNotOnUIThread();
+                        // Comments typed into the plan document (added or deleted lines) go along with the feedback box.
+                        string comments = null;
+                        if (docPath != null)
+                        {
+                            VsContext.SaveIfOpen(docPath);
+                            try { comments = PlanComments.ToFeedback(PlanComments.Extract(plan, System.IO.File.ReadAllText(docPath))); }
+                            catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException) { AppendError("[plan] ", ex.Message); }
+                        }
+                        string all = string.Join("\n\n", new[] { feedback?.Trim(), comments }.Where(x => !string.IsNullOrEmpty(x)));
+                        Respond(false, null, ExitPlanModeTool.RevisionMessage(all), comments != null ? "✎ changes requested, with your comments from the plan document" : "✎ changes requested");
+                    },
+                    () =>
+                    {
+                        ThreadHelper.ThrowIfNotOnUIThread();
+                        try
+                        {
+                            if (docPath == null)
+                            {
+                                docPath = PlanDocumentPath(plan);
+                                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(docPath));
+                                System.IO.File.WriteAllText(docPath, plan, new UTF8Encoding(false));
+                            }
+                            VsContext.OpenFile(docPath);
+                        }
+                        catch (Exception ex) { AppendError("[plan] ", ex.Message); }
+                    });
                 return true;
             }
             return false;
+        }
+
+        /// <summary>%LocalAppData%\claude-vs-tokensaver\plans\&lt;plan title&gt;-&lt;time&gt;.md (the plan's first heading names it).</summary>
+        private static string PlanDocumentPath(string plan)
+        {
+            string heading = (plan ?? "").Replace("\r", "").Split('\n').Select(l => l.Trim()).FirstOrDefault(l => l.StartsWith("#"))?.TrimStart('#').Trim();
+            string name = ConversationExport.FileName(string.IsNullOrEmpty(heading) ? "Plan" : heading);
+            name = System.IO.Path.GetFileNameWithoutExtension(name) + "-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".md";
+            return System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "claude-vs-tokensaver", "plans", name);
         }
 
         private void AnswerPermission(bool allow)

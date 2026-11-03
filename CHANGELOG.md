@@ -7,6 +7,9 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Plan as a document:** the plan card's **Open as document** opens the plan in the editor (Markdown preview
+  included). Type comments anywhere or delete lines; **Request changes** sends them to Claude, each comment
+  quoted with the plan line it follows, together with the feedback box.
 - **Sessions list:** groups (hover → Move to group…, type a name to create one; rename or delete groups there),
   a ring and "open in VS Code · working" for sessions open elsewhere (read from Claude Code's running-session
   registry), an All / Open / Closed filter, Unarchive all, and automatic archiving of sessions unused for 14 days
