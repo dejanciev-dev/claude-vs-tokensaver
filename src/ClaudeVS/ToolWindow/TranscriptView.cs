@@ -25,14 +25,13 @@ namespace ClaudeVS.ToolWindow
         private static readonly FontFamily Mono = new FontFamily("Cascadia Mono, Consolas");
         // Translucent overlays work on light and dark themes alike.
         private static readonly Brush CodeBackground = Freeze(new SolidColorBrush(Color.FromArgb(0x22, 0x80, 0x80, 0x80)));
-        private static readonly Brush InlineCodeBackground = Freeze(new SolidColorBrush(Color.FromArgb(0x30, 0x80, 0x80, 0x80)));
         private static readonly Brush QuoteBar = Freeze(new SolidColorBrush(Color.FromArgb(0x80, 0x80, 0x80, 0x80)));
 
         private readonly FlowDocument _doc;
         private readonly StringBuilder _answer = new StringBuilder();
         private readonly List<Block> _answerBlocks = new List<Block>();
         private Paragraph _plain;
-        private readonly Dictionary<string, TextBlock> _tools = new Dictionary<string, TextBlock>();
+        private readonly Dictionary<string, (TextBlock Header, Run Dot)> _tools = new Dictionary<string, (TextBlock, Run)>();
         private ScrollViewer _scroll;
 
         /// <summary>
@@ -221,8 +220,14 @@ namespace ClaudeVS.ToolWindow
                 AddDayLine(local);
                 text = text.Length == 0 ? local.ToString("t") : text + " · " + local.ToString("t");
             }
-            var label = new TextBlock { Text = text, FontSize = 11.5, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
+            var label = new TextBlock { FontSize = 11.5, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
             ChatTheme.Muted(label);
+            if (text.StartsWith("✓", StringComparison.Ordinal))
+            {
+                label.Inlines.Add(new Run("✓") { Foreground = ChatTheme.Accents(Box).Success, FontWeight = FontWeights.SemiBold });
+                label.Inlines.Add(new Run(text.Substring(1)));
+            }
+            else label.Text = text;
             var row = new DockPanel();
             if (toggleBookmark != null)
             {
@@ -286,7 +291,7 @@ namespace ClaudeVS.ToolWindow
                 ThreadHelper.ThrowIfNotOnUIThread();
                 if (string.IsNullOrWhiteSpace(s) || link != null || !_doc.Blocks.Contains(head)) return;
                 text = s;
-                link = new Hyperlink(new Run("Show summary")) { ToolTip = "What Claude kept from the conversation above" };
+                link = new Hyperlink(new Run("Show summary")) { ToolTip = "What Claude kept from the conversation above", Foreground = ChatTheme.Accents(Box).Link };
                 link.Click += (o, e) =>
                 {
                     ThreadHelper.ThrowIfNotOnUIThread();
@@ -394,8 +399,7 @@ namespace ClaudeVS.ToolWindow
             EndAnswer();
             _plain = null;
 
-            var header = new TextBlock { Text = "⚙  " + description, FontSize = 12, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
-            ChatTheme.Muted(header);
+            var header = ToolHeader(description, ChatTheme.Accents(Box), out Run dot);
             object headerContent = header;
             if (onDiff != null)
             {
@@ -432,8 +436,37 @@ namespace ClaudeVS.ToolWindow
                 if (!string.IsNullOrEmpty(toolUseId)) _toolGroupOf[toolUseId] = group;
             }
             else _doc.Blocks.Add(new BlockUIContainer(expander) { Margin = new Thickness(0) });
-            if (!string.IsNullOrEmpty(toolUseId)) _tools[toolUseId] = header;
+            if (!string.IsNullOrEmpty(toolUseId)) _tools[toolUseId] = (header, dot);
             ScrollToEndIfNear();
+        }
+
+        private static readonly HashSet<string> ShellTools = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Bash", "PowerShell", "BashOutput", "Monitor" };
+        private static readonly HashSet<string> FileTools = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Read", "Write", "Edit", "MultiEdit", "NotebookEdit", "Glob", "Grep", "LS" };
+
+        /// <summary>
+        /// "● Bash  cd src &amp;&amp; dotnet test": a status dot (gray until the result arrives, then green or red), the
+        /// tool name in bold, then its argument: colored monospace for shell commands, path-colored for file tools.
+        /// </summary>
+        private static TextBlock ToolHeader(string description, ChatTheme.AccentSet a, out Run dot)
+        {
+            var tb = new TextBlock { FontSize = 12, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center, ToolTip = description };
+            ChatTheme.Muted(tb);
+            dot = new Run("●  ") { FontSize = 11 };
+            dot.SetResourceReference(TextElement.ForegroundProperty, EnvironmentColors.SystemGrayTextBrushKey);
+            tb.Inlines.Add(dot);
+            string d = description ?? "";
+            int colon = d.IndexOf(": ", StringComparison.Ordinal);
+            string name = colon > 0 && colon < 40 ? d.Substring(0, colon) : null;
+            if (name == null) { tb.Inlines.Add(new Run(d)); return tb; }
+            var n = new Run(name) { FontWeight = FontWeights.SemiBold };
+            n.SetResourceReference(TextElement.ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
+            tb.Inlines.Add(n);
+            tb.Inlines.Add(new Run("  "));
+            var arg = new Run(d.Substring(colon + 2));
+            if (ShellTools.Contains(name)) { arg.FontFamily = Mono; arg.FontSize = 11.5; arg.Foreground = a.Code; }
+            else if (FileTools.Contains(name)) arg.Foreground = a.Path;
+            tb.Inlines.Add(arg);
+            return tb;
         }
 
         /// <summary>
@@ -448,7 +481,7 @@ namespace ClaudeVS.ToolWindow
             _plain = null;
 
             var panel = new StackPanel();
-            panel.Children.Add(new TextBlock { Text = "❓ Claude has a question", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 4) });
+            panel.Children.Add(new TextBlock { Text = "❓ Claude has a question", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 4), Foreground = ChatTheme.Accents(Box).Brand });
             var readers = new List<Func<KeyValuePair<string, IReadOnlyList<string>>>>();
             string group = "q" + Guid.NewGuid().ToString("N");
 
@@ -537,7 +570,7 @@ namespace ClaudeVS.ToolWindow
             EndAnswer();
             _plain = null;
 
-            _doc.Blocks.Add(new Paragraph(new Run("📋 Plan for approval")) { FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 8, 0, 2) });
+            _doc.Blocks.Add(new Paragraph(new Run("📋 Plan for approval")) { FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 8, 0, 2), Foreground = ChatTheme.Accents(Box).Brand });
             var section = new Section { BorderBrush = QuoteBar, BorderThickness = new Thickness(3, 0, 0, 0), Padding = new Thickness(8, 0, 0, 0) };
             foreach (var md in MarkdownParser.Parse(planMarkdown)) section.Blocks.Add(Render(md));
             _doc.Blocks.Add(section);
@@ -591,7 +624,7 @@ namespace ClaudeVS.ToolWindow
         private ToolGroup CurrentToolGroup()
         {
             if (_toolGroup != null && _doc.Blocks.LastBlock == _toolGroup.Block) return _toolGroup;
-            _toolGroup = new ToolGroup();
+            _toolGroup = new ToolGroup(ChatTheme.Accents(Box));
             _doc.Blocks.Add(_toolGroup.Block);
             return _toolGroup;
         }
@@ -603,13 +636,15 @@ namespace ClaudeVS.ToolWindow
         private sealed class ToolGroup
         {
             private readonly TextBlock _header = new TextBlock { FontSize = 12, TextTrimming = TextTrimming.CharacterEllipsis };
+            private readonly ChatTheme.AccentSet _accents;
             private readonly List<string> _names = new List<string>();
             private readonly Dictionary<string, string> _running = new Dictionary<string, string>();
             private long _tokens;
             private int _failed;
 
-            public ToolGroup()
+            public ToolGroup(ChatTheme.AccentSet accents)
             {
+                _accents = accents;
                 ChatTheme.Muted(_header);
                 Rows = new StackPanel { Margin = new Thickness(12, 0, 0, 0) };
                 var expander = new Expander { Header = _header, Content = Rows, IsExpanded = false, Margin = new Thickness(0, 1, 0, 1) };
@@ -640,12 +675,14 @@ namespace ClaudeVS.ToolWindow
             private void Update()
             {
                 var counts = _names.GroupBy(n => n).Select(g => g.Count() > 1 ? $"{g.Key} ×{g.Count()}" : g.Key);
-                string text = $"⚙  {_names.Count} tool call{(_names.Count == 1 ? "" : "s")} · {string.Join(", ", counts)}";
+                string text = $"{_names.Count} tool call{(_names.Count == 1 ? "" : "s")} · {string.Join(", ", counts)}";
                 if (_tokens > 0) text += $" · ~{Core.Tokens.TokenMeter.Format(_tokens)} tok";
-                if (_failed > 0) text += $" · {_failed} failed";
-                if (_running.Count > 0) text += " · running " + _running.Values.Last();
-                _header.Text = text;
-                _header.ToolTip = text;
+                _header.Inlines.Clear();
+                _header.Inlines.Add(new Run("●  ") { FontSize = 11, Foreground = _running.Count > 0 ? _accents.Running : _failed > 0 ? _accents.Failure : _accents.Success });
+                _header.Inlines.Add(new Run(text));
+                if (_failed > 0) _header.Inlines.Add(new Run($" · {_failed} failed") { Foreground = _accents.Failure });
+                if (_running.Count > 0) _header.Inlines.Add(new Run(" · running " + _running.Values.Last()) { Foreground = _accents.Running });
+                _header.ToolTip = text + (_failed > 0 ? $" · {_failed} failed" : "");
                 _header.FontWeight = _tokens >= 5000 ? FontWeights.SemiBold : FontWeights.Normal;
             }
         }
@@ -659,10 +696,13 @@ namespace ClaudeVS.ToolWindow
                 _toolGroupOf.Remove(toolUseId);
                 group.Complete(toolUseId, resultChars, isError);
             }
-            if (string.IsNullOrEmpty(toolUseId) || !_tools.TryGetValue(toolUseId, out TextBlock header)) return;
+            if (string.IsNullOrEmpty(toolUseId) || !_tools.TryGetValue(toolUseId, out var row)) return;
             _tools.Remove(toolUseId);
-            string size = resultChars > 0 ? $" · ~{Core.Tokens.TokenMeter.Format(resultChars / 4)} tok" : "";
-            header.Text += isError ? size + " · failed" : size;
+            var a = ChatTheme.Accents(Box);
+            var header = row.Header;
+            row.Dot.Foreground = isError ? a.Failure : a.Success;
+            if (resultChars > 0) header.Inlines.Add(new Run($" · ~{Core.Tokens.TokenMeter.Format(resultChars / 4)} tok"));
+            if (isError) header.Inlines.Add(new Run(" · failed") { Foreground = a.Failure });
             // Large results are what fill the context window; make them stand out.
             if (resultChars / 4 >= 5000) header.FontWeight = FontWeights.SemiBold;
         }
@@ -715,13 +755,14 @@ namespace ClaudeVS.ToolWindow
                 case MdBlockKind.Heading:
                 {
                     var p = new Paragraph { FontWeight = FontWeights.SemiBold, FontSize = b.Level == 1 ? 17 : b.Level == 2 ? 15 : 13.5, Margin = new Thickness(0, 8, 0, 4) };
+                    if (b.Level <= 2) p.Foreground = ChatTheme.Accents(Box).Brand;
                     AddInlines(p.Inlines, b.Inlines);
                     return p;
                 }
                 case MdBlockKind.ListItem:
                 {
                     var p = new Paragraph { Margin = new Thickness(12 + 16 * b.Indent, 1, 0, 1), TextIndent = -12 };
-                    p.Inlines.Add(new Run(b.Number.HasValue ? b.Number + ". " : "• "));
+                    p.Inlines.Add(new Run(b.Number.HasValue ? b.Number + ". " : "• ") { Foreground = ChatTheme.Accents(Box).Brand });
                     AddInlines(p.Inlines, b.Inlines);
                     return p;
                 }
@@ -744,14 +785,15 @@ namespace ClaudeVS.ToolWindow
             }
         }
 
-        private static void AddInlines(InlineCollection target, IEnumerable<MdInline> inlines)
+        private void AddInlines(InlineCollection target, IEnumerable<MdInline> inlines)
         {
+            var a = ChatTheme.Accents(Box);
             foreach (var i in inlines)
             {
                 switch (i.Kind)
                 {
                     case MdInlineKind.Code:
-                        target.Add(new Run(i.Text) { FontFamily = Mono, Background = InlineCodeBackground });
+                        target.Add(new Run(i.Text) { FontFamily = Mono, Foreground = a.Code, Background = a.CodeBack });
                         break;
                     case MdInlineKind.Bold:
                         target.Add(new Bold(new Run(i.Text)));
@@ -760,7 +802,7 @@ namespace ClaudeVS.ToolWindow
                         target.Add(new Italic(new Run(i.Text)));
                         break;
                     case MdInlineKind.Link:
-                        target.Add(MakeLink(i));
+                        target.Add(MakeLink(i, a.Link));
                         break;
                     default:
                         AddTextWithBreaks(target, i.Text);
@@ -779,11 +821,11 @@ namespace ClaudeVS.ToolWindow
             }
         }
 
-        private static Inline MakeLink(MdInline i)
+        private static Inline MakeLink(MdInline i, Brush color)
         {
             if (!Uri.TryCreate(i.Url, UriKind.Absolute, out Uri uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
                 return new Run(i.Text); // only open web links; anything else is shown as text
-            var link = new Hyperlink(new Run(i.Text)) { NavigateUri = uri, ToolTip = uri.ToString() };
+            var link = new Hyperlink(new Run(i.Text)) { NavigateUri = uri, ToolTip = uri.ToString(), Foreground = color };
             link.RequestNavigate += (s, e) =>
             {
                 try { Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true }); } catch { }
