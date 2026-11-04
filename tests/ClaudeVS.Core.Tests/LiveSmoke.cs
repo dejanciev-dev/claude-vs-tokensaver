@@ -18,6 +18,49 @@ namespace ClaudeVS.Core.Tests
     internal static class LiveSmoke
     {
         /// <summary>
+        /// `-- --live-haiku-router`: warms up the trimmed Haiku router, routes four prompts, and compares each with the
+        /// local rules. Checks the answers are usable, warm routes take under 4 s, and the cost stays tiny (~$0.001).
+        /// </summary>
+        public static int RunHaikuRouter()
+        {
+            string exe = ClaudeCliLocator.Resolve("");
+            if (exe == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }
+            var failures = new List<string>();
+            void Check(bool ok, string what) { Console.WriteLine((ok ? "  ok   " : "  FAIL ") + what); if (!ok) failures.Add(what); }
+            var local = new Tokens.ModelRouter();
+            using (var router = new Tokens.HaikuRouter(""))
+            {
+                var t0 = DateTime.UtcNow;
+                router.WarmUp();
+                Thread.Sleep(TimeSpan.FromSeconds(18)); // start-up happens while idle
+                string[] prompts =
+                {
+                    "rename the variable x to count in Program.cs",
+                    "design a plugin architecture for our billing service across 6 projects and plan the migration of the old code",
+                    "the login page throws a NullReferenceException since the last merge, find and fix it",
+                    "write a commit message for these changes",
+                };
+                foreach (var p in prompts)
+                {
+                    var req = new Tokens.RouteRequest { Prompt = p };
+                    var sw = System.Diagnostics.Stopwatch.StartNew();
+                    var d = router.RouteAsync(req, TimeSpan.FromSeconds(15)).Result;
+                    sw.Stop();
+                    var l = local.Route(req);
+                    Console.WriteLine($"  {sw.ElapsedMilliseconds,5} ms  haiku → {(d == null ? "none" : d.Model.ToCli() + "/" + d.Effort.ToCli())}  local → {l.Model.ToCli()}/{l.Effort.ToCli()}  · {p}");
+                    if (d != null) Console.WriteLine("         " + d.Reason);
+                    Check(d != null, "usable answer");
+                    Check(sw.ElapsedMilliseconds < 4000, "answered in under 4 s (warm)");
+                }
+                Console.WriteLine($"  {router.Routes} routes, total ${router.TotalCostUsd:0.00000} (last ${router.LastRouteCostUsd:0.00000}), {(DateTime.UtcNow - t0).TotalSeconds:0} s including warm-up");
+                Check(router.Routes == prompts.Length, "every route counted");
+                Check(router.TotalCostUsd > 0 && router.TotalCostUsd < 0.01, "cost under a cent for all routes");
+            }
+            Console.WriteLine(failures.Count == 0 ? "PASS live haiku router" : "FAIL live haiku router");
+            return failures.Count == 0 ? 0 : 1;
+        }
+
+        /// <summary>
         /// `-- --live-session`: the meter against the real CLI. Haiku turn → context % vs get_context_usage; switch to
         /// Sonnet/medium mid-session (set_model, apply_flag_settings) → which model answered; relaunch with --resume →
         /// session cost keeps adding up; /compact → context drops. About $0.05–0.10 (one Sonnet turn writes the cache).

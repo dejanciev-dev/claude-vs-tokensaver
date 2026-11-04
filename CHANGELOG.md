@@ -7,6 +7,12 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Route with Haiku** (Tools → Options → Claude Code → Token saving, off by default): with the model on Auto,
+  a small Haiku call picks model and effort for each prompt instead of the local keyword rules, with a short
+  reason (about $0.0001 and 1–2 s per prompt). It runs in a separate Claude Code process trimmed to a classifier
+  (no tools, no project files, ~1.3k tokens), started when the chat opens. Without an answer in 4 s the local
+  rules decide. The usage log keeps both decisions; the savings report shows how often they agree and what the
+  router cost (included in the actual cost).
 - **Screen readers:** Narrator, NVDA and JAWS announce when Claude finishes (with the start of the answer),
   asks for permission, has a question or a plan, wants an edit reviewed, stops responding, or hits a usage
   limit (option *Screen reader announcements*, on). **Focus Last Message** (Tools → Claude Code, `Ctrl+Alt+K, M`,

@@ -19,6 +19,7 @@ namespace ClaudeVS.Core.Tests
             if (args.Length >= 4 && args[0] == "--live-ask")
                 return LiveSmoke.RunInteractive(args[1], (PermissionModeChoice)Enum.Parse(typeof(PermissionModeChoice), args[2], true), args[3]);
             if (args.Length > 0 && args[0] == "--live-mcp") return LiveSmoke.RunMcp();
+            if (args.Length > 0 && args[0] == "--live-haiku-router") return LiveSmoke.RunHaikuRouter();
             if (args.Length > 0 && args[0] == "--live-session") return LiveSmoke.RunSession();
             if (args.Length > 0 && args[0] == "--live-setup") return LiveSmoke.RunSetup(args.Length > 1 ? args[1] : null);
             if (args.Length > 0 && args[0] == "--live-dialogs") return LiveSmoke.RunDialogs();
@@ -58,6 +59,59 @@ namespace ClaudeVS.Core.Tests
         {
             string a = ClaudeArgsBuilder.Build(new ClaudeLaunchOptions { Model = ModelChoice.Haiku, Effort = EffortChoice.Low, ResumeSessionId = "abc", AppendSystemPrompt = "Be brief." });
             True(a.Contains("--model haiku") && a.Contains("--effort low") && a.Contains("--resume abc") && a.Contains("--append-system-prompt \"Be brief.\""), a);
+        }
+
+        // ---------- Haiku router ----------
+        private static void Test_HaikuRouter_ParseAndRequest()
+        {
+            var d = HaikuRouter.Parse("{\"model\":\"sonnet\",\"effort\":\"medium\",\"reason\":\"Debugging a regression\"}");
+            Eq(ModelChoice.Sonnet, d.Model);
+            Eq(EffortChoice.Medium, d.Effort);
+            Eq("Haiku router: Debugging a regression", d.Reason);
+            Eq(EffortChoice.Medium, HaikuRouter.Parse("{\"model\":\"opus\"}").Effort, "missing effort = medium");
+            Eq(null, HaikuRouter.Parse("{\"model\":\"gpt\"}"), "unknown model");
+            Eq(null, HaikuRouter.Parse("not json"));
+            Eq(null, HaikuRouter.Parse(""));
+
+            string req = HaikuRouter.BuildRequest(new RouteRequest { Prompt = new string('x', 5000), AttachedFiles = 2, AttachedCodeLines = 40 });
+            True(req.StartsWith("Request: 2 file(s) attached. 40 lines of code attached.\n"), req.Substring(0, 80));
+            True(req.EndsWith("…(cut)") && req.Length < HaikuRouter.MaxPromptChars + 100, "prompt cut");
+
+            string args = HaikuRouter.TrimmedArguments();
+            foreach (var flag in new[] { "--system-prompt", "--tools \"\"", "--strict-mcp-config", "--disable-slash-commands", "--setting-sources \"\"", "--no-session-persistence", "--json-schema" })
+                True(args.Contains(flag), "has " + flag);
+        }
+
+        private static void Test_Router_StickinessAppliesToHaikuAnswers()
+        {
+            var router = new ModelRouter { StickyContextTokens = 30000 };
+            var big = new RouteRequest { Prompt = "x", CurrentModel = ModelChoice.Sonnet, ContextTokens = 50000 };
+            var down = router.ApplyCacheStickiness(new RouteDecision { Model = ModelChoice.Haiku, Effort = EffortChoice.Low, Reason = "Haiku router: rename" }, big, clearlyHard: false);
+            Eq(ModelChoice.Sonnet, down.Model, "no downgrade in a big conversation");
+            True(down.Reason.Contains("kept sonnet to reuse the prompt cache"), down.Reason);
+            Eq(ModelChoice.Opus, router.ApplyCacheStickiness(new RouteDecision { Model = ModelChoice.Opus, Effort = EffortChoice.High, Reason = "r" }, big, clearlyHard: true).Model, "clearly hard may upgrade");
+            Eq(ModelChoice.Haiku, router.ApplyCacheStickiness(new RouteDecision { Model = ModelChoice.Haiku, Reason = "r" }, new RouteRequest { CurrentModel = ModelChoice.Sonnet, ContextTokens = 1000 }, false).Model, "small conversation: free to switch");
+        }
+
+        private static void Test_SavingsReport_HaikuRouter()
+        {
+            var records = new[]
+            {
+                new UsageRecord { Routed = true, Router = "haiku", RouteModel = "sonnet", LocalModel = "sonnet", ModelUsed = "claude-sonnet-5-5", CostUsd = 0.02, RouterCostUsd = 0.0001, RouterMs = 1500 },
+                new UsageRecord { Routed = true, Router = "haiku", RouteModel = "haiku", LocalModel = "sonnet", ModelUsed = "claude-haiku-5-5", CostUsd = 0.002, RouterCostUsd = 0.0001, RouterMs = 2500 },
+                new UsageRecord { Routed = true, RouteModel = "sonnet", ModelUsed = "claude-sonnet-5-5", CostUsd = 0.01, RouterCostUsd = 0.0001, RouterMs = 4000 }, // timed out: local rules
+            };
+            var rep = SavingsReport.Build(records, new PriceTable());
+            Eq(2, rep.HaikuRouted);
+            Eq(1, rep.HaikuAgreed);
+            Eq(0.0003, Math.Round(rep.RouterCostUsd, 6));
+            Eq(0.0323, Math.Round(rep.ActualCostUsd, 6), "router cost counted in the actual cost");
+            Eq(2666L, rep.RouterAverageMs);
+            string text = rep.ToText();
+            True(text.Contains("Haiku router:               2 prompts, same model as the local rules 50% of the time"), text);
+
+            var json = Newtonsoft.Json.JsonConvert.SerializeObject(new UsageRecord { Routed = true });
+            True(!json.Contains("router") && !json.Contains("localModel"), "local-only records stay as before: " + json);
         }
 
         // ---------- Screen reader text ----------

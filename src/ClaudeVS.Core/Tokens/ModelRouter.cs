@@ -98,24 +98,29 @@ namespace ClaudeVS.Core.Tokens
             else if (score < 6) { model = ModelChoice.Opus; effort = EffortChoice.Medium; }
             else { model = ModelChoice.Opus; effort = EffortChoice.High; }
 
-            // Cache stickiness.
-            if (r.CurrentModel != ModelChoice.Auto && r.ContextTokens >= StickyContextTokens && model != r.CurrentModel)
-            {
-                bool upgrade = Rank(model) > Rank(r.CurrentModel);
-                if (!upgrade || score < 6)
-                {
-                    reasons.Add($"kept {r.CurrentModel.ToCli()} to reuse the prompt cache ({TokenMeter.Format(r.ContextTokens)} context)");
-                    model = r.CurrentModel;
-                }
-            }
-
-            return new RouteDecision
+            var decision = new RouteDecision
             {
                 Model = model,
                 Effort = effort,
                 Score = score,
                 Reason = reasons.Count == 0 ? "default" : string.Join(", ", reasons),
             };
+            return ApplyCacheStickiness(decision, r, clearlyHard: score >= 6);
+        }
+
+        /// <summary>
+        /// Cache stickiness: in a big conversation keep the current model (its prompt cache), except to upgrade for a
+        /// clearly hard prompt. Used for the local rules and for the Haiku router's answers alike.
+        /// </summary>
+        public RouteDecision ApplyCacheStickiness(RouteDecision d, RouteRequest r, bool clearlyHard)
+        {
+            if (d == null || r == null) return d;
+            if (r.CurrentModel == ModelChoice.Auto || r.ContextTokens < StickyContextTokens || d.Model == r.CurrentModel) return d;
+            bool upgrade = Rank(d.Model) > Rank(r.CurrentModel);
+            if (upgrade && clearlyHard) return d;
+            d.Reason = (d.Reason == "default" ? "" : d.Reason + ", ") + $"kept {r.CurrentModel.ToCli()} to reuse the prompt cache ({TokenMeter.Format(r.ContextTokens)} context)";
+            d.Model = r.CurrentModel;
+            return d;
         }
 
         private static int Rank(ModelChoice m) => m == ModelChoice.Haiku ? 1 : m == ModelChoice.Sonnet ? 2 : m == ModelChoice.Opus ? 3 : 0;

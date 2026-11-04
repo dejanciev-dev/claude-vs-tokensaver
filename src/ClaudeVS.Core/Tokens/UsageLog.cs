@@ -21,6 +21,14 @@ namespace ClaudeVS.Core.Tokens
         [JsonProperty("promptChars")] public int PromptChars { get; set; }
         [JsonProperty("attachedLines")] public int AttachedLines { get; set; }
         [JsonProperty("attachedFiles")] public int AttachedFiles { get; set; }
+        /// <summary>"haiku" when the Haiku router decided; null for the local rules.</summary>
+        [JsonProperty("router", NullValueHandling = NullValueHandling.Ignore)] public string Router { get; set; }
+        /// <summary>What the local rules would have picked (logged with the Haiku router, to compare them).</summary>
+        [JsonProperty("localModel", NullValueHandling = NullValueHandling.Ignore)] public string LocalModel { get; set; }
+        [JsonProperty("localEffort", NullValueHandling = NullValueHandling.Ignore)] public string LocalEffort { get; set; }
+        /// <summary>What asking the Haiku router cost, and how long it took (also when it timed out).</summary>
+        [JsonProperty("routerCost", DefaultValueHandling = DefaultValueHandling.Ignore)] public double RouterCostUsd { get; set; }
+        [JsonProperty("routerMs", DefaultValueHandling = DefaultValueHandling.Ignore)] public long RouterMs { get; set; }
         /// <summary>First characters of the prompt. Only written when the user opts in; enables router replay.</summary>
         [JsonProperty("prompt")] public string PromptPreview { get; set; }
 
