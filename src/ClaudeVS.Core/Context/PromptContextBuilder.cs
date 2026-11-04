@@ -23,7 +23,13 @@ namespace ClaudeVS.Core.Context
         /// <summary>Compiler code such as CS0103, if known.</summary>
         public string Code { get; set; }
         public string Message { get; set; }
+        public ErrorSeverity Severity { get; set; } = ErrorSeverity.Error;
+        public int Column { get; set; }
+        public string Project { get; set; }
     }
+
+    /// <summary>The Error List's three levels.</summary>
+    public enum ErrorSeverity { Error, Warning, Message }
 
     public sealed class ContextSettings
     {

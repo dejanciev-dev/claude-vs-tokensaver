@@ -17,6 +17,38 @@ namespace ClaudeVS.Core.Tests
     /// </summary>
     internal static class LiveSmoke
     {
+        /// <summary>
+        /// `-- --live-mcp`: starts the CLI with our in-process Error List server and checks that the CLI connects to it
+        /// and lists its tool (mcp_status). Sends no prompt, so it makes no model call and costs nothing.
+        /// </summary>
+        public static int RunMcp()
+        {
+            string exe = ClaudeCliLocator.Resolve("");
+            if (exe == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-live-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            var options = new ClaudeLaunchOptions { WorkingDirectory = dir, PermissionMode = PermissionModeChoice.Plan };
+            options.SdkMcpServers.Add(Context.IdeMcpServer.Create(
+                () => System.Threading.Tasks.Task.FromResult<IReadOnlyList<Context.BuildError>>(new Context.BuildError[0]), () => dir));
+            using (var session = new ClaudeSession(options))
+            {
+                try
+                {
+                    McpServerRow row = null;
+                    for (int i = 0; i < 20 && row?.Status != "connected"; i++)
+                    {
+                        if (i > 0) Thread.Sleep(500);
+                        row = session.GetMcpServersAsync().Result?.FirstOrDefault(r => r.Name == Context.IdeMcpServer.ServerName);
+                    }
+                    Console.WriteLine($"visualstudio: {row?.Status ?? "missing"}, tools {row?.ToolCount}, transport {row?.Transport}");
+                    bool ok = row?.Status == "connected" && row.ToolCount == 1;
+                    Console.WriteLine(ok ? "PASS live MCP" : "FAIL live MCP");
+                    return ok ? 0 : 1;
+                }
+                finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
+            }
+        }
+
         public static int Run(string rawLogPath, PermissionModeChoice mode = PermissionModeChoice.Plan, int turns = 2)
         {
             string exe = ClaudeCliLocator.Resolve("");

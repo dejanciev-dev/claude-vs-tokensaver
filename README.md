@@ -61,6 +61,7 @@ This extension attacks all three, and shows the numbers so you can see the effec
 | **Smart selection context** | Small selections are inlined and dedented. Large ones are sent as `path:L10-200` references, so Claude reads only that range. Whole files are never pasted. |
 | **File references** | **Attach Current File** and the **`@` file picker** send only a path. Claude reads what it needs. |
 | **Compact error list** | **Attach Error List** sends errors only (no warnings), one `file:line` + message line each, de-duplicated and capped at 20. |
+| **Claude reads the Error List itself** | A read-only `get_error_list` tool (an MCP server inside the extension) lets Claude check errors and warnings after an edit instead of running a verbose full build. One line per row, errors first; its listing costs almost nothing until Claude uses it. |
 | **One warm process per chat** | The `claude` process stays alive between prompts, so the prompt cache is reused (verified: 18k cache-read tokens on the second turn). Model and effort switch live without a restart. |
 | **Concise answers** | A one-line system prompt asks for short answers and only the changed code. |
 | **Lean `CLAUDE.md` generator** | Writes a short `CLAUDE.md` (projects, build/test commands, folders to skip) and shows its token cost per request. It never overwrites yours. |
@@ -271,6 +272,7 @@ Editor commands go to the chat window you used last.
 | Token saving | Keep model above context (tokens) | 30000 | Cache-aware routing threshold. |
 | Token saving | Suggest / Urge /compact at (%) | 60 / 85 | Meter advice. |
 | Token saving | Auto-approve quiet rewrites | Off | Hook installer: run rewritten build/test commands without asking. |
+| Token saving | Claude can read the Error List | On | The `get_error_list` tool, for new sessions. |
 | Token saving | Max attached errors | 20 | For Attach Error List. |
 | Pricing | Opus / Sonnet / Haiku price | 2026-10 list prices | `input, output, cache write, cache read` in USD per million tokens. Used only for the savings estimate. |
 | Diagnostics | Keep local usage log | On | See Privacy. |
@@ -323,7 +325,8 @@ msbuild ClaudeVS.sln /restore /p:Configuration=Release /warnaserror     # → sr
 
 - **Debug in VS:** set **ClaudeVS** as the startup project and press **F5** to open the experimental instance.
 - **Live check against your CLI** (opt-in, costs a few cents, never runs in CI):
-  `dotnet run --project tests/ClaudeVS.Core.Tests -- --live`
+  `dotnet run --project tests/ClaudeVS.Core.Tests -- --live`. `--live-mcp` checks that the CLI connects to the
+  Error List server, with no prompt and no cost.
 - **CI** builds every push and PR with warnings as errors, runs the tests and uploads the `.vsix`. Pushing a
   `v*` tag creates a draft GitHub Release.
 

@@ -53,6 +53,9 @@ namespace ClaudeVS.Options
         [Category("Token saving"), DisplayName("Auto-approve quiet rewrites"), Description("When installing hooks: run rewritten dotnet build/test commands without asking.")]
         public bool AutoApproveHookRewrites { get; set; } = false;
 
+        [Category("Token saving"), DisplayName("Claude can read the Error List"), Description("Gives Claude a read-only Error List tool (an MCP server inside the extension), so it can check errors and warnings after editing instead of running a full build. It costs almost nothing until Claude uses it. Applies to new sessions.")]
+        public bool ErrorListTool { get; set; } = true;
+
         [Category("Token saving"), DisplayName("Max attached errors"), Description("Attach Error List sends at most this many errors, one line each.")]
         public int MaxAttachedErrors { get; set; } = 20;
 

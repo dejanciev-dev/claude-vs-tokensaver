@@ -7,6 +7,12 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Claude reads the Error List itself** (Tools → Options → Claude Code → Token saving, on by default): a
+  read-only `get_error_list` tool, served by an MCP server inside the extension, lets Claude check errors and
+  warnings after an edit instead of running a full build. It answers one line per row (`path:line:col error CODE:
+  message (Project)`), errors first, filtered by severity or file and capped at 50 rows; it runs without a
+  permission prompt and shows as "Error List" in the conversation. MCP tools are loaded on demand, so the tool
+  costs almost nothing until Claude uses it.
 - **Focus view** (/ → Focus view, or Tools → Options → Claude Code → Chat): consecutive tool calls collapse into
   one row, such as "⚙ 4 tool calls · Read ×3, Edit · ~6.2k tok", showing what is running; expand it for each call.
 - **Plan as a document:** the plan card's **Open as document** opens the plan in the editor (Markdown preview

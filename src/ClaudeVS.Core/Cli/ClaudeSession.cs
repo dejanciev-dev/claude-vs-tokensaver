@@ -315,8 +315,13 @@ namespace ClaudeVS.Core.Cli
             lock (_gate) stdin = _process != null && !_process.HasExited ? _stdin : null;
             if (stdin == null) throw new InvalidOperationException("Claude process is not running.");
             RaiseRaw(RawLineDirection.Stdin, line);
-            await stdin.WriteLineAsync(line).ConfigureAwait(false);
+            // Prompts, permission answers and MCP replies come from different threads; StreamWriter allows one write at a time.
+            await _writeLock.WaitAsync().ConfigureAwait(false);
+            try { await stdin.WriteLineAsync(line).ConfigureAwait(false); }
+            finally { _writeLock.Release(); }
         }
+
+        private readonly SemaphoreSlim _writeLock = new SemaphoreSlim(1, 1);
 
         private void ReadLoop(StreamReader reader, bool isError)
         {
@@ -336,6 +341,8 @@ namespace ClaudeVS.Core.Cli
                     catch (Exception ex) { events = new[] { new ClaudeEvent { Kind = ClaudeEventKind.Error, Text = "Parse error: " + ex.Message } }; }
                     foreach (var ev in events)
                     {
+                        // Off the reader thread: a tool may wait for the UI thread, which may be waiting on us.
+                        if (ev.Kind == ClaudeEventKind.McpMessage) { Task.Run(() => AnswerMcpAsync(ev)); continue; }
                         if (ev.Kind == ClaudeEventKind.TurnCompleted) IsBusy = false;
                         if (ev.Kind == ClaudeEventKind.ControlResponse) CompletePending(ev);
                         Raise(ev);
@@ -343,6 +350,26 @@ namespace ClaudeVS.Core.Cli
                 }
             }
             catch (Exception ex) when (ex is IOException || ex is ObjectDisposedException) { }
+        }
+
+        /// <summary>Hands an mcp_message to our server of that name and writes its JSON-RPC answer back.</summary>
+        private async Task AnswerMcpAsync(ClaudeEvent ev)
+        {
+            JObject response;
+            try
+            {
+                var server = Options.SdkMcpServers.FirstOrDefault(s => s.Name == ev.ServerName);
+                response = server == null
+                    ? new JObject { ["subtype"] = "error", ["request_id"] = ev.RequestId, ["error"] = "No MCP server named " + ev.ServerName }
+                    : new JObject { ["subtype"] = "success", ["request_id"] = ev.RequestId, ["response"] = new JObject { ["mcp_response"] = await server.HandleAsync(ev.Payload).ConfigureAwait(false) } };
+            }
+            catch (Exception ex)
+            {
+                response = new JObject { ["subtype"] = "error", ["request_id"] = ev.RequestId, ["error"] = ex.Message };
+            }
+            try { await WriteLineAsync(new JObject { ["type"] = "control_response", ["response"] = response }.ToString(Formatting.None)).ConfigureAwait(false); }
+            catch (InvalidOperationException) { } // the process exited meanwhile
+            catch (IOException) { }
         }
 
         private void Raise(ClaudeEvent ev)
