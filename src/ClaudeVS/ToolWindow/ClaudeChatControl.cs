@@ -26,7 +26,7 @@ namespace ClaudeVS.ToolWindow
     /// The chat panel. Built in code (no XAML) to keep the project simple; colors come from the
     /// VS theme so it works in Light, Dark and Blue in both VS 2022 and VS 2026.
     /// </summary>
-    public sealed class ClaudeChatControl : UserControl, IDisposable
+    public sealed partial class ClaudeChatControl : UserControl, IDisposable
     {
         // Header: session title, history, new session.
         private readonly TextBlock _title = new TextBlock { Text = DefaultTitle, FontWeight = FontWeights.SemiBold, FontSize = 13, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
@@ -300,6 +300,7 @@ namespace ClaudeVS.ToolWindow
             _inputBox.MouseLeftButtonDown += (s, e) => _prompt.Focus(); // clicking the box's padding focuses the text
 
             var bottom = new StackPanel { Margin = new Thickness(10, 4, 10, 10) };
+            bottom.Children.Add(_agentsPanel);
             bottom.Children.Add(_stall);
             bottom.Children.Add(_queuedPanel);
             bottom.Children.Add(_permission);
@@ -1165,6 +1166,7 @@ namespace ClaudeVS.ToolWindow
             if (_title.Text == DefaultTitle && routed) SetTitle(userText.Length > 0 ? userText : images.Count == 1 ? images[0].Image.Name : "Images");
             bool queued = _busy;
             SetBusy(true);
+            ForgetFinishedTasks();
 
             Fire(async () =>
             {
@@ -1633,6 +1635,7 @@ namespace ClaudeVS.ToolWindow
                 {
                     case ClaudeEventKind.SessionStarted:
                         ClaudeOutputPane.WriteLine($"Session {ev.SessionId} started, model {ev.Model}");
+                        OnTurnStarted(); // init comes at the start of every turn (2.1.318)
                         string named = _sessionName;
                         if (named != null && ev.SessionId != null && SessionMeta.Get(ev.SessionId)?.Name != named)
                             SaveSessionMeta(() => SessionMeta.SetName(ev.SessionId, named)); // named before the session had an id
@@ -1658,6 +1661,9 @@ namespace ClaudeVS.ToolWindow
                         _pendingPermission = ev;
                         _permissionText.Text = "Allow " + ev.Text + "?";
                         _permission.Visibility = Visibility.Visible;
+                        break;
+                    case ClaudeEventKind.Task:
+                        OnTaskEvent(ev);
                         break;
                     case ClaudeEventKind.RateLimit:
                         _rateLimits = RateLimitInfo.Parse(ev.Payload);
@@ -1990,6 +1996,7 @@ namespace ClaudeVS.ToolWindow
             RefreshQueuedPanel();
             _waitingForUser = false;
             SetStalled(false);
+            ClearTasks(); // the process is gone (exit, new session), and its tasks with it
         }
 
         private void RefreshQueuedPanel()
@@ -2359,6 +2366,7 @@ namespace ClaudeVS.ToolWindow
             _flushTimer.Stop();
             _routeTimer.Stop();
             _stallTimer.Stop();
+            _agentsTimer?.Stop();
             DisposeSession();
         }
     }

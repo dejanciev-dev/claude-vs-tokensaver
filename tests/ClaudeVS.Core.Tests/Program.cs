@@ -56,6 +56,98 @@ namespace ClaudeVS.Core.Tests
             True(a.Contains("--model haiku") && a.Contains("--effort low") && a.Contains("--resume abc") && a.Contains("--append-system-prompt \"Be brief.\""), a);
         }
 
+        // ---------- Subagents and background tasks ----------
+        private static List<JObject> AgentFixture() =>
+            File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.318-agents.jsonl"))
+                .Where(l => l.Trim().Length > 0).Select(JObject.Parse).ToList();
+
+        private static void Test_AgentTasks_ReplayCapture()
+        {
+            var lines = AgentFixture();
+            var parser = new ClaudeStreamParser();
+            var list = new AgentTaskList();
+            var t0 = new DateTime(2026, 11, 4, 12, 0, 0, DateTimeKind.Utc);
+            int i = 0;
+            AgentTask A() => list.Find("a94500e2880720a6e");
+            AgentTask B() => list.Find("a39987eeb9f3c67fc");
+            void Upto(Func<JObject, bool> stopAfter)
+            {
+                for (; i < lines.Count; i++)
+                {
+                    foreach (var ev in parser.Parse(lines[i].ToString(Newtonsoft.Json.Formatting.None)).Where(e => e.Kind == ClaudeEventKind.Task))
+                        list.Apply(ev.Payload, t0.AddSeconds(i));
+                    if (stopAfter(lines[i])) { i++; return; }
+                }
+            }
+
+            // Both agents started: A in the background, B in the foreground.
+            Upto(l => (string)l["subtype"] == "task_started" && (string)l["task_id"] == "a39987eeb9f3c67fc");
+            Eq(2, list.RunningCount);
+            True(A().IsBackgrounded && !A().CanMoveToBackground, "A is in the background");
+            True(!B().IsBackgrounded && B().CanMoveToBackground, "B can be moved");
+            Eq("Sleeper B", B().Description);
+            Eq("general-purpose", B().SubagentType);
+            Eq("toolu_017ZarFmHV4amGtubxdAX7gr", B().ToolUseId);
+            Eq("2 agents running", list.Headline());
+
+            // Progress, then B moved to the background (task_updated patch).
+            Upto(l => (string)l["subtype"] == "task_updated" && (string)l["task_id"] == "a39987eeb9f3c67fc");
+            Eq("Running Sleep for 30 seconds", A().Activity);
+            Eq(17940L, A().TotalTokens);
+            True(B().IsBackgrounded && !B().CanMoveToBackground, "B moved");
+
+            // A's own background shell command is nested under it.
+            Upto(l => (string)l["subtype"] == "task_started" && (string)l["task_id"] == "b6ysjloo6");
+            var tree = list.Tree();
+            Eq("a94500e2880720a6e", tree[0].Task.TaskId);
+            Eq("b6ysjloo6", tree[1].Task.TaskId);
+            Eq(1, tree[1].Depth);
+            True(!list.Find("b6ysjloo6").IsAgent, "a shell command is not an agent");
+            Eq("2 agents running · 1 command running", list.Headline());
+
+            // Stopping A (stop_task) kills it and its command.
+            Upto(l => (string)l["subtype"] == "task_notification" && (string)l["task_id"] == "b6ysjloo6");
+            Eq(AgentTaskStatus.Stopped, A().Status);
+            Eq(AgentTaskStatus.Stopped, list.Find("b6ysjloo6").Status);
+            True(A().EndedUtc.HasValue && A().Activity == null, "ended, no activity");
+            Eq(null, A().Summary, "summary equal to the description is dropped");
+
+            // B finishes with its answer as the summary.
+            Upto(_ => false);
+            Eq(AgentTaskStatus.Completed, B().Status);
+            Eq("DONE-B", B().Summary);
+            Eq(23097L, B().ReportedDurationMs.Value);
+            Eq(0, list.RunningCount);
+            Eq("4 done", list.Headline());
+            True(list.RemoveFinished() && list.IsEmpty, "all finished tasks cleared");
+        }
+
+        private static void Test_AgentTasks_RemoveFinishedKeepsRunningFamilies()
+        {
+            var list = new AgentTaskList();
+            list.Apply(JObject.Parse("{\"type\":\"system\",\"subtype\":\"task_started\",\"task_id\":\"p\",\"task_type\":\"local_agent\",\"description\":\"Parent\"}"));
+            list.Apply(JObject.Parse("{\"type\":\"system\",\"subtype\":\"task_started\",\"task_id\":\"c\",\"parent_task_id\":\"p\",\"task_type\":\"local_bash\",\"description\":\"Child\"}"));
+            list.Apply(JObject.Parse("{\"type\":\"system\",\"subtype\":\"task_notification\",\"task_id\":\"p\",\"status\":\"completed\",\"summary\":\"ok\"}"));
+            list.Apply(JObject.Parse("{\"type\":\"system\",\"subtype\":\"task_started\",\"task_id\":\"d\",\"task_type\":\"local_agent\",\"description\":\"Done one\"}"));
+            list.Apply(JObject.Parse("{\"type\":\"system\",\"subtype\":\"task_notification\",\"task_id\":\"d\",\"status\":\"failed\"}"));
+            Eq(AgentTaskStatus.Failed, list.Find("d").Status);
+            list.RemoveFinished();
+            Eq("p,c", string.Join(",", list.Tasks.Select(t => t.TaskId)), "finished parent kept while its child runs");
+
+            // A background task we never saw start (e.g. the window reopened) is added from the background list.
+            list.Apply(JObject.Parse("{\"type\":\"system\",\"subtype\":\"background_tasks_changed\",\"tasks\":[{\"task_id\":\"z\",\"task_type\":\"local_agent\",\"subagent_type\":\"Explore\",\"description\":\"Late\"}]}"));
+            True(list.Find("z").IsBackgrounded && list.Find("z").IsRunning, "added as running in the background");
+            True(!list.Apply(JObject.Parse("{\"type\":\"system\",\"subtype\":\"init\"}")), "other system messages are ignored");
+        }
+
+        private static void Test_Parser_SubagentToolRowsNested()
+        {
+            var evs = new ClaudeStreamParser().Parse("{\"type\":\"assistant\",\"parent_tool_use_id\":\"toolu_1\",\"message\":{\"id\":\"m\",\"content\":[{\"type\":\"tool_use\",\"id\":\"t2\",\"name\":\"Bash\",\"input\":{\"command\":\"ls\"}}]}}");
+            Eq("↳ Bash: ls", evs.Single(e => e.Kind == ClaudeEventKind.ToolUse).Text);
+            var main = new ClaudeStreamParser().Parse("{\"type\":\"assistant\",\"parent_tool_use_id\":null,\"message\":{\"id\":\"m\",\"content\":[{\"type\":\"tool_use\",\"id\":\"t3\",\"name\":\"Bash\",\"input\":{\"command\":\"ls\"}}]}}");
+            Eq("Bash: ls", main.Single(e => e.Kind == ClaudeEventKind.ToolUse).Text);
+        }
+
         // ---------- In-process MCP server (Error List tool) ----------
         private static SdkMcpServer TestIdeServer(params BuildError[] rows) =>
             IdeMcpServer.Create(() => System.Threading.Tasks.Task.FromResult<IReadOnlyList<BuildError>>(rows), () => @"C:\src\Shop");

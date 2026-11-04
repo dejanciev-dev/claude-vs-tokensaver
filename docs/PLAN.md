@@ -180,7 +180,7 @@ Compared against the `[VSCode]` entries; the version in brackets is where the VS
 - [x] Focus view: hide tool rows behind a per-turn summary (2.1.221); here one summary row per run of consecutive tool calls, live "running …"
 
 **Large**
-- [ ] Subagents: agent map, background tasks, Run in background, Stop per agent (2.1.269–2.1.287)
+- [x] Subagents: agent map, background tasks, Run in background, Stop per agent (2.1.269–2.1.287). From the CLI's `task_started` / `task_progress` / `task_updated` / `task_notification` / `background_tasks_changed` system messages; Stop is `stop_task {task_id}`, Run in background is `background_tasks {tool_use_id}` (verified with 2.1.318, capture in `Fixtures/cli-2.1.318-agents.jsonl`). When a background task finishes, the CLI starts a turn by itself (`init` comes at the start of every turn); the panel says so and keeps the per-prompt bookkeeping in step
 - [ ] Accept or reject each change in the diff (2.1.275)
 - [x] On-demand diagnostics: Claude reads the Error List when it wants, through an MCP server in the extension (2.1.285). An in-process "sdk" server declared in `--mcp-config`; the CLI sends its JSON-RPC as `mcp_message` control requests (verified with 2.1.318, including a real `tools/call`). Tool `mcp__visualstudio__get_error_list`, read-only, in `--allowedTools`
 - [ ] Dialogs: Status, Permission rules, Hooks, Memory/Instructions, Output styles, Account & usage (2.1.120–2.1.280)

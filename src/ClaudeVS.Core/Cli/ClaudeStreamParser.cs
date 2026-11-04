@@ -53,6 +53,7 @@ namespace ClaudeVS.Core.Cli
 
         private IReadOnlyList<ClaudeEvent> ParseSystem(JObject json)
         {
+            if (AgentTaskList.IsTaskMessage(json)) return new[] { new ClaudeEvent { Kind = ClaudeEventKind.Task, Payload = json } };
             switch ((string)json["subtype"])
             {
                 case "init":
@@ -120,7 +121,8 @@ namespace ClaudeVS.Core.Cli
                                 ToolUseId = (string)block["id"],
                                 ToolInput = block["input"] as JObject,
                                 IsSubagent = isSub,
-                                Text = DescribeTool((string)block["name"], block["input"] as JObject),
+                                // A subagent's own tool calls are nested under its Agent call.
+                                Text = (isSub ? SubagentToolPrefix : "") + DescribeTool((string)block["name"], block["input"] as JObject),
                             });
                             break;
                     }
@@ -203,6 +205,8 @@ namespace ClaudeVS.Core.Cli
                 Text = DescribeTool((string)req["tool_name"], req["input"] as JObject),
             } };
         }
+
+        public const string SubagentToolPrefix = "↳ ";
 
         /// <summary>One short line per tool call for the transcript (never the whole payload).</summary>
         public static string DescribeTool(string name, JObject input)

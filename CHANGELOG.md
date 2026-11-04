@@ -7,6 +7,12 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Agents panel:** Claude's subagents and background commands show above the input box as a tree, each
+  with what it is doing now ("Running Read: Foo.cs"), its tokens, tool calls and time, then its result.
+  **Background** moves a running agent to the background so Claude carries on; **Stop** ends one agent and what
+  it started, without stopping Claude. Finished ones leave at the next prompt (or **Clear finished**). A
+  subagent's own tool calls are marked `↳` in the conversation, and when Claude continues by itself after a
+  background task finishes, a line says which one.
 - **Claude reads the Error List itself** (Tools → Options → Claude Code → Token saving, on by default): a
   read-only `get_error_list` tool, served by an MCP server inside the extension, lets Claude check errors and
   warnings after an edit instead of running a full build. It answers one line per row (`path:line:col error CODE:
