@@ -53,13 +53,13 @@ Tick the boxes as you go. Each phase ends with something you can run.
 - [x] Log every route decision (prompt length, score, reason, chosen model) to the output pane
 - [ ] Collect ~50 real prompts from your own work (turn on Options > Diagnostics > *Log prompt preview*); tune keyword lists and thresholds in `ModelRouter.cs`; check the effect with the router replay in *Show Savings Report*
 - [ ] Add those prompts as test cases in `tests/ClaudeVS.Core.Tests`
-- [ ] Verify `set_model` / `apply_flag_settings` take effect mid-session (check `init`/result `modelUsage`)
+- [x] Verify `set_model` / `apply_flag_settings` take effect mid-session (`--live-session`, 2.1.318: after `set_model sonnet` the next turn was answered by claude-sonnet-5-5; the effort change was accepted, but the answer does not show which effort ran)
 - [x] Show the model actually used per turn in the footer
 
 ### 2.2 Token meter
-- [ ] Confirm context % matches the CLI's own `/context` output (±2%)
-- [ ] Confirm cost resets correctly after interrupt/relaunch
-- [ ] Make the `/compact` advice button work end-to-end; meter drops after `compact_boundary`
+- [x] Confirm context % matches the CLI's own `/context` output (±2%): same token count in `--live-session` (2.1.318). The meter now also takes the CLI's `get_context_usage` number after each turn
+- [x] Confirm cost resets correctly after interrupt/relaunch: after a `--resume` relaunch the CLI's cost restarts at 0 and the meter keeps adding up (`--live-session`)
+- [ ] Make the `/compact` advice button work end-to-end; meter drops after `compact_boundary` — the meter part is verified (`--live-session`; it showed 0 until the next turn, now the CLI's measured size), the button itself still needs a click in VS
 - [x] Persist usage per solution: one line per turn in `%LocalAppData%\claude-vs-tokensaver\usage.jsonl` (`UsageLog`); summary logged to the Output pane on session start
 
 ### 2.3 Smart context
@@ -69,9 +69,9 @@ Tick the boxes as you go. Each phase ends with something you can run.
 
 ### 2.4 Setup commands
 - [ ] Run **Install Token-Saving Settings and Hooks** on a real solution
-- [ ] **Verify the hook:** ask Claude to run `dotnet build` — the executed command must contain `-v q -nologo`
+- [x] **Verify the hook:** ask Claude to run `dotnet build` — the executed command must contain `-v q -nologo` (`--live-setup`, 2.1.318). Found: on Windows Claude runs it with the **PowerShell** tool, so the Bash-only hook never ran; the matcher is now `Bash|PowerShell`, and `updatedInput` is honored
   - If `updatedInput` is ignored → fall back to a `deny` with message "use: `<quiet command>`"
-- [ ] Verify Claude refuses to read `bin/` / `obj/` after install
+- [x] Verify Claude refuses to read `bin/` / `obj/` after install (`--live-setup`: "File is in a directory that is denied by your permission settings"). Also found: `BASH_MAX_OUTPUT_LENGTH` no longer caps what Claude receives; the installer now sets `bashOutputMaxChars` (Bash and PowerShell), verified with a 25 KB output
 - [ ] Run **Generate Lean CLAUDE.md** on 2–3 different solutions (API, Angular+API, legacy .NET Framework) and fix scanner gaps
 
 ### 2.5 Diagnostics

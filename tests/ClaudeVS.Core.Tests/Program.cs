@@ -19,6 +19,8 @@ namespace ClaudeVS.Core.Tests
             if (args.Length >= 4 && args[0] == "--live-ask")
                 return LiveSmoke.RunInteractive(args[1], (PermissionModeChoice)Enum.Parse(typeof(PermissionModeChoice), args[2], true), args[3]);
             if (args.Length > 0 && args[0] == "--live-mcp") return LiveSmoke.RunMcp();
+            if (args.Length > 0 && args[0] == "--live-session") return LiveSmoke.RunSession();
+            if (args.Length > 0 && args[0] == "--live-setup") return LiveSmoke.RunSetup(args.Length > 1 ? args[1] : null);
             if (args.Length > 0 && args[0] == "--live-dialogs") return LiveSmoke.RunDialogs();
             if (args.Length > 0 && args[0] == "--live-edit-review") return LiveSmoke.RunEditReview();
             if (args.Length > 0 && args[0] == "--live")
@@ -829,6 +831,20 @@ namespace ClaudeVS.Core.Tests
         }
 
         // ---------- Token meter ----------
+        private static void Test_Meter_ContextAfterCompactFromCli()
+        {
+            var m = new TokenMeter();
+            m.Observe(new ClaudeEvent { Kind = ClaudeEventKind.TurnCompleted, LastRequestUsage = new TokenUsage { CacheRead = 27000, Input = 782 }, ContextWindow = 200000 });
+            Eq(27782L, m.ContextTokens);
+            m.Observe(new ClaudeEvent { Kind = ClaudeEventKind.Compacted, PreCompactTokens = 27782 });
+            Eq(0L, m.ContextTokens, "usage alone says 0 after a compaction");
+            m.ApplyContextUsage(9100, 1000000);
+            Eq(9100L, m.ContextTokens, "the CLI's measurement fills it in");
+            Eq(1000000L, m.ContextWindow);
+            m.ApplyContextUsage(0, 0);
+            Eq(9100L, m.ContextTokens, "an empty answer changes nothing");
+        }
+
         private static void Test_Meter_Context_Cost_Advice()
         {
             var m = new TokenMeter(new TokenMeterSettings { LargeToolResultChars = 1000 });
@@ -1434,7 +1450,22 @@ namespace ClaudeVS.Core.Tests
             True(((JArray)s["permissions"]["deny"]).Any(t => (string)t == "Read(./secrets/**)"), "kept user deny");
             True(((JArray)s["permissions"]["deny"]).Any(t => (string)t == "Read(./**/bin/**)"), "added bin deny");
             Eq(1, ((JArray)s["hooks"]["PreToolUse"]).Count);
+            Eq("Bash|PowerShell", (string)s["hooks"]["PreToolUse"][0]["matcher"], "both shells");
             Eq("15000", (string)s["env"]["BASH_MAX_OUTPUT_LENGTH"]);
+            Eq(15000, (int)s[TokenSaverSetup.OutputMaxCharsKey]);
+        }
+
+        private static void Test_Setup_UpgradesBashOnlyHookAndKeepsUserCap()
+        {
+            // As installed by an earlier version: Bash-only matcher; the user picked their own output cap.
+            var s = JObject.Parse("{\"bashOutputMaxChars\":8000,\"hooks\":{\"PreToolUse\":[{\"matcher\":\"Bash\",\"hooks\":[{\"type\":\"command\",\"command\":\"powershell -File \\\"$CLAUDE_PROJECT_DIR/.claude/hooks/trim-output.ps1\\\"\"}]},{\"matcher\":\"Bash\",\"hooks\":[{\"type\":\"command\",\"command\":\"other.sh\"}]}]}}");
+            TokenSaverSetup.MergeSettings(s);
+            var pre = (JArray)s["hooks"]["PreToolUse"];
+            Eq(2, pre.Count, "no duplicate hook added");
+            Eq("Bash|PowerShell", (string)pre[0]["matcher"], "ours upgraded");
+            Eq("Bash", (string)pre[1]["matcher"], "someone else's hook left alone");
+            Eq(8000, (int)s["bashOutputMaxChars"], "user's cap kept");
+            True(TokenSaverSetup.HookScript(false).Contains("$evt.tool_name -ne 'PowerShell'"), "script accepts PowerShell");
         }
 
         private static void Test_Scanner_And_ClaudeMd()

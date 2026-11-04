@@ -65,7 +65,7 @@ This extension attacks all three, and shows the numbers so you can see the effec
 | **One warm process per chat** | The `claude` process stays alive between prompts, so the prompt cache is reused (verified: 18k cache-read tokens on the second turn). Model and effort switch live without a restart. |
 | **Concise answers** | A one-line system prompt asks for short answers and only the changed code. |
 | **Lean `CLAUDE.md` generator** | Writes a short `CLAUDE.md` (projects, build/test commands, folders to skip) and shows its token cost per request. It never overwrites yours. |
-| **Token-saving settings and hooks** | Merges into `.claude/settings.json`: blocks reading `bin/obj/node_modules/packages/dist`, caps shell output, and adds a hook that rewrites `dotnet build/test`, `msbuild`, `git log` and `npm test` into their quiet forms. |
+| **Token-saving settings and hooks** | Merges into `.claude/settings.json`: blocks reading `bin/obj/node_modules/packages/dist`, caps shell output (`bashOutputMaxChars`), and adds a hook (Bash and PowerShell) that rewrites `dotnet build/test`, `msbuild`, `git log` and `npm test` into their quiet forms. |
 
 ### See what you spend
 
@@ -331,7 +331,7 @@ msbuild ClaudeVS.sln /restore /p:Configuration=Release /warnaserror     # → sr
 
 - **Debug in VS:** set **ClaudeVS** as the startup project and press **F5** to open the experimental instance.
 - **Live check against your CLI** (opt-in, costs a few cents, never runs in CI):
-  `dotnet run --project tests/ClaudeVS.Core.Tests -- --live`. `--live-edit-review` checks a partly applied edit (about $0.005). `--live-dialogs` reads every dialog (no cost). `--live-mcp` checks that the CLI connects to the
+  `dotnet run --project tests/ClaudeVS.Core.Tests -- --live`. `--live-edit-review` checks a partly applied edit (about $0.005). `--live-dialogs` reads every dialog (no cost). `--live-setup` checks the installed hook and deny rules (about $0.005), `--live-session` the meter, model switching and /compact (about $0.05). `--live-mcp` checks that the CLI connects to the
   Error List server, with no prompt and no cost.
 - **CI** builds every push and PR with warnings as errors, runs the tests and uploads the `.vsix`. Pushing a
   `v*` tag creates a draft GitHub Release.

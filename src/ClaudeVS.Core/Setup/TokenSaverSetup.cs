@@ -27,6 +27,8 @@ namespace ClaudeVS.Core.Setup
         public const string HookFileName = "trim-output.ps1";
         public const string HookMarker = "claudevs-trim-output";
         public const int DefaultBashMaxOutput = 15000;
+        public const string OutputMaxCharsKey = "bashOutputMaxChars";
+        public const string ShellMatcher = "Bash|PowerShell";
 
         public static readonly string[] DenyReadPatterns =
         {
@@ -75,20 +77,25 @@ namespace ClaudeVS.Core.Setup
             var existing = new HashSet<string>(deny.Select(t => (string)t), StringComparer.OrdinalIgnoreCase);
             foreach (var p in DenyReadPatterns) if (existing.Add(p)) deny.Add(p);
 
-            // 2. env
+            // 2. Shell output cap. bashOutputMaxChars is what Claude receives inline from Bash and PowerShell (Claude
+            // Code 2.1.318); BASH_MAX_OUTPUT_LENGTH alone now only sizes the read-back window, kept for older versions.
+            if (settings[OutputMaxCharsKey] == null) settings[OutputMaxCharsKey] = DefaultBashMaxOutput;
             var env = GetOrAdd<JObject>(settings, "env");
             if (env["BASH_MAX_OUTPUT_LENGTH"] == null) env["BASH_MAX_OUTPUT_LENGTH"] = DefaultBashMaxOutput.ToString();
 
-            // 3. hooks.PreToolUse (Bash)
+            // 3. hooks.PreToolUse for both shells: on Windows Claude Code runs commands with its PowerShell tool too
+            // (verified with 2.1.318: `dotnet build` went through PowerShell, so a Bash-only hook never ran).
             var hooks = GetOrAdd<JObject>(settings, "hooks");
             var pre = GetOrAdd<JArray>(hooks, "PreToolUse");
-            bool present = pre.OfType<JObject>().SelectMany(m => (m["hooks"] as JArray)?.OfType<JObject>() ?? Enumerable.Empty<JObject>())
-                              .Any(h => ((string)h["command"] ?? "").Contains(HookFileName));
-            if (!present)
+            var ours = pre.OfType<JObject>().Where(m => ((m["hooks"] as JArray)?.OfType<JObject>() ?? Enumerable.Empty<JObject>())
+                              .Any(h => ((string)h["command"] ?? "").Contains(HookFileName))).ToList();
+            foreach (var m in ours)
+                if ((string)m["matcher"] == "Bash") m["matcher"] = ShellMatcher; // installed by an earlier version
+            if (ours.Count == 0)
             {
                 pre.Add(new JObject
                 {
-                    ["matcher"] = "Bash",
+                    ["matcher"] = ShellMatcher,
                     ["hooks"] = new JArray(new JObject
                     {
                         ["type"] = "command",
@@ -122,7 +129,7 @@ try {
     $evt = $raw | ConvertFrom-Json
 } catch { exit 0 }
 
-if ($evt.tool_name -ne 'Bash') { exit 0 }
+if ($evt.tool_name -ne 'Bash' -and $evt.tool_name -ne 'PowerShell') { exit 0 }
 $cmd = [string]$evt.tool_input.command
 if ([string]::IsNullOrWhiteSpace($cmd)) { exit 0 }
 # Leave piped / chained / already-tuned commands alone.
