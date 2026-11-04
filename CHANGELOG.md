@@ -7,6 +7,12 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Claude Code dialogs** (/ → Claude Code): **Status** (version, account, model, setting sources; click a row
+  to copy it), **Account & usage** (plan, each usage limit with its reset time, this session's cost and lines
+  changed), **Memory & instructions** (CLAUDE.md files and saved memories with their token cost per request;
+  click to open, or to create a missing file), **Output style** (switch for this project, saved in
+  `.claude/settings.local.json`), **Permission rules** (deny / ask / allow) and **Hooks**, each opening the
+  settings file it comes from. All read from Claude Code with no model call.
 - **Review each change of an edit:** in Manual mode, when Claude wants to edit or write a file with several
   changes, a card lists each one with its removed and added lines and a check box. **Apply** only the checked
   changes, **Reject all**, or **Open diff** to see the whole file in Visual Studio's diff window. Claude is told

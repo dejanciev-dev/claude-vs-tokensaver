@@ -96,7 +96,12 @@ namespace ClaudeVS.Core.Cli
                 // Hooks are registered with an initialize request, before anything else is written (we hold _gate).
                 if (Options.EditNotesHook)
                 {
-                    string init = BuildInitialize().ToString(Formatting.None);
+                    var initRequest = BuildInitialize();
+                    // Its answer carries the output styles (and more); keep it for GetOutputStylesAsync.
+                    var tcs = new TaskCompletionSource<JObject>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    _pending[(string)initRequest["request_id"]] = tcs;
+                    _initialize = tcs.Task;
+                    string init = initRequest.ToString(Formatting.None);
                     RaiseRaw(RawLineDirection.Stdin, init);
                     _stdin.WriteLine(init);
                 }
@@ -297,6 +302,63 @@ namespace ClaudeVS.Core.Cli
             EnsureRunning();
             var r = await RequestAsync(new JObject { ["subtype"] = "mcp_status" }, TimeSpan.FromSeconds(20)).ConfigureAwait(false);
             return r == null ? null : McpServerRow.ParseStatus(r);
+        }
+
+        // ---- The CLI's dialogs (no model call; each starts the process if needed) ----
+
+        private Task<JObject> _initialize;
+        private string _outputStyleSet;
+
+        private async Task<JObject> DialogAsync(string subtype)
+        {
+            EnsureRunning();
+            return await RequestAsync(new JObject { ["subtype"] = subtype }, TimeSpan.FromSeconds(20)).ConfigureAwait(false);
+        }
+
+        /// <summary>/status rows. Null when the CLI does not answer.</summary>
+        public async Task<List<StatusRow>> GetStatusAsync() { var r = await DialogAsync("get_status").ConfigureAwait(false); return r == null ? null : StatusRow.Parse(r); }
+
+        public async Task<List<PermissionRuleRow>> GetPermissionRulesAsync() { var r = await DialogAsync("list_permission_rules").ConfigureAwait(false); return r == null ? null : PermissionRuleRow.Parse(r); }
+
+        public async Task<List<HookRow>> GetHooksAsync() { var r = await DialogAsync("get_hooks_listing").ConfigureAwait(false); return r == null ? null : HookRow.Parse(r); }
+
+        public async Task<MemoryEntry.Dialog> GetMemoryAsync() { var r = await DialogAsync("get_memory_dialog").ConfigureAwait(false); return r == null ? null : MemoryEntry.Parse(r); }
+
+        public async Task<UsageInfo> GetUsageAsync() { var r = await DialogAsync("get_usage").ConfigureAwait(false); return r == null ? null : UsageInfo.Parse(r); }
+
+        /// <summary>
+        /// Output styles from the initialize answer (sent at start with <see cref="ClaudeLaunchOptions.EditNotesHook"/>),
+        /// with any style set since. Null when not available.
+        /// </summary>
+        public async Task<OutputStyles> GetOutputStylesAsync()
+        {
+            EnsureRunning();
+            var init = _initialize;
+            if (init == null) return null;
+            var done = await Task.WhenAny(init, Task.Delay(TimeSpan.FromSeconds(20))).ConfigureAwait(false);
+            if (done != init) return null;
+            var styles = OutputStyles.Parse(await init.ConfigureAwait(false));
+            if (styles != null && _outputStyleSet != null) styles.Current = _outputStyleSet;
+            return styles;
+        }
+
+        /// <summary>
+        /// Sets the output style for this project the way /config does: written to .claude/settings.local.json and
+        /// applied to the running session (<c>update_settings</c>, verified with 2.1.318). It changes the system prompt,
+        /// so the next request writes the prompt cache again. Throws <see cref="InvalidOperationException"/> when refused.
+        /// </summary>
+        public async Task<bool> SetOutputStyleAsync(string style)
+        {
+            EnsureRunning();
+            var r = await RequestAsync(new JObject
+            {
+                ["subtype"] = "update_settings",
+                ["source"] = "localSettings",
+                ["settings"] = new JObject { ["outputStyle"] = style },
+            }, TimeSpan.FromSeconds(20)).ConfigureAwait(false);
+            if (r == null) return false;
+            _outputStyleSet = style;
+            return true;
         }
 
         public Task<JObject> SetMcpServerEnabledAsync(string serverName, bool enabled) =>

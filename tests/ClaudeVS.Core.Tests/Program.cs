@@ -19,6 +19,7 @@ namespace ClaudeVS.Core.Tests
             if (args.Length >= 4 && args[0] == "--live-ask")
                 return LiveSmoke.RunInteractive(args[1], (PermissionModeChoice)Enum.Parse(typeof(PermissionModeChoice), args[2], true), args[3]);
             if (args.Length > 0 && args[0] == "--live-mcp") return LiveSmoke.RunMcp();
+            if (args.Length > 0 && args[0] == "--live-dialogs") return LiveSmoke.RunDialogs();
             if (args.Length > 0 && args[0] == "--live-edit-review") return LiveSmoke.RunEditReview();
             if (args.Length > 0 && args[0] == "--live")
                 return LiveSmoke.Run(args.Length > 1 ? args[1] : null,
@@ -55,6 +56,74 @@ namespace ClaudeVS.Core.Tests
         {
             string a = ClaudeArgsBuilder.Build(new ClaudeLaunchOptions { Model = ModelChoice.Haiku, Effort = EffortChoice.Low, ResumeSessionId = "abc", AppendSystemPrompt = "Be brief." });
             True(a.Contains("--model haiku") && a.Contains("--effort low") && a.Contains("--resume abc") && a.Contains("--append-system-prompt \"Be brief.\""), a);
+        }
+
+        // ---------- The CLI's dialogs ----------
+        private static JObject DialogFixture(string requestId) =>
+            File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.318-dialogs.jsonl"))
+                .Where(l => l.Trim().Length > 0).Select(JObject.Parse)
+                .Single(j => (string)j.SelectToken("response.request_id") == requestId).SelectToken("response.response") as JObject;
+
+        private static void Test_Dialogs_StatusAndOutputStyles()
+        {
+            var rows = StatusRow.Parse(DialogFixture("get_status"));
+            Eq("2.1.318", rows.Single(r => r.Label == "Version").Value);
+            Eq("Session", rows.First().Section);
+            Eq("Environment", rows.Single(r => r.Label == "Model").Section);
+
+            var styles = OutputStyles.Parse(DialogFixture("initialize"));
+            Eq("Terse", styles.Current);
+            Eq("default,Proactive,Concise,Explanatory,Learning,Terse", string.Join(",", styles.Available));
+            Eq("Custom style", OutputStyles.Describe("Terse"));
+            Eq("default", OutputStyles.Parse(new JObject()).Current, "no style = default");
+            Eq(null, OutputStyles.Parse(null));
+        }
+
+        private static void Test_Dialogs_RulesAndHooks()
+        {
+            var rules = PermissionRuleRow.Parse(DialogFixture("list_permission_rules"));
+            Eq(2, rules.Count);
+            var ask = rules.Single(r => r.Behavior == "ask");
+            Eq("Bash(git push:*)", ask.Rule);
+            Eq("Any Bash command starting with git push", ask.Description);
+            Eq("projectSettings", ask.Source);
+            Eq(null, rules.Single(r => r.Behavior == "deny").Description);
+            True(PermissionRuleRow.Order("deny") < PermissionRuleRow.Order("ask") && PermissionRuleRow.Order("ask") < PermissionRuleRow.Order("allow"), "deny first");
+
+            var hooks = HookRow.Parse(DialogFixture("get_hooks_listing"));
+            Eq(1, hooks.Count);
+            Eq("PreToolUse", hooks[0].Event);
+            Eq("Bash", hooks[0].Matcher);
+            Eq("echo hi", hooks[0].Text);
+            Eq("Project settings (.claude/settings.json)", hooks[0].SourceLabel);
+
+            Eq(Path.Combine(@"C:\p", ".claude", "settings.local.json"), SettingsSources.PathFor("localSettings", @"C:\p"));
+            Eq(Path.Combine(@"C:\home", ".claude", "settings.json"), SettingsSources.PathFor("userSettings", @"C:\p", @"C:\home"));
+            Eq(null, SettingsSources.PathFor("policySettings", @"C:\p"));
+            Eq("Local project settings", SettingsSources.Label("localSettings"));
+        }
+
+        private static void Test_Dialogs_MemoryAndUsage()
+        {
+            var mem = MemoryEntry.Parse(DialogFixture("get_memory_dialog"));
+            Eq("on", mem.AutoMemoryStatus);
+            var user = mem.Entries.Single(e => e.Kind == "user");
+            True(!user.Exists && user.Path.EndsWith(@".claude\CLAUDE.md") && user.Label == "User instructions", "user file");
+            Eq(3, mem.Entries.Count(e => e.Kind == "memory"));
+            True(mem.Entries.Single(e => e.Label == "MEMORY.md").Modified.HasValue, "modified time");
+            True(mem.Entries.Single(e => e.Kind == "auto").IsFolder, "auto-memory folder");
+
+            var usage = UsageInfo.Parse(DialogFixture("get_usage"));
+            Eq("Pro", usage.PlanName);
+            Eq(2, usage.Limits.Count);
+            var five = usage.Limits.Single(l => l.Kind == "session");
+            Eq(33, five.Percent);
+            Eq("5-hour limit", five.Name);
+            Eq(new DateTime(2026, 11, 4, 16, 49, 59, DateTimeKind.Utc), five.ResetsAt.Value.AddTicks(-(five.ResetsAt.Value.Ticks % TimeSpan.TicksPerSecond)));
+            Eq("Weekly limit (all models)", usage.Limits.Single(l => l.Kind == "weekly_all").Name);
+            Eq("Weekly limit (opus)", new UsageLimit { Kind = "weekly_opus" }.Name);
+            True(!usage.ExtraUsageEnabled, "extra usage off");
+            Eq(0.0, usage.SessionCostUsd);
         }
 
         // ---------- Review each change of an edit ----------

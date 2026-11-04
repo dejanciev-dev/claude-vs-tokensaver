@@ -95,6 +95,7 @@ This extension attacks all three, and shows the numbers so you can see the effec
 | **Rewind** | Hover one of your messages → **Rewind** puts the files Claude changed since that prompt back the way they were. You see the list of files first; the conversation stays as it is. |
 | **Export** | `/` → *Export conversation…* saves the whole conversation (also what came before a resume or a compaction) as Markdown: your prompts, Claude's answers, and one line per tool call. |
 | **Bookmarks** | Star any answer to keep it. The bookmarks panel lists them per solution with search; clicking one scrolls to it, or shows the saved copy if it came from another conversation. |
+| **Claude Code dialogs** | `/` → *Claude Code*: **Status**, **Account & usage** (plan, every usage limit with its reset time, this session's cost), **Memory & instructions** (CLAUDE.md files and saved memories, with what each costs per request; click to open or create), **Output style** (switch for this project), **Permission rules** and **Hooks** (with the settings file each comes from). Read from Claude Code with no model call. |
 | **Several chat windows** | Each window has its own conversation, meter and model. |
 | **Prompt box helpers** | `Ctrl+Up/Down` prompt history; `/` lists commands, including your own `.claude/commands`; `@` picks a file. |
 | **Diagnostics** | An **Output → Claude Code** pane with route decisions, errors and plain-language hints (not logged in, rate limited, context too long…), plus optional raw CLI traffic. |
@@ -327,7 +328,7 @@ msbuild ClaudeVS.sln /restore /p:Configuration=Release /warnaserror     # → sr
 
 - **Debug in VS:** set **ClaudeVS** as the startup project and press **F5** to open the experimental instance.
 - **Live check against your CLI** (opt-in, costs a few cents, never runs in CI):
-  `dotnet run --project tests/ClaudeVS.Core.Tests -- --live`. `--live-edit-review` checks a partly applied edit (about $0.005). `--live-mcp` checks that the CLI connects to the
+  `dotnet run --project tests/ClaudeVS.Core.Tests -- --live`. `--live-edit-review` checks a partly applied edit (about $0.005). `--live-dialogs` reads every dialog (no cost). `--live-mcp` checks that the CLI connects to the
   Error List server, with no prompt and no cost.
 - **CI** builds every push and PR with warnings as errors, runs the tests and uploads the `.vsix`. Pushing a
   `v*` tag creates a draft GitHub Release.
