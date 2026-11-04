@@ -18,6 +18,46 @@ namespace ClaudeVS.Core.Tests
     internal static class LiveSmoke
     {
         /// <summary>
+        /// `-- --live-dialogs`: reads every dialog (status, rules, hooks, memory, usage, output styles) and sets an output
+        /// style, in a temp folder. Sends no prompt, so it makes no model call and costs nothing.
+        /// </summary>
+        public static int RunDialogs()
+        {
+            string exe = ClaudeCliLocator.Resolve("");
+            if (exe == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-live-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(Path.Combine(dir, ".claude"));
+            File.WriteAllText(Path.Combine(dir, ".claude", "settings.json"), "{\"permissions\":{\"deny\":[\"Read(./secrets/**)\"]},\"hooks\":{\"PreToolUse\":[{\"matcher\":\"Bash\",\"hooks\":[{\"type\":\"command\",\"command\":\"echo hi\"}]}]}}");
+            var failures = new List<string>();
+            void Check(bool ok, string what) { Console.WriteLine((ok ? "  ok   " : "  FAIL ") + what); if (!ok) failures.Add(what); }
+            using (var session = new ClaudeSession(new ClaudeLaunchOptions { WorkingDirectory = dir, PermissionMode = PermissionModeChoice.Plan, EditNotesHook = true }))
+            {
+                try
+                {
+                    var status = session.GetStatusAsync().Result;
+                    Check(status?.Any(r => r.Label == "Version") == true, "status: " + status?.FirstOrDefault(r => r.Label == "Version")?.Value);
+                    var rules = session.GetPermissionRulesAsync().Result;
+                    Check(rules?.Any(r => r.Behavior == "deny" && r.Rule == "Read(./secrets/**)") == true, $"permission rules: {rules?.Count}");
+                    var hooks = session.GetHooksAsync().Result;
+                    Check(hooks?.Any(h => h.Event == "PreToolUse" && h.Text == "echo hi") == true, $"hooks: {hooks?.Count}");
+                    var memory = session.GetMemoryAsync().Result;
+                    Check(memory?.Entries.Any(e => e.Kind == "project") == true, $"memory: {memory?.Entries.Count} entries");
+                    var usage = session.GetUsageAsync().Result;
+                    Check(usage != null, $"usage: {usage?.PlanName}, {usage?.Limits.Count} limits");
+                    var styles = session.GetOutputStylesAsync().Result;
+                    Check(styles?.Available.Contains("Explanatory") == true, $"output styles: {(styles == null ? "none" : string.Join(", ", styles.Available))} (current {styles?.Current})");
+                    Check(session.SetOutputStyleAsync("Explanatory").Result, "set output style");
+                    string local = Path.Combine(dir, ".claude", "settings.local.json");
+                    Check(File.Exists(local) && File.ReadAllText(local).Contains("Explanatory"), "written to settings.local.json");
+                    Check(session.GetOutputStylesAsync().Result?.Current == "Explanatory", "current style updated");
+                }
+                finally { session.Dispose(); try { Directory.Delete(dir, true); } catch (IOException) { } }
+            }
+            Console.WriteLine(failures.Count == 0 ? "PASS live dialogs" : "FAIL live dialogs");
+            return failures.Count == 0 ? 0 : 1;
+        }
+
+        /// <summary>
         /// `-- --live-edit-review`: Haiku in Manual mode edits two lines of a temp file; the test rejects one change
         /// (EditReview), allows the rest with a PostToolUse note, and checks the file and that Claude was told.
         /// About $0.005.
