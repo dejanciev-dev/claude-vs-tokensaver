@@ -114,6 +114,11 @@ namespace ClaudeVS.Core.Cli
         /// their read-only tools are added to <c>--allowedTools</c> so they run without a permission prompt.
         /// </summary>
         public List<SdkMcpServer> SdkMcpServers { get; } = new List<SdkMcpServer>();
+        /// <summary>
+        /// Registers a PostToolUse hook for Edit and Write, so a note can be added to the tool result Claude sees
+        /// (<see cref="ClaudeSession.SetToolResultNote"/>), e.g. when the user applied only part of an edit.
+        /// </summary>
+        public bool EditNotesHook { get; set; }
         public string ExtraArguments { get; set; } = "";
     }
 

@@ -19,6 +19,7 @@ namespace ClaudeVS.Core.Tests
             if (args.Length >= 4 && args[0] == "--live-ask")
                 return LiveSmoke.RunInteractive(args[1], (PermissionModeChoice)Enum.Parse(typeof(PermissionModeChoice), args[2], true), args[3]);
             if (args.Length > 0 && args[0] == "--live-mcp") return LiveSmoke.RunMcp();
+            if (args.Length > 0 && args[0] == "--live-edit-review") return LiveSmoke.RunEditReview();
             if (args.Length > 0 && args[0] == "--live")
                 return LiveSmoke.Run(args.Length > 1 ? args[1] : null,
                     args.Length > 2 ? (PermissionModeChoice)Enum.Parse(typeof(PermissionModeChoice), args[2], true) : PermissionModeChoice.Plan,
@@ -54,6 +55,79 @@ namespace ClaudeVS.Core.Tests
         {
             string a = ClaudeArgsBuilder.Build(new ClaudeLaunchOptions { Model = ModelChoice.Haiku, Effort = EffortChoice.Low, ResumeSessionId = "abc", AppendSystemPrompt = "Be brief." });
             True(a.Contains("--model haiku") && a.Contains("--effort low") && a.Contains("--resume abc") && a.Contains("--append-system-prompt \"Be brief.\""), a);
+        }
+
+        // ---------- Review each change of an edit ----------
+        private static void Test_EditReview_Edit_PartialApply()
+        {
+            string file = "header\nalpha\nbeta\ngamma\ndelta\n";
+            var input = JObject.Parse("{\"file_path\":\"C:/x/notes.txt\",\"old_string\":\"beta\\ngamma\\ndelta\",\"new_string\":\"BETA\\ngamma\\nDELTA\",\"replace_all\":false}");
+            var r = EditReview.Create("Edit", input, file);
+            Eq(2, r.Hunks.Count);
+            Eq("line 3 (−1 +1)", r.Hunks[0].Label, "file line of old_string + offset");
+            Eq("line 5 (−1 +1)", r.Hunks[1].Label);
+            Eq("BETA\ngamma\nDELTA", (string)r.BuildInput()["new_string"], "all accepted = unchanged");
+            Eq(null, r.NoteForClaude());
+
+            r.Hunks[1].Accepted = false;
+            var built = r.BuildInput();
+            Eq("BETA\ngamma\ndelta", (string)built["new_string"]);
+            Eq("beta\ngamma\ndelta", (string)built["old_string"]);
+            Eq(false, (bool)built["replace_all"], "other fields kept");
+            string note = r.NoteForClaude();
+            True(note.StartsWith("The user reviewed this edit and applied only 1 of 2 changes."), note);
+            True(note.Contains("- line 5 (−1 +1): kept\n    delta\n  instead of\n    DELTA\n"), note);
+            Eq("BETA\ngamma\nDELTA", (string)input["new_string"], "original input not modified");
+        }
+
+        private static void Test_EditReview_Write_InsertDeleteAndCrlf()
+        {
+            string file = "a\r\nb\r\nc\r\nd\r\n";
+            var input = JObject.Parse("{\"file_path\":\"f.txt\",\"content\":\"a\\nNEW\\nb\\nc\\n\"}"); // inserts after a, deletes d
+            var r = EditReview.Create("Write", input, file);
+            Eq(2, r.Hunks.Count, "line endings alone are not changes");
+            Eq("after line 1 (+1)", r.Hunks[0].Label);
+            Eq("line 4 (−1)", r.Hunks[1].Label);
+            Eq("a\nNEW\nb\nc\n", (string)r.BuildInput()["content"], "all accepted = exactly Claude's content");
+            r.Hunks[1].Accepted = false; // keep d, in the proposal's line endings
+            Eq("a\nNEW\nb\nc\nd\n", (string)r.BuildInput()["content"]);
+            r.Hunks[1].Accepted = true; r.Hunks[0].Accepted = false;
+            Eq("a\nb\nc\n", (string)r.BuildInput()["content"]);
+
+            var crlf = EditReview.Create("Write", JObject.Parse("{\"content\":\"A\\r\\nb\\r\\nC\\r\\n\"}"), "a\nb\nc\n");
+            crlf.Hunks[1].Accepted = false;
+            Eq("A\r\nb\r\nc\r\n", (string)crlf.BuildInput()["content"], "kept lines take CRLF from the proposal");
+            True(r.NoteForClaude().Contains("kept\n    (nothing)\n  instead of\n    NEW\n"), r.NoteForClaude());
+
+            Eq(null, EditReview.Create("Write", JObject.Parse("{\"content\":\"same\"}"), "same"), "no change, no review");
+            Eq(null, EditReview.Create("Bash", JObject.Parse("{\"command\":\"ls\"}"), null), "not a file tool");
+            Eq(1, EditReview.Create("Write", JObject.Parse("{\"content\":\"x\\ny\"}"), null).Hunks.Count, "new file = one change");
+        }
+
+        private static void Test_EditReview_ProposedFile()
+        {
+            var input = JObject.Parse("{\"old_string\":\"b\",\"new_string\":\"B\"}");
+            Eq("aBcb", EditReview.ProposedFile("Edit", input, "abcb"));
+            input["replace_all"] = true;
+            Eq("aBcB", EditReview.ProposedFile("Edit", input, "abcb"));
+            Eq(null, EditReview.ProposedFile("Edit", input, "xyz"), "old_string not found");
+        }
+
+        private static void Test_Hooks_InitializeAndCallback()
+        {
+            var init = ClaudeSession.BuildInitialize();
+            Eq("initialize", (string)init.SelectToken("request.subtype"));
+            Eq("Edit|Write", (string)init.SelectToken("request.hooks.PostToolUse[0].matcher"));
+            Eq(ClaudeSession.EditNotesCallbackId, (string)init.SelectToken("request.hooks.PostToolUse[0].hookCallbackIds[0]"));
+            Eq("{}", ClaudeSession.HookResponse(null).ToString(Newtonsoft.Json.Formatting.None));
+            Eq("note", (string)ClaudeSession.HookResponse("note").SelectToken("hookSpecificOutput.additionalContext"));
+            Eq("PostToolUse", (string)ClaudeSession.HookResponse("note").SelectToken("hookSpecificOutput.hookEventName"));
+            True(!ClaudeArgsBuilder.Build(new ClaudeLaunchOptions { EditNotesHook = true }).Contains("hook"), "hooks are not a command-line flag");
+
+            var evs = new ClaudeStreamParser().Parse("{\"type\":\"control_request\",\"request_id\":\"h1\",\"request\":{\"subtype\":\"hook_callback\",\"callback_id\":\"edit_notes\",\"tool_use_id\":\"toolu_9\",\"input\":{\"hook_event_name\":\"PostToolUse\"}}}");
+            Eq(ClaudeEventKind.HookCallback, evs.Single().Kind);
+            Eq("h1", evs.Single().RequestId);
+            Eq("toolu_9", (string)evs.Single().Payload["tool_use_id"]);
         }
 
         // ---------- Subagents and background tasks ----------

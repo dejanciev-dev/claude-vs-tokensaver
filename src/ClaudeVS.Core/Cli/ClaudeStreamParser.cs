@@ -194,6 +194,8 @@ namespace ClaudeVS.Core.Cli
             var req = json["request"] as JObject;
             if (req != null && (string)req["subtype"] == "mcp_message")
                 return new[] { new ClaudeEvent { Kind = ClaudeEventKind.McpMessage, RequestId = (string)json["request_id"], ServerName = (string)req["server_name"], Payload = req["message"] as JObject } };
+            if (req != null && (string)req["subtype"] == "hook_callback")
+                return new[] { new ClaudeEvent { Kind = ClaudeEventKind.HookCallback, RequestId = (string)json["request_id"], Payload = req } };
             if (req == null || (string)req["subtype"] != "can_use_tool") return None;
             return new[] { new ClaudeEvent
             {
