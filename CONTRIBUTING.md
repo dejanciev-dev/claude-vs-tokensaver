@@ -22,7 +22,8 @@ dotnet run --project tests/ClaudeVS.Core.Tests -- --live [path-for-raw-output.tx
 ```
 
 It runs two short turns in read-only plan mode in an empty temp folder. To capture and answer permission
-requests (questions, plan approval), use `--live-ask <rawPath> <PermissionMode> "<prompt>"`. Note that in plan
+requests (questions, plan approval), use `--live-ask <rawPath> <PermissionMode> "<prompt>"`. `--live-mcp` starts the CLI
+with the in-process Error List MCP server and checks that it connects (no prompt, no cost). Note that in plan
 mode the CLI also saves the plan under `~/.claude/plans`. If a new CLI version changes the
 event format, add a **sanitized** capture under `tests/ClaudeVS.Core.Tests/Fixtures`, with personal data removed
 (init details, rate-limit info, IDs). See `cli-2.1.316-turn.jsonl` for an example.

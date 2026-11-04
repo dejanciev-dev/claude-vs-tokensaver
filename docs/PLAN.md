@@ -182,7 +182,7 @@ Compared against the `[VSCode]` entries; the version in brackets is where the VS
 **Large**
 - [ ] Subagents: agent map, background tasks, Run in background, Stop per agent (2.1.269–2.1.287)
 - [ ] Accept or reject each change in the diff (2.1.275)
-- [ ] On-demand diagnostics: Claude reads the Error List when it wants, through an MCP server in the extension (2.1.285)
+- [x] On-demand diagnostics: Claude reads the Error List when it wants, through an MCP server in the extension (2.1.285). An in-process "sdk" server declared in `--mcp-config`; the CLI sends its JSON-RPC as `mcp_message` control requests (verified with 2.1.318, including a real `tools/call`). Tool `mcp__visualstudio__get_error_list`, read-only, in `--allowedTools`
 - [ ] Dialogs: Status, Permission rules, Hooks, Memory/Instructions, Output styles, Account & usage (2.1.120–2.1.280)
 - [ ] Accessibility: screen reader announcements, "Focus last message" command (2.1.236 / 2.1.268 / 2.1.274)
 

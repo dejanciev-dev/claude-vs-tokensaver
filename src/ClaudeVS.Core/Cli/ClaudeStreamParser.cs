@@ -190,6 +190,8 @@ namespace ClaudeVS.Core.Cli
         private static IReadOnlyList<ClaudeEvent> ParseControlRequest(JObject json)
         {
             var req = json["request"] as JObject;
+            if (req != null && (string)req["subtype"] == "mcp_message")
+                return new[] { new ClaudeEvent { Kind = ClaudeEventKind.McpMessage, RequestId = (string)json["request_id"], ServerName = (string)req["server_name"], Payload = req["message"] as JObject } };
             if (req == null || (string)req["subtype"] != "can_use_tool") return None;
             return new[] { new ClaudeEvent
             {
@@ -205,6 +207,12 @@ namespace ClaudeVS.Core.Cli
         /// <summary>One short line per tool call for the transcript (never the whole payload).</summary>
         public static string DescribeTool(string name, JObject input)
         {
+            string friendly = Context.IdeMcpServer.DisplayName(name);
+            if (friendly != null)
+            {
+                string scope = (string)input?["file"];
+                return string.IsNullOrWhiteSpace(scope) ? friendly : $"{friendly}: {scope.Trim()}";
+            }
             if (input == null) return name;
             string Arg(string k) => (string)input[k];
             string detail = Arg("file_path") ?? Arg("command") ?? Arg("pattern") ?? Arg("url") ?? Arg("description") ?? Arg("query");

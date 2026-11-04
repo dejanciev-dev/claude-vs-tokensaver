@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -844,6 +845,13 @@ namespace ClaudeVS.ToolWindow
             UpdateFilePicker();
         }
 
+        /// <summary>For Claude's Error List tool: called on a background thread, reads the Error List on the UI thread.</summary>
+        private static async Task<IReadOnlyList<BuildError>> ReadErrorListAsync()
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            return VsContext.GetErrorListRows(includeWarnings: true);
+        }
+
         private void AttachErrorListFromIde()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -1275,6 +1283,8 @@ namespace ClaudeVS.ToolWindow
                 EnableFileCheckpointing = o?.FileCheckpoints ?? true,
                 SessionName = _sessionName,
             });
+            if (o?.ErrorListTool ?? true)
+                _session.Options.SdkMcpServers.Add(IdeMcpServer.Create(ReadErrorListAsync, () => dir));
             _resumeId = null;
             _forkNext = false;
             _sessionDir = dir;

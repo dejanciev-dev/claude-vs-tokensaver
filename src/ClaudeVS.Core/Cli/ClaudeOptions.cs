@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace ClaudeVS.Core.Cli
@@ -108,6 +109,11 @@ namespace ClaudeVS.Core.Cli
         public string SessionName { get; set; }
         /// <summary>Short extra system prompt (kept tiny on purpose — it is paid on every request).</summary>
         public string AppendSystemPrompt { get; set; }
+        /// <summary>
+        /// MCP servers that run inside this process (<see cref="SdkMcpServer"/>). Declared with <c>--mcp-config</c>;
+        /// their read-only tools are added to <c>--allowedTools</c> so they run without a permission prompt.
+        /// </summary>
+        public List<SdkMcpServer> SdkMcpServers { get; } = new List<SdkMcpServer>();
         public string ExtraArguments { get; set; } = "";
     }
 
@@ -149,6 +155,13 @@ namespace ClaudeVS.Core.Cli
             if (!string.IsNullOrWhiteSpace(o.SessionName)) { parts.Add("--name"); parts.Add(o.SessionName.Trim().Replace('\n', ' ').Replace('\r', ' ')); }
 
             if (!string.IsNullOrWhiteSpace(o.AppendSystemPrompt)) { parts.Add("--append-system-prompt"); parts.Add(o.AppendSystemPrompt.Trim()); }
+
+            if (o.SdkMcpServers.Count > 0)
+            {
+                parts.Add("--mcp-config"); parts.Add(SdkMcpServer.ConfigJson(o.SdkMcpServers));
+                var readOnly = o.SdkMcpServers.SelectMany(s => s.Tools.Where(t => t.ReadOnly).Select(s.QualifiedName)).ToList();
+                if (readOnly.Count > 0) { parts.Add("--allowedTools"); parts.Add(string.Join(",", readOnly)); }
+            }
 
             var sb = new StringBuilder();
             foreach (var p in parts)

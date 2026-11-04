@@ -152,17 +152,31 @@ namespace ClaudeVS.Commands
         public static List<BuildError> GetErrors()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
+            return GetErrorListRows(includeWarnings: false);
+        }
+
+        /// <summary>
+        /// Rows of the Error List: errors only, or errors, warnings and messages. Capped at <paramref name="max"/>
+        /// rows, because each row is several COM calls on the UI thread.
+        /// </summary>
+        public static List<BuildError> GetErrorListRows(bool includeWarnings, int max = 2000)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
             var list = new List<BuildError>();
             try
             {
                 ErrorItems items = Dte?.ToolWindows?.ErrorList?.ErrorItems;
                 if (items == null) return list;
-                for (int i = 1; i <= items.Count; i++) // COM collection, 1-based
+                for (int i = 1; i <= items.Count && list.Count < max; i++) // COM collection, 1-based
                 {
                     ErrorItem item = items.Item(i);
-                    if (item.ErrorLevel != vsBuildErrorLevel.vsBuildErrorLevelHigh) continue;
+                    var severity = item.ErrorLevel == vsBuildErrorLevel.vsBuildErrorLevelHigh ? ErrorSeverity.Error
+                        : item.ErrorLevel == vsBuildErrorLevel.vsBuildErrorLevelMedium ? ErrorSeverity.Warning : ErrorSeverity.Message;
+                    if (!includeWarnings && severity != ErrorSeverity.Error) continue;
                     var (code, message) = SplitCode(item.Description);
-                    list.Add(new BuildError { FilePath = item.FileName, Line = item.Line, Code = code, Message = message });
+                    var row = new BuildError { FilePath = item.FileName, Line = item.Line, Code = code, Message = message, Severity = severity };
+                    try { row.Column = item.Column; row.Project = item.Project; } catch (Exception) { } // not every provider fills these
+                    list.Add(row);
                 }
             }
             catch (Exception) { }

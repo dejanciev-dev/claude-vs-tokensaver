@@ -18,6 +18,7 @@ namespace ClaudeVS.Core.Tests
         {
             if (args.Length >= 4 && args[0] == "--live-ask")
                 return LiveSmoke.RunInteractive(args[1], (PermissionModeChoice)Enum.Parse(typeof(PermissionModeChoice), args[2], true), args[3]);
+            if (args.Length > 0 && args[0] == "--live-mcp") return LiveSmoke.RunMcp();
             if (args.Length > 0 && args[0] == "--live")
                 return LiveSmoke.Run(args.Length > 1 ? args[1] : null,
                     args.Length > 2 ? (PermissionModeChoice)Enum.Parse(typeof(PermissionModeChoice), args[2], true) : PermissionModeChoice.Plan,
@@ -53,6 +54,97 @@ namespace ClaudeVS.Core.Tests
         {
             string a = ClaudeArgsBuilder.Build(new ClaudeLaunchOptions { Model = ModelChoice.Haiku, Effort = EffortChoice.Low, ResumeSessionId = "abc", AppendSystemPrompt = "Be brief." });
             True(a.Contains("--model haiku") && a.Contains("--effort low") && a.Contains("--resume abc") && a.Contains("--append-system-prompt \"Be brief.\""), a);
+        }
+
+        // ---------- In-process MCP server (Error List tool) ----------
+        private static SdkMcpServer TestIdeServer(params BuildError[] rows) =>
+            IdeMcpServer.Create(() => System.Threading.Tasks.Task.FromResult<IReadOnlyList<BuildError>>(rows), () => @"C:\src\Shop");
+
+        private static void Test_Args_SdkMcpServer_ConfigAndAllowedTools()
+        {
+            var o = new ClaudeLaunchOptions();
+            o.SdkMcpServers.Add(TestIdeServer());
+            string a = ClaudeArgsBuilder.Build(o);
+            True(a.Contains("--mcp-config \"{\\\"mcpServers\\\":{\\\"visualstudio\\\":{\\\"type\\\":\\\"sdk\\\",\\\"name\\\":\\\"visualstudio\\\"}}}\""), a);
+            True(a.Contains("--allowedTools mcp__visualstudio__get_error_list"), a);
+            True(!ClaudeArgsBuilder.Build(new ClaudeLaunchOptions()).Contains("--mcp-config"), "no servers, no flag");
+        }
+
+        private static void Test_Parser_McpMessage()
+        {
+            // Captured from Claude Code 2.1.318.
+            var evs = new ClaudeStreamParser().Parse("{\"type\":\"control_request\",\"request_id\":\"r1\",\"request\":{\"subtype\":\"mcp_message\",\"server_name\":\"visualstudio\",\"message\":{\"method\":\"tools/list\",\"jsonrpc\":\"2.0\",\"id\":1}}}");
+            Eq(1, evs.Count);
+            Eq(ClaudeEventKind.McpMessage, evs[0].Kind);
+            Eq("r1", evs[0].RequestId);
+            Eq("visualstudio", evs[0].ServerName);
+            Eq("tools/list", (string)evs[0].Payload["method"]);
+        }
+
+        private static void Test_SdkMcpServer_Protocol()
+        {
+            var s = TestIdeServer(new BuildError { FilePath = @"C:\src\Shop\Api\Program.cs", Line = 12, Column = 5, Code = "CS0103", Message = "The name 'zork' does not exist" });
+            var init = s.HandleAsync(JObject.Parse("{\"jsonrpc\":\"2.0\",\"id\":0,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2025-11-25\"}}")).Result;
+            Eq("2025-11-25", (string)init.SelectToken("result.protocolVersion"));
+            Eq("visualstudio", (string)init.SelectToken("result.serverInfo.name"));
+            Eq(0, (int)init["id"]);
+
+            var note = s.HandleAsync(JObject.Parse("{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}")).Result;
+            True(note["id"] == null && note["result"] != null && note["error"] == null, "notification gets an empty result: " + note);
+
+            var list = s.HandleAsync(JObject.Parse("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}")).Result;
+            Eq("get_error_list", (string)list.SelectToken("result.tools[0].name"));
+            Eq(true, (bool)list.SelectToken("result.tools[0].annotations.readOnlyHint"));
+
+            var call = s.HandleAsync(JObject.Parse("{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\",\"params\":{\"name\":\"get_error_list\",\"arguments\":{}}}")).Result;
+            string text = (string)call.SelectToken("result.content[0].text");
+            True(text.Contains("Api/Program.cs:12:5 error CS0103: The name 'zork' does not exist"), text);
+            True(call.SelectToken("result.isError") == null, "not an error");
+
+            var unknown = s.HandleAsync(JObject.Parse("{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/call\",\"params\":{\"name\":\"nope\"}}")).Result;
+            Eq(-32602, (int)unknown.SelectToken("error.code"));
+            var method = s.HandleAsync(JObject.Parse("{\"jsonrpc\":\"2.0\",\"id\":4,\"method\":\"resources/list\"}")).Result;
+            Eq(-32601, (int)method.SelectToken("error.code"));
+
+            var failing = new SdkMcpServer("x").Add(new McpTool { Name = "boom", Handler = _ => throw new InvalidOperationException("no IDE") });
+            var r = failing.HandleAsync(JObject.Parse("{\"jsonrpc\":\"2.0\",\"id\":5,\"method\":\"tools/call\",\"params\":{\"name\":\"boom\"}}")).Result;
+            Eq(true, (bool)r.SelectToken("result.isError"));
+            True(((string)r.SelectToken("result.content[0].text")).Contains("no IDE"), r.ToString());
+        }
+
+        private static void Test_ErrorListTool_Format()
+        {
+            var rows = new[]
+            {
+                new BuildError { FilePath = @"C:\src\Shop\Web\Site.cs", Line = 3, Code = "CS0168", Message = "Unused variable", Severity = ErrorSeverity.Warning, Project = "Web" },
+                new BuildError { FilePath = @"C:\src\Shop\Api\Program.cs", Line = 12, Code = "CS0103", Message = "Missing name", Project = "Api" },
+                new BuildError { FilePath = @"C:\src\Shop\Api\Program.cs", Line = 12, Code = "CS0103", Message = "Missing name", Project = "Api" }, // build + IntelliSense
+                new BuildError { FilePath = @"C:\src\Shop\Api\Util.cs", Line = 1, Message = "Info only", Severity = ErrorSeverity.Message },
+            };
+            string errorsOnly = ErrorListTool.Format(rows, @"C:\src\Shop", null);
+            Eq("Error List: 1 error, 1 warning.\nApi/Program.cs:12 error CS0103: Missing name (Api)", errorsOnly);
+
+            string withWarnings = ErrorListTool.Format(rows, @"C:\src\Shop", JObject.Parse("{\"severity\":\"warning\"}"));
+            True(withWarnings.IndexOf("error CS0103") < withWarnings.IndexOf("warning CS0168"), "errors first: " + withWarnings);
+            True(!withWarnings.Contains("Info only"), "messages need severity all");
+            True(ErrorListTool.Format(rows, @"C:\src\Shop", JObject.Parse("{\"severity\":\"all\"}")).Contains("message Info only"), "all includes messages");
+
+            string filtered = ErrorListTool.Format(rows, @"C:\src\Shop", JObject.Parse("{\"severity\":\"all\",\"file\":\"web\\\\site\"}"));
+            True(filtered.Contains("Matching \"web/site\": 1.") && filtered.Contains("Site.cs:3 warning"), filtered);
+
+            string onlyWarnings = ErrorListTool.Format(rows.Where(e => e.Severity == ErrorSeverity.Warning), @"C:\src\Shop", null);
+            Eq("Error List: 0 errors, 1 warning. Pass severity \"warning\" to see the warnings.", onlyWarnings);
+
+            var many = Enumerable.Range(1, 80).Select(i => new BuildError { FilePath = @"C:\src\Shop\A.cs", Line = i, Message = "e" + i }).ToArray();
+            string capped = ErrorListTool.Format(many, @"C:\src\Shop", JObject.Parse("{\"limit\":5}"));
+            True(capped.StartsWith("Error List: 80 errors, 0 warnings. Showing the first 5.\n"), capped);
+            Eq(6, capped.Split('\n').Length, "count line + 5 rows");
+        }
+
+        private static void Test_DescribeTool_ErrorList()
+        {
+            Eq("Error List", ClaudeStreamParser.DescribeTool("mcp__visualstudio__get_error_list", new JObject()));
+            Eq("Error List: Program.cs", ClaudeStreamParser.DescribeTool("mcp__visualstudio__get_error_list", JObject.Parse("{\"file\":\"Program.cs\"}")));
         }
 
         private static void Test_Quote_Windows()

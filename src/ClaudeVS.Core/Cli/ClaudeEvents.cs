@@ -50,6 +50,11 @@ namespace ClaudeVS.Core.Cli
         ControlResponse,
         /// <summary>Plan usage limits (rate_limit_event); the data is in Payload.</summary>
         RateLimit,
+        /// <summary>
+        /// A JSON-RPC message for one of our in-process MCP servers (control_request <c>mcp_message</c>). The
+        /// session answers it itself; <see cref="ClaudeEvent.ServerName"/>, RequestId, Payload = the message.
+        /// </summary>
+        McpMessage,
         Error,
     }
 
@@ -69,6 +74,8 @@ namespace ClaudeVS.Core.Cli
         public string RequestId { get; set; }
         /// <summary>ControlResponse: the CLI's answer to our control request (e.g. the get_context_usage data).</summary>
         public JObject Payload { get; set; }
+        /// <summary>McpMessage: which of our MCP servers the message is for.</summary>
+        public string ServerName { get; set; }
 
         // Usage
         public TokenUsage Usage { get; set; }
