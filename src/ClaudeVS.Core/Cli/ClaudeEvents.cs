@@ -55,6 +55,8 @@ namespace ClaudeVS.Core.Cli
         /// session answers it itself; <see cref="ClaudeEvent.ServerName"/>, RequestId, Payload = the message.
         /// </summary>
         McpMessage,
+        /// <summary>A subagent or background command started, progressed or ended; the system message is in Payload (see <see cref="AgentTaskList"/>).</summary>
+        Task,
         Error,
     }
 

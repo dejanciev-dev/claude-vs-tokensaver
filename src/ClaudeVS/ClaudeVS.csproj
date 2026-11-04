@@ -65,6 +65,7 @@
     <Compile Include="ToolWindow\ChatTheme.cs" />
     <Compile Include="ToolWindow\ImageAttachments.cs" />
     <Compile Include="ToolWindow\ClaudeChatControl.cs" />
+    <Compile Include="ToolWindow\ClaudeChatControl.Agents.cs" />
     <Compile Include="ToolWindow\TranscriptView.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

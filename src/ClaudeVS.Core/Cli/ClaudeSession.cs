@@ -160,6 +160,24 @@ namespace ClaudeVS.Core.Cli
 
         public Task InterruptAsync() => SendControlAsync(new JObject { ["subtype"] = "interrupt" });
 
+        /// <summary>
+        /// Stops one subagent or background command (control request <c>stop_task</c>, verified with 2.1.318; the
+        /// tasks it started stop too). Throws <see cref="InvalidOperationException"/> when the CLI refuses.
+        /// </summary>
+        public Task StopTaskAsync(string taskId) =>
+            RequestAsync(new JObject { ["subtype"] = "stop_task", ["task_id"] = taskId }, TimeSpan.FromSeconds(15));
+
+        /// <summary>
+        /// Moves a running foreground agent to the background (control request <c>background_tasks</c> with the Agent
+        /// call's id, verified with 2.1.318): Claude gets on with the turn and is told when the agent finishes.
+        /// True when the CLI says it was moved.
+        /// </summary>
+        public async Task<bool> MoveToBackgroundAsync(string toolUseId)
+        {
+            var r = await RequestAsync(new JObject { ["subtype"] = "background_tasks", ["tool_use_id"] = toolUseId }, TimeSpan.FromSeconds(15)).ConfigureAwait(false);
+            return r != null && (r.Value<bool?>("backgrounded") ?? true);
+        }
+
         /// <summary>Switch model on the running process (no restart). NOTE: a model switch starts a new prompt cache.</summary>
         public async Task SetModelAsync(ModelChoice model)
         {
