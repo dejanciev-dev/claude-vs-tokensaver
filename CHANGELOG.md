@@ -7,6 +7,12 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Screen readers:** Narrator, NVDA and JAWS announce when Claude finishes (with the start of the answer),
+  asks for permission, has a question or a plan, wants an edit reviewed, stops responding, or hits a usage
+  limit (option *Screen reader announcements*, on). **Focus Last Message** (Tools → Claude Code, `Ctrl+Alt+K, M`,
+  or / → Focus last message) puts the keyboard at the start of Claude's last answer; `Esc` returns to the
+  prompt box. The prompt box, the conversation, the meter and the agents panel header now have names, and the
+  agents panel opens and closes with Enter or Space.
 - **Claude Code dialogs** (/ → Claude Code): **Status** (version, account, model, setting sources; click a row
   to copy it), **Account & usage** (plan, each usage limit with its reset time, this session's cost and lines
   changed), **Memory & instructions** (CLAUDE.md files and saved memories with their token cost per request;

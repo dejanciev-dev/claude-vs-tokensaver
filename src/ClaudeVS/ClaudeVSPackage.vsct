@@ -46,6 +46,12 @@
           <ButtonText>New Chat Window</ButtonText>
         </Strings>
       </Button>
+      <Button guid="guidClaudeVSCmdSet" id="cmdidFocusLastMessage" priority="0x0070" type="Button">
+        <Parent guid="guidClaudeVSCmdSet" id="ClaudeSubMenuGroup" />
+        <Strings>
+          <ButtonText>Focus Last Message</ButtonText>
+        </Strings>
+      </Button>
       <Button guid="guidClaudeVSCmdSet" id="cmdidAttachCurrentFile" priority="0x0150" type="Button">
         <Parent guid="guidClaudeVSCmdSet" id="ClaudeSubMenuGroup" />
         <Strings>
@@ -97,6 +103,7 @@
     <KeyBinding guid="guidClaudeVSCmdSet" id="cmdidAttachCurrentFile" editor="guidVSStd97" key1="K" mod1="Control Alt" key2="F" />
     <KeyBinding guid="guidClaudeVSCmdSet" id="cmdidAttachErrorList" editor="guidVSStd97" key1="K" mod1="Control Alt" key2="E" />
     <KeyBinding guid="guidClaudeVSCmdSet" id="cmdidNewChatWindow" editor="guidVSStd97" key1="K" mod1="Control Alt" key2="N" />
+    <KeyBinding guid="guidClaudeVSCmdSet" id="cmdidFocusLastMessage" editor="guidVSStd97" key1="K" mod1="Control Alt" key2="M" />
   </KeyBindings>
 
   <Symbols>
@@ -114,6 +121,7 @@
       <IDSymbol name="cmdidAttachErrorList" value="0x0105" />
       <IDSymbol name="cmdidShowSavingsReport" value="0x0106" />
       <IDSymbol name="cmdidNewChatWindow" value="0x0107" />
+      <IDSymbol name="cmdidFocusLastMessage" value="0x0108" />
     </GuidSymbol>
   </Symbols>
 </CommandTable>

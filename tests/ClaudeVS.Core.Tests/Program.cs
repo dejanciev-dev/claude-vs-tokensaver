@@ -58,6 +58,30 @@ namespace ClaudeVS.Core.Tests
             True(a.Contains("--model haiku") && a.Contains("--effort low") && a.Contains("--resume abc") && a.Contains("--append-system-prompt \"Be brief.\""), a);
         }
 
+        // ---------- Screen reader text ----------
+        private static void Test_ScreenReaderText_Plain()
+        {
+            Eq("Fix Use the real name", ScreenReaderText.Plain("# Fix\nUse the **real** name"));
+            Eq("Steps: Run it (code block) Then see the docs and Program.cs.",
+               ScreenReaderText.Plain("Steps:\n\n1. Run it\n```csharp\nvar x = 1;\n```\n- Then see [the docs](https://x.y) and `Program.cs`."));
+            Eq("a b 1 2", ScreenReaderText.Plain("| a | b |\n|---|---|\n| 1 | 2 |"));
+            Eq("quoted", ScreenReaderText.Plain("> quoted"));
+            Eq("unclosed (code block)", ScreenReaderText.Plain("unclosed\n```\ncode never closed"));
+            Eq("", ScreenReaderText.Plain(null));
+        }
+
+        private static void Test_ScreenReaderText_AnswerFinished()
+        {
+            Eq("Claude finished. Done.", ScreenReaderText.AnswerFinished("**Done.**"));
+            Eq("Claude finished.", ScreenReaderText.AnswerFinished(""));
+            string longAnswer = string.Join(" ", Enumerable.Repeat("This sentence is part of a long answer.", 20));
+            string said = ScreenReaderText.AnswerFinished(longAnswer);
+            True(said.EndsWith(ScreenReaderText.ReadAllHint), said);
+            True(said.Length < ScreenReaderText.AnswerChars + 100, "short: " + said.Length);
+            True(said.Contains("long answer. " + ScreenReaderText.ReadAllHint), "cut after a sentence: " + said);
+            Eq("one two…", ScreenReaderText.Shorten("one two three", 9));
+        }
+
         // ---------- The CLI's dialogs ----------
         private static JObject DialogFixture(string requestId) =>
             File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.318-dialogs.jsonl"))

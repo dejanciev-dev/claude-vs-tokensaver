@@ -19,5 +19,6 @@ namespace ClaudeVS
         public const int AttachErrorList = 0x0105;
         public const int ShowSavingsReport = 0x0106;
         public const int NewChatWindow = 0x0107;
+        public const int FocusLastMessage = 0x0108;
     }
 }

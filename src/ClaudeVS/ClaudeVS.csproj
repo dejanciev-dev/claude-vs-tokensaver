@@ -67,6 +67,7 @@
     <Compile Include="ToolWindow\ClaudeChatControl.cs" />
     <Compile Include="ToolWindow\ClaudeChatControl.Agents.cs" />
     <Compile Include="ToolWindow\ClaudeChatControl.Dialogs.cs" />
+    <Compile Include="ToolWindow\ClaudeChatControl.Accessibility.cs" />
     <Compile Include="ToolWindow\TranscriptView.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

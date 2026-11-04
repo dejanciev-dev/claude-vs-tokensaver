@@ -308,6 +308,7 @@ namespace ClaudeVS.ToolWindow
             bottom.Children.Add(_attachment);
             bottom.Children.Add(_route);
             bottom.Children.Add(_inputBox);
+            InitAccessibility(bottom);
 
             var root = new DockPanel();
             DockPanel.SetDock(top, Dock.Top);
@@ -741,6 +742,7 @@ namespace ClaudeVS.ToolWindow
                 new ChatPopup.Entry { Group = "Context", Label = "Rewind…", Detail = "Esc Esc", Description = "Put files back to before one of your prompts", Run = ShowRewindPicker },
                 new ChatPopup.Entry { Group = "Context", Label = "Focus view", Description = "Collapse tool calls into one summary row", Checked = Options?.FocusView == true, Run = ToggleFocusView },
                 new ChatPopup.Entry { Group = "Context", Label = "Copy last response", Description = "Claude's last answer as Markdown", Run = CopyLastAnswer },
+                new ChatPopup.Entry { Group = "Context", Label = "Focus last message", Detail = "Ctrl+Alt+K, M", Description = "Move the keyboard to Claude's last answer (for screen readers)", Run = FocusLastMessage },
                 new ChatPopup.Entry { Group = "Context", Label = "Export conversation…", Description = "Save the whole conversation as Markdown", Run = ExportConversation },
                 new ChatPopup.Entry { Group = "Context", Label = "Bookmarks", Description = "Answers you starred", Run = ToggleBookmarksPanel },
             };
@@ -1663,6 +1665,7 @@ namespace ClaudeVS.ToolWindow
                         _pendingPermission = ev;
                         _permissionText.Text = "Allow " + ev.Text + "?";
                         _permission.Visibility = Visibility.Visible;
+                        Announce($"Claude asks to allow {ev.Text}. The Allow and Deny buttons are above the prompt box.", assertive: true);
                         break;
                     case ClaudeEventKind.Task:
                         OnTaskEvent(ev);
@@ -1690,6 +1693,7 @@ namespace ClaudeVS.ToolWindow
                         _view.AppendTurnFooter($"✓ {ev.DurationMs / 1000.0:0.0}s · {TokenMeter.Format(ev.Usage.Total)} tok · ${_meterModel?.LastTurnCostUsd:0.000}{used}",
                             string.IsNullOrWhiteSpace(answer) ? null : BookmarkToggle(turn.Prompt, answer, turn.Anchor), answer);
                         if (!string.IsNullOrWhiteSpace(answer)) _lastAnswer = answer;
+                        Announce(ev.IsError ? "Claude stopped with an error. " + Short(ev.Text) : ScreenReaderText.AnswerFinished(answer));
                         if (_queuedBubbles.Count > 0) { _queuedBubbles.Dequeue().Render(); RefreshQueuedPanel(); } // Claude starts on the next one now
                         break;
                     case ClaudeEventKind.Error:
@@ -1837,6 +1841,7 @@ namespace ClaudeVS.ToolWindow
             {
                 var questions = AskUserQuestionTool.Parse(ev.ToolInput);
                 if (questions.Count == 0) return false;
+                Announce("Claude has a question: " + Short(questions[0].Text) + (questions.Count > 1 ? $" And {questions.Count - 1} more." : ""), assertive: true);
                 _view.AppendQuestionCard(questions, chosen =>
                 {
                     ThreadHelper.ThrowIfNotOnUIThread();
@@ -1850,6 +1855,7 @@ namespace ClaudeVS.ToolWindow
             {
                 string plan = ExitPlanModeTool.Plan(ev.ToolInput);
                 string docPath = null; // the plan as a document, once opened
+                Announce("Claude's plan is ready for your approval. " + Short(plan), assertive: true);
                 _view.AppendPlanCard(plan,
                     () => { ThreadHelper.ThrowIfNotOnUIThread(); Respond(true, null, null, "✔ plan approved — Claude starts the work"); },
                     feedback =>
@@ -1892,6 +1898,7 @@ namespace ClaudeVS.ToolWindow
                 var review = EditReview.Create(ev.ToolName, ev.ToolInput, current);
                 if (review == null || review.Hunks.Count < 2) return false; // one change: the usual Allow / Deny bar
                 string name = System.IO.Path.GetFileName(path ?? "");
+                Announce($"Claude wants to {(ev.ToolName == "Write" ? "write" : "edit")} {name}: {review.Hunks.Count} changes to review in the conversation.", assertive: true);
                 _view.AppendEditReviewCard(name, review,
                     onApply: () =>
                     {
@@ -2223,6 +2230,7 @@ namespace ClaudeVS.ToolWindow
             _limitBanner.Foreground = level == LimitLevel.Reached ? ChatTheme.Error : Brushes.DarkOrange;
             _limitBanner.ToolTip = r.Details(now) + "\nFrom Claude Code; updated with each answer.";
             _limitBanner.Visibility = Visibility.Visible;
+            AnnounceLimit(text, level == LimitLevel.Reached);
         }
 
         // ---------------- "Not responding" ----------------
@@ -2245,8 +2253,10 @@ namespace ClaudeVS.ToolWindow
 
         private void SetStalled(bool stalled, TimeSpan quiet = default)
         {
+            bool wasStalled = _stall.Visibility == Visibility.Visible;
             _stall.Visibility = stalled ? Visibility.Visible : Visibility.Collapsed;
             if (stalled) _stall.Text = $"⚠ Not responding: no output from Claude Code for {(int)quiet.TotalMinutes} min. A long command may still be running; Esc stops it.";
+            if (stalled && !wasStalled) Announce("Claude Code is not responding. A long command may still be running. Press Escape in the prompt box to stop it.");
         }
 
         // ---------------- Bookmarks ----------------
@@ -2336,6 +2346,7 @@ namespace ClaudeVS.ToolWindow
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             _view.AppendPlain(prefix + text, error: true);
+            Announce("Error: " + Short(text));
             string hint = ClaudeErrorHints.Explain(text);
             if (hint != null && hint != _lastHint) Append("  → " + hint + "\n");
             _lastHint = hint;

@@ -96,6 +96,7 @@ This extension attacks all three, and shows the numbers so you can see the effec
 | **Export** | `/` → *Export conversation…* saves the whole conversation (also what came before a resume or a compaction) as Markdown: your prompts, Claude's answers, and one line per tool call. |
 | **Bookmarks** | Star any answer to keep it. The bookmarks panel lists them per solution with search; clicking one scrolls to it, or shows the saved copy if it came from another conversation. |
 | **Claude Code dialogs** | `/` → *Claude Code*: **Status**, **Account & usage** (plan, every usage limit with its reset time, this session's cost), **Memory & instructions** (CLAUDE.md files and saved memories, with what each costs per request; click to open or create), **Output style** (switch for this project), **Permission rules** and **Hooks** (with the settings file each comes from). Read from Claude Code with no model call. |
+| **Screen readers** | Announcements through a UIA live region when Claude finishes (with the start of the answer), asks for permission, has a question or a plan, wants an edit reviewed, stops responding, or hits a usage limit. **Focus last message** (`Ctrl+Alt+K, M`) puts the keyboard at the start of Claude's last answer; `Esc` returns to the prompt box. |
 | **Several chat windows** | Each window has its own conversation, meter and model. |
 | **Prompt box helpers** | `Ctrl+Up/Down` prompt history; `/` lists commands, including your own `.claude/commands`; `@` picks a file. |
 | **Diagnostics** | An **Output → Claude Code** pane with route decisions, errors and plain-language hints (not logged in, rate limited, context too long…), plus optional raw CLI traffic. |
@@ -240,6 +241,7 @@ First run:
 | Ask Claude about the selection | Editor right-click | `Ctrl+Alt+K, S` |
 | Attach current file as a reference | Tools → Claude Code · editor right-click | `Ctrl+Alt+K, F` |
 | Attach Error List | Tools → Claude Code | `Ctrl+Alt+K, E` |
+| Focus last message (keyboard to Claude's last answer; `Esc` goes back) | Tools → Claude Code · `/` | `Ctrl+Alt+K, M` |
 | Show Savings Report | Tools → Claude Code | |
 | Generate Lean CLAUDE.md | Tools → Claude Code | |
 | Install Token-Saving Settings and Hooks | Tools → Claude Code | |
@@ -266,6 +268,7 @@ Editor commands go to the chat window you used last.
 | CLI | Permission mode | AcceptEdits | Edits are applied; shell commands ask. In **Plan** mode the CLI answered with Sonnet even when Haiku was requested. |
 | Chat | Archive inactive sessions after (days) | 14 | Unused sessions move to the Archived group of the sessions list; 0 = never. |
 | Chat | Focus view | Off | Consecutive tool calls collapse into one summary row; also / → Focus view. |
+| Chat | Screen reader announcements | On | Narrator, NVDA or JAWS announce finished answers (their start), permission requests, questions, plans, edits to review, stalls and usage limits. Nothing is sent without a screen reader. |
 | Chat | Show message timestamps | On | Time above each prompt and at the end of each answer line; a date line where the day changes. |
 | CLI | File checkpoints (rewind) | On | Claude Code keeps a copy of each file before Claude changes it, so prompts can be rewound. Applies to new sessions. |
 | CLI | Extra arguments | | Appended to the `claude` command line, e.g. `--add-dir ..\shared`. |
