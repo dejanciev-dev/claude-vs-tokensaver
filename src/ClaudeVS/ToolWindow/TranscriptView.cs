@@ -386,7 +386,28 @@ namespace ClaudeVS.ToolWindow
                 _doc.Blocks.Add(block);
                 _answerBlocks.Add(block);
             }
+            if (_answerBlocks.Count > 0) _lastAnswerStart = _answerBlocks[0];
             ScrollToEndIfNear();
+        }
+
+        // First block of the text Claude wrote last (for Focus last message).
+        private Block _lastAnswerStart;
+
+        /// <summary>
+        /// Puts the keyboard caret at the start of Claude's last answer, so a screen reader reads it from there
+        /// (arrow keys move through it). False when there is no answer yet.
+        /// </summary>
+        public bool FocusLastAnswer()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var b = _lastAnswerStart;
+            if (b == null || b.Parent == null) return false; // not in the document any more
+            Box.IsReadOnlyCaretVisible = true; // a visible caret while reading with the keyboard
+            Box.Focus();
+            System.Windows.Input.Keyboard.Focus(Box);
+            Box.Selection.Select(b.ContentStart, b.ContentStart);
+            b.BringIntoView();
+            return true;
         }
 
         /// <summary>
@@ -799,6 +820,7 @@ namespace ClaudeVS.ToolWindow
             _toolGroupOf.Clear();
             _toolGroup = null;
             LastUserMessage = null;
+            _lastAnswerStart = null;
             _lastDay = null;
         }
 

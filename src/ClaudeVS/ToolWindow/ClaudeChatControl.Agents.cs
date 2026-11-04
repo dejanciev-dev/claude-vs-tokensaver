@@ -65,6 +65,7 @@ namespace ClaudeVS.ToolWindow
             string what = _lastBackgroundDone != null ? $"“{_lastBackgroundDone}” finished" : "A background task finished";
             _lastBackgroundDone = null;
             Append($"\n  ⚙ {what}; Claude continues.\n");
+            Announce($"{what.Replace('“', '"').Replace('”', '"')}; Claude continues.");
         }
 
         /// <summary>Before a new prompt: finished tasks from earlier turns leave the panel.</summary>
@@ -113,6 +114,17 @@ namespace ClaudeVS.ToolWindow
             header.Children.Add(title);
             header.ToolTip = _agentsCollapsed ? "Show agents and background tasks" : "Hide the list";
             header.MouseLeftButtonUp += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); _agentsCollapsed = !_agentsCollapsed; RefreshAgentsPanel(); };
+            // Keyboard and screen readers: Tab to the header, Enter or Space toggles the list.
+            header.Focusable = true;
+            System.Windows.Automation.AutomationProperties.SetName(header, _tasks.Headline() + (_agentsCollapsed ? ", collapsed" : ", expanded"));
+            header.KeyDown += (s, e) =>
+            {
+                ThreadHelper.ThrowIfNotOnUIThread();
+                if (e.Key != System.Windows.Input.Key.Enter && e.Key != System.Windows.Input.Key.Space) return;
+                e.Handled = true;
+                _agentsCollapsed = !_agentsCollapsed;
+                RefreshAgentsPanel();
+            };
             stack.Children.Add(header);
 
             if (!_agentsCollapsed)

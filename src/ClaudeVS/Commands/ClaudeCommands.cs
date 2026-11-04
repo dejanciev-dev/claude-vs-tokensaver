@@ -65,6 +65,12 @@ namespace ClaudeVS.Commands
 
             Add(mcs, PackageIds.ShowSavingsReport, (s, e) => Run(ShowSavingsReportAsync));
             Add(mcs, PackageIds.NewChatWindow, (s, e) => Run(async () => await _package.NewChatWindowAsync()));
+            Add(mcs, PackageIds.FocusLastMessage, (s, e) => Run(async () =>
+            {
+                var chat = await _package.ShowChatAsync();
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                chat.FocusLastMessage();
+            }));
 
             Add(mcs, PackageIds.GenerateClaudeMd, (s, e) => Run(GenerateClaudeMdAsync));
             Add(mcs, PackageIds.InstallTokenSaver, (s, e) => Run(InstallTokenSaverAsync));

@@ -23,6 +23,9 @@ namespace ClaudeVS.Options
         [Category("Chat"), DisplayName("Focus view"), Description("Collapse consecutive tool calls into one summary row (expand it to see each call). Also toggled with / → Focus view.")]
         public bool FocusView { get; set; }
 
+        [Category("Chat"), DisplayName("Screen reader announcements"), Description("Screen readers (Narrator, NVDA, JAWS) announce when Claude finishes (with the start of the answer), asks for permission, has a question or a plan, wants an edit reviewed, stops responding, or hits a usage limit. Nothing is sent when no screen reader is running.")]
+        public bool ScreenReaderAnnouncements { get; set; } = true;
+
         [Category("Chat"), DisplayName("Show message timestamps"), Description("A small time above each prompt and at the end of each answer's line, with a date line where the day changes.")]
         public bool ShowTimestamps { get; set; } = true;
 
