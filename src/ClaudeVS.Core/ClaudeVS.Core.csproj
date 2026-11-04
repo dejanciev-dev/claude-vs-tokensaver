@@ -13,7 +13,7 @@
 
   <ItemGroup>
     <!-- 13.0.x ships with VS 2022 and VS 2026, so the VSIX does not have to carry its own copy. -->
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
 
 </Project>
