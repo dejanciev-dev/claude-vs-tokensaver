@@ -23,7 +23,9 @@ dotnet run --project tests/ClaudeVS.Core.Tests -- --live [path-for-raw-output.tx
 
 It runs two short turns in read-only plan mode in an empty temp folder. To capture and answer permission
 requests (questions, plan approval), use `--live-ask <rawPath> <PermissionMode> "<prompt>"`. `--live-edit-review` has Haiku make a two-line edit, applies one line and checks that Claude was told (about
-$0.005). `--live-dialogs` reads every dialog and sets an output style in a temp folder (no prompt, no cost). `--live-mcp` starts the CLI
+$0.005). `--live-setup` installs the token-saving settings into a temp .NET project and checks the quiet `dotnet build`, the
+`bin/` block and the output cap (about $0.005; needs the .NET SDK). `--live-session` checks the meter against
+`/context`, a mid-session model switch, cost across a relaunch and `/compact` (about $0.05). `--live-dialogs` reads every dialog and sets an output style in a temp folder (no prompt, no cost). `--live-mcp` starts the CLI
 with the in-process Error List MCP server and checks that it connects (no prompt, no cost). Note that in plan
 mode the CLI also saves the plan under `~/.claude/plans`. If a new CLI version changes the
 event format, add a **sanitized** capture under `tests/ClaudeVS.Core.Tests/Fixtures`, with personal data removed

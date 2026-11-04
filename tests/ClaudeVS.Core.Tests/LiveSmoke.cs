@@ -18,6 +18,159 @@ namespace ClaudeVS.Core.Tests
     internal static class LiveSmoke
     {
         /// <summary>
+        /// `-- --live-session`: the meter against the real CLI. Haiku turn → context % vs get_context_usage; switch to
+        /// Sonnet/medium mid-session (set_model, apply_flag_settings) → which model answered; relaunch with --resume →
+        /// session cost keeps adding up; /compact → context drops. About $0.05–0.10 (one Sonnet turn writes the cache).
+        /// </summary>
+        public static int RunSession()
+        {
+            string exe = ClaudeCliLocator.Resolve("");
+            if (exe == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-live-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            var failures = new List<string>();
+            void Check(bool ok, string what) { Console.WriteLine((ok ? "  ok   " : "  FAIL ") + what); if (!ok) failures.Add(what); }
+            var meter = new Tokens.TokenMeter();
+            var done = new AutoResetEvent(false);
+            string turnModel = null;
+            bool compacted = false;
+
+            ClaudeSession Open(string resumeId)
+            {
+                var s = new ClaudeSession(new ClaudeLaunchOptions { WorkingDirectory = dir, Model = ModelChoice.Haiku, Effort = EffortChoice.Low, PermissionMode = PermissionModeChoice.Default, ResumeSessionId = resumeId });
+                s.EventReceived += (o, ev) =>
+                {
+                    meter.Observe(ev);
+                    if (ev.Kind == ClaudeEventKind.AssistantUsage && !ev.IsSubagent && ev.Model != null) turnModel = ev.Model;
+                    if (ev.Kind == ClaudeEventKind.Compacted) compacted = true;
+                    if (ev.Kind == ClaudeEventKind.PermissionRequest) s.RespondToPermissionAsync(ev.RequestId, ev.ToolInput, false, "Not in this test.").Wait();
+                    if (ev.Kind == ClaudeEventKind.TurnCompleted) done.Set();
+                };
+                return s;
+            }
+            bool Turn(ClaudeSession s, string prompt) { turnModel = null; s.SendPromptAsync(prompt).Wait(); return done.WaitOne(TimeSpan.FromSeconds(180)); }
+
+            string sessionId;
+            double costBeforeRelaunch;
+            using (var s1 = Open(null))
+            {
+                Check(Turn(s1, "Reply with the single word: one"), "haiku turn finished");
+                Check(turnModel?.Contains("haiku") == true, "answered by " + turnModel);
+                var usage = s1.GetContextUsageAsync().Result;
+                Console.WriteLine($"  meter: {meter.ContextTokens:N0} tok ({meter.ContextPercent:0.0}%) · CLI /context: {usage?.TotalTokens:N0} tok ({usage?.Percentage:0.0}%)");
+                Check(usage != null && Math.Abs(meter.ContextPercent - usage.Percentage) <= 2.0, "context % within 2 points of the CLI's /context");
+                Check(usage != null && Math.Abs(meter.ContextTokens - usage.TotalTokens) <= usage.TotalTokens * 0.02, "context tokens within 2% of the CLI's /context");
+
+                s1.SetModelAsync(ModelChoice.Sonnet).Wait();
+                s1.SetEffortAsync(EffortChoice.Medium).Wait();
+                Check(Turn(s1, "Reply with the single word: two"), "turn after switching finished");
+                Check(turnModel?.Contains("sonnet") == true, "set_model mid-session: answered by " + turnModel);
+                s1.SetModelAsync(ModelChoice.Haiku).Wait();
+                sessionId = s1.SessionId;
+                costBeforeRelaunch = meter.SessionCostUsd;
+                Console.WriteLine($"  cost before relaunch ${costBeforeRelaunch:0.0000}");
+            }
+
+            using (var s2 = Open(sessionId))
+            {
+                Check(Turn(s2, "Reply with the single word: three"), "turn after relaunch (--resume) finished");
+                Console.WriteLine($"  cost after relaunch ${meter.SessionCostUsd:0.0000} (last turn ${meter.LastTurnCostUsd:0.0000})");
+                Check(meter.SessionCostUsd > costBeforeRelaunch && meter.LastTurnCostUsd > 0, "session cost kept adding up across the relaunch");
+
+                long before = meter.ContextTokens;
+                Check(Turn(s2, "/compact"), "/compact finished");
+                Console.WriteLine($"  context before /compact {before:N0} tok, after {meter.ContextTokens:N0} tok");
+                Check(compacted, "compact_boundary seen");
+                // As the chat does after every turn: take the CLI's own measurement.
+                var after = s2.GetContextUsageAsync().Result;
+                if (after != null) meter.ApplyContextUsage(after.TotalTokens, after.MaxTokens);
+                Console.WriteLine($"  after /compact the CLI measures {after?.TotalTokens:N0} tok; meter shows {meter.ContextTokens:N0}");
+                Check(meter.ContextTokens > 0 && meter.ContextTokens < before, "meter shows the smaller, non-zero context after compaction");
+                Console.WriteLine($"  total cost ${meter.SessionCostUsd:0.0000}");
+            }
+            try { Directory.Delete(dir, true); } catch (IOException) { }
+            Console.WriteLine(failures.Count == 0 ? "PASS live session" : "FAIL live session");
+            return failures.Count == 0 ? 0 : 1;
+        }
+
+        /// <summary>
+        /// `-- --live-setup [rawLogPath]`: installs the token-saving settings and hook into a temp .NET project, then
+        /// has Haiku (1) run `dotnet build` and (2) read a file under bin/. Checks that the command that runs is the
+        /// quiet one and that bin/ is not readable. About $0.02; needs the .NET SDK.
+        /// </summary>
+        public static int RunSetup(string rawLogPath)
+        {
+            string exe = ClaudeCliLocator.Resolve("");
+            if (exe == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-live-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(Path.Combine(dir, "bin", "Debug"));
+            File.WriteAllText(Path.Combine(dir, "Hello.csproj"), "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework></PropertyGroup></Project>");
+            File.WriteAllText(Path.Combine(dir, "Program.cs"), "System.Console.WriteLine(\"hi\");");
+            File.WriteAllText(Path.Combine(dir, "bin", "Debug", "secret.txt"), "BIN-SECRET-42");
+            Console.WriteLine("  setup: " + Setup.TokenSaverSetup.Apply(dir));
+
+            var failures = new List<string>();
+            void Check(bool ok, string what) { Console.WriteLine((ok ? "  ok   " : "  FAIL ") + what); if (!ok) failures.Add(what); }
+            var raw = new StringBuilder();
+            var commands = new List<string>();      // shell commands as Claude Code asked to run them (after hooks)
+            var shellTools = new List<string>();
+            var reply = new StringBuilder();
+            var resultSizes = new List<int>();
+            var done = new AutoResetEvent(false);
+            double cost = 0;
+            var options = new ClaudeLaunchOptions { WorkingDirectory = dir, Model = ModelChoice.Haiku, Effort = EffortChoice.Low, PermissionMode = PermissionModeChoice.Default };
+            using (var session = new ClaudeSession(options))
+            {
+                session.RawLine += (s, e) => { lock (raw) raw.Append(e.Direction == RawLineDirection.Stdin ? ">> " : "<< ").AppendLine(e.Line); };
+                session.EventReceived += (s, ev) =>
+                {
+                    if (ev.Kind == ClaudeEventKind.ToolUse && (ev.ToolName == "Bash" || ev.ToolName == "PowerShell")) shellTools.Add(ev.ToolName + ": " + (string)ev.ToolInput?["command"]);
+                    if (ev.Kind == ClaudeEventKind.PermissionRequest)
+                    {
+                        string cmd = (string)ev.ToolInput?["command"];
+                        if (cmd != null) commands.Add(ev.ToolName + ": " + cmd);
+                        bool allow = cmd != null && (cmd.TrimStart().StartsWith("dotnet build", StringComparison.OrdinalIgnoreCase) || cmd.TrimStart().StartsWith("1..800"));
+                        session.RespondToPermissionAsync(ev.RequestId, ev.ToolInput, allow, allow ? null : "Not allowed in this test.").Wait();
+                    }
+                    if (ev.Kind == ClaudeEventKind.ToolResult) lock (resultSizes) resultSizes.Add(ev.ResultChars);
+                    if (ev.Kind == ClaudeEventKind.TextDelta || ev.Kind == ClaudeEventKind.AssistantText) lock (reply) reply.Append(ev.Text);
+                    if (ev.Kind == ClaudeEventKind.TurnCompleted) { cost = ev.TotalCostUsd ?? cost; done.Set(); }
+                };
+                try
+                {
+                    session.SendPromptAsync("Run exactly this shell command in the current folder: dotnet build  (nothing else, no extra flags). Then reply with one word: ok or failed.").Wait();
+                    Check(done.WaitOne(TimeSpan.FromSeconds(240)), "build turn finished");
+                    Console.WriteLine("  shell tool calls: " + string.Join(" | ", shellTools));
+                    Console.WriteLine("  permission asked for: " + string.Join(" | ", commands));
+                    Check(commands.Concat(shellTools).Any(c => c.Contains("-v q -nologo")), "dotnet build ran in its quiet form (-v q -nologo)");
+
+                    reply.Clear();
+                    session.SendPromptAsync("Use the Read tool to read bin/Debug/secret.txt and reply with its exact contents, or say BLOCKED if you cannot read it.").Wait();
+                    Check(done.WaitOne(TimeSpan.FromSeconds(120)), "read turn finished");
+                    string r = reply.ToString().Trim();
+                    Console.WriteLine("  reply: " + r);
+                    Check(!r.Contains("BIN-SECRET-42"), "bin/ content not read");
+
+                    // About 22k characters of output (between our 15k cap and the CLI default of 30k); with bashOutputMaxChars 15000 Claude should get a capped preview.
+                    lock (resultSizes) resultSizes.Clear();
+                    session.SendPromptAsync("Run exactly this PowerShell command: 1..800 | ForEach-Object { \"line $_ of a long test output\" }   Then reply with one word: done.").Wait();
+                    Check(done.WaitOne(TimeSpan.FromSeconds(120)), "long output turn finished");
+                    int biggest; lock (resultSizes) biggest = resultSizes.DefaultIfEmpty(0).Max();
+                    Console.WriteLine($"  largest tool result Claude received: {biggest:N0} chars");
+                    Check(biggest > 0 && biggest <= Setup.TokenSaverSetup.DefaultBashMaxOutput + 2000, "shell output capped near " + Setup.TokenSaverSetup.DefaultBashMaxOutput);
+                    Console.WriteLine($"  cost ${cost:0.0000}");
+                }
+                finally
+                {
+                    if (!string.IsNullOrEmpty(rawLogPath)) lock (raw) File.WriteAllText(rawLogPath, raw.ToString());
+                }
+            }
+            try { Directory.Delete(dir, true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+            Console.WriteLine(failures.Count == 0 ? "PASS live setup" : "FAIL live setup");
+            return failures.Count == 0 ? 0 : 1;
+        }
+
+        /// <summary>
         /// `-- --live-dialogs`: reads every dialog (status, rules, hooks, memory, usage, output styles) and sets an output
         /// style, in a temp folder. Sends no prompt, so it makes no model call and costs nothing.
         /// </summary>

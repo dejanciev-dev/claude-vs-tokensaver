@@ -115,6 +115,18 @@ namespace ClaudeVS.Core.Tokens
             Changed?.Invoke(this, EventArgs.Empty);
         }
 
+        /// <summary>
+        /// The CLI's own measurement (<c>get_context_usage</c>, fetched after each turn). It also covers what the
+        /// usage numbers miss, such as the context right after /compact, which they would show as 0.
+        /// </summary>
+        public void ApplyContextUsage(long totalTokens, long maxTokens)
+        {
+            if (totalTokens <= 0) return;
+            ContextTokens = totalTokens;
+            if (maxTokens > 0) ContextWindow = maxTokens;
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+
         public IReadOnlyList<TokenAdvice> GetAdvice()
         {
             var list = new List<TokenAdvice>();

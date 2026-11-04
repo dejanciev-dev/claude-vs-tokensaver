@@ -139,6 +139,14 @@ All notable changes to this project are listed here. The format follows
 - `dotnet test` runs the Core test runner instead of silently reporting zero tests.
 
 ### Fixed
+- **Quiet-build hook on Windows:** Claude Code runs commands with its PowerShell tool there, so the installed hook
+  (Bash only) never made `dotnet build` quiet. It now covers Bash and PowerShell; run *Install Token-Saving
+  Settings and Hooks* again to update an existing install.
+- **Shell output cap:** `BASH_MAX_OUTPUT_LENGTH` no longer limits what Claude receives. The installer now also sets
+  `bashOutputMaxChars` (15,000 characters; Bash and PowerShell); larger output is saved to a file and Claude
+  gets a short preview.
+- **Meter after /compact** showed 0 tokens until the next answer; it now shows the size Claude Code measures
+  (`get_context_usage`, read after every answer), so it also matches the CLI's own `/context`.
 - Output from a stopped conversation (after **New**, **History** or a solution change) no longer appears in
   the new one, including a spurious "claude exited with code -1".
 - Streamed text that arrives right after a tool call no longer appears above that tool row.
