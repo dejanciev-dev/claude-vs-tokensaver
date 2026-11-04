@@ -1181,12 +1181,20 @@ namespace ClaudeVS.ToolWindow
                 EffortChoice effort = _effortChoice;
                 string routeNote = null;
                 RouteDecision decision = null;
+                RouteDecision local = null;
+                double routerCost = 0;
+                long routerMs = 0;
                 if (routed && (model == ModelChoice.Auto || effort == EffortChoice.Auto))
                 {
-                    decision = Route(userText, attachedLines, attachedFiles);
+                    var request = RouteRequestFor(userText, attachedLines, attachedFiles);
+                    local = _router.Route(request);
+                    var (fromHaiku, cost, ms) = await AskHaikuRouterAsync(request);
+                    routerCost = cost;
+                    routerMs = ms;
+                    decision = fromHaiku ?? local;
                     if (model == ModelChoice.Auto) model = decision.Model;
                     if (effort == EffortChoice.Auto) effort = decision.Effort;
-                    routeNote = $"auto → {model.ToCli()}/{effort.ToCli()}";
+                    routeNote = $"auto{(fromHaiku != null ? " (Haiku)" : "")} → {model.ToCli()}/{effort.ToCli()}";
                     ClaudeOutputPane.WriteLine($"Route: {decision} | prompt {userText.Length} chars, {attachedLines} attached lines, {attachedFiles} files, context {_meterModel?.ContextTokens ?? 0} tok → using {model.ToCli()}/{effort.ToCli()}");
                 }
 
@@ -1203,6 +1211,11 @@ namespace ClaudeVS.ToolWindow
                     AttachedFiles = attachedFiles,
                     PromptPreview = decision != null && Options?.LogPromptPreview == true ? UsageRecord.Preview(userText) : null,
                     CharsAvoided = built.CharsAvoided,
+                    Router = decision != null && decision != local ? "haiku" : null,
+                    LocalModel = decision != null && decision != local ? local?.Model.ToCli() : null,
+                    LocalEffort = decision != null && decision != local ? local?.Effort.ToCli() : null,
+                    RouterCostUsd = routerCost,
+                    RouterMs = routerMs,
                 });
 
                 // Show the message right away; switching model/effort talks to the CLI first.
@@ -1235,17 +1248,58 @@ namespace ClaudeVS.ToolWindow
             });
         }
 
-        private RouteDecision Route(string prompt, int attachedLines, int attachedFiles)
+        private RouteDecision Route(string prompt, int attachedLines, int attachedFiles) => _router.Route(RouteRequestFor(prompt, attachedLines, attachedFiles));
+
+        private RouteRequest RouteRequestFor(string prompt, int attachedLines, int attachedFiles)
         {
             _router.StickyContextTokens = Options?.StickyContextTokens ?? 30000;
-            return _router.Route(new RouteRequest
+            return new RouteRequest
             {
                 Prompt = prompt,
                 AttachedCodeLines = attachedLines,
                 AttachedFiles = attachedFiles,
                 CurrentModel = _session?.IsRunning == true ? _session.CurrentModel : ModelChoice.Auto,
                 ContextTokens = _meterModel?.ContextTokens ?? 0,
-            });
+            };
+        }
+
+        // ---- "Ask Haiku to route" (option Route with Haiku) ----
+
+        private HaikuRouter _haikuRouter;
+        private static readonly TimeSpan HaikuRouteTimeout = TimeSpan.FromSeconds(4);
+
+        /// <summary>The Haiku router while the option is on (started ahead of time: it takes ~14 s to start); null when off.</summary>
+        private HaikuRouter HaikuRouterIfOn()
+        {
+            if (Options?.HaikuRouting != true)
+            {
+                if (_haikuRouter != null) { _haikuRouter.Dispose(); _haikuRouter = null; }
+                return null;
+            }
+            if (_haikuRouter == null)
+            {
+                _haikuRouter = new HaikuRouter(Options?.ClaudePath ?? "");
+                var r = _haikuRouter;
+                _ = System.Threading.Tasks.Task.Run(() => r.WarmUp()); // starting a process makes no model call
+            }
+            return _haikuRouter;
+        }
+
+        /// <summary>
+        /// Asks the Haiku router (at most <see cref="HaikuRouteTimeout"/>); its answer goes through the same cache rule as
+        /// the local one. Null when it is off or does not answer in time; the local decision is used then.
+        /// </summary>
+        private async System.Threading.Tasks.Task<(RouteDecision Decision, double Cost, long Ms)> AskHaikuRouterAsync(RouteRequest request)
+        {
+            var router = HaikuRouterIfOn();
+            if (router == null) return (null, 0, 0);
+            double before = router.TotalCostUsd;
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            var d = await router.RouteAsync(request, HaikuRouteTimeout);
+            sw.Stop();
+            if (d != null) d = _router.ApplyCacheStickiness(d, request, clearlyHard: d.Model == ModelChoice.Opus && d.Effort == EffortChoice.High);
+            ClaudeOutputPane.WriteLine(d != null ? $"Haiku router ({sw.ElapsedMilliseconds} ms): {d}" : $"Haiku router gave no answer in {sw.ElapsedMilliseconds} ms; using the local rules");
+            return (d, Math.Max(0, router.TotalCostUsd - before), sw.ElapsedMilliseconds);
         }
 
         private void UpdateRouteHint()
@@ -1292,6 +1346,7 @@ namespace ClaudeVS.ToolWindow
             });
             if (o?.ErrorListTool ?? true)
                 _session.Options.SdkMcpServers.Add(IdeMcpServer.Create(ReadErrorListAsync, () => dir));
+            HaikuRouterIfOn(); // with Route with Haiku on: start its process now, so it is warm for the first prompt
             _resumeId = null;
             _forkNext = false;
             _sessionDir = dir;
@@ -2423,6 +2478,8 @@ namespace ClaudeVS.ToolWindow
             _routeTimer.Stop();
             _stallTimer.Stop();
             _agentsTimer?.Stop();
+            _haikuRouter?.Dispose();
+            _haikuRouter = null;
             DisposeSession();
         }
     }

@@ -106,7 +106,7 @@ Tick the boxes as you go. Each phase ends with something you can run.
   - tokens avoided by references (from `BuiltPrompt.CharsAvoided`)
   - turns routed to Haiku/Sonnet vs Opus and estimated $ saved
   - cache hit rate trend
-- [ ] Optional "Ask Haiku to route" mode (one cheap call) — compare accuracy with the local router
+- [x] Optional "Ask Haiku to route" mode (one cheap call) — compare accuracy with the local router. Option *Route with Haiku* (off). A separate Claude Code process trimmed to a classifier (`--system-prompt`, `--tools ""`, `--strict-mcp-config`, `--disable-slash-commands`, `--setting-sources ""`, `--no-session-persistence`, `--json-schema`; `--bare` is not usable because it ignores subscription sign-in). Measured with 2.1.318: ~1.3k tokens, ~14 s to start (so it starts with the chat), then 1–2 s and ~$0.0001 per route. Falls back to the local rules after 4 s. The usage log records both decisions and the savings report shows how often they agree; first live run: same model 4 of 4, effort differed once
 
 **Done when:** the report shows real savings numbers on your own usage. Tag `v0.4.0`.
 

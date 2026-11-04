@@ -41,6 +41,9 @@ namespace ClaudeVS.Options
         [Category("Token saving"), DisplayName("Default model"), Description("Auto = route each prompt to the cheapest model likely to handle it.")]
         public ModelChoice DefaultModel { get; set; } = ModelChoice.Auto;
 
+        [Category("Token saving"), DisplayName("Route with Haiku"), Description("With the model on Auto, a small Haiku call picks model and effort for each prompt instead of the local keyword rules (about $0.0001 and 1–2 s per prompt). It runs in a separate, trimmed Claude Code process (no tools, no project files, ~1.3k tokens) started when the chat opens. If it doesn't answer within 4 s, the local rules decide. The savings report compares both.")]
+        public bool HaikuRouting { get; set; }
+
         [Category("Token saving"), DisplayName("Inline selection up to (lines)"), Description("Larger selections are sent as file:line references instead of pasted code.")]
         public int InlineMaxLines { get; set; } = 60;
 

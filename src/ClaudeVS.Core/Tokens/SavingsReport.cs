@@ -104,6 +104,11 @@ namespace ClaudeVS.Core.Tokens
         public double ReferencesSavedUsd { get; set; }
         public double CacheHitPercent { get; set; }
         public List<ModelBreakdown> ByModel { get; } = new List<ModelBreakdown>();
+        /// <summary>Turns routed by the Haiku router, how many picked the same model as the local rules, its cost and time.</summary>
+        public int HaikuRouted { get; set; }
+        public int HaikuAgreed { get; set; }
+        public double RouterCostUsd { get; set; }
+        public long RouterAverageMs { get; set; }
         /// <summary>Cache hit % per day, oldest first.</summary>
         public List<KeyValuePair<DateTime, double>> CacheTrend { get; } = new List<KeyValuePair<DateTime, double>>();
 
@@ -121,7 +126,13 @@ namespace ClaudeVS.Core.Tokens
             foreach (var r in list)
             {
                 if (r.Routed) rep.RoutedTurns++;
-                rep.ActualCostUsd += r.CostUsd;
+                rep.ActualCostUsd += r.CostUsd + r.RouterCostUsd; // asking the router is part of what routing costs
+                rep.RouterCostUsd += r.RouterCostUsd;
+                if (r.Router == "haiku")
+                {
+                    rep.HaikuRouted++;
+                    if (r.LocalModel != null && string.Equals(r.LocalModel, r.RouteModel, StringComparison.OrdinalIgnoreCase)) rep.HaikuAgreed++;
+                }
                 rep.OpusEquivalentUsd += PriceTable.Family(r.ModelUsed) == "opus" ? r.CostUsd : prices.Opus.Cost(r);
                 long avoided = r.CharsAvoided / 4;
                 rep.TokensAvoided += avoided;
@@ -130,6 +141,8 @@ namespace ClaudeVS.Core.Tokens
                 cacheRead += r.CacheReadTokens;
             }
             rep.CacheHitPercent = input > 0 ? 100.0 * cacheRead / input : 0;
+            var timed = list.Where(r => r.RouterMs > 0).ToList();
+            rep.RouterAverageMs = timed.Count > 0 ? (long)timed.Average(r => r.RouterMs) : 0;
 
             rep.ByModel.AddRange(list
                 .GroupBy(r => PriceTable.Family(r.ModelUsed) ?? "other")
@@ -158,6 +171,11 @@ namespace ClaudeVS.Core.Tokens
             sb.AppendLine($"Saved by model routing:     ${RoutingSavedUsd:0.00}  ({RoutingSavedPercent:0}%)");
             sb.AppendLine($"Saved by file references:   ~{TokenMeter.Format(TokensAvoided)} tokens ≈ ${ReferencesSavedUsd:0.00}");
             sb.AppendLine($"Cache hit rate:             {CacheHitPercent:0}%");
+            if (HaikuRouted > 0 || RouterCostUsd > 0)
+            {
+                sb.AppendLine($"Haiku router:               {HaikuRouted} prompts, same model as the local rules {(HaikuRouted > 0 ? 100.0 * HaikuAgreed / HaikuRouted : 0):0}% of the time");
+                sb.AppendLine($"                            cost ${RouterCostUsd:0.000} (included above), {RouterAverageMs / 1000.0:0.0} s per prompt on average");
+            }
             sb.AppendLine();
             sb.AppendLine("By model:");
             foreach (var b in ByModel)

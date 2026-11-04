@@ -57,6 +57,7 @@ This extension attacks all three, and shows the numbers so you can see the effec
 | Feature | What it does |
 |---|---|
 | **Auto model and effort routing** | A local classifier (no API call) sends simple prompts to Haiku, normal work to Sonnet, and only hard ones (refactor, deadlock, architecture…) to Opus. The hint under the prompt box shows the choice and the reason before you send. |
+| **Route with Haiku** (optional, off) | Instead of the local keyword rules, a small Haiku call picks model and effort for each Auto prompt, with a short reason: about $0.0001 and 1–2 s per prompt. It runs in a separate, trimmed Claude Code process (no tools, no project files, ~1.3k tokens instead of ~25k), started when the chat opens because it takes ~14 s to start. No answer within 4 s: the local rules decide. The savings report shows how often both agree and what the router cost. |
 | **Cache-aware routing** | The prompt cache is per model. Once a conversation is large (30k tokens by default), routing never switches to a cheaper model, because re-caching the whole context would cost more than it saves. |
 | **Smart selection context** | Small selections are inlined and dedented. Large ones are sent as `path:L10-200` references, so Claude reads only that range. Whole files are never pasted. |
 | **File references** | **Attach Current File** and the **`@` file picker** send only a path. Claude reads what it needs. |
@@ -274,6 +275,7 @@ Editor commands go to the chat window you used last.
 | CLI | Extra arguments | | Appended to the `claude` command line, e.g. `--add-dir ..\shared`. |
 | Token saving | Concise answers | On | One-line brevity prompt. |
 | Token saving | Default model | Auto | Auto = route each prompt. |
+| Token saving | Route with Haiku | Off | A Haiku call picks model and effort instead of the local rules (~$0.0001, 1–2 s per prompt). |
 | Token saving | Inline selection up to (lines) | 60 | Larger selections become references. |
 | Token saving | Keep model above context (tokens) | 30000 | Cache-aware routing threshold. |
 | Token saving | Suggest / Urge /compact at (%) | 60 / 85 | Meter advice. |
@@ -331,7 +333,7 @@ msbuild ClaudeVS.sln /restore /p:Configuration=Release /warnaserror     # → sr
 
 - **Debug in VS:** set **ClaudeVS** as the startup project and press **F5** to open the experimental instance.
 - **Live check against your CLI** (opt-in, costs a few cents, never runs in CI):
-  `dotnet run --project tests/ClaudeVS.Core.Tests -- --live`. `--live-edit-review` checks a partly applied edit (about $0.005). `--live-dialogs` reads every dialog (no cost). `--live-setup` checks the installed hook and deny rules (about $0.005), `--live-session` the meter, model switching and /compact (about $0.05). `--live-mcp` checks that the CLI connects to the
+  `dotnet run --project tests/ClaudeVS.Core.Tests -- --live`. `--live-edit-review` checks a partly applied edit (about $0.005). `--live-dialogs` reads every dialog (no cost). `--live-setup` checks the installed hook and deny rules (about $0.005), `--live-session` the meter, model switching and /compact (about $0.05). `--live-haiku-router` routes four prompts with the Haiku router (about $0.001). `--live-mcp` checks that the CLI connects to the
   Error List server, with no prompt and no cost.
 - **CI** builds every push and PR with warnings as errors, runs the tests and uploads the `.vsix`. Pushing a
   `v*` tag creates a draft GitHub Release.
