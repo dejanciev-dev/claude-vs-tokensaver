@@ -1284,6 +1284,7 @@ namespace ClaudeVS.ToolWindow
                 ForkSession = _forkNext && _resumeId != null,
                 EnableFileCheckpointing = o?.FileCheckpoints ?? true,
                 SessionName = _sessionName,
+                EditNotesHook = true, // tells Claude which changes of an edit were rejected (review card)
             });
             if (o?.ErrorListTool ?? true)
                 _session.Options.SdkMcpServers.Add(IdeMcpServer.Create(ReadErrorListAsync, () => dir));
@@ -1881,7 +1882,49 @@ namespace ClaudeVS.ToolWindow
                     });
                 return true;
             }
+
+            if (EditReview.Supports(ev.ToolName) && session?.Options.EditNotesHook == true)
+            {
+                string path = (string)ev.ToolInput?["file_path"];
+                string current = ReadForReview(path);
+                if (current == ReviewUnreadable) return false;
+                var review = EditReview.Create(ev.ToolName, ev.ToolInput, current);
+                if (review == null || review.Hunks.Count < 2) return false; // one change: the usual Allow / Deny bar
+                string name = System.IO.Path.GetFileName(path ?? "");
+                _view.AppendEditReviewCard(name, review,
+                    onApply: () =>
+                    {
+                        ThreadHelper.ThrowIfNotOnUIThread();
+                        if (review.AllAccepted) { Respond(true, null, null, "✔ applied all changes"); return; }
+                        session.SetToolResultNote(ev.ToolUseId, review.NoteForClaude());
+                        Respond(true, review.BuildInput(), null, $"✔ applied {review.Hunks.Count(h => h.Accepted)} of {review.Hunks.Count} changes; Claude is told which you rejected");
+                    },
+                    onRejectAll: () => { ThreadHelper.ThrowIfNotOnUIThread(); Respond(false, null, "The user rejected all changes in this edit.", "✖ rejected"); },
+                    onOpenDiff: () =>
+                    {
+                        ThreadHelper.ThrowIfNotOnUIThread();
+                        string proposed = EditReview.ProposedFile(ev.ToolName, ev.ToolInput, current);
+                        if (proposed == null) { Append("\n  (the file changed since Claude read it, so the whole-file diff is not available)\n"); return; }
+                        try { VsContext.OpenDiff(current ?? "", "Current", path, proposed, "Proposed by Claude", "Claude: " + name); }
+                        catch (Exception ex) { AppendError("[diff] ", ex.Message); }
+                    });
+                return true;
+            }
             return false;
+        }
+
+        private const string ReviewUnreadable = "\0unreadable";
+
+        /// <summary>The file as it is now for a review: null when it does not exist yet; <see cref="ReviewUnreadable"/> when it can't be read or is huge.</summary>
+        private static string ReadForReview(string path)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(path)) return ReviewUnreadable;
+                if (!System.IO.File.Exists(path)) return null;
+                return new System.IO.FileInfo(path).Length <= MaxSnapshotBytes ? System.IO.File.ReadAllText(path) : ReviewUnreadable;
+            }
+            catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException || ex is ArgumentException || ex is NotSupportedException) { return ReviewUnreadable; }
         }
 
         /// <summary>%LocalAppData%\claude-vs-tokensaver\plans\&lt;plan title&gt;-&lt;time&gt;.md (the plan's first heading names it).</summary>

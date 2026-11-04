@@ -86,6 +86,7 @@ This extension attacks all three, and shows the numbers so you can see the effec
 | **Markdown answers** | Headings, lists, quotes, inline code and links, rendered while the answer streams. |
 | **Code blocks** | **Copy** and **Insert** (at the cursor, one undo step). |
 | **Diff for Claude's edits** | Rows for Edit / MultiEdit / Write have a **Diff** button that opens Visual Studio's diff window. |
+| **Review each change** | In Manual mode, an edit or write with several changes asks with a card listing each one (− and + lines) with a check box. **Apply** only the checked ones, **Reject all**, or **Open diff** for the whole file. Claude is told which changes you rejected, so it neither assumes they are in the file nor applies them again. |
 | **Question cards** | When Claude asks a question, you get its options (plus "Other") and your answer goes back to Claude. |
 | **Plan approval cards** | Plans render as Markdown with **Approve** or **Request changes** (with feedback). |
 | **Permission bar** | Other tool calls that need approval show **Allow** / **Deny**. |
@@ -326,7 +327,7 @@ msbuild ClaudeVS.sln /restore /p:Configuration=Release /warnaserror     # → sr
 
 - **Debug in VS:** set **ClaudeVS** as the startup project and press **F5** to open the experimental instance.
 - **Live check against your CLI** (opt-in, costs a few cents, never runs in CI):
-  `dotnet run --project tests/ClaudeVS.Core.Tests -- --live`. `--live-mcp` checks that the CLI connects to the
+  `dotnet run --project tests/ClaudeVS.Core.Tests -- --live`. `--live-edit-review` checks a partly applied edit (about $0.005). `--live-mcp` checks that the CLI connects to the
   Error List server, with no prompt and no cost.
 - **CI** builds every push and PR with warnings as errors, runs the tests and uploads the `.vsix`. Pushing a
   `v*` tag creates a draft GitHub Release.

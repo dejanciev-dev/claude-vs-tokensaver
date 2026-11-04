@@ -597,6 +597,82 @@ namespace ClaudeVS.ToolWindow
             AddCard(panel);
         }
 
+        private const int MaxReviewLines = 12;
+
+        /// <summary>
+        /// A proposed Edit or Write split into its changes, each with a check box and its removed (−) and added (+)
+        /// lines. Apply selected sends the checked ones (all checked = allow, none = reject); Reject all rejects.
+        /// </summary>
+        public void AppendEditReviewCard(string fileName, Core.Context.EditReview review, Action onApply, Action onRejectAll, Action onOpenDiff)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            EndAnswer();
+            _plain = null;
+            var accents = ChatTheme.Accents(Box);
+
+            var panel = new StackPanel();
+            panel.Children.Add(new TextBlock
+            {
+                Text = $"✎ Claude wants to {(review.ToolName == "Write" ? "write" : "edit")} {fileName}: {review.Hunks.Count} changes",
+                FontWeight = FontWeights.SemiBold,
+                Margin = new Thickness(0, 0, 0, 2),
+                Foreground = accents.Brand,
+                TextWrapping = TextWrapping.Wrap,
+            });
+            panel.Children.Add(new TextBlock { Text = "Uncheck the changes you don't want. Claude is told which ones you rejected.", Opacity = 0.75, FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 4) });
+
+            var apply = SmallButton("Apply all", "Apply the checked changes");
+            foreach (var hunk in review.Hunks)
+            {
+                var h = hunk;
+                var box = new CheckBox { IsChecked = h.Accepted, Content = $"Change {h.Index + 1} · {h.Label}", Margin = new Thickness(0, 6, 0, 2) };
+                box.SetResourceReference(Control.ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
+                box.Checked += (s, e) => { h.Accepted = true; UpdateApply(); };
+                box.Unchecked += (s, e) => { h.Accepted = false; UpdateApply(); };
+                panel.Children.Add(box);
+
+                var lines = new TextBlock { FontFamily = ChatTheme.Mono, FontSize = 11.5, Margin = new Thickness(20, 0, 0, 0), TextWrapping = TextWrapping.NoWrap };
+                void Add(IReadOnlyList<string> src, string sign, Brush color)
+                {
+                    foreach (var l in src.Take(MaxReviewLines))
+                    {
+                        if (lines.Inlines.Count > 0) lines.Inlines.Add(new LineBreak());
+                        lines.Inlines.Add(new Run(sign + " " + l) { Foreground = color });
+                    }
+                    if (src.Count > MaxReviewLines)
+                    {
+                        lines.Inlines.Add(new LineBreak());
+                        lines.Inlines.Add(new Run($"  … {src.Count - MaxReviewLines} more lines") { Foreground = Brushes.Gray });
+                    }
+                }
+                Add(h.OldLines, "−", accents.Failure);
+                Add(h.NewLines, "+", accents.Success);
+                panel.Children.Add(new ScrollViewer { Content = lines, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled });
+            }
+
+            var buttons = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };
+            var reject = SmallButton("Reject all", "Apply none of these changes");
+            apply.Margin = new Thickness(0);
+            buttons.Children.Add(apply);
+            buttons.Children.Add(reject);
+            if (onOpenDiff != null)
+            {
+                var diff = SmallButton("Open diff", "Compare the whole file before and after, in Visual Studio's diff window");
+                diff.Click += (s, e) => onOpenDiff();
+                buttons.Children.Add(diff);
+            }
+            panel.Children.Add(buttons);
+
+            void UpdateApply()
+            {
+                apply.Content = review.AllAccepted ? "Apply all" : review.NoneAccepted ? "Apply none" : $"Apply {review.Hunks.Count(x => x.Accepted)} of {review.Hunks.Count}";
+                apply.IsEnabled = !review.NoneAccepted;
+            }
+            apply.Click += (s, e) => { panel.IsEnabled = false; apply.Content = "Applied"; onApply(); };
+            reject.Click += (s, e) => { panel.IsEnabled = false; reject.Content = "Rejected"; onRejectAll(); };
+            AddCard(panel);
+        }
+
         private ToggleButton MakeChoice(bool multi, string group, object content)
         {
             ToggleButton box = multi ? (ToggleButton)new CheckBox() : new RadioButton { GroupName = group };

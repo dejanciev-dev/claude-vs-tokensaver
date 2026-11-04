@@ -7,6 +7,11 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Review each change of an edit:** in Manual mode, when Claude wants to edit or write a file with several
+  changes, a card lists each one with its removed and added lines and a check box. **Apply** only the checked
+  changes, **Reject all**, or **Open diff** to see the whole file in Visual Studio's diff window. Claude is told
+  which changes were rejected, in the same tool result, so it does not assume they are in the file or redo
+  them. Edits with a single change keep the Allow / Deny bar.
 - **Agents panel:** Claude's subagents and background commands show above the input box as a tree, each
   with what it is doing now ("Running Read: Foo.cs"), its tokens, tool calls and time, then its result.
   **Background** moves a running agent to the background so Claude carries on; **Stop** ends one agent and what

@@ -18,6 +18,55 @@ namespace ClaudeVS.Core.Tests
     internal static class LiveSmoke
     {
         /// <summary>
+        /// `-- --live-edit-review`: Haiku in Manual mode edits two lines of a temp file; the test rejects one change
+        /// (EditReview), allows the rest with a PostToolUse note, and checks the file and that Claude was told.
+        /// About $0.005.
+        /// </summary>
+        public static int RunEditReview()
+        {
+            string exe = ClaudeCliLocator.Resolve("");
+            if (exe == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-live-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            string file = Path.Combine(dir, "notes.txt");
+            File.WriteAllText(file, "alpha\nbeta\ngamma\ndelta\n");
+            var options = new ClaudeLaunchOptions { WorkingDirectory = dir, Model = ModelChoice.Haiku, Effort = EffortChoice.Low, PermissionMode = PermissionModeChoice.Default, EditNotesHook = true };
+            var done = new ManualResetEventSlim();
+            string reply = "";
+            bool reviewed = false;
+            using (var session = new ClaudeSession(options))
+            {
+                session.EventReceived += (s, ev) =>
+                {
+                    if (ev.Kind == ClaudeEventKind.PermissionRequest)
+                    {
+                        var review = ev.ToolName == "Edit" ? Context.EditReview.Create(ev.ToolName, ev.ToolInput, File.ReadAllText(file)) : null;
+                        if (review != null && review.Hunks.Count >= 2)
+                        {
+                            review.Hunks.Last().Accepted = false;
+                            reviewed = true;
+                            Console.WriteLine($"  reviewing {review.Hunks.Count} changes, rejecting: {review.Hunks.Last().Label}");
+                            session.SetToolResultNote(ev.ToolUseId, review.NoteForClaude());
+                            session.RespondToPermissionAsync(ev.RequestId, review.BuildInput(), true).Wait();
+                        }
+                        else session.RespondToPermissionAsync(ev.RequestId, ev.ToolInput, ev.ToolName == "Read").Wait();
+                    }
+                    if (ev.Kind == ClaudeEventKind.TextDelta || ev.Kind == ClaudeEventKind.AssistantText) reply += ev.Text;
+                    if (ev.Kind == ClaudeEventKind.TurnCompleted) { Console.WriteLine($"  cost ${ev.TotalCostUsd:0.0000}"); done.Set(); }
+                };
+                session.SendPromptAsync("In notes.txt, change \"beta\" to \"BETA\" and \"delta\" to \"DELTA\" with one Edit call whose old_string spans lines 2-4. Then say in one sentence what the tool result told you.").Wait();
+                bool finished = done.Wait(TimeSpan.FromSeconds(120));
+                string content = File.ReadAllText(file);
+                Console.WriteLine("  file: " + content.Replace("\n", "\\n"));
+                Console.WriteLine("  reply: " + reply.Trim());
+                bool ok = finished && reviewed && content == "alpha\nBETA\ngamma\ndelta\n" && reply.IndexOf("reject", StringComparison.OrdinalIgnoreCase) >= 0;
+                Console.WriteLine(ok ? "PASS live edit review" : "FAIL live edit review");
+                try { Directory.Delete(dir, true); } catch (IOException) { }
+                return ok ? 0 : 1;
+            }
+        }
+
+        /// <summary>
         /// `-- --live-mcp`: starts the CLI with our in-process Error List server and checks that the CLI connects to it
         /// and lists its tool (mcp_status). Sends no prompt, so it makes no model call and costs nothing.
         /// </summary>
@@ -27,7 +76,7 @@ namespace ClaudeVS.Core.Tests
             if (exe == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }
             string dir = Path.Combine(Path.GetTempPath(), "cvs-live-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(dir);
-            var options = new ClaudeLaunchOptions { WorkingDirectory = dir, PermissionMode = PermissionModeChoice.Plan };
+            var options = new ClaudeLaunchOptions { WorkingDirectory = dir, PermissionMode = PermissionModeChoice.Plan, EditNotesHook = true }; // as the extension starts it
             options.SdkMcpServers.Add(Context.IdeMcpServer.Create(
                 () => System.Threading.Tasks.Task.FromResult<IReadOnlyList<Context.BuildError>>(new Context.BuildError[0]), () => dir));
             using (var session = new ClaudeSession(options))

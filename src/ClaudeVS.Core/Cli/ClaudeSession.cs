@@ -93,6 +93,13 @@ namespace ClaudeVS.Core.Cli
                 // (netstandard2.0 has no StandardInputEncoding), so wrap the raw stream ourselves.
                 _stdin = new StreamWriter(p.StandardInput.BaseStream, new UTF8Encoding(false)) { AutoFlush = true, NewLine = "\n" };
                 _process = p;
+                // Hooks are registered with an initialize request, before anything else is written (we hold _gate).
+                if (Options.EditNotesHook)
+                {
+                    string init = BuildInitialize().ToString(Formatting.None);
+                    RaiseRaw(RawLineDirection.Stdin, init);
+                    _stdin.WriteLine(init);
+                }
                 CurrentModel = Options.Model;
                 CurrentEffort = Options.Effort;
 
@@ -361,6 +368,7 @@ namespace ClaudeVS.Core.Cli
                     {
                         // Off the reader thread: a tool may wait for the UI thread, which may be waiting on us.
                         if (ev.Kind == ClaudeEventKind.McpMessage) { Task.Run(() => AnswerMcpAsync(ev)); continue; }
+                        if (ev.Kind == ClaudeEventKind.HookCallback) { Task.Run(() => AnswerHookAsync(ev)); continue; }
                         if (ev.Kind == ClaudeEventKind.TurnCompleted) IsBusy = false;
                         if (ev.Kind == ClaudeEventKind.ControlResponse) CompletePending(ev);
                         Raise(ev);
@@ -368,6 +376,57 @@ namespace ClaudeVS.Core.Cli
                 }
             }
             catch (Exception ex) when (ex is IOException || ex is ObjectDisposedException) { }
+        }
+
+        public const string EditNotesCallbackId = "edit_notes";
+
+        /// <summary>
+        /// The initialize control request with a PostToolUse hook on Edit and Write; the CLI then sends a
+        /// <c>hook_callback</c> after each of those calls (verified with 2.1.318).
+        /// </summary>
+        public static JObject BuildInitialize() => new JObject
+        {
+            ["type"] = "control_request",
+            ["request_id"] = "init-" + Guid.NewGuid().ToString("N"),
+            ["request"] = new JObject
+            {
+                ["subtype"] = "initialize",
+                ["hooks"] = new JObject
+                {
+                    ["PostToolUse"] = new JArray(new JObject { ["matcher"] = "Edit|Write", ["hookCallbackIds"] = new JArray(EditNotesCallbackId) }),
+                },
+            },
+        };
+
+        // Notes for the tool results of specific tool calls, by tool_use_id; added by the PostToolUse hook.
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> _toolNotes =
+            new System.Collections.Concurrent.ConcurrentDictionary<string, string>();
+
+        /// <summary>
+        /// Adds <paramref name="note"/> to what Claude sees as the result of tool call <paramref name="toolUseId"/>
+        /// (needs <see cref="ClaudeLaunchOptions.EditNotesHook"/>; Edit and Write only). Set it before answering the call's permission request.
+        /// </summary>
+        public void SetToolResultNote(string toolUseId, string note)
+        {
+            if (string.IsNullOrEmpty(toolUseId)) return;
+            if (string.IsNullOrEmpty(note)) _toolNotes.TryRemove(toolUseId, out _);
+            else _toolNotes[toolUseId] = note;
+        }
+
+        /// <summary>The hook's answer: the note as additionalContext, or nothing (the call goes on unchanged).</summary>
+        public static JObject HookResponse(string note) =>
+            string.IsNullOrEmpty(note) ? new JObject()
+                : new JObject { ["hookSpecificOutput"] = new JObject { ["hookEventName"] = "PostToolUse", ["additionalContext"] = note } };
+
+        private async Task AnswerHookAsync(ClaudeEvent ev)
+        {
+            string toolUseId = (string)ev.Payload?["tool_use_id"] ?? (string)ev.Payload?.SelectToken("input.tool_use_id");
+            string note = null;
+            if ((string)ev.Payload?["callback_id"] == EditNotesCallbackId && toolUseId != null) _toolNotes.TryRemove(toolUseId, out note);
+            var response = new JObject { ["subtype"] = "success", ["request_id"] = ev.RequestId, ["response"] = HookResponse(note) };
+            try { await WriteLineAsync(new JObject { ["type"] = "control_response", ["response"] = response }.ToString(Formatting.None)).ConfigureAwait(false); }
+            catch (InvalidOperationException) { }
+            catch (IOException) { }
         }
 
         /// <summary>Hands an mcp_message to our server of that name and writes its JSON-RPC answer back.</summary>
