@@ -103,11 +103,13 @@
       <IncludeAssets>compile; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <!-- Pinned to the version verified to build with VS 2022. -->
-    <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="17.14.2142">
+    <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="18.5.40034">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" ExcludeAssets="runtime" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" ExcludeAssets="runtime">
+      <IncludeAssets>compile; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ClaudeVS.Core\ClaudeVS.Core.csproj">
