@@ -842,6 +842,17 @@ namespace ClaudeVS.Core.Tests
             Eq(@"C:\x\y.cs", TurnChanges.FullPath("C:/x/y.cs", @"C:\r"), "a heredoc's forward-slash path");
         }
 
+        private static void Test_RouteText()
+        {
+            Eq("Auto → Sonnet, low effort", RouteText.Note(true, true, ModelChoice.Sonnet, EffortChoice.Low), "both on Auto");
+            Eq("Auto → Haiku", RouteText.Note(true, false, ModelChoice.Haiku, EffortChoice.High), "only the model");
+            Eq("Auto → extra high effort", RouteText.Note(false, true, ModelChoice.Opus, EffortChoice.XHigh), "only the effort");
+            Eq(null, RouteText.Note(false, false, ModelChoice.Opus, EffortChoice.High), "nothing on Auto");
+            Eq("Picked by the Haiku router: short question", RouteText.Tip(true, "Haiku router: short question"), "Haiku prefix dropped");
+            Eq("Picked by the local router", RouteText.Tip(false, "default"), "no reason");
+            Eq("Picked by the local router: mentions refactor", RouteText.Tip(false, "mentions refactor"), "local reason");
+        }
+
         private static void Test_ToolCallView()
         {
             Eq(("Update", "src/a.cs"), ToolCallView.Title("Edit", JObject.Parse("{\"file_path\":\"C:\\\\repo\\\\src\\\\a.cs\"}"), "C:/repo"), "path relative to the solution");
