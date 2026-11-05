@@ -17,7 +17,15 @@ All notable changes to this project are listed here. The format follows
   own suggested rule, saved in `.claude/settings.local.json`; verified with 2.1.318), **Deny**, and a box to tell
   Claude what to do instead.
 - **Colored meter**: context % green, amber or red at the /compact thresholds (the bar too), cache hits green
-  when most input comes from the cache, the cost in orange, the model colored by family.
+  when most input comes from the cache, the cost in orange, the model colored by family and capitalized ("Sonnet").
+- **Changes in the chat**: each file change shows as red / green lines under its tool row, with the file name and
+  `+added −removed`, two unchanged lines around each change, scrolling when long. Covers Edit / MultiEdit, Write
+  (compared with the file as it was before) and shell commands that write a file with a heredoc
+  (`cat > file <<'EOF'`, the usual way on Windows), including after `cd "dir" &&`.
+
+### Changed
+- Tool rows open and close by clicking the row itself; the round expand buttons are gone.
+- The agents panel shows only the first line of a background command (a heredoc no longer fills the panel).
 - **Generate Lean CLAUDE.md** knows more solution shapes: .NET Framework solutions get MSBuild and vstest
   commands (`dotnet build` can't build them), with packages from `packages.config` and web and test projects
   recognized; the target framework is read from `Directory.Build.props`; VB and F# projects are listed; React,

@@ -414,7 +414,7 @@ namespace ClaudeVS.ToolWindow
         /// A collapsible row for a tool call: the header shows the call, the body its input.
         /// <see cref="CompleteTool"/> adds the result size when the result arrives.
         /// </summary>
-        public void AppendTool(string toolUseId, string description, string inputJson, Action onDiff = null)
+        public void AppendTool(string toolUseId, string description, string inputJson, Action onDiff = null, Core.Context.InlineDiff fileDiff = null)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             EndAnswer();
@@ -446,8 +446,8 @@ namespace ClaudeVS.ToolWindow
                 Margin = new Thickness(16, 2, 0, 2),
             };
             body.SetResourceReference(Control.ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
-            var expander = new Expander { Header = headerContent, Content = body, IsExpanded = false, Margin = new Thickness(0, 1, 0, 1) };
-            expander.SetResourceReference(Control.ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
+            var expander = Collapsible(headerContent, body, new Thickness(0, 1, 0, 1));
+            if (fileDiff != null && fileDiff.Lines.Count > 0) expander.Children.Add(DiffView(fileDiff, ChatTheme.Accents(Box)));
 
             if (FocusView())
             {
@@ -459,6 +459,119 @@ namespace ClaudeVS.ToolWindow
             else _doc.Blocks.Add(new BlockUIContainer(expander) { Margin = new Thickness(0) });
             if (!string.IsNullOrEmpty(toolUseId)) _tools[toolUseId] = (header, dot);
             ScrollToEndIfNear();
+        }
+
+        /// <summary>
+        /// A row that opens and closes when its header is clicked (or Space / Enter on it), without the expander's
+        /// round chevron: the header gets a light hover background instead. Returns the panel (header, content).
+        /// </summary>
+        private static StackPanel Collapsible(object header, UIElement content, Thickness margin)
+        {
+            var toggle = new ToggleButton
+            {
+                Content = header,
+                Template = RowToggleTemplate,
+                Background = Brushes.Transparent,
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                Padding = new Thickness(3, 1, 3, 1),
+                Cursor = System.Windows.Input.Cursors.Hand,
+            };
+            toggle.SetResourceReference(Control.ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
+            if (header is TextBlock tb) System.Windows.Automation.AutomationProperties.SetName(toggle, tb.Text);
+            content.Visibility = Visibility.Collapsed;
+            toggle.Checked += (s, e) => content.Visibility = Visibility.Visible;
+            toggle.Unchecked += (s, e) => content.Visibility = Visibility.Collapsed;
+            var panel = new StackPanel { Margin = margin };
+            panel.Children.Add(toggle);
+            panel.Children.Add(content);
+            return panel;
+        }
+
+        private static readonly ControlTemplate RowToggleTemplate = CreateRowToggleTemplate();
+
+        private static ControlTemplate CreateRowToggleTemplate()
+        {
+            var border = new FrameworkElementFactory(typeof(Border), "Bd");
+            border.SetValue(Border.CornerRadiusProperty, new CornerRadius(3));
+            border.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(Control.BackgroundProperty));
+            border.SetValue(Border.PaddingProperty, new TemplateBindingExtension(Control.PaddingProperty));
+            var content = new FrameworkElementFactory(typeof(ContentPresenter));
+            content.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Stretch);
+            content.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
+            border.AppendChild(content);
+            var t = new ControlTemplate(typeof(ToggleButton)) { VisualTree = border };
+            var hover = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true };
+            hover.Setters.Add(new Setter(Border.BackgroundProperty, ChatTheme.Hover, "Bd"));
+            var focus = new Trigger { Property = UIElement.IsKeyboardFocusedProperty, Value = true };
+            focus.Setters.Add(new Setter(Border.BackgroundProperty, ChatTheme.Hover, "Bd"));
+            t.Triggers.Add(hover);
+            t.Triggers.Add(focus);
+            return t;
+        }
+
+        private const int MaxDiffLines = 300;
+
+        /// <summary>
+        /// Red / green lines under a file-changing tool call: a header with the file and +added −removed, then the
+        /// lines (scrolls when long; at most 300, the Diff button shows the rest).
+        /// </summary>
+        private static UIElement DiffView(Core.Context.InlineDiff d, ChatTheme.AccentSet a)
+        {
+            Color Of(Brush b) => (b as SolidColorBrush)?.Color ?? Colors.Gray;
+            Brush Tint(Brush b, byte alpha) { var c = Of(b); var br = new SolidColorBrush(Color.FromArgb(alpha, c.R, c.G, c.B)); br.Freeze(); return br; }
+            var addBack = Tint(a.Success, 0x2A);
+            var delBack = Tint(a.Failure, 0x2A);
+
+            var head = new TextBlock { FontSize = 11.5, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(8, 4, 8, 4), ToolTip = d.FilePath };
+            head.Inlines.Add(new Run(System.IO.Path.GetFileName(d.FilePath.TrimEnd('/', '\\'))) { Foreground = a.Path, FontWeight = FontWeights.SemiBold });
+            if (d.Added > 0) head.Inlines.Add(new Run("  +" + d.Added) { Foreground = a.Success, FontWeight = FontWeights.SemiBold });
+            if (d.Removed > 0) head.Inlines.Add(new Run("  −" + d.Removed) { Foreground = a.Failure, FontWeight = FontWeights.SemiBold });
+            string note = d.IsAppend ? "appended" : d.IsNewFile ? "new file" : null;
+            if (note != null) { var r = new Run("  " + note); r.SetResourceReference(TextElement.ForegroundProperty, EnvironmentColors.SystemGrayTextBrushKey); head.Inlines.Add(r); }
+            var dir = System.IO.Path.GetDirectoryName(d.FilePath.Replace('/', '\\'));
+            if (!string.IsNullOrEmpty(dir)) { var r = new Run("   " + dir); r.SetResourceReference(TextElement.ForegroundProperty, EnvironmentColors.SystemGrayTextBrushKey); head.Inlines.Add(r); }
+
+            var lines = new StackPanel();
+            foreach (var l in d.Lines.Take(MaxDiffLines))
+            {
+                var text = new TextBlock { FontFamily = Mono, FontSize = 11.5, TextWrapping = TextWrapping.Wrap, Padding = new Thickness(8, 0, 8, 0) };
+                switch (l.Kind)
+                {
+                    case Core.Context.DiffLineKind.Added:
+                        text.Background = addBack;
+                        text.Inlines.Add(new Run("+ ") { Foreground = a.Success });
+                        break;
+                    case Core.Context.DiffLineKind.Removed:
+                        text.Background = delBack;
+                        text.Inlines.Add(new Run("− ") { Foreground = a.Failure });
+                        break;
+                    case Core.Context.DiffLineKind.Gap:
+                        text.Text = "  ⋯";
+                        ChatTheme.Muted(text);
+                        lines.Children.Add(text);
+                        continue;
+                    default:
+                        text.Inlines.Add(new Run("  "));
+                        break;
+                }
+                var body = new Run(l.Text.Replace("\t", "    "));
+                body.SetResourceReference(TextElement.ForegroundProperty, l.Kind == Core.Context.DiffLineKind.Context ? EnvironmentColors.SystemGrayTextBrushKey : EnvironmentColors.ToolWindowTextBrushKey);
+                text.Inlines.Add(body);
+                lines.Children.Add(text);
+            }
+            if (d.Lines.Count > MaxDiffLines)
+            {
+                var more = new TextBlock { Text = $"  … {d.Lines.Count - MaxDiffLines} more lines", FontSize = 11, Padding = new Thickness(8, 2, 8, 2) };
+                ChatTheme.Muted(more);
+                lines.Children.Add(more);
+            }
+
+            var stack = new StackPanel();
+            stack.Children.Add(head);
+            stack.Children.Add(new ScrollViewer { Content = lines, MaxHeight = 280, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, Margin = new Thickness(0, 0, 0, 4) });
+            var card = new Border { Child = stack, CornerRadius = new CornerRadius(4), BorderThickness = new Thickness(1), BorderBrush = ChatTheme.Hover, Background = ChatTheme.Subtle, Margin = new Thickness(18, 2, 0, 6) };
+            System.Windows.Automation.AutomationProperties.SetName(card, $"{System.IO.Path.GetFileName(d.FilePath)}: {d.Added} lines added, {d.Removed} removed");
+            return card;
         }
 
         private static readonly HashSet<string> ShellTools = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Bash", "PowerShell", "BashOutput", "Monitor" };
@@ -744,8 +857,7 @@ namespace ClaudeVS.ToolWindow
                 _accents = accents;
                 ChatTheme.Muted(_header);
                 Rows = new StackPanel { Margin = new Thickness(12, 0, 0, 0) };
-                var expander = new Expander { Header = _header, Content = Rows, IsExpanded = false, Margin = new Thickness(0, 1, 0, 1) };
-                expander.SetResourceReference(Control.ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
+                var expander = Collapsible(_header, Rows, new Thickness(0, 1, 0, 1));
                 Block = new BlockUIContainer(expander) { Margin = new Thickness(0) };
             }
 
