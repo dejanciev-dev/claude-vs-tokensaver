@@ -24,6 +24,14 @@ namespace ClaudeVS.Core.Tests
             if (args.Length > 0 && args[0] == "--live-setup") return LiveSmoke.RunSetup(args.Length > 1 ? args[1] : null);
             if (args.Length > 0 && args[0] == "--live-dialogs") return LiveSmoke.RunDialogs();
             if (args.Length > 0 && args[0] == "--live-edit-review") return LiveSmoke.RunEditReview();
+            if (args.Length > 1 && args[0] == "--scan")
+            {
+                // Read-only: prints the CLAUDE.md that Generate Lean CLAUDE.md would write for that folder.
+                string md = ClaudeMdGenerator.Generate(SolutionScanner.Scan(args[1]));
+                Console.WriteLine(md);
+                Console.WriteLine($"~{ClaudeMdGenerator.EstimateTokens(md)} tokens");
+                return 0;
+            }
             if (args.Length > 0 && args[0] == "--live")
                 return LiveSmoke.Run(args.Length > 1 ? args[1] : null,
                     args.Length > 2 ? (PermissionModeChoice)Enum.Parse(typeof(PermissionModeChoice), args[2], true) : PermissionModeChoice.Plan,
@@ -1549,6 +1557,68 @@ namespace ClaudeVS.Core.Tests
                 True(File.Exists(Path.Combine(root, ".claude", "hooks", TokenSaverSetup.HookFileName)), "hook written");
                 var res2 = TokenSaverSetup.Apply(root);
                 Eq(0, res2.Written.Count, "second apply writes nothing");
+            }
+            finally { Directory.Delete(root, true); }
+        }
+
+        // Gaps found by running the generator on real solutions (Phase 2.4).
+        private static void Test_Scanner_LegacyFramework()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "claudevs-test-" + Guid.NewGuid().ToString("N"));
+            void Write(string rel, string text) { string f = Path.Combine(root, rel); Directory.CreateDirectory(Path.GetDirectoryName(f)); File.WriteAllText(f, text); }
+            const string ns = "xmlns=\"http://schemas.microsoft.com/developer/msbuild/2003\"";
+            Write("Shop.sln", "Project(\"{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}\") = \"Shop.Web\", \"Shop.Web\\Shop.Web.csproj\", \"{1}\"\r\nEndProject\r\n"
+                            + "Project(\"{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}\") = \"Shop.Tests\", \"Shop.Tests\\Shop.Tests.csproj\", \"{2}\"\r\nEndProject\r\n"
+                            + "Project(\"{F184B08F-C81C-45F6-A57F-5ABD9991F28F}\") = \"Reports\", \"Reports\\Reports.vbproj\", \"{3}\"\r\nEndProject\r\n");
+            Write("Shop.Web/Shop.Web.csproj", $"<Project ToolsVersion=\"15.0\" {ns}><PropertyGroup><TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion><ProjectTypeGuids>{{349c5851-65df-11da-9384-00065b846f21}};{{fae04ec0-301f-11d3-bf4b-00c04f79efbc}}</ProjectTypeGuids></PropertyGroup></Project>");
+            Write("Shop.Web/packages.config", "<packages><package id=\"EntityFramework\" version=\"6.4.4\" /><package id=\"log4net\" version=\"2.0.8\" /></packages>");
+            Write("Shop.Tests/Shop.Tests.csproj", $"<Project {ns}><PropertyGroup><TargetFrameworkVersion>v4.8</TargetFrameworkVersion></PropertyGroup><ItemGroup><Reference Include=\"nunit.framework, Version=3.13.0.0\" /></ItemGroup></Project>");
+            Write("Reports/Reports.vbproj", $"<Project {ns}><PropertyGroup><TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion></PropertyGroup></Project>");
+            try
+            {
+                var info = SolutionScanner.Scan(root);
+                var web = info.Projects.Single(p => p.Name == "Shop.Web");
+                True(web.IsLegacy && web.IsWeb && web.UsesPackagesConfig, "legacy web project");
+                Eq("net472", web.Frameworks, "framework moniker");
+                True(web.KeyPackages.Contains("EntityFramework") && web.KeyPackages.Contains("log4net"), "packages.config read");
+                True(info.Projects.Single(p => p.Name == "Shop.Tests").IsTest, "test project from an assembly reference");
+                True(info.Projects.Any(p => p.Name == "Reports"), ".vbproj found");
+
+                string md = ClaudeMdGenerator.Generate(info);
+                True(md.Contains("`msbuild Shop.sln -restore -p:RestorePackagesConfig=true -v:q -nologo`"), md);
+                True(!md.Contains("Build: `dotnet build"), "no dotnet build for .NET Framework: " + md);
+                True(md.Contains("`vstest.console.exe Shop.Tests/bin/Debug/Shop.Tests.dll`"), md);
+            }
+            finally { Directory.Delete(root, true); }
+        }
+
+        private static void Test_Scanner_SolutionMembership_And_FrontEnds()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "claudevs-test-" + Guid.NewGuid().ToString("N"));
+            void Write(string rel, string text) { string f = Path.Combine(root, rel); Directory.CreateDirectory(Path.GetDirectoryName(f)); File.WriteAllText(f, text); }
+            Write("App.slnx", "<Solution><Project Path=\"src/Api/Api.csproj\" /><Project Path=\"../Shared/Shared.csproj\" /></Solution>");
+            Write("Directory.Build.props", "<Project><PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup></Project>");
+            Write("src/Api/Api.csproj", "<Project Sdk=\"Microsoft.NET.Sdk.Web\"></Project>");
+            Write("src/Api/package.json", "{\"name\":\"api-assets\",\"devDependencies\":{\"esbuild\":\"^0.25.0\"},\"scripts\":{\"build\":\"node build.js\"}}");
+            Write("samples/Old/Old.csproj", "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><TargetFramework>net8.0</TargetFramework></PropertyGroup></Project>");
+            Write("web/package.json", "{\"name\":\"app-web\",\"scripts\":{\"build\":\"vite build\",\"test\":\"vitest run\",\"lint\":\"eslint .\"},\"dependencies\":{\"react\":\"19.0.0\"},\"devDependencies\":{\"vitest\":\"3.0.0\"}}");
+            Write("package.json", "{\"devDependencies\":{\"esbuild\":\"^0.25.0\"}}");
+            try
+            {
+                var info = SolutionScanner.Scan(root);
+                Eq("net10.0", info.Projects.Single(p => p.Name == "Api").Frameworks, "framework from Directory.Build.props");
+                True(!info.Projects.Single(p => p.Name == "Old").InSolution, "project the solution doesn't list");
+                Eq("../Shared/Shared.csproj", info.ExternalProjects.Single(), "external project");
+                True(!info.Projects.Any(p => p.RelativePath == "package.json"), "tooling-only package.json dropped");
+                Eq("React 19.0.0", info.Projects.Single(p => p.Name == "app-web").Frameworks, "React detected");
+
+                string md = ClaudeMdGenerator.Generate(info);
+                True(md.Contains("Not in App.slnx (not built by it): `samples/` (1)"), md);
+                True(md.Contains("outside this folder: `../Shared/Shared.csproj`"), md);
+                True(md.Contains("app-web: `cd web && npm run build` / `npm test`"), md);
+                True(md.Contains("api-assets: `cd src/Api && npm run build`"), md);
+                True(!md.Contains("` api-assets"), "package.json beside a .NET project is not listed as a second project: " + md);
+                True(!md.Contains("Old"), "projects outside the solution are not listed one by one");
             }
             finally { Directory.Delete(root, true); }
         }

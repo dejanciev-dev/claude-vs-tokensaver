@@ -31,6 +31,9 @@ mode the CLI also saves the plan under `~/.claude/plans`. If a new CLI version c
 event format, add a **sanitized** capture under `tests/ClaudeVS.Core.Tests/Fixtures`, with personal data removed
 (init details, rate-limit info, IDs). See `cli-2.1.316-turn.jsonl` for an example.
 
+To see what **Generate Lean CLAUDE.md** would write for a folder, without writing anything, run
+`dotnet run --project tests/ClaudeVS.Core.Tests -- --scan <solution folder>` (no CLI, no cost).
+
 To try the extension, set `ClaudeVS` as the startup project and press F5. This opens the
 experimental instance (`/rootsuffix Exp`). If that instance breaks, run *Reset the Visual Studio
 Experimental Instance* from the Start menu.
