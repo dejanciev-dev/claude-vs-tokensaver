@@ -317,7 +317,8 @@ src/ClaudeVS/                 net472 VSIX: package, commands, tool window, optio
   Commands/   ClaudeCommands, VsContext (DTE: selection, errors, diff, insert)
   Diagnostics/ClaudeOutputPane
 tests/ClaudeVS.Core.Tests/    dependency-free test runner, live CLI harness, real-output fixtures
-.github/                      CI build, tag-triggered release, issue templates
+.github/                      CI build, tag-triggered release, Marketplace publish, issue templates
+marketplace/                  Marketplace publish manifest, overview page, publish.ps1
 docs/PLAN.md                  roadmap and status
 ```
 
@@ -336,7 +337,7 @@ msbuild ClaudeVS.sln /restore /p:Configuration=Release /warnaserror     # → sr
   `dotnet run --project tests/ClaudeVS.Core.Tests -- --live`. `--live-edit-review` checks a partly applied edit (about $0.005). `--live-dialogs` reads every dialog (no cost). `--live-setup` checks the installed hook and deny rules (about $0.005), `--live-session` the meter, model switching and /compact (about $0.05). `--live-haiku-router` routes four prompts with the Haiku router (about $0.001). `--live-mcp` checks that the CLI connects to the
   Error List server, with no prompt and no cost.
 - **CI** builds every push and PR with warnings as errors, runs the tests and uploads the `.vsix`. Pushing a
-  `v*` tag creates a draft GitHub Release.
+  `v*` tag creates a draft GitHub Release; publishing it starts the Marketplace upload, after approval.
 
 ## Known limitations
 

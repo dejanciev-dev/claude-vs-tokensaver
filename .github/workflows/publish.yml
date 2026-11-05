@@ -1,0 +1,54 @@
+name: Publish to Marketplace
+
+# Runs when you publish a GitHub Release (the draft the Release workflow made), or by hand for a given tag.
+# The job uses the "marketplace" environment: give it required reviewers in Settings → Environments, and the
+# job waits for your approval before anything is uploaded.
+#
+# Needs, in Settings → Secrets and variables → Actions:
+#   variable MARKETPLACE_PUBLISHER  your Visual Studio Marketplace publisher ID
+#   secret   VS_MARKETPLACE_PAT     Azure DevOps personal access token, organization "All accessible
+#                                   organizations", scope Marketplace → Manage
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag whose .vsix to publish (e.g. v0.2.0)
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    environment: marketplace
+    # Pre-releases stay on GitHub only.
+    if: github.event_name == 'workflow_dispatch' || !github.event.release.prerelease
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+
+      - name: Download the .vsix from the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ver = $env:TAG.TrimStart('v')
+          gh release download $env:TAG --pattern "ClaudeVS-$ver.vsix" --dir out
+          if (-not (Test-Path "out/ClaudeVS-$ver.vsix")) { throw "Release $env:TAG has no ClaudeVS-$ver.vsix." }
+          "VSIX=out/ClaudeVS-$ver.vsix" | Out-File -Append $env:GITHUB_ENV
+
+      - name: Publish
+        shell: pwsh
+        env:
+          VS_MARKETPLACE_PAT: ${{ secrets.VS_MARKETPLACE_PAT }}
+          PUBLISHER: ${{ vars.MARKETPLACE_PUBLISHER }}
+        run: |
+          if (-not $env:PUBLISHER) { throw 'Set the repository variable MARKETPLACE_PUBLISHER to your Marketplace publisher ID.' }
+          if (-not $env:VS_MARKETPLACE_PAT) { throw 'Set the secret VS_MARKETPLACE_PAT.' }
+          ./marketplace/publish.ps1 -Vsix $env:VSIX -Publisher $env:PUBLISHER

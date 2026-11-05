@@ -119,7 +119,7 @@ Tick the boxes as you go. Each phase ends with something you can run.
 - [ ] Test install of the Release `.vsix` on clean VS 2022 **and** VS 2026 (x64; ARM64 if available)
 - [x] GitHub Actions: build on `windows-latest`, run Core tests, upload `.vsix` artifact (`.github/workflows/build.yml`)
 - [x] Tag-triggered release workflow: `v*` tag → build, test, **draft** GitHub Release with the `.vsix` and CHANGELOG notes
-- [ ] `publishManifest.json` + `VsixPublisher.exe` publish step (manual approval) — needs the Marketplace publisher ID
+- [ ] `publishManifest.json` + `VsixPublisher.exe` publish step (manual approval) — prepared: `marketplace/` (manifest, overview, `publish.ps1`) and `.github/workflows/publish.yml` (runs when a release is published, waits for approval in the `marketplace` environment). Still needs the publisher ID (variable `MARKETPLACE_PUBLISHER`), the `VS_MARKETPLACE_PAT` secret and the environment's reviewers
 - [x] CHANGELOG.md, issue templates, CONTRIBUTING.md
 - [ ] Publish to Visual Studio Marketplace as **Claude Code for Visual Studio — Token Saver**
 
