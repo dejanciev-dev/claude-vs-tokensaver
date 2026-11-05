@@ -706,11 +706,13 @@ namespace ClaudeVS.ToolWindow
         }
 
         private const int MaxDiffLines = 300;
+        private const int DiffPreviewLines = 12;
 
         /// <summary>
         /// The changed lines the way the Claude Code terminal shows them: a line-number gutter, then − / + and the
-        /// code on a full-width dark red / green row, with syntax colors from the file's extension. Scrolls when
-        /// long; at most 300 lines (the Diff button shows everything).
+        /// code on a full-width dark red / green row, with syntax colors from the file's extension. No scroll box of
+        /// its own: a long diff shows its first lines and "… +N lines" expands it in place (at most 300 lines; the
+        /// Diff button shows everything).
         /// </summary>
         private UIElement DiffView(Core.Context.InlineDiff d, ChatTheme.AccentSet a)
         {
@@ -723,15 +725,13 @@ namespace ClaudeVS.ToolWindow
             int widest = d.Lines.Take(MaxDiffLines).Select(l => l.Number ?? 0).DefaultIfEmpty(0).Max().ToString().Length;
             bool numbered = d.Lines.Any(l => l.Number != null);
 
-            var lines = new StackPanel();
-            foreach (var l in d.Lines.Take(MaxDiffLines))
+            UIElement Line(Core.Context.DiffLine l)
             {
                 if (l.Kind == Core.Context.DiffLineKind.Gap)
                 {
                     var gap = new TextBlock { Text = new string(' ', numbered ? widest + 1 : 0) + "  ⋮", FontFamily = Mono, FontSize = 11.5 };
                     ChatTheme.Muted(gap);
-                    lines.Children.Add(gap);
-                    continue;
+                    return gap;
                 }
                 var text = new TextBlock { FontFamily = Mono, FontSize = 11.5, TextWrapping = TextWrapping.Wrap, Padding = new Thickness(0, 0, 8, 0) };
                 if (numbered)
@@ -763,16 +763,46 @@ namespace ClaudeVS.ToolWindow
                     pos = s.Start + s.Length;
                 }
                 if (pos < code.Length) text.Inlines.Add(CodeRun(code.Substring(pos), null, l.Kind));
-                lines.Children.Add(text);
-            }
-            if (d.Lines.Count > MaxDiffLines)
-            {
-                var more = new TextBlock { Text = $"… {d.Lines.Count - MaxDiffLines} more lines", FontSize = 11, Padding = new Thickness(4, 2, 8, 2) };
-                ChatTheme.Muted(more);
-                lines.Children.Add(more);
+                return text;
             }
 
-            var view = new ScrollViewer { Content = lines, MaxHeight = 320, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, Margin = new Thickness(36, 2, 0, 6) };
+            var shown = d.Lines.Take(MaxDiffLines).ToList();
+            // Only fold when it saves a real amount: never hide just a line or two behind a link.
+            int preview = shown.Count > DiffPreviewLines + 3 ? DiffPreviewLines : shown.Count;
+            var view = new StackPanel { Margin = new Thickness(36, 2, 0, 6) };
+            foreach (var l in shown.Take(preview)) view.Children.Add(Line(l));
+
+            if (preview < shown.Count)
+            {
+                StackPanel rest = null; // built on the first expand
+                var toggle = new TextBlock { FontSize = 11.5, Padding = new Thickness(0, 2, 8, 0) };
+                void ShowCollapsed()
+                {
+                    toggle.Inlines.Clear();
+                    toggle.Inlines.Add(Link($"… +{d.Lines.Count - preview} lines (click to see all)", "Show the whole change here", Expand, a));
+                }
+                void Expand()
+                {
+                    if (rest == null)
+                    {
+                        rest = new StackPanel();
+                        foreach (var l in shown.Skip(preview)) rest.Children.Add(Line(l));
+                        if (d.Lines.Count > MaxDiffLines)
+                        {
+                            var more = new TextBlock { Text = $"… {d.Lines.Count - MaxDiffLines} more lines (Open diff shows everything)", FontSize = 11, Padding = new Thickness(4, 2, 8, 2) };
+                            ChatTheme.Muted(more);
+                            rest.Children.Add(more);
+                        }
+                        view.Children.Insert(view.Children.IndexOf(toggle), rest);
+                    }
+                    rest.Visibility = Visibility.Visible;
+                    toggle.Inlines.Clear();
+                    toggle.Inlines.Add(Link("Show less", "Fold the change back to its first lines", () => { rest.Visibility = Visibility.Collapsed; ShowCollapsed(); }, a));
+                }
+                ShowCollapsed();
+                view.Children.Add(toggle);
+            }
+
             System.Windows.Automation.AutomationProperties.SetName(view, $"{System.IO.Path.GetFileName(d.FilePath)}: {d.Added} lines added, {d.Removed} removed");
             return view;
         }

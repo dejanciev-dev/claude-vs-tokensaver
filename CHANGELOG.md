@@ -25,7 +25,8 @@ All notable changes to this project are listed here. The format follows
   20,000 characters). Claude's text between tool calls starts with a `●` too.
 - **Changes in the chat**: each file change shows its lines under the tool row like the terminal: a line-number
   gutter, `-` / `+` on full-width red / green rows, syntax colors from the file's extension, two unchanged lines
-  around each change, scrolling when long. Covers Edit / MultiEdit (numbered from where the change is in the file),
+  around each change. A long change shows its first 12 lines and "… +N lines (click to see all)" opens the rest
+  in place (no scroll box of its own, so the mouse wheel always scrolls the chat). Covers Edit / MultiEdit (numbered from where the change is in the file),
   Write (compared with the file as it was before) and shell commands that write a file with a heredoc
   (`cat > file <<'EOF'`, the usual way on Windows), including after `cd "dir" &&`. A change that fails is hidden.
   Above the lines: **Open diff** (Visual Studio's diff window, now also for files written by shell heredocs) and
