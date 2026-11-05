@@ -53,8 +53,6 @@ namespace ClaudeVS.ToolWindow
         private readonly TextBlock _advice = new TextBlock { FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 0), VerticalAlignment = VerticalAlignment.Center };
         private readonly Button _adviceAction = Btn("", "");
         private readonly TranscriptView _view = new TranscriptView();
-        private readonly StackPanel _permission = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 6), Visibility = Visibility.Collapsed };
-        private readonly TextBlock _permissionText = new TextBlock { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0), TextWrapping = TextWrapping.Wrap, MaxWidth = 400 };
         private readonly TextBlock _route = new TextBlock { FontSize = 11, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(2, 0, 0, 4) };
         private readonly TextBlock _attachment = new TextBlock { FontSize = 11, Visibility = Visibility.Collapsed, Margin = new Thickness(2, 0, 0, 4), TextWrapping = TextWrapping.Wrap };
         private readonly TextBox _prompt = new TextBox
@@ -256,13 +254,7 @@ namespace ClaudeVS.ToolWindow
             adviceRow.Children.Add(_adviceAction);
             adviceRow.Children.Add(_advice);
 
-            var allow = Btn("Allow", "");
-            var deny = Btn("Deny", "");
-            allow.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); AnswerPermission(true); };
-            deny.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); AnswerPermission(false); };
-            _permission.Children.Add(_permissionText);
-            _permission.Children.Add(allow);
-            _permission.Children.Add(deny);
+            BuildPermissionCard();
 
             var top = new StackPanel { Margin = new Thickness(10, 6, 6, 4) };
             top.Children.Add(header);
@@ -1683,6 +1675,7 @@ namespace ClaudeVS.ToolWindow
                 if (q.Event.Kind == ClaudeEventKind.TextDelta || q.Event.Kind == ClaudeEventKind.AssistantText)
                 {
                     lock (_pendingText) _pendingText.Append(q.Event.Text);
+                    CountStreamedText(q.Event.Text?.Length ?? 0);
                     _flushTimer.Start(); // coalesce rendering of fast deltas
                     continue;
                 }
@@ -1722,10 +1715,7 @@ namespace ClaudeVS.ToolWindow
                         _waitingForUser = true; // Claude waits for you; not a stall
                         SetStalled(false);
                         if (ShowInteractiveCard(ev)) break;
-                        _pendingPermission = ev;
-                        _permissionText.Text = "Allow " + ev.Text + "?";
-                        _permission.Visibility = Visibility.Visible;
-                        Announce($"Claude asks to allow {ev.Text}. The Allow and Deny buttons are above the prompt box.", assertive: true);
+                        ShowPermission(ev);
                         break;
                     case ClaudeEventKind.Task:
                         OnTaskEvent(ev);
@@ -2003,20 +1993,6 @@ namespace ClaudeVS.ToolWindow
             string name = ConversationExport.FileName(string.IsNullOrEmpty(heading) ? "Plan" : heading);
             name = System.IO.Path.GetFileNameWithoutExtension(name) + "-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".md";
             return System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "claude-vs-tokensaver", "plans", name);
-        }
-
-        private void AnswerPermission(bool allow)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
-            var req = _pendingPermission;
-            _pendingPermission = null;
-            _permission.Visibility = Visibility.Collapsed;
-            _waitingForUser = false;
-            RenderActivity();
-            System.Threading.Interlocked.Exchange(ref _lastOutputTicks, DateTime.UtcNow.Ticks);
-            if (req == null || _session == null) return;
-            Append(allow ? "  ✔ allowed\n" : "  ✖ denied\n");
-            Fire(() => _session.RespondToPermissionAsync(req.RequestId, req.ToolInput ?? new JObject(), allow));
         }
 
         // ---------------- Helpers ----------------

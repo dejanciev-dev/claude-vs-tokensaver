@@ -11,13 +11,31 @@ using ClaudeVS.Core.Tokens;
 namespace ClaudeVS.ToolWindow
 {
     /// <summary>
-    /// The activity strip above the input box while Claude works: three pulsing dots and a sweeping line in the
-    /// color of the current phase (thinking, writing, a tool, waiting for you), the time the turn has taken and,
-    /// while thinking, the CLI's estimate of the thinking tokens. The meter line is colored here too.
+    /// The activity strip above the input box while Claude works, in the style of the Claude Code terminal:
+    ///   ✻ Imagining… (1m 05s · ↓ 9.5k tokens · thinking)                                   Esc to stop
+    ///     ⎿ Tip: …
+    /// The spinner, the verb and a sweeping line take the color of the phase (thinking, writing, a tool, waiting
+    /// for you). The token count is an estimate: the CLI's thinking estimates plus streamed text and tool input
+    /// at ~4 characters per token. The meter line is colored here too.
     /// </summary>
     public partial class ClaudeChatControl
     {
         private enum Phase { Starting, Thinking, Writing, Tool, Waiting }
+
+        private static readonly string[] SpinnerFrames = { "·", "✢", "✳", "✶", "✻", "✽", "✻", "✶", "✳", "✢" };
+        private static readonly string[] Verbs = { "Thinking", "Pondering", "Imagining", "Reasoning", "Considering", "Mulling", "Working", "Brewing", "Crafting", "Figuring" };
+        private static readonly string[] Tips =
+        {
+            "@ attaches a file as a path only, so Claude reads just what it needs",
+            "Shift+Tab switches mode: Manual, Edit automatically, Plan, Auto",
+            "a new session is the cheapest context; /compact when the meter turns amber",
+            "Ctrl+Alt+K, S asks about the selection; large selections go as line ranges",
+            "click the meter to see what fills the context window",
+            "type while Claude works: your message waits until Claude gets to it",
+            "with the model on Auto, simple prompts go to Haiku",
+            "Always allow on a permission card saves the rule, so Claude stops asking",
+        };
+        private static readonly Random Rng = new Random();
 
         private readonly Border _activity = new Border
         {
@@ -26,50 +44,55 @@ namespace ClaudeVS.ToolWindow
             BorderThickness = new Thickness(3, 0, 0, 0),
             Margin = new Thickness(0, 0, 0, 6),
         };
-        private readonly Ellipse[] _activityDots = new Ellipse[3];
-        private readonly TextBlock _activityLabel = new TextBlock { FontSize = 12, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
-        private readonly TextBlock _activityDetail = new TextBlock { FontSize = 11, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis };
+        private readonly TextBlock _spinner = new TextBlock { FontFamily = new FontFamily("Segoe UI Symbol"), FontSize = 14, Width = 16, TextAlignment = TextAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) };
+        private readonly TextBlock _activityLabel = new TextBlock { FontSize = 12.5, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
+        private readonly TextBlock _activityDetail = new TextBlock { FontSize = 11.5, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis };
         private readonly TextBlock _activityHint = new TextBlock { Text = "Esc to stop", FontSize = 11, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0) };
+        private readonly TextBlock _activityTip = new TextBlock { FontSize = 11, Margin = new Thickness(24, 1, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis };
         private readonly Rectangle _activitySweep = new Rectangle { Height = 2, VerticalAlignment = VerticalAlignment.Bottom, IsHitTestVisible = false };
-        private DispatcherTimer _activityTimer;
+        private DispatcherTimer _activityTimer, _spinTimer;
+        private int _spinFrame;
         private bool _activityAnimating;
 
         private Phase _phase;
         private string _phaseText;           // what the tool phase is about ("Bash dotnet test")
         private string _phaseTool;           // tool name for the label
-        private int? _thinkingTokens;
+        private string _turnVerb = "Thinking";
+        private long _turnThinkingTokens;    // the CLI's estimates, summed over the turn
+        private long _turnOutputChars;       // streamed answer text and tool input
         private DateTime _turnStartedUtc = DateTime.UtcNow;
         private Brush _activityColor;
 
         private void InitActivity()
         {
-            var dots = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) };
-            for (int i = 0; i < _activityDots.Length; i++)
-            {
-                _activityDots[i] = new Ellipse { Width = 6, Height = 6, Margin = new Thickness(i == 0 ? 0 : 3, 0, 0, 0) };
-                dots.Children.Add(_activityDots[i]);
-            }
             ChatTheme.Muted(_activityDetail);
             ChatTheme.Muted(_activityHint);
+            ChatTheme.Muted(_activityTip);
 
-            var row = new DockPanel { Margin = new Thickness(8, 5, 8, 6), LastChildFill = true };
-            DockPanel.SetDock(dots, Dock.Left);
+            var row = new DockPanel { LastChildFill = true };
+            DockPanel.SetDock(_spinner, Dock.Left);
             DockPanel.SetDock(_activityHint, Dock.Right);
-            row.Children.Add(dots);
+            row.Children.Add(_spinner);
             row.Children.Add(_activityHint);
             var text = new StackPanel { Orientation = Orientation.Horizontal };
             text.Children.Add(_activityLabel);
             text.Children.Add(_activityDetail);
             row.Children.Add(text);
 
+            var lines = new StackPanel { Margin = new Thickness(8, 5, 8, 6) };
+            lines.Children.Add(row);
+            lines.Children.Add(_activityTip);
+
             var grid = new Grid { ClipToBounds = true };
-            grid.Children.Add(row);
+            grid.Children.Add(lines);
             grid.Children.Add(_activitySweep);
             _activity.Child = grid;
             System.Windows.Automation.AutomationProperties.SetName(_activity, "Claude is working");
 
             _activityTimer = new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Background, (s, e) => RenderActivity(), Dispatcher);
             _activityTimer.Stop();
+            _spinTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(120), DispatcherPriority.Background, (s, e) => _spinner.Text = SpinnerFrames[_spinFrame = (_spinFrame + 1) % SpinnerFrames.Length], Dispatcher);
+            _spinTimer.Stop();
         }
 
         /// <summary>Called from SetBusy: a turn starts (or the queue moves on) or Claude is done.</summary>
@@ -84,8 +107,14 @@ namespace ClaudeVS.ToolWindow
             _turnStartedUtc = DateTime.UtcNow;
             _phase = Phase.Starting;
             _phaseTool = _phaseText = null;
-            _thinkingTokens = null;
+            _turnThinkingTokens = 0;
+            _turnOutputChars = 0;
+            _turnVerb = Verbs[Rng.Next(Verbs.Length)];
+            _activityTip.Text = "⎿  Tip: " + Tips[Rng.Next(Tips.Length)];
         }
+
+        /// <summary>Streamed answer text (counted for the ↓ tokens estimate; the strip shows it on the next tick).</summary>
+        private void CountStreamedText(int chars) => _turnOutputChars += chars;
 
         /// <summary>Events that change what the strip says. Called for every event on the UI thread.</summary>
         private void OnActivityEvent(ClaudeEvent ev)
@@ -95,9 +124,8 @@ namespace ClaudeVS.ToolWindow
                 case ClaudeEventKind.Activity:
                     if (ev.Activity == ClaudeActivity.Thinking)
                     {
-                        if (_phase != Phase.Thinking) _thinkingTokens = null;
                         _phase = Phase.Thinking;
-                        if (ev.EstimatedTokens is int t) _thinkingTokens = (_thinkingTokens ?? 0) + t;
+                        if (ev.EstimatedTokens is int t && t > 0) _turnThinkingTokens += t;
                     }
                     else if (ev.Activity == ClaudeActivity.Writing) _phase = Phase.Writing;
                     else { _phase = Phase.Tool; _phaseTool = ev.ToolName; _phaseText = null; }
@@ -106,10 +134,10 @@ namespace ClaudeVS.ToolWindow
                     _phase = Phase.Tool;
                     _phaseTool = ev.ToolName;
                     _phaseText = ev.Text;
+                    _turnOutputChars += ev.ToolInput?.ToString(Newtonsoft.Json.Formatting.None).Length ?? 0;
                     break;
                 case ClaudeEventKind.ToolResult when !ev.IsSubagent:
-                    _phase = Phase.Thinking; // Claude reads the result and decides what's next
-                    _thinkingTokens = null;
+                    _phase = Phase.Starting; // Claude reads the result and decides what's next
                     break;
                 case ClaudeEventKind.TurnCompleted:
                     StartActivityTurn(); // a queued prompt may follow right away
@@ -122,7 +150,7 @@ namespace ClaudeVS.ToolWindow
             RenderActivity();
         }
 
-        /// <summary>Draws the strip from the current state; also every second for the elapsed time.</summary>
+        /// <summary>Draws the strip from the current state; also every second for the elapsed time and tokens.</summary>
         private void RenderActivity()
         {
             bool stalled = _stall.Visibility == Visibility.Visible;
@@ -138,56 +166,61 @@ namespace ClaudeVS.ToolWindow
 
             var a = ChatTheme.Accents(this);
             var phase = _waitingForUser ? Phase.Waiting : _phase;
-            string label, detail = null;
+            string label, what = null;
             Brush color;
             switch (phase)
             {
                 case Phase.Thinking:
-                    label = "Thinking";
+                    label = _turnVerb + "…";
+                    what = "thinking";
                     color = a.Brand;
-                    if (_thinkingTokens is int t && t > 0) detail = "~" + TokenMeter.Format(t) + " tok";
                     break;
                 case Phase.Writing:
-                    label = "Writing";
+                    label = "Writing…";
                     color = a.Link;
                     break;
                 case Phase.Tool:
-                    label = ToolVerb(_phaseTool);
+                    label = ToolVerb(_phaseTool) + "…";
+                    what = ShortToolText(_phaseTool, _phaseText);
                     color = a.Running;
-                    detail = ShortToolText(_phaseTool, _phaseText);
                     break;
                 case Phase.Waiting:
                     label = "Waiting for you";
+                    what = "answer the card above the prompt box";
                     color = a.Success;
-                    detail = "answer the card or the Allow/Deny bar";
                     break;
                 default:
-                    label = _session?.IsRunning == true ? "Working" : "Starting Claude Code";
+                    label = _session?.IsRunning == true ? _turnVerb + "…" : "Starting Claude Code…";
                     color = a.Brand;
                     break;
             }
 
             int secs = (int)(DateTime.UtcNow - _turnStartedUtc).TotalSeconds;
-            string elapsed = secs < 60 ? secs + "s" : $"{secs / 60}m {secs % 60:00}s";
-            detail = detail == null ? elapsed : elapsed + " · " + detail;
+            string detail = secs < 60 ? secs + "s" : $"{secs / 60}m {secs % 60:00}s";
+            long tokens = _turnThinkingTokens + _turnOutputChars / 4;
+            if (tokens > 0) detail += " · ↓ " + TokenMeter.Format(tokens) + " tokens";
+            if (what != null) detail += " · " + what;
 
             _activityLabel.Text = label;
-            _activityDetail.Text = detail;
+            _activityDetail.Text = "(" + detail + ")";
+            _activityDetail.ToolTip = tokens > 0 ? "↓ tokens: estimated output so far (thinking, text and tool input)" : null;
             _activityHint.Visibility = phase == Phase.Waiting ? Visibility.Collapsed : Visibility.Visible;
-            System.Windows.Automation.AutomationProperties.SetName(_activity, label + ", " + detail);
+            _activityTip.Visibility = phase == Phase.Waiting ? Visibility.Collapsed : Visibility.Visible;
+            System.Windows.Automation.AutomationProperties.SetName(_activity, label + " " + detail);
 
             if (!ReferenceEquals(color, _activityColor))
             {
                 _activityColor = color;
                 _activityLabel.Foreground = color;
+                _spinner.Foreground = color;
                 _activity.BorderBrush = color;
                 var c = (color as SolidColorBrush)?.Color ?? Colors.Gray;
                 _activity.Background = new SolidColorBrush(Color.FromArgb(0x1C, c.R, c.G, c.B));
-                foreach (var dot in _activityDots) dot.Fill = color;
                 _activitySweep.Fill = SweepBrush(c);
                 _activityAnimating = false; // the sweep brush is new: start its animation again
             }
             SetActivityAnimation(phase != Phase.Waiting);
+            if (!_activityAnimating) _spinner.Text = phase == Phase.Waiting ? "●" : "✻";
         }
 
         private static Brush SweepBrush(Color c)
@@ -200,23 +233,13 @@ namespace ClaudeVS.ToolWindow
             return brush;
         }
 
-        /// <summary>Pulsing dots and the sweep; off when Windows' "Show animations" is off, or while waiting for you.</summary>
+        /// <summary>The spinner and the sweep; off when Windows' "Show animations" is off, or while waiting for you.</summary>
         private void SetActivityAnimation(bool on)
         {
             on &= SystemParameters.ClientAreaAnimation;
             if (on == _activityAnimating) return;
             _activityAnimating = on;
-            for (int i = 0; i < _activityDots.Length; i++)
-            {
-                if (!on) { _activityDots[i].BeginAnimation(UIElement.OpacityProperty, null); _activityDots[i].Opacity = 1; continue; }
-                _activityDots[i].BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0.25, 1, TimeSpan.FromMilliseconds(450))
-                {
-                    AutoReverse = true,
-                    RepeatBehavior = RepeatBehavior.Forever,
-                    BeginTime = TimeSpan.FromMilliseconds(150 * i),
-                    EasingFunction = new SineEase(),
-                });
-            }
+            if (on) _spinTimer.Start(); else _spinTimer.Stop();
             var move = (_activitySweep.Fill as Brush)?.RelativeTransform as TranslateTransform;
             if (move == null) return;
             if (on) move.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(-1, 1, TimeSpan.FromMilliseconds(1600)) { RepeatBehavior = RepeatBehavior.Forever });

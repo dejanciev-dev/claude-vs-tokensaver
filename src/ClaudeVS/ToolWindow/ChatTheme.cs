@@ -206,6 +206,24 @@ namespace ClaudeVS.ToolWindow
             return b;
         }
 
+        /// <summary>The main action of a card (Allow): filled with the VS accent color, white text.</summary>
+        public static Button PrimaryButton(string text, string tooltip = null)
+        {
+            var b = new Button
+            {
+                Content = text,
+                ToolTip = string.IsNullOrEmpty(tooltip) ? null : tooltip,
+                Padding = new Thickness(14, 3, 14, 3),
+                Margin = new Thickness(0, 0, 6, 0),
+                Template = FlatTemplate(new CornerRadius(3), filled: true),
+                Foreground = Brushes.White,
+                FontWeight = FontWeights.SemiBold,
+                Cursor = System.Windows.Input.Cursors.Hand,
+            };
+            b.SetResourceReference(Control.BackgroundProperty, EnvironmentColors.SystemHighlightBrushKey);
+            return b;
+        }
+
         /// <summary>A compact combo box using VS's own themed style.</summary>
         public static ComboBox Combo(double width, string tooltip)
         {

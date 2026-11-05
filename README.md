@@ -72,7 +72,7 @@ This extension attacks all three, and shows the numbers so you can see the effec
 
 | Feature | What it does |
 |---|---|
-| **Activity strip** | While Claude works, a strip above the input box shows what it is doing, in color with pulsing dots: *Thinking* (with the estimated thinking tokens), *Writing*, *Running · dotnet test*, *Editing*, *Waiting for you*, and how long the turn has taken. |
+| **Activity strip** | While Claude works, a strip above the input box shows what it is doing, like the terminal: `✻ Imagining… (1m 05s · ↓ 9.5k tokens · thinking)`, then *Writing…*, *Running… dotnet test*, *Editing…*, *Waiting for you*, colored by phase, with a tip underneath. |
 | **Live token meter** | Context fill %, session tokens and cost, cache-hit rate and the current model, colored: context green / amber / red at the /compact thresholds, cache hits green when high. Suggests `/compact` at 60% context and urges it at 85%. Click it for a breakdown of what fills the context (system prompt, tools, memory files, tool results…), from the CLI with no model call. |
 | **Per-turn footer** | `✓ 3.1s · 12.4k tok · $0.004 · claude-haiku-5-5`, showing the model that *actually* answered. |
 | **Model mismatch warning** | If the CLI answers with a different model than the one requested (for example in plan mode), the chat tells you. |
@@ -91,7 +91,7 @@ This extension attacks all three, and shows the numbers so you can see the effec
 | **Review each change** | In Manual mode, an edit or write with several changes asks with a card listing each one (− and + lines) with a check box. **Apply** only the checked ones, **Reject all**, or **Open diff** for the whole file. Claude is told which changes you rejected, so it neither assumes they are in the file nor applies them again. |
 | **Question cards** | When Claude asks a question, you get its options (plus "Other") and your answer goes back to Claude. |
 | **Plan approval cards** | Plans render as Markdown with **Approve** or **Request changes** (with feedback). |
-| **Permission bar** | Other tool calls that need approval show **Allow** / **Deny**. |
+| **Permission card** | Other tool calls that need approval show a card: the question ("Run this command?"), Claude's description, the command or file, and **Allow**, **Always allow** (the rule Claude Code suggests, saved for this project), **Deny**, or a line telling Claude what to do instead. |
 | **Sessions** | Resume an earlier conversation for the same solution (`claude --resume`); its earlier prompts, answers and tool calls are redrawn. Click the title to rename a session (also passed to the CLI as `--name`); hover a session in the list to rename or archive it. |
 | **Images** | Paste a screenshot (`Ctrl+V`) or pick image files with **+ → Upload** and they are sent with the prompt. Thumbnails show above the input box with their token cost (≈ width × height / 750); images are scaled to 1568 px first, since the API would scale larger ones down anyway. |
 | **Rewind** | Hover one of your messages → **Rewind** puts the files Claude changed since that prompt back the way they were. You see the list of files first; the conversation stays as it is. |

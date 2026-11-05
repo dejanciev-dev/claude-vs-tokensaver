@@ -231,12 +231,16 @@ namespace ClaudeVS.Core.Cli
         private Task SendThinkingAsync() =>
             SendControlAsync(new JObject { ["subtype"] = "set_max_thinking_tokens", ["max_thinking_tokens"] = ThinkingEnabled ? JValue.CreateNull() : new JValue(0) });
 
-        /// <summary>Answer a <see cref="ClaudeEventKind.PermissionRequest"/>.</summary>
-        public Task RespondToPermissionAsync(string requestId, JObject originalInput, bool allow, string denyMessage = null)
+        /// <summary>
+        /// Answer a <see cref="ClaudeEventKind.PermissionRequest"/>. <paramref name="updatedPermissions"/> (with allow)
+        /// are permission updates for the CLI to save, such as <see cref="PermissionPrompt.AlwaysAllow"/>.
+        /// </summary>
+        public Task RespondToPermissionAsync(string requestId, JObject originalInput, bool allow, string denyMessage = null, JArray updatedPermissions = null)
         {
             JObject response = allow
                 ? new JObject { ["behavior"] = "allow", ["updatedInput"] = originalInput ?? new JObject() }
                 : new JObject { ["behavior"] = "deny", ["message"] = denyMessage ?? "The user denied this action." };
+            if (allow && updatedPermissions != null && updatedPermissions.Count > 0) response["updatedPermissions"] = updatedPermissions;
             var payload = new JObject
             {
                 ["type"] = "control_response",
