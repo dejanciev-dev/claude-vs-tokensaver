@@ -22,10 +22,6 @@ All notable changes to this project are listed here. The format follows
   `+added −removed`, two unchanged lines around each change, scrolling when long. Covers Edit / MultiEdit, Write
   (compared with the file as it was before) and shell commands that write a file with a heredoc
   (`cat > file <<'EOF'`, the usual way on Windows), including after `cd "dir" &&`.
-
-### Changed
-- Tool rows open and close by clicking the row itself; the round expand buttons are gone.
-- The agents panel shows only the first line of a background command (a heredoc no longer fills the panel).
 - **Generate Lean CLAUDE.md** knows more solution shapes: .NET Framework solutions get MSBuild and vstest
   commands (`dotnet build` can't build them), with packages from `packages.config` and web and test projects
   recognized; the target framework is read from `Directory.Build.props`; VB and F# projects are listed; React,
@@ -166,6 +162,8 @@ All notable changes to this project are listed here. The format follows
 - GitHub Actions build: Release build with warnings as errors, Core tests, `.vsix` artifact.
 
 ### Changed
+- Tool rows open and close by clicking the row itself; the round expand buttons are gone.
+- The agents panel shows only the first line of a background command (a heredoc no longer fills the panel).
 - Model router matches keywords as whole words ("prefix" no longer counts as "fix").
 - `dotnet test` runs the Core test runner instead of silently reporting zero tests.
 
