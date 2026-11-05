@@ -75,7 +75,8 @@ All notable changes to this project are listed here. The format follows
   **Background** moves a running agent to the background so Claude carries on; **Stop** ends one agent and what
   it started, without stopping Claude. Finished ones leave at the next prompt (or **Clear finished**). A
   subagent's own tool calls are marked `↳` in the conversation, and when Claude continues by itself after a
-  background task finishes, a line says which one.
+  background task finishes, a line says which one. Once everything is done the panel folds to one line
+  (`▸ ✓ 5 done · Clear finished`); each task is one line, with its status and time on the right.
 - **Claude reads the Error List itself** (Tools → Options → Claude Code → Token saving, on by default): a
   read-only `get_error_list` tool, served by an MCP server inside the extension, lets Claude check errors and
   warnings after an edit instead of running a full build. It answers one line per row (`path:line:col error CODE:
@@ -183,10 +184,15 @@ All notable changes to this project are listed here. The format follows
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.
 - The agents panel shows only the first line of a background command (a heredoc no longer fills the panel).
+- A command's leading `cd "<working folder>" &&` is left out of `Bash(...)` rows and the agents panel (the
+  folder is shown under the title); a `cd` to any other folder stays.
 - Model router matches keywords as whole words ("prefix" no longer counts as "fix").
 - `dotnet test` runs the Core test runner instead of silently reporting zero tests.
 
 ### Fixed
+- The conversation keeps following new output when it grows after it was added (a tool row filling in its
+  result) or when the chat gets shorter (the permission card or agents panel opening below it). Scrolling up
+  still stops the following.
 - **Quiet-build hook on Windows:** Claude Code runs commands with its PowerShell tool there, so the installed hook
   (Bash only) never made `dotnet build` quiet. It now covers Bash and PowerShell; run *Install Token-Saving
   Settings and Hooks* again to update an existing install.
