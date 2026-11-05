@@ -63,6 +63,13 @@ namespace ClaudeVS.ToolWindow
             };
             Box.SetResourceReference(Control.BackgroundProperty, EnvironmentColors.ToolWindowBackgroundBrushKey);
             Box.SetResourceReference(Control.ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
+            Box.Loaded += (s, e) =>
+            {
+                // Loaded fires again when the tool window is re-docked, and the template may be new: look it up again.
+                if (_scroll != null) _scroll.ScrollChanged -= OnScrollChanged;
+                _scroll = FindScrollViewer(Box);
+                if (_scroll != null) _scroll.ScrollChanged += OnScrollChanged;
+            };
         }
 
         public RichTextBox Box { get; }
@@ -1182,11 +1189,31 @@ namespace ClaudeVS.ToolWindow
             _lastDay = null;
         }
 
+        /// <summary>
+        /// True while the view is at (or within 40px of) the bottom. Kept by <see cref="OnScrollChanged"/>, so it
+        /// stays true while content grows or the chat gets shorter, and turns false only when the user scrolls up.
+        /// </summary>
+        private bool _followEnd = true;
+
         // Only follow the output when the user hasn't scrolled up to read something.
         private void ScrollToEndIfNear()
         {
             var sv = _scroll ?? (_scroll = FindScrollViewer(Box)); // template is applied once; cache the lookup
-            if (sv == null || sv.VerticalOffset >= sv.ScrollableHeight - 40) Box.ScrollToEnd();
+            if (sv == null || _followEnd || sv.VerticalOffset >= sv.ScrollableHeight - 40) Box.ScrollToEnd();
+        }
+
+        /// <summary>
+        /// Keeps the newest output in view when the content grows after it was added (a tool row filling in its
+        /// result, text laid out later) or when the chat gets shorter (the permission card or the tasks panel
+        /// opening below it). A scroll with no size change is the user's own, so it decides whether to follow.
+        /// </summary>
+        private void OnScrollChanged(object sender, ScrollChangedEventArgs e)
+        {
+            var sv = (ScrollViewer)sender;
+            if (e.ExtentHeightChange == 0 && e.ViewportHeightChange == 0)
+                _followEnd = sv.VerticalOffset >= sv.ScrollableHeight - 40;
+            else if (_followEnd)
+                sv.ScrollToEnd();
         }
 
         private static ScrollViewer FindScrollViewer(DependencyObject d)

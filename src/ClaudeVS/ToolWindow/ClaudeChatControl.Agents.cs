@@ -30,7 +30,8 @@ namespace ClaudeVS.ToolWindow
             Padding = new Thickness(8, 4, 8, 4),
             Margin = new Thickness(0, 0, 0, 4),
         };
-        private bool _agentsCollapsed;
+        private bool _agentsCollapsed;     // the user's choice while something runs
+        private bool _agentsDoneOpen;      // opened by the user while everything is done (folded by default then)
         private DispatcherTimer _agentsTimer;
         // Detail lines that show elapsed time, refreshed each second while something runs.
         private readonly List<(TextBlock Line, AgentTask Task)> _agentDetails = new List<(TextBlock, AgentTask)>();
@@ -100,6 +101,17 @@ namespace ClaudeVS.ToolWindow
 
             var accents = ChatTheme.Accents(this);
             var stack = new StackPanel();
+            // While something runs the list is open (unless the user folded it); once everything is done it folds
+            // to the one-line headline, since the commands and their output are in the chat above.
+            bool allDone = _tasks.RunningCount == 0;
+            if (!allDone) _agentsDoneOpen = false;
+            bool collapsed = allDone ? !_agentsDoneOpen : _agentsCollapsed;
+            void Toggle()
+            {
+                if (allDone) _agentsDoneOpen = !_agentsDoneOpen;
+                else _agentsCollapsed = !_agentsCollapsed;
+                RefreshAgentsPanel();
+            }
 
             var header = new DockPanel { Cursor = System.Windows.Input.Cursors.Hand, Background = Brushes.Transparent };
             if (_tasks.RunningCount < _tasks.Tasks.Count)
@@ -109,25 +121,28 @@ namespace ClaudeVS.ToolWindow
                 DockPanel.SetDock(clear, Dock.Right);
                 header.Children.Add(clear);
             }
-            var title = new TextBlock { FontSize = 11.5, Text = (_agentsCollapsed ? "▸ " : "▾ ") + "⚙ " + _tasks.Headline(), VerticalAlignment = VerticalAlignment.Center };
+            var title = new TextBlock { FontSize = 11.5, VerticalAlignment = VerticalAlignment.Center };
+            title.Inlines.Add(new System.Windows.Documents.Run(collapsed ? "▸ " : "▾ "));
+            if (allDone) title.Inlines.Add(new System.Windows.Documents.Run("✓ ") { Foreground = accents.Success });
+            else title.Inlines.Add(new System.Windows.Documents.Run("⚙ "));
+            title.Inlines.Add(new System.Windows.Documents.Run(_tasks.Headline()));
             ChatTheme.Text(title);
             header.Children.Add(title);
-            header.ToolTip = _agentsCollapsed ? "Show agents and background tasks" : "Hide the list";
-            header.MouseLeftButtonUp += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); _agentsCollapsed = !_agentsCollapsed; RefreshAgentsPanel(); };
+            header.ToolTip = collapsed ? "Show agents and background tasks" : "Hide the list";
+            header.MouseLeftButtonUp += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); Toggle(); };
             // Keyboard and screen readers: Tab to the header, Enter or Space toggles the list.
             header.Focusable = true;
-            System.Windows.Automation.AutomationProperties.SetName(header, _tasks.Headline() + (_agentsCollapsed ? ", collapsed" : ", expanded"));
+            System.Windows.Automation.AutomationProperties.SetName(header, _tasks.Headline() + (collapsed ? ", collapsed" : ", expanded"));
             header.KeyDown += (s, e) =>
             {
                 ThreadHelper.ThrowIfNotOnUIThread();
                 if (e.Key != System.Windows.Input.Key.Enter && e.Key != System.Windows.Input.Key.Space) return;
                 e.Handled = true;
-                _agentsCollapsed = !_agentsCollapsed;
-                RefreshAgentsPanel();
+                Toggle();
             };
             stack.Children.Add(header);
 
-            if (!_agentsCollapsed)
+            if (!collapsed)
             {
                 var rows = _tasks.Tree();
                 foreach (var (task, depth) in rows.Take(MaxAgentRows)) stack.Children.Add(AgentRow(task, depth, accents));
@@ -177,20 +192,23 @@ namespace ClaudeVS.ToolWindow
             DockPanel.SetDock(dot, Dock.Left);
             row.Children.Add(dot);
 
-            var text = new StackPanel();
-            var name = new TextBlock { FontSize = 11.5, TextTrimming = TextTrimming.CharacterEllipsis };
-            name.Inlines.Add(new System.Windows.Documents.Run(FirstLine(t.Description) ?? (t.IsAgent ? "Agent" : "Command")) { FontWeight = FontWeights.SemiBold });
-            string kind = t.IsAgent ? t.SubagentType ?? "agent" : "command";
-            name.Inlines.Add(new System.Windows.Documents.Run("  " + kind + (t.IsBackgrounded ? " · background" : "")) { Foreground = Brushes.Gray });
-            ChatTheme.Text(name);
-            text.Children.Add(name);
-
-            var detail = new TextBlock { FontSize = 11, TextTrimming = TextTrimming.CharacterEllipsis };
+            // One line: the name (cut with … when narrow), then status · tokens · time on the right, never cut.
+            var detail = new TextBlock { FontSize = 11, Margin = new Thickness(10, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
             ChatTheme.Muted(detail);
             detail.Text = AgentDetail(t, DateTime.UtcNow);
-            text.Children.Add(detail);
-            row.Children.Add(text);
+            DockPanel.SetDock(detail, Dock.Right);
+            row.Children.Add(detail);
             if (t.IsRunning) _agentDetails.Add((detail, t));
+
+            var name = new TextBlock { FontSize = 11.5, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
+            string described = FirstLine(Core.Cli.ToolCallView.WithoutCdToBase(t.Description?.Trim(), _sessionDir));
+            name.Inlines.Add(new System.Windows.Documents.Run(described ?? (t.IsAgent ? "Agent" : "Command")) { FontWeight = FontWeights.SemiBold });
+            // Commands are most of the list: only agents (and background runs) say what kind they are.
+            string kind = t.IsAgent ? t.SubagentType ?? "agent" : "command";
+            string tag = t.IsAgent ? kind + (t.IsBackgrounded ? " · background" : "") : t.IsBackgrounded ? "background" : null;
+            if (tag != null) name.Inlines.Add(new System.Windows.Documents.Run("  " + tag) { Foreground = Brushes.Gray });
+            ChatTheme.Text(name);
+            row.Children.Add(name);
 
             string tip = StatusWord(t.Status);
             if (!string.IsNullOrWhiteSpace(t.Prompt)) tip += "\n\nTask:\n" + Shorten(t.Prompt, 600);
@@ -200,12 +218,15 @@ namespace ClaudeVS.ToolWindow
             return row;
         }
 
-        /// <summary>"Running Read: Foo.cs · 20.1k tok · 3 tools · 0:23", or the result once it has finished.</summary>
+        /// <summary>
+        /// "Read: Foo.cs · 20.1k tok · 3 tools · 0:23" while running, "Done · 0:08" once finished; short, since it sits
+        /// on the row's right. The result is in the row's tooltip and in the chat.
+        /// </summary>
         private static string AgentDetail(AgentTask t, DateTime nowUtc)
         {
             var parts = new List<string>();
-            if (t.IsRunning) parts.Add(t.Activity ?? (t.IsAgent ? "Starting…" : "Running…"));
-            else parts.Add(StatusWord(t.Status) + (string.IsNullOrWhiteSpace(t.Summary) ? "" : ": " + Shorten(t.Summary.Replace('\n', ' ').Replace('\r', ' '), 120)));
+            if (t.IsRunning) parts.Add(Shorten(t.Activity ?? (t.IsAgent ? "Starting…" : "Running…"), 40));
+            else parts.Add(StatusWord(t.Status));
             if (t.TotalTokens > 0) parts.Add(TokenMeter.Format(t.TotalTokens) + " tok");
             if (t.ToolUses > 0) parts.Add(t.ToolUses + (t.ToolUses == 1 ? " tool" : " tools"));
             var elapsed = t.Elapsed(nowUtc);

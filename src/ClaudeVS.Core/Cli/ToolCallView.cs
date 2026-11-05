@@ -42,7 +42,7 @@ namespace ClaudeVS.Core.Cli
                 case "Read": return ("Read", Path("file_path"));
                 case "NotebookEdit": return ("Update", Path("notebook_path"));
                 case "Bash":
-                case "PowerShell": return (toolName, OneLine(Arg("command")));
+                case "PowerShell": return (toolName, OneLine(WithoutCdToBase(Arg("command"), baseDir)));
                 case "Grep": return ("Search", $"pattern: \"{Arg("pattern")}\"" + (Arg("path") != null ? ", path: " + Path("path") : ""));
                 case "Glob": return ("Search", $"pattern: \"{Arg("pattern")}\"" + (Arg("path") != null ? ", path: " + Path("path") : ""));
                 case "WebFetch": return ("Fetch", Arg("url"));
@@ -129,6 +129,35 @@ namespace ClaudeVS.Core.Cli
             if (s == null) return null;
             int nl = s.IndexOfAny(new[] { '\r', '\n' });
             return nl < 0 ? s : s.Substring(0, nl).TrimEnd() + " …";
+        }
+
+        private static readonly System.Text.RegularExpressions.Regex CdPrefix = new System.Text.RegularExpressions.Regex(
+            @"^\s*(?:cd|Set-Location|pushd)\s+(?:""(?<d>[^""]+)""|'(?<d>[^']+)'|(?<d>[^\s;&|]+))\s*(?:&&|;)\s*",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        /// <summary>
+        /// A command without a leading <c>cd "&lt;working folder&gt;" &amp;&amp;</c> (or <c>;</c>): Claude starts most
+        /// commands that way, and the folder is already shown under the title. A cd anywhere else stays, since
+        /// it changes what the command does. Git Bash paths (<c>/c/Users/…</c>) match their Windows form.
+        /// </summary>
+        public static string WithoutCdToBase(string command, string baseDir)
+        {
+            if (string.IsNullOrEmpty(command) || string.IsNullOrEmpty(baseDir)) return command;
+            var m = CdPrefix.Match(command);
+            if (!m.Success || m.Length >= command.Length) return command;
+            return SameDir(m.Groups["d"].Value, baseDir) ? command.Substring(m.Length) : command;
+        }
+
+        private static bool SameDir(string a, string b)
+        {
+            string Norm(string p)
+            {
+                p = p.Replace('\\', '/').TrimEnd('/');
+                if (p.Length >= 3 && p[0] == '/' && char.IsLetter(p[1]) && p[2] == '/') p = p[1] + ":" + p.Substring(2); // /c/x → c:/x
+                else if (p.Length == 2 && p[0] == '/' && char.IsLetter(p[1])) p = p[1] + ":";
+                return p;
+            }
+            return string.Equals(Norm(a), Norm(b), StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>A path inside <paramref name="baseDir"/> without that prefix (either slash style); others unchanged.</summary>

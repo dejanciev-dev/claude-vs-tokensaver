@@ -847,6 +847,16 @@ namespace ClaudeVS.Core.Tests
             Eq(("Update", "src/a.cs"), ToolCallView.Title("Edit", JObject.Parse("{\"file_path\":\"C:\\\\repo\\\\src\\\\a.cs\"}"), "C:/repo"), "path relative to the solution");
             Eq(("Bash", "cd x && cat > f <<'EOF' …"), ToolCallView.Title("Bash", new JObject { ["command"] = "cd x && cat > f <<'EOF'\nbody\nEOF" }), "first line of a command");
             Eq(("Search", "pattern: \"Foo\""), ToolCallView.Title("Grep", new JObject { ["pattern"] = "Foo" }), "grep");
+            Eq(("Bash", "dotnet test"), ToolCallView.Title("Bash", new JObject { ["command"] = "cd \"C:/Users/me/repo\" && dotnet test" }, @"C:\Users\me\repo"), "cd to the working folder dropped");
+
+            Eq("dotnet test", ToolCallView.WithoutCdToBase("cd \"C:/r\" && dotnet test", @"C:\r\"), "quoted, either slash style");
+            Eq("ls", ToolCallView.WithoutCdToBase("cd '/c/r' && ls", "C:/r"), "git bash path");
+            Eq("ls", ToolCallView.WithoutCdToBase("cd C:/r; ls", "c:/R"), "unquoted, semicolon, case");
+            Eq("Get-ChildItem", ToolCallView.WithoutCdToBase("Set-Location \"C:\\r\"; Get-ChildItem", @"C:\r"), "PowerShell");
+            Eq("cd \"C:/r/src\" && ls", ToolCallView.WithoutCdToBase("cd \"C:/r/src\" && ls", "C:/r"), "another folder stays");
+            Eq("cd \"C:/r\"", ToolCallView.WithoutCdToBase("cd \"C:/r\"", "C:/r"), "a bare cd stays");
+            Eq("ls && cd \"C:/r\" && ls", ToolCallView.WithoutCdToBase("ls && cd \"C:/r\" && ls", "C:/r"), "only at the start");
+            Eq("cd \"C:/r\" && ls", ToolCallView.WithoutCdToBase("cd \"C:/r\" && ls", null), "no working folder");
 
             var bash = ToolCallView.Summarize("Bash", "l1\nl2\nl3\nl4\nl5\n", false);
             Eq("l1|l2|l3", string.Join("|", bash.Lines), "first three lines");
