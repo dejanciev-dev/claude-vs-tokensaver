@@ -72,7 +72,8 @@ This extension attacks all three, and shows the numbers so you can see the effec
 
 | Feature | What it does |
 |---|---|
-| **Live token meter** | Context fill %, session tokens and cost, cache-hit rate and the current model. Suggests `/compact` at 60% context and urges it at 85%. Click it for a breakdown of what fills the context (system prompt, tools, memory files, tool results…), from the CLI with no model call. |
+| **Activity strip** | While Claude works, a strip above the input box shows what it is doing, in color with pulsing dots: *Thinking* (with the estimated thinking tokens), *Writing*, *Running · dotnet test*, *Editing*, *Waiting for you*, and how long the turn has taken. |
+| **Live token meter** | Context fill %, session tokens and cost, cache-hit rate and the current model, colored: context green / amber / red at the /compact thresholds, cache hits green when high. Suggests `/compact` at 60% context and urges it at 85%. Click it for a breakdown of what fills the context (system prompt, tools, memory files, tool results…), from the CLI with no model call. |
 | **Per-turn footer** | `✓ 3.1s · 12.4k tok · $0.004 · claude-haiku-5-5`, showing the model that *actually* answered. |
 | **Model mismatch warning** | If the CLI answers with a different model than the one requested (for example in plan mode), the chat tells you. |
 | **Agents panel** | Claude's subagents and background commands above the input box, as a tree: what each is doing, its tokens, tool calls and time, and its result. **Background** lets Claude carry on while an agent works; **Stop** ends one agent (and what it started) without stopping Claude. A subagent's own tool calls are marked `↳` in the conversation. |

@@ -38,7 +38,9 @@ namespace ClaudeVS.Core.Cli
             switch ((string)json["type"])
             {
                 case "system": return ParseSystem(json);
-                case "stream_event": return ParseStreamEvent(json["event"] as JObject);
+                case "stream_event":
+                    var parent = json["parent_tool_use_id"];
+                    return ParseStreamEvent(json["event"] as JObject, isSubagent: parent != null && parent.Type != JTokenType.Null);
                 case "assistant": return ParseAssistant(json);
                 case "user": return ParseUser(json);
                 case "result": return ParseResult(json);
@@ -74,7 +76,7 @@ namespace ClaudeVS.Core.Cli
             }
         }
 
-        private IReadOnlyList<ClaudeEvent> ParseStreamEvent(JObject ev)
+        private IReadOnlyList<ClaudeEvent> ParseStreamEvent(JObject ev, bool isSubagent)
         {
             if (ev == null) return None;
             string type = (string)ev["type"];
@@ -83,8 +85,32 @@ namespace ClaudeVS.Core.Cli
                 _currentStreamMessageId = (string)ev.SelectToken("message.id");
                 return None;
             }
+            if (type == "content_block_start")
+            {
+                if (isSubagent) return None;
+                switch ((string)ev.SelectToken("content_block.type"))
+                {
+                    case "thinking":
+                    case "redacted_thinking":
+                        return new[] { new ClaudeEvent { Kind = ClaudeEventKind.Activity, Activity = ClaudeActivity.Thinking } };
+                    case "text":
+                        return new[] { new ClaudeEvent { Kind = ClaudeEventKind.Activity, Activity = ClaudeActivity.Writing } };
+                    case "tool_use":
+                    case "server_tool_use":
+                        return new[] { new ClaudeEvent { Kind = ClaudeEventKind.Activity, Activity = ClaudeActivity.Tool, ToolName = (string)ev.SelectToken("content_block.name") } };
+                    default: return None;
+                }
+            }
             if (type != "content_block_delta") return None;
-            if ((string)ev.SelectToken("delta.type") != "text_delta") return None;
+            string deltaType = (string)ev.SelectToken("delta.type");
+            if (deltaType == "thinking_delta")
+            {
+                // 2.1.318 sends no thinking text ("thinking_display": "updates"), only an estimate, sometimes null.
+                int? estimate = ev.SelectToken("delta.estimated_tokens")?.Type == JTokenType.Integer ? ev.SelectToken("delta.estimated_tokens").Value<int>() : (int?)null;
+                if (isSubagent || estimate == null) return None;
+                return new[] { new ClaudeEvent { Kind = ClaudeEventKind.Activity, Activity = ClaudeActivity.Thinking, EstimatedTokens = estimate } };
+            }
+            if (deltaType != "text_delta") return None;
 
             string text = (string)ev.SelectToken("delta.text");
             if (string.IsNullOrEmpty(text)) return None;

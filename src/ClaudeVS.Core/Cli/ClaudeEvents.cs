@@ -59,7 +59,24 @@ namespace ClaudeVS.Core.Cli
         HookCallback,
         /// <summary>A subagent or background command started, progressed or ended; the system message is in Payload (see <see cref="AgentTaskList"/>).</summary>
         Task,
+        /// <summary>
+        /// What the main agent is doing right now, from the stream's content blocks: <see cref="ClaudeEvent.Activity"/>,
+        /// with ToolName for a tool call being written and <see cref="ClaudeEvent.EstimatedTokens"/> while thinking.
+        /// Subagents' blocks are not reported.
+        /// </summary>
+        Activity,
         Error,
+    }
+
+    /// <summary>The phase of the main agent's current response (<see cref="ClaudeEventKind.Activity"/>).</summary>
+    public enum ClaudeActivity
+    {
+        /// <summary>A thinking block. The CLI streams no thinking text, only an estimate of its size.</summary>
+        Thinking,
+        /// <summary>A text block: the answer is being written.</summary>
+        Writing,
+        /// <summary>A tool_use block: Claude is writing the input of a tool call (ToolName).</summary>
+        Tool,
     }
 
     public class ClaudeEvent
@@ -96,6 +113,11 @@ namespace ClaudeVS.Core.Cli
 
         // Compacted
         public long PreCompactTokens { get; set; }
+
+        // Activity
+        public ClaudeActivity Activity { get; set; }
+        /// <summary>Activity (Thinking): the CLI's estimate of the thinking tokens so far, when it sends one.</summary>
+        public int? EstimatedTokens { get; set; }
 
         public override string ToString() => $"{Kind}: {Text ?? ToolName}";
     }

@@ -7,6 +7,12 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Activity strip** above the input box while Claude works: pulsing dots and a moving line in the color of
+  what Claude is doing (thinking in orange, writing in blue, tools in amber, "Waiting for you" in green), the
+  time the turn has taken, the CLI's estimate of the thinking tokens, and which tool runs with what (for example
+  "Running · dotnet test"). Follows Windows' "Show animations" setting.
+- **Colored meter**: context % green, amber or red at the /compact thresholds (the bar too), cache hits green
+  when most input comes from the cache, the cost in orange, the model colored by family.
 - **Generate Lean CLAUDE.md** knows more solution shapes: .NET Framework solutions get MSBuild and vstest
   commands (`dotnet build` can't build them), with packages from `packages.config` and web and test projects
   recognized; the target framework is read from `Directory.Build.props`; VB and F# projects are listed; React,

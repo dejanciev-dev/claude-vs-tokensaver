@@ -756,6 +756,33 @@ namespace ClaudeVS.Core.Tests
             Eq("00000000-0000-0000-0000-000000000001", parser.SessionId, "session id");
         }
 
+        /// <summary>A turn with extended thinking from Claude Code 2.1.318 (stream_event and result lines, sanitized).</summary>
+        private static void Test_Parser_Activity_RealCli_2_1_318()
+        {
+            var parser = new ClaudeStreamParser();
+            var events = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.318-thinking.jsonl"))
+                .SelectMany(l => parser.Parse(l)).ToList();
+            var activity = events.Where(e => e.Kind == ClaudeEventKind.Activity).ToList();
+
+            Eq(3, activity.Count, "thinking start, one estimate (the null one is skipped), writing start");
+            Eq(ClaudeActivity.Thinking, activity[0].Activity, "thinking block first");
+            Eq(null, activity[0].EstimatedTokens, "no estimate on the block start");
+            Eq(50, activity[1].EstimatedTokens, "thinking_delta estimate");
+            Eq(ClaudeActivity.Writing, activity[2].Activity, "then the text block");
+            int writing = events.IndexOf(activity[2]);
+            True(events.FindIndex(e => e.Kind == ClaudeEventKind.TextDelta) > writing, "writing comes before the first text delta");
+            Eq(1, events.Count(e => e.Kind == ClaudeEventKind.TurnCompleted), "turn completes");
+        }
+
+        private static void Test_Parser_Activity_ToolAndSubagent()
+        {
+            var parser = new ClaudeStreamParser();
+            var tool = parser.Parse("{\"type\":\"stream_event\",\"event\":{\"type\":\"content_block_start\",\"index\":1,\"content_block\":{\"type\":\"tool_use\",\"id\":\"toolu_1\",\"name\":\"Bash\",\"input\":{}}},\"parent_tool_use_id\":null}").Single();
+            Eq(ClaudeActivity.Tool, tool.Activity, "tool_use block");
+            Eq("Bash", tool.ToolName, "tool name");
+            Eq(0, parser.Parse("{\"type\":\"stream_event\",\"event\":{\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"thinking\"}},\"parent_tool_use_id\":\"toolu_9\"}").Count, "subagent blocks are not the main agent's activity");
+        }
+
         /// <summary>Real AskUserQuestion and ExitPlanMode permission requests from Claude Code 2.1.316 (sanitized).</summary>
         private static void Test_InteractiveRequests_RealCli()
         {
