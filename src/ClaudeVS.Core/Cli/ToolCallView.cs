@@ -64,6 +64,50 @@ namespace ClaudeVS.Core.Cli
             }
         }
 
+        /// <summary>Tools whose back-to-back calls fold into one "Read 3 files, searched for 2 patterns" row.</summary>
+        public static bool IsLookTool(string toolName) => toolName == "Read" || toolName == "Grep" || toolName == "Glob";
+
+        /// <summary>
+        /// The folded row's text, like the terminal: "Read 3 files, searched for 2 patterns", or while one is still
+        /// running "Reading 3 files, searching for 2 patterns…".
+        /// </summary>
+        public static string LookSummary(int reads, int searches, bool running)
+        {
+            var parts = new List<string>();
+            if (reads > 0) parts.Add((running ? "reading " : "read ") + Count(reads, "file"));
+            if (searches > 0) parts.Add((running ? "searching for " : "searched for ") + Count(searches, "pattern"));
+            if (parts.Count == 0) return "";
+            string s = string.Join(", ", parts);
+            return char.ToUpperInvariant(s[0]) + s.Substring(1) + (running ? "…" : "");
+        }
+
+        private static string Count(int n, string noun) => n == 1 ? $"1 {noun}" : $"{n} {noun}s";
+
+        /// <summary>
+        /// The muted line under a shell command when Claude set how it runs: "(timeout 10m)", "(running in the
+        /// background)", or both. Null for the defaults.
+        /// </summary>
+        public static string RunNote(string toolName, JObject input)
+        {
+            if (input == null || (toolName != "Bash" && toolName != "PowerShell")) return null;
+            var parts = new List<string>();
+            var t = input["timeout"];
+            if (t != null && (t.Type == JTokenType.Integer || t.Type == JTokenType.Float) && (double)t > 0)
+                parts.Add("timeout " + Duration(TimeSpan.FromMilliseconds((double)t)));
+            if (input["run_in_background"]?.Type == JTokenType.Boolean && (bool)input["run_in_background"])
+                parts.Add("running in the background");
+            return parts.Count == 0 ? null : "(" + string.Join(", ", parts) + ")";
+        }
+
+        /// <summary>"10m", "1h 30m", "45s", "2m 30s": the largest units, no zero parts.</summary>
+        public static string Duration(TimeSpan d)
+        {
+            if (d.TotalSeconds < 60) return Math.Max(1, (int)Math.Round(d.TotalSeconds)) + "s";
+            int h = (int)d.TotalHours, m = d.Minutes, s = d.Seconds;
+            if (h > 0) return m > 0 ? $"{h}h {m}m" : $"{h}h";
+            return s > 0 ? $"{m}m {s}s" : $"{m}m";
+        }
+
         /// <summary>What the ⎿ line says once the result is in.</summary>
         public static ToolResultSummary Summarize(string toolName, string resultText, bool isError, InlineDiff diff = null)
         {

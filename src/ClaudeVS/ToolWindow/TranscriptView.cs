@@ -484,6 +484,14 @@ namespace ClaudeVS.ToolWindow
             var expander = Collapsible(headerContent, bodyPanel, new Thickness(0, 1, 0, 1));
             var result = new StackPanel { Margin = new Thickness(18, 0, 0, 0) };
             expander.Children.Add(result);
+            string runNote = toolName != null ? Core.Cli.ToolCallView.RunNote(toolName, input) : null;
+            if (runNote != null)
+            {
+                // "⎿ (timeout 10m)": how Claude set the command to run, so a long one doesn't look stuck.
+                var note = new TextBlock { Text = "⎿  " + runNote, FontSize = 11.5, Margin = new Thickness(18, 0, 0, 0) };
+                ChatTheme.Muted(note);
+                expander.Children.Add(note);
+            }
             UIElement diffElement = null;
             if (inlineDiff)
             {
@@ -500,6 +508,12 @@ namespace ClaudeVS.ToolWindow
                 group.Rows.Children.Add(expander);
                 group.Add(toolUseId, description);
                 if (!string.IsNullOrEmpty(toolUseId)) _toolGroupOf[toolUseId] = group;
+            }
+            else if (Core.Cli.ToolCallView.IsLookTool(toolName) && !IsSubagentCall(description))
+            {
+                var look = CurrentLookGroup();
+                look.Add(toolUseId, toolName, expander);
+                if (!string.IsNullOrEmpty(toolUseId)) _lookGroupOf[toolUseId] = look;
             }
             else _doc.Blocks.Add(new BlockUIContainer(expander) { Margin = new Thickness(0) });
             if (!string.IsNullOrEmpty(toolUseId)) _tools[toolUseId] = toolRow;
@@ -1145,6 +1159,93 @@ namespace ClaudeVS.ToolWindow
             }
         }
 
+        // ---------------- Read / search groups ----------------
+
+        private LookGroup _lookGroup;
+        private readonly Dictionary<string, LookGroup> _lookGroupOf = new Dictionary<string, LookGroup>();
+
+        private static bool IsSubagentCall(string description) =>
+            description != null && description.StartsWith(Core.Cli.ClaudeStreamParser.SubagentToolPrefix, StringComparison.Ordinal);
+
+        /// <summary>The group the next Read / Grep / Glob joins: the last one, while nothing else was added after it.</summary>
+        private LookGroup CurrentLookGroup()
+        {
+            if (_lookGroup != null && _doc.Blocks.LastBlock == _lookGroup.Block) return _lookGroup;
+            _lookGroup = new LookGroup(ChatTheme.Accents(Box));
+            _doc.Blocks.Add(_lookGroup.Block);
+            return _lookGroup;
+        }
+
+        /// <summary>
+        /// Back-to-back reads and searches, like the terminal: "● Read 3 files, searched for 2 patterns", opening on
+        /// click to the usual rows. A single call shows its own row ("Read(src/a.cs) ⎿ Read 120 lines" says more);
+        /// the folded line takes over from the second one.
+        /// </summary>
+        private sealed class LookGroup
+        {
+            private readonly TextBlock _header = new TextBlock { FontSize = 12, TextTrimming = TextTrimming.CharacterEllipsis };
+            private readonly Run _dot = new Run("● ");
+            private readonly Run _text = new Run();
+            private readonly Run _failedText = new Run();
+            private readonly ToggleButton _toggle;
+            private readonly ChatTheme.AccentSet _accents;
+            private readonly HashSet<string> _running = new HashSet<string>();
+            private int _reads, _searches, _failed;
+
+            public LookGroup(ChatTheme.AccentSet accents)
+            {
+                _accents = accents;
+                ChatTheme.Muted(_header);
+                _failedText.Foreground = accents.Failure;
+                _header.Inlines.Add(_dot);
+                _header.Inlines.Add(_text);
+                _header.Inlines.Add(_failedText);
+                Rows = new StackPanel();
+                var panel = Collapsible(_header, Rows, new Thickness(0, 1, 0, 1));
+                _toggle = (ToggleButton)panel.Children[0];
+                _toggle.ToolTip = "Show the files read and the searches";
+                _toggle.Checked += (s, e) => Update();
+                _toggle.Unchecked += (s, e) => Update();
+                Block = new BlockUIContainer(panel) { Margin = new Thickness(0) };
+            }
+
+            public BlockUIContainer Block { get; }
+            public StackPanel Rows { get; }
+
+            public void Add(string id, string toolName, UIElement row)
+            {
+                Rows.Children.Add(row);
+                if (toolName == "Read") _reads++; else _searches++;
+                if (!string.IsNullOrEmpty(id)) _running.Add(id);
+                Update();
+            }
+
+            public void Complete(string id, bool isError)
+            {
+                _running.Remove(id);
+                if (isError) _failed++;
+                Update();
+            }
+
+            private void Update()
+            {
+                if (Rows.Children.Count < 2)
+                {
+                    _toggle.Visibility = Visibility.Collapsed; // one call: just its row
+                    Rows.Visibility = Visibility.Visible;
+                    return;
+                }
+                _toggle.Visibility = Visibility.Visible;
+                Rows.Visibility = _toggle.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+                Rows.Margin = new Thickness(12, 0, 0, 0);
+                bool running = _running.Count > 0;
+                _dot.Foreground = running ? _accents.Running : _failed > 0 ? _accents.Failure : _accents.Success;
+                _text.Text = Core.Cli.ToolCallView.LookSummary(_reads, _searches, running);
+                _failedText.Text = _failed > 0 ? $" · {_failed} failed" : "";
+                System.Windows.Automation.AutomationProperties.SetName(_toggle, _text.Text + _failedText.Text + (_toggle.IsChecked == true ? ", expanded" : ", collapsed"));
+            }
+        }
+
         /// <summary>
         /// Adds the result size (≈ chars / 4 tokens) to a tool row and marks failed calls; with the result text,
         /// the ⎿ summary under the row and the whole output inside it.
@@ -1156,6 +1257,11 @@ namespace ClaudeVS.ToolWindow
             {
                 _toolGroupOf.Remove(toolUseId);
                 group.Complete(toolUseId, resultChars, isError);
+            }
+            if (!string.IsNullOrEmpty(toolUseId) && _lookGroupOf.TryGetValue(toolUseId, out var look))
+            {
+                _lookGroupOf.Remove(toolUseId);
+                look.Complete(toolUseId, isError);
             }
             if (string.IsNullOrEmpty(toolUseId) || !_tools.TryGetValue(toolUseId, out var row)) return;
             _tools.Remove(toolUseId);
@@ -1184,6 +1290,8 @@ namespace ClaudeVS.ToolWindow
             _tools.Clear();
             _toolGroupOf.Clear();
             _toolGroup = null;
+            _lookGroupOf.Clear();
+            _lookGroup = null;
             LastUserMessage = null;
             _lastAnswerStart = null;
             _lastDay = null;
