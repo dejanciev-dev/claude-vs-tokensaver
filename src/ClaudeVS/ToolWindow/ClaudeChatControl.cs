@@ -1177,7 +1177,7 @@ namespace ClaudeVS.ToolWindow
 
                 ModelChoice model = _modelChoice;
                 EffortChoice effort = _effortChoice;
-                string routeNote = null;
+                string routeNote = null, routeTip = null;
                 RouteDecision decision = null;
                 RouteDecision local = null;
                 double routerCost = 0;
@@ -1192,7 +1192,8 @@ namespace ClaudeVS.ToolWindow
                     decision = fromHaiku ?? local;
                     if (model == ModelChoice.Auto) model = decision.Model;
                     if (effort == EffortChoice.Auto) effort = decision.Effort;
-                    routeNote = $"auto{(fromHaiku != null ? " (Haiku)" : "")} → {model.ToCli()}/{effort.ToCli()}";
+                    routeNote = RouteText.Note(_modelChoice == ModelChoice.Auto, _effortChoice == EffortChoice.Auto, model, effort);
+                    routeTip = RouteText.Tip(fromHaiku != null, decision.Reason);
                     ClaudeOutputPane.WriteLine($"Route: {decision} | prompt {userText.Length} chars, {attachedLines} attached lines, {attachedFiles} files, context {_meterModel?.ContextTokens ?? 0} tok → using {model.ToCli()}/{effort.ToCli()}");
                 }
 
@@ -1231,7 +1232,7 @@ namespace ClaudeVS.ToolWindow
                 turn.Render = () =>
                 {
                     ThreadHelper.ThrowIfNotOnUIThread();
-                    _view.AppendUserMessage(userText, string.Join("  ·  ", meta), RewindAction(messageId, userText), previews);
+                    _view.AppendUserMessage(userText, string.Join("  ·  ", meta), RewindAction(messageId, userText), previews, metaTip: routeTip);
                     turn.Anchor = _view.LastUserMessage;
                 };
                 _turnPrompts.Enqueue(turn);

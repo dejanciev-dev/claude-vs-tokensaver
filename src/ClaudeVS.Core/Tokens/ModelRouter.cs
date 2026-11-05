@@ -6,6 +6,34 @@ using ClaudeVS.Core.Cli;
 
 namespace ClaudeVS.Core.Tokens
 {
+    /// <summary>The line under a routed prompt and its tooltip.</summary>
+    public static class RouteText
+    {
+        /// <summary>
+        /// "Auto → Sonnet, low effort" when both were on Auto; "Auto → Sonnet" or "Auto → low effort" when only one
+        /// was (the other is what you picked, shown in the footer).
+        /// </summary>
+        public static string Note(bool modelAuto, bool effortAuto, ModelChoice model, EffortChoice effort)
+        {
+            var parts = new List<string>();
+            string m = model.ToCli();
+            if (modelAuto && m != null) parts.Add(char.ToUpperInvariant(m[0]) + m.Substring(1));
+            string e = effort.ToCli();
+            if (effortAuto && e != null) parts.Add((e == "xhigh" ? "extra high" : e) + " effort");
+            return parts.Count == 0 ? null : "Auto → " + string.Join(", ", parts);
+        }
+
+        /// <summary>"Picked by the Haiku router: asks for an explanation, no code changes" (the reason without its prefix).</summary>
+        public static string Tip(bool byHaiku, string reason)
+        {
+            reason = (reason ?? "").Trim();
+            if (reason.StartsWith("Haiku router", StringComparison.Ordinal)) reason = reason.Substring("Haiku router".Length).TrimStart(':', ' ');
+            if (reason == "default") reason = "";
+            string who = byHaiku ? "Picked by the Haiku router" : "Picked by the local router";
+            return reason.Length == 0 ? who : who + ": " + reason;
+        }
+    }
+
     public sealed class RouteRequest
     {
         public string Prompt { get; set; } = "";

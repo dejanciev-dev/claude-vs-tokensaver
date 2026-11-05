@@ -190,6 +190,8 @@ All notable changes to this project are listed here. The format follows
 - The agents panel shows only the first line of a background command (a heredoc no longer fills the panel).
 - A command's leading `cd "<working folder>" &&` is left out of `Bash(...)` rows and the agents panel (the
   folder is shown under the title); a `cd` to any other folder stays.
+- The line under a routed prompt reads `Auto → Sonnet, low effort` (was `auto → sonnet/low`), with the model in
+  its meter color and who picked it and why on hover.
 - Model router matches keywords as whole words ("prefix" no longer counts as "fix").
 - `dotnet test` runs the Core test runner instead of silently reporting zero tests.
 

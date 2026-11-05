@@ -124,7 +124,7 @@ namespace ClaudeVS.ToolWindow
         /// Your prompt as a rounded bubble, with an optional muted line (route, attachments) under it.
         /// <paramref name="onRewind"/> adds a Rewind button, shown while the mouse is over the bubble.
         /// </summary>
-        public void AppendUserMessage(string text, string meta, Action onRewind = null, IReadOnlyList<ImageSource> images = null, DateTime? timeUtc = null)
+        public void AppendUserMessage(string text, string meta, Action onRewind = null, IReadOnlyList<ImageSource> images = null, DateTime? timeUtc = null, string metaTip = null)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             EndAnswer();
@@ -172,8 +172,9 @@ namespace ClaudeVS.ToolWindow
             if (!string.IsNullOrEmpty(text)) stack.Children.Add(body);
             if (!string.IsNullOrEmpty(meta))
             {
-                var m = new TextBlock { Text = meta, FontSize = 11, Margin = new Thickness(0, 4, 0, 0), TextWrapping = TextWrapping.Wrap };
+                var m = new TextBlock { FontSize = 11, Margin = new Thickness(0, 4, 0, 0), TextWrapping = TextWrapping.Wrap, ToolTip = metaTip };
                 ChatTheme.Muted(m);
+                AddRouteInlines(m, meta);
                 stack.Children.Add(m);
             }
             UIElement content = stack;
@@ -518,6 +519,26 @@ namespace ClaudeVS.ToolWindow
             else _doc.Blocks.Add(new BlockUIContainer(expander) { Margin = new Thickness(0) });
             if (!string.IsNullOrEmpty(toolUseId)) _tools[toolUseId] = toolRow;
             ScrollToEndIfNear();
+        }
+
+        /// <summary>
+        /// The line under a prompt. "Auto → Sonnet, medium effort" gets the model in its meter color (Opus orange,
+        /// Sonnet blue, Haiku green) so the pick stands out; the rest stays gray.
+        /// </summary>
+        private void AddRouteInlines(TextBlock line, string meta)
+        {
+            const string auto = "Auto → ";
+            if (!meta.StartsWith(auto, StringComparison.Ordinal)) { line.Text = meta; return; }
+            var a = ChatTheme.Accents(Box);
+            string rest = meta.Substring(auto.Length);
+            int end = 0;
+            while (end < rest.Length && char.IsLetter(rest[end])) end++;
+            string word = rest.Substring(0, end);
+            Brush color = word == "Opus" ? a.Brand : word == "Sonnet" ? a.Link : word == "Haiku" ? a.Success : null;
+            line.Inlines.Add(new Run(auto));
+            if (color == null) { line.Inlines.Add(new Run(rest)); return; }
+            line.Inlines.Add(new Run(word) { Foreground = color, FontWeight = FontWeights.SemiBold });
+            line.Inlines.Add(new Run(rest.Substring(end)));
         }
 
         /// <summary>"Open diff · Open file" above a change's lines.</summary>
