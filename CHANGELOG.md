@@ -27,7 +27,8 @@ All notable changes to this project are listed here. The format follows
   command's output and "… +N lines". Errors in red. Clicking the row shows the input and the whole output (up to
   20,000 characters) at full height, without a scroll box of its own. Claude's text between tool calls starts with a `●` too.
   Back-to-back reads and searches fold into one line, `● Read 3 files, searched for 2 patterns` ("Reading…" while
-  they run), which opens on click; a single one keeps its own row. A command Claude gave a timeout or ran in the
+  they run), which opens on click; a single one keeps its own row. Shell commands that only read (`cat`, `head`,
+  `sed -n`, `grep`, `git log`…, with no redirect into a file) join it: `Read 2 files, ran 3 read-only commands`. A command Claude gave a timeout or ran in the
   background says so under its row: `⎿ (timeout 10m)`.
 - **Changes in the chat**: each file change shows its lines under the tool row like the terminal: a line-number
   gutter, `-` / `+` on full-width red / green rows, syntax colors from the file's extension, two unchanged lines

@@ -510,7 +510,7 @@ namespace ClaudeVS.ToolWindow
                 group.Add(toolUseId, description);
                 if (!string.IsNullOrEmpty(toolUseId)) _toolGroupOf[toolUseId] = group;
             }
-            else if (Core.Cli.ToolCallView.IsLookTool(toolName) && !IsSubagentCall(description))
+            else if (IsLookCall(toolName, input) && !IsSubagentCall(description))
             {
                 var look = CurrentLookGroup();
                 look.Add(toolUseId, toolName, expander);
@@ -1185,6 +1185,14 @@ namespace ClaudeVS.ToolWindow
         private LookGroup _lookGroup;
         private readonly Dictionary<string, LookGroup> _lookGroupOf = new Dictionary<string, LookGroup>();
 
+        /// <summary>Read / Grep / Glob, or a shell command that only reads (cat, head, sed -n, git log…).</summary>
+        private static bool IsLookCall(string toolName, Newtonsoft.Json.Linq.JObject input) =>
+            Core.Cli.ToolCallView.IsLookTool(toolName) ||
+            (toolName != null && ShellTools.Contains(toolName) && toolName != "BashOutput" && toolName != "Monitor"
+             && input?["command"]?.Type == Newtonsoft.Json.Linq.JTokenType.String
+             && input["run_in_background"]?.Type != Newtonsoft.Json.Linq.JTokenType.Boolean
+             && Core.Cli.ToolCallView.IsReadOnlyCommand((string)input["command"]));
+
         private static bool IsSubagentCall(string description) =>
             description != null && description.StartsWith(Core.Cli.ClaudeStreamParser.SubagentToolPrefix, StringComparison.Ordinal);
 
@@ -1211,7 +1219,7 @@ namespace ClaudeVS.ToolWindow
             private readonly ToggleButton _toggle;
             private readonly ChatTheme.AccentSet _accents;
             private readonly HashSet<string> _running = new HashSet<string>();
-            private int _reads, _searches, _failed;
+            private int _reads, _searches, _commands, _failed;
 
             public LookGroup(ChatTheme.AccentSet accents)
             {
@@ -1224,7 +1232,7 @@ namespace ClaudeVS.ToolWindow
                 Rows = new StackPanel();
                 var panel = Collapsible(_header, Rows, new Thickness(0, 1, 0, 1));
                 _toggle = (ToggleButton)panel.Children[0];
-                _toggle.ToolTip = "Show the files read and the searches";
+                _toggle.ToolTip = "Show each read, search and command";
                 _toggle.Checked += (s, e) => Update();
                 _toggle.Unchecked += (s, e) => Update();
                 Block = new BlockUIContainer(panel) { Margin = new Thickness(0) };
@@ -1236,7 +1244,9 @@ namespace ClaudeVS.ToolWindow
             public void Add(string id, string toolName, UIElement row)
             {
                 Rows.Children.Add(row);
-                if (toolName == "Read") _reads++; else _searches++;
+                if (toolName == "Read") _reads++;
+                else if (toolName == "Grep" || toolName == "Glob") _searches++;
+                else _commands++;
                 if (!string.IsNullOrEmpty(id)) _running.Add(id);
                 Update();
             }
@@ -1261,7 +1271,7 @@ namespace ClaudeVS.ToolWindow
                 Rows.Margin = new Thickness(12, 0, 0, 0);
                 bool running = _running.Count > 0;
                 _dot.Foreground = running ? _accents.Running : _failed > 0 ? _accents.Failure : _accents.Success;
-                _text.Text = Core.Cli.ToolCallView.LookSummary(_reads, _searches, running);
+                _text.Text = Core.Cli.ToolCallView.LookSummary(_reads, _searches, running, _commands);
                 _failedText.Text = _failed > 0 ? $" · {_failed} failed" : "";
                 System.Windows.Automation.AutomationProperties.SetName(_toggle, _text.Text + _failedText.Text + (_toggle.IsChecked == true ? ", expanded" : ", collapsed"));
             }
