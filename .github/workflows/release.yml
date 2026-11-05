@@ -1,7 +1,8 @@
 name: Release
 
 # Push a tag like v0.2.0 to build the VSIX and create a DRAFT GitHub Release with it attached.
-# Review the draft on GitHub and publish it yourself. Marketplace publishing is a separate, manual step.
+# Review the draft on GitHub and publish it yourself; that starts the "Publish to Marketplace" workflow
+# (publish.yml), which waits for approval in the "marketplace" environment.
 on:
   push:
     tags: ['v*']

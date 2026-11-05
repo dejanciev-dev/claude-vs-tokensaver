@@ -5,3 +5,4 @@ obj/
 *.suo
 *.vsix
 TestResults/
+marketplace/publishManifest.generated.json
