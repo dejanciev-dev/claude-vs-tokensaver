@@ -7,6 +7,12 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Generate Lean CLAUDE.md** knows more solution shapes: .NET Framework solutions get MSBuild and vstest
+  commands (`dotnet build` can't build them), with packages from `packages.config` and web and test projects
+  recognized; the target framework is read from `Directory.Build.props`; VB and F# projects are listed; React,
+  Vue, Next.js and Svelte front ends get their `npm run build` / `npm test` commands. Projects the solution
+  doesn't build (samples, test inputs) are summed up in one line, and projects it includes from outside the
+  folder are named.
 - **Route with Haiku** (Tools → Options → Claude Code → Token saving, off by default): with the model on Auto,
   a small Haiku call picks model and effort for each prompt instead of the local keyword rules, with a short
   reason (about $0.0001 and 1–2 s per prompt). It runs in a separate Claude Code process trimmed to a classifier
