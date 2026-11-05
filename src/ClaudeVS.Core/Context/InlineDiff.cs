@@ -12,6 +12,8 @@ namespace ClaudeVS.Core.Context
     {
         public DiffLineKind Kind { get; set; }
         public string Text { get; set; }
+        /// <summary>Line number in the file: the new number for added and unchanged lines, the old one for removed; null when unknown.</summary>
+        public int? Number { get; set; }
         public override string ToString() => (Kind == DiffLineKind.Added ? "+" : Kind == DiffLineKind.Removed ? "-" : Kind == DiffLineKind.Gap ? "…" : " ") + Text;
     }
 
@@ -36,10 +38,11 @@ namespace ClaudeVS.Core.Context
         public bool IsAppend { get; private set; }
 
         /// <summary>
-        /// The diff for a tool call, or null when it does not change a file. <paramref name="writeSnapshot"/> is
-        /// the file content before a Write (null: unknown or a new file).
+        /// The diff for a tool call, or null when it does not change a file. <paramref name="before"/> is the file
+        /// as it was before the call: for a Write the old content (null: a new file), for an Edit it gives the line
+        /// numbers (null: no numbers).
         /// </summary>
-        public static InlineDiff FromToolUse(string toolName, JObject input, string writeSnapshot = null)
+        public static InlineDiff FromToolUse(string toolName, JObject input, string before = null)
         {
             if (input == null) return null;
             switch (toolName)
@@ -53,7 +56,7 @@ namespace ClaudeVS.Core.Context
                     foreach (var e in change.Edits)
                     {
                         if (lines.Count > 0) lines.Add(new DiffLine { Kind = DiffLineKind.Gap, Text = "" });
-                        lines.AddRange(Trim(Diff(SplitLines(e.OldText), SplitLines(e.NewText))));
+                        lines.AddRange(Trim(Diff(SplitLines(e.OldText), SplitLines(e.NewText), LineOf(before, e.OldText))));
                     }
                     return Make(change.FilePath, lines, isNew: false);
                 }
@@ -62,9 +65,9 @@ namespace ClaudeVS.Core.Context
                     string path = (string)input["file_path"];
                     string content = (string)input["content"];
                     if (string.IsNullOrEmpty(path) || content == null) return null;
-                    bool isNew = writeSnapshot == null;
-                    var lines = isNew ? SplitLines(content).Select(l => new DiffLine { Kind = DiffLineKind.Added, Text = l }).ToList()
-                                      : Trim(Diff(SplitLines(writeSnapshot), SplitLines(content)));
+                    bool isNew = before == null;
+                    var lines = isNew ? Numbered(SplitLines(content))
+                                      : Trim(Diff(SplitLines(before), SplitLines(content), 1));
                     return Make(path, lines, isNew);
                 }
                 case "Bash":
@@ -100,8 +103,10 @@ namespace ClaudeVS.Core.Context
             if (cd.Success && cd.Index < m.Index && !IsRooted(path))
                 path = Unquote(cd.Groups["dir"].Value).TrimEnd('/', '\\') + "/" + path;
 
-            var diff = Make(path, SplitLines(body).Select(l => new DiffLine { Kind = DiffLineKind.Added, Text = l }).ToList(), isNew: true);
-            diff.IsAppend = m.Groups["op"].Value == ">>";
+            bool append = m.Groups["op"].Value == ">>";
+            var lines = append ? SplitLines(body).Select(l => new DiffLine { Kind = DiffLineKind.Added, Text = l }).ToList() : Numbered(SplitLines(body));
+            var diff = Make(path, lines, isNew: true);
+            diff.IsAppend = append;
             return diff;
         }
 
@@ -125,8 +130,42 @@ namespace ClaudeVS.Core.Context
             return lines;
         }
 
-        /// <summary>Line diff: common start and end kept as context, the middle by LCS (or removed-then-added when large).</summary>
-        public static List<DiffLine> Diff(IReadOnlyList<string> a, IReadOnlyList<string> b)
+        private static List<DiffLine> Numbered(List<string> lines) =>
+            lines.Select((l, i) => new DiffLine { Kind = DiffLineKind.Added, Text = l, Number = i + 1 }).ToList();
+
+        /// <summary>1-based line where <paramref name="text"/> starts in <paramref name="file"/>; 0 when unknown.</summary>
+        private static int LineOf(string file, string text)
+        {
+            if (string.IsNullOrEmpty(file) || string.IsNullOrEmpty(text)) return 0;
+            string f = file.Replace("\r\n", "\n");
+            int at = f.IndexOf(text.Replace("\r\n", "\n"), StringComparison.Ordinal);
+            if (at < 0) return 0;
+            int line = 1;
+            for (int i = 0; i < at; i++) if (f[i] == '\n') line++;
+            return line;
+        }
+
+        /// <summary>
+        /// Line diff: common start and end kept as context, the middle by LCS (or removed-then-added when large).
+        /// <paramref name="firstLine"/> &gt; 0 numbers the lines from there (the old and the new file both start at it).
+        /// </summary>
+        public static List<DiffLine> Diff(IReadOnlyList<string> a, IReadOnlyList<string> b, int firstLine = 0)
+        {
+            var lines = DiffCore(a, b);
+            if (firstLine > 0)
+            {
+                int oldNo = firstLine, newNo = firstLine;
+                foreach (var l in lines)
+                {
+                    if (l.Kind == DiffLineKind.Removed) l.Number = oldNo++;
+                    else if (l.Kind == DiffLineKind.Added) l.Number = newNo++;
+                    else { l.Number = newNo++; oldNo++; }
+                }
+            }
+            return lines;
+        }
+
+        private static List<DiffLine> DiffCore(IReadOnlyList<string> a, IReadOnlyList<string> b)
         {
             int pre = 0;
             while (pre < a.Count && pre < b.Count && a[pre] == b[pre]) pre++;

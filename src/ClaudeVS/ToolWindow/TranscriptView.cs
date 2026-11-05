@@ -31,7 +31,7 @@ namespace ClaudeVS.ToolWindow
         private readonly StringBuilder _answer = new StringBuilder();
         private readonly List<Block> _answerBlocks = new List<Block>();
         private Paragraph _plain;
-        private readonly Dictionary<string, (TextBlock Header, Run Dot)> _tools = new Dictionary<string, (TextBlock, Run)>();
+        private readonly Dictionary<string, ToolRow> _tools = new Dictionary<string, ToolRow>();
         private ScrollViewer _scroll;
 
         /// <summary>
@@ -387,6 +387,13 @@ namespace ClaudeVS.ToolWindow
                 _answerBlocks.Add(block);
             }
             if (_answerBlocks.Count > 0) _lastAnswerStart = _answerBlocks[0];
+            // Like the terminal: a ● in front of each piece of text Claude writes between tool calls.
+            if (_answerBlocks.Count > 0 && _answerBlocks[0] is Paragraph first && first.Inlines.FirstInline != null)
+            {
+                var bullet = new Run("● ");
+                bullet.SetResourceReference(TextElement.ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
+                first.Inlines.InsertBefore(first.Inlines.FirstInline, bullet);
+            }
             ScrollToEndIfNear();
         }
 
@@ -410,17 +417,35 @@ namespace ClaudeVS.ToolWindow
             return true;
         }
 
+        private sealed class ToolRow
+        {
+            public TextBlock Header;
+            public Run Dot;
+            public string ToolName;
+            public Core.Context.InlineDiff Diff;
+            public UIElement DiffElement;
+            public StackPanel Result;   // the ⎿ lines, always visible
+            public StackPanel Body;     // input and full output, shown when the row is opened
+        }
+
         /// <summary>
-        /// A collapsible row for a tool call: the header shows the call, the body its input.
-        /// <see cref="CompleteTool"/> adds the result size when the result arrives.
+        /// A tool call the way the Claude Code terminal shows it: "● Update(src/a.cs)", then (from
+        /// <see cref="CompleteTool"/>) a "⎿ Added 3 lines" summary or the first lines of the output, and for a file
+        /// change the numbered red / green lines. Clicking the row shows the input and the whole output.
+        /// Without <paramref name="toolName"/> the older "Bash: command" header is used.
         /// </summary>
-        public void AppendTool(string toolUseId, string description, string inputJson, Action onDiff = null, Core.Context.InlineDiff fileDiff = null)
+        public void AppendTool(string toolUseId, string description, string inputJson, Action onDiff = null, Core.Context.InlineDiff fileDiff = null,
+            string toolName = null, Newtonsoft.Json.Linq.JObject input = null, string baseDir = null)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             EndAnswer();
             _plain = null;
 
-            var header = ToolHeader(description, ChatTheme.Accents(Box), out Run dot);
+            var accents = ChatTheme.Accents(Box);
+            Run dot;
+            var header = toolName != null
+                ? CliToolHeader(toolName, input, baseDir, description, accents, out dot)
+                : ToolHeader(description, accents, out dot);
             object headerContent = header;
             if (onDiff != null)
             {
@@ -446,8 +471,14 @@ namespace ClaudeVS.ToolWindow
                 Margin = new Thickness(16, 2, 0, 2),
             };
             body.SetResourceReference(Control.ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
-            var expander = Collapsible(headerContent, body, new Thickness(0, 1, 0, 1));
-            if (fileDiff != null && fileDiff.Lines.Count > 0) expander.Children.Add(DiffView(fileDiff, ChatTheme.Accents(Box)));
+            var bodyPanel = new StackPanel();
+            bodyPanel.Children.Add(body);
+            var expander = Collapsible(headerContent, bodyPanel, new Thickness(0, 1, 0, 1));
+            var result = new StackPanel { Margin = new Thickness(18, 0, 0, 0) };
+            expander.Children.Add(result);
+            UIElement diffElement = null;
+            if (fileDiff != null && fileDiff.Lines.Count > 0) expander.Children.Add(diffElement = DiffView(fileDiff, accents));
+            var toolRow = new ToolRow { Header = header, Dot = dot, ToolName = toolName, Diff = fileDiff, DiffElement = diffElement, Result = result, Body = bodyPanel };
 
             if (FocusView())
             {
@@ -457,8 +488,88 @@ namespace ClaudeVS.ToolWindow
                 if (!string.IsNullOrEmpty(toolUseId)) _toolGroupOf[toolUseId] = group;
             }
             else _doc.Blocks.Add(new BlockUIContainer(expander) { Margin = new Thickness(0) });
-            if (!string.IsNullOrEmpty(toolUseId)) _tools[toolUseId] = (header, dot);
+            if (!string.IsNullOrEmpty(toolUseId)) _tools[toolUseId] = toolRow;
             ScrollToEndIfNear();
+        }
+
+        private static readonly HashSet<string> PathTitleTools = new HashSet<string>(StringComparer.Ordinal) { "Update", "Write", "Read" };
+
+        /// <summary>"● Update(src/a.cs)": status dot, the CLI's name for the tool in bold, its argument in parentheses.</summary>
+        private static TextBlock CliToolHeader(string toolName, Newtonsoft.Json.Linq.JObject input, string baseDir, string description, ChatTheme.AccentSet a, out Run dot)
+        {
+            var tb = new TextBlock { FontSize = 12.5, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center, ToolTip = description };
+            ChatTheme.Muted(tb);
+            dot = new Run("● ");
+            dot.SetResourceReference(TextElement.ForegroundProperty, EnvironmentColors.SystemGrayTextBrushKey);
+            tb.Inlines.Add(dot);
+            if (description != null && description.StartsWith(Core.Cli.ClaudeStreamParser.SubagentToolPrefix, StringComparison.Ordinal))
+                tb.Inlines.Add(new Run(Core.Cli.ClaudeStreamParser.SubagentToolPrefix));
+            var (name, arg) = Core.Cli.ToolCallView.Title(toolName, input, baseDir);
+            var n = new Run(name) { FontWeight = FontWeights.SemiBold };
+            n.SetResourceReference(TextElement.ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
+            tb.Inlines.Add(n);
+            if (!string.IsNullOrEmpty(arg))
+            {
+                tb.Inlines.Add(new Run("("));
+                var r = new Run(arg);
+                if (ShellTools.Contains(toolName)) { r.FontFamily = Mono; r.FontSize = 12; r.Foreground = a.Code; }
+                else if (PathTitleTools.Contains(name)) r.Foreground = a.Path;
+                else r.SetResourceReference(TextElement.ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
+                tb.Inlines.Add(r);
+                tb.Inlines.Add(new Run(")"));
+            }
+            return tb;
+        }
+
+        /// <summary>The ⎿ lines under a finished tool call, and its whole output in the row's body.</summary>
+        private void ShowResult(ToolRow row, string resultText, bool isError, ChatTheme.AccentSet a)
+        {
+            var summary = Core.Cli.ToolCallView.Summarize(row.ToolName, resultText, isError, row.Diff);
+            row.Result.Children.Clear();
+            for (int i = 0; i < summary.Lines.Count; i++)
+            {
+                var line = new TextBlock { FontSize = 12, TextWrapping = TextWrapping.Wrap };
+                var lead = new Run(i == 0 ? "⎿  " : "    ");
+                lead.SetResourceReference(TextElement.ForegroundProperty, EnvironmentColors.SystemGrayTextBrushKey);
+                line.Inlines.Add(lead);
+                var text = new Run(summary.Lines[i]);
+                bool output = summary.Lines.Count > 1 || summary.MoreLines > 0 || ShellTools.Contains(row.ToolName);
+                if (output) { text.FontFamily = Mono; text.FontSize = 11.5; }
+                if (summary.IsError) text.Foreground = a.Failure;
+                else text.SetResourceReference(TextElement.ForegroundProperty, output ? EnvironmentColors.SystemGrayTextBrushKey : EnvironmentColors.ToolWindowTextBrushKey);
+                line.Inlines.Add(text);
+                row.Result.Children.Add(line);
+            }
+            if (summary.MoreLines > 0)
+            {
+                var more = new TextBlock { Text = $"    … +{summary.MoreLines} lines (click the row to see all)", FontSize = 11.5 };
+                ChatTheme.Muted(more);
+                row.Result.Children.Add(more);
+            }
+            // A failed change didn't happen: hide its diff.
+            if (isError && row.DiffElement != null) row.DiffElement.Visibility = Visibility.Collapsed;
+
+            if (!string.IsNullOrWhiteSpace(resultText))
+            {
+                var label = new TextBlock { Text = "Output", FontSize = 11, FontWeight = FontWeights.SemiBold, Margin = new Thickness(16, 4, 0, 0) };
+                ChatTheme.Muted(label);
+                var output = new TextBox
+                {
+                    Text = resultText.TrimEnd(),
+                    IsReadOnly = true,
+                    FontFamily = Mono,
+                    FontSize = 11,
+                    BorderThickness = new Thickness(0),
+                    Background = Brushes.Transparent,
+                    TextWrapping = TextWrapping.Wrap,
+                    MaxHeight = 320,
+                    VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                    Margin = new Thickness(16, 2, 0, 4),
+                };
+                output.SetResourceReference(Control.ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
+                row.Body.Children.Add(label);
+                row.Body.Children.Add(output);
+            }
         }
 
         /// <summary>
@@ -512,29 +623,38 @@ namespace ClaudeVS.ToolWindow
         private const int MaxDiffLines = 300;
 
         /// <summary>
-        /// Red / green lines under a file-changing tool call: a header with the file and +added −removed, then the
-        /// lines (scrolls when long; at most 300, the Diff button shows the rest).
+        /// The changed lines the way the Claude Code terminal shows them: a line-number gutter, then − / + and the
+        /// code on a full-width dark red / green row, with syntax colors from the file's extension. Scrolls when
+        /// long; at most 300 lines (the Diff button shows everything).
         /// </summary>
-        private static UIElement DiffView(Core.Context.InlineDiff d, ChatTheme.AccentSet a)
+        private UIElement DiffView(Core.Context.InlineDiff d, ChatTheme.AccentSet a)
         {
             Color Of(Brush b) => (b as SolidColorBrush)?.Color ?? Colors.Gray;
             Brush Tint(Brush b, byte alpha) { var c = Of(b); var br = new SolidColorBrush(Color.FromArgb(alpha, c.R, c.G, c.B)); br.Freeze(); return br; }
-            var addBack = Tint(a.Success, 0x2A);
-            var delBack = Tint(a.Failure, 0x2A);
-
-            var head = new TextBlock { FontSize = 11.5, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(8, 4, 8, 4), ToolTip = d.FilePath };
-            head.Inlines.Add(new Run(System.IO.Path.GetFileName(d.FilePath.TrimEnd('/', '\\'))) { Foreground = a.Path, FontWeight = FontWeights.SemiBold });
-            if (d.Added > 0) head.Inlines.Add(new Run("  +" + d.Added) { Foreground = a.Success, FontWeight = FontWeights.SemiBold });
-            if (d.Removed > 0) head.Inlines.Add(new Run("  −" + d.Removed) { Foreground = a.Failure, FontWeight = FontWeights.SemiBold });
-            string note = d.IsAppend ? "appended" : d.IsNewFile ? "new file" : null;
-            if (note != null) { var r = new Run("  " + note); r.SetResourceReference(TextElement.ForegroundProperty, EnvironmentColors.SystemGrayTextBrushKey); head.Inlines.Add(r); }
-            var dir = System.IO.Path.GetDirectoryName(d.FilePath.Replace('/', '\\'));
-            if (!string.IsNullOrEmpty(dir)) { var r = new Run("   " + dir); r.SetResourceReference(TextElement.ForegroundProperty, EnvironmentColors.SystemGrayTextBrushKey); head.Inlines.Add(r); }
+            var addBack = Tint(a.Success, 0x38);
+            var delBack = Tint(a.Failure, 0x38);
+            var palette = CurrentPalette();
+            string language = System.IO.Path.GetExtension(d.FilePath ?? "").TrimStart('.');
+            int widest = d.Lines.Take(MaxDiffLines).Select(l => l.Number ?? 0).DefaultIfEmpty(0).Max().ToString().Length;
+            bool numbered = d.Lines.Any(l => l.Number != null);
 
             var lines = new StackPanel();
             foreach (var l in d.Lines.Take(MaxDiffLines))
             {
-                var text = new TextBlock { FontFamily = Mono, FontSize = 11.5, TextWrapping = TextWrapping.Wrap, Padding = new Thickness(8, 0, 8, 0) };
+                if (l.Kind == Core.Context.DiffLineKind.Gap)
+                {
+                    var gap = new TextBlock { Text = new string(' ', numbered ? widest + 1 : 0) + "  ⋮", FontFamily = Mono, FontSize = 11.5 };
+                    ChatTheme.Muted(gap);
+                    lines.Children.Add(gap);
+                    continue;
+                }
+                var text = new TextBlock { FontFamily = Mono, FontSize = 11.5, TextWrapping = TextWrapping.Wrap, Padding = new Thickness(0, 0, 8, 0) };
+                if (numbered)
+                {
+                    var num = new Run((l.Number?.ToString() ?? "").PadLeft(widest) + " ");
+                    num.SetResourceReference(TextElement.ForegroundProperty, EnvironmentColors.SystemGrayTextBrushKey);
+                    text.Inlines.Add(num);
+                }
                 switch (l.Kind)
                 {
                     case Core.Context.DiffLineKind.Added:
@@ -543,35 +663,42 @@ namespace ClaudeVS.ToolWindow
                         break;
                     case Core.Context.DiffLineKind.Removed:
                         text.Background = delBack;
-                        text.Inlines.Add(new Run("− ") { Foreground = a.Failure });
+                        text.Inlines.Add(new Run("- ") { Foreground = a.Failure });
                         break;
-                    case Core.Context.DiffLineKind.Gap:
-                        text.Text = "  ⋯";
-                        ChatTheme.Muted(text);
-                        lines.Children.Add(text);
-                        continue;
                     default:
                         text.Inlines.Add(new Run("  "));
                         break;
                 }
-                var body = new Run(l.Text.Replace("\t", "    "));
-                body.SetResourceReference(TextElement.ForegroundProperty, l.Kind == Core.Context.DiffLineKind.Context ? EnvironmentColors.SystemGrayTextBrushKey : EnvironmentColors.ToolWindowTextBrushKey);
-                text.Inlines.Add(body);
+                string code = l.Text.Replace("\t", "    ");
+                int pos = 0;
+                foreach (var s in SyntaxHighlighter.Tokenize(code, language))
+                {
+                    if (s.Start > pos) text.Inlines.Add(CodeRun(code.Substring(pos, s.Start - pos), null, l.Kind));
+                    text.Inlines.Add(CodeRun(code.Substring(s.Start, s.Length), palette[s.Kind], l.Kind));
+                    pos = s.Start + s.Length;
+                }
+                if (pos < code.Length) text.Inlines.Add(CodeRun(code.Substring(pos), null, l.Kind));
                 lines.Children.Add(text);
             }
             if (d.Lines.Count > MaxDiffLines)
             {
-                var more = new TextBlock { Text = $"  … {d.Lines.Count - MaxDiffLines} more lines", FontSize = 11, Padding = new Thickness(8, 2, 8, 2) };
+                var more = new TextBlock { Text = $"… {d.Lines.Count - MaxDiffLines} more lines", FontSize = 11, Padding = new Thickness(4, 2, 8, 2) };
                 ChatTheme.Muted(more);
                 lines.Children.Add(more);
             }
 
-            var stack = new StackPanel();
-            stack.Children.Add(head);
-            stack.Children.Add(new ScrollViewer { Content = lines, MaxHeight = 280, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, Margin = new Thickness(0, 0, 0, 4) });
-            var card = new Border { Child = stack, CornerRadius = new CornerRadius(4), BorderThickness = new Thickness(1), BorderBrush = ChatTheme.Hover, Background = ChatTheme.Subtle, Margin = new Thickness(18, 2, 0, 6) };
-            System.Windows.Automation.AutomationProperties.SetName(card, $"{System.IO.Path.GetFileName(d.FilePath)}: {d.Added} lines added, {d.Removed} removed");
-            return card;
+            var view = new ScrollViewer { Content = lines, MaxHeight = 320, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, Margin = new Thickness(36, 2, 0, 6) };
+            System.Windows.Automation.AutomationProperties.SetName(view, $"{System.IO.Path.GetFileName(d.FilePath)}: {d.Added} lines added, {d.Removed} removed");
+            return view;
+        }
+
+        /// <summary>A piece of a diff line: syntax color when it has one, else the text color (gray for unchanged lines).</summary>
+        private static Run CodeRun(string text, Brush color, Core.Context.DiffLineKind kind)
+        {
+            var r = new Run(text);
+            if (color != null) r.Foreground = color;
+            else r.SetResourceReference(TextElement.ForegroundProperty, kind == Core.Context.DiffLineKind.Context ? EnvironmentColors.SystemGrayTextBrushKey : EnvironmentColors.ToolWindowTextBrushKey);
+            return r;
         }
 
         private static readonly HashSet<string> ShellTools = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Bash", "PowerShell", "BashOutput", "Monitor" };
@@ -896,8 +1023,11 @@ namespace ClaudeVS.ToolWindow
             }
         }
 
-        /// <summary>Adds the result size (≈ chars / 4 tokens) to a tool row; marks failed calls.</summary>
-        public void CompleteTool(string toolUseId, int resultChars, bool isError)
+        /// <summary>
+        /// Adds the result size (≈ chars / 4 tokens) to a tool row and marks failed calls; with the result text,
+        /// the ⎿ summary under the row and the whole output inside it.
+        /// </summary>
+        public void CompleteTool(string toolUseId, int resultChars, bool isError, string resultText = null)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             if (!string.IsNullOrEmpty(toolUseId) && _toolGroupOf.TryGetValue(toolUseId, out var group))
@@ -910,10 +1040,11 @@ namespace ClaudeVS.ToolWindow
             var a = ChatTheme.Accents(Box);
             var header = row.Header;
             row.Dot.Foreground = isError ? a.Failure : a.Success;
-            if (resultChars > 0) header.Inlines.Add(new Run($" · ~{Core.Tokens.TokenMeter.Format(resultChars / 4)} tok"));
-            if (isError) header.Inlines.Add(new Run(" · failed") { Foreground = a.Failure });
+            if (resultChars > 0) header.Inlines.Add(new Run($"  · ~{Core.Tokens.TokenMeter.Format(resultChars / 4)} tok") { FontSize = 11 });
+            if (isError && row.ToolName == null) header.Inlines.Add(new Run(" · failed") { Foreground = a.Failure });
             // Large results are what fill the context window; make them stand out.
             if (resultChars / 4 >= 5000) header.FontWeight = FontWeights.SemiBold;
+            if (row.ToolName != null) ShowResult(row, resultText, isError, a);
         }
 
         public void EndAnswer()

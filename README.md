@@ -77,7 +77,7 @@ This extension attacks all three, and shows the numbers so you can see the effec
 | **Per-turn footer** | `✓ 3.1s · 12.4k tok · $0.004 · claude-haiku-5-5`, showing the model that *actually* answered. |
 | **Model mismatch warning** | If the CLI answers with a different model than the one requested (for example in plan mode), the chat tells you. |
 | **Agents panel** | Claude's subagents and background commands above the input box, as a tree: what each is doing, its tokens, tool calls and time, and its result. **Background** lets Claude carry on while an agent works; **Stop** ends one agent (and what it started) without stopping Claude. A subagent's own tool calls are marked `↳` in the conversation. |
-| **Tool rows with sizes** | Every tool call is a collapsible row showing its input and the size of its result in tokens. Results of 5k+ tokens are in bold, because those fill the context. |
+| **Tool rows with sizes** | Tool calls read like the terminal: `● Update(src/a.cs)` with a `⎿ Added 13 lines` line, `● Bash(dotnet test)` with the first lines of its output. Each row shows the size of its result in tokens; results of 5k+ tokens are in bold, because those fill the context. Click a row for its input and whole output. |
 | **Savings report** | Actual cost vs the same tokens at Opus prices, tokens saved by references, cost per model, cache-hit rate by day. |
 | **Router replay** | With the opt-in prompt preview, the report re-runs your real prompts through the current router rules and lists those that would now route differently. |
 

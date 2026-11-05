@@ -813,6 +813,35 @@ namespace ClaudeVS.Core.Tests
             Eq(null, InlineDiff.FromToolUse("Read", input), "Read changes nothing");
         }
 
+        private static void Test_InlineDiff_LineNumbers()
+        {
+            var input = JObject.Parse("{\"file_path\":\"a.cs\",\"old_string\":\"b\\nc\",\"new_string\":\"b\\nC\\nc2\"}");
+            var d = InlineDiff.FromToolUse("Edit", input, "a\nb\nc\nd\n");
+            Eq("2: b|3:-c|3:+C|4:+c2", string.Join("|", d.Lines.Select(l => l.Number + ":" + l)), "numbers from where old_string starts");
+            var unknown = InlineDiff.FromToolUse("Edit", input, null);
+            True(unknown.Lines.All(l => l.Number == null), "no file content: no numbers");
+            var fresh = InlineDiff.FromToolUse("Write", JObject.Parse("{\"file_path\":\"n.txt\",\"content\":\"x\\ny\"}"));
+            Eq("1,2", string.Join(",", fresh.Lines.Select(l => l.Number)), "a new file is numbered from 1");
+        }
+
+        private static void Test_ToolCallView()
+        {
+            Eq(("Update", "src/a.cs"), ToolCallView.Title("Edit", JObject.Parse("{\"file_path\":\"C:\\\\repo\\\\src\\\\a.cs\"}"), "C:/repo"), "path relative to the solution");
+            Eq(("Bash", "cd x && cat > f <<'EOF' …"), ToolCallView.Title("Bash", new JObject { ["command"] = "cd x && cat > f <<'EOF'\nbody\nEOF" }), "first line of a command");
+            Eq(("Search", "pattern: \"Foo\""), ToolCallView.Title("Grep", new JObject { ["pattern"] = "Foo" }), "grep");
+
+            var bash = ToolCallView.Summarize("Bash", "l1\nl2\nl3\nl4\nl5\n", false);
+            Eq("l1|l2|l3", string.Join("|", bash.Lines), "first three lines");
+            Eq(2, bash.MoreLines, "… +2 lines");
+            Eq("(No output)", ToolCallView.Summarize("PowerShell", "", false).Lines.Single(), "empty output");
+            Eq("Read 3 lines", ToolCallView.Summarize("Read", "     1\ta\n     2\tb\n     3\tc", false).Lines.Single(), "read");
+            var edit = InlineDiff.FromToolUse("Edit", JObject.Parse("{\"file_path\":\"a.cs\",\"old_string\":\"x\",\"new_string\":\"y\\nz\"}"));
+            Eq("Added 2 lines, removed 1 line", ToolCallView.Summarize("Edit", "The file a.cs has been updated successfully.", false, edit).Lines.Single(), "edit summary from the diff");
+            var err = ToolCallView.Summarize("Bash", "Exit code 1\nboom", true);
+            True(err.IsError && err.Lines[0] == "Exit code 1", "error shows its first lines");
+            Eq("ok", string.Join("|", ToolCallView.Summarize("Bash", "ok\n<system-reminder>\nnote\n</system-reminder>", false).Lines), "system reminders are not output");
+        }
+
         private static void Test_InlineDiff_Write()
         {
             var input = JObject.Parse("{\"file_path\":\"x.txt\",\"content\":\"1\\n2\\n3\\n4\\n5\\n6\\n7\\n8\\nnine\\n10\\n\"}");
