@@ -28,6 +28,11 @@ All notable changes to this project are listed here. The format follows
   around each change, scrolling when long. Covers Edit / MultiEdit (numbered from where the change is in the file),
   Write (compared with the file as it was before) and shell commands that write a file with a heredoc
   (`cat > file <<'EOF'`, the usual way on Windows), including after `cd "dir" &&`. A change that fails is hidden.
+  Above the lines: **Open diff** (Visual Studio's diff window, now also for files written by shell heredocs) and
+  **Open file**.
+- **Files changed** after each answer: every file the turn added, changed or deleted, with `+added −removed`; the
+  path opens the file and **Diff** opens Visual Studio's diff of the file before the answer against now (several
+  edits to one file show as one diff).
 - **Generate Lean CLAUDE.md** knows more solution shapes: .NET Framework solutions get MSBuild and vstest
   commands (`dotnet build` can't build them), with packages from `packages.config` and web and test projects
   recognized; the target framework is read from `Directory.Build.props`; VB and F# projects are listed; React,

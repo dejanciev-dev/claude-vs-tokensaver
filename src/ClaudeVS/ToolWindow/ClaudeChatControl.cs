@@ -1648,6 +1648,11 @@ namespace ClaudeVS.ToolWindow
             // A Write replaces the whole file, so its old content can't be rebuilt afterwards. Copy it now, on the
             // reader thread, before the CLI runs the tool (best effort: a very fast tool may already have run).
             FileChange change = ev.Kind == ClaudeEventKind.ToolUse ? FileChange.FromToolUse(ev.ToolName, ev.ToolInput) : null;
+            // A shell command that writes a file with a heredoc is a Write too (Claude does this a lot on Windows).
+            if (change == null && ev.Kind == ClaudeEventKind.ToolUse && (ev.ToolName == "Bash" || ev.ToolName == "PowerShell")
+                && InlineDiff.FromHeredoc((string)ev.ToolInput?["command"]) is InlineDiff heredoc
+                && TurnChanges.FullPath(heredoc.FilePath, _sessionDir) is string written)
+                change = new FileChange { FilePath = written, ToolName = ev.ToolName, IsWrite = true };
             // For an Edit the copy only gives the line numbers of the red / green lines.
             string writeSnapshot = change != null ? ReadSnapshot(change.FilePath) : null;
 
@@ -1711,7 +1716,9 @@ namespace ClaudeVS.ToolWindow
                         // Red / green lines under the row. A Write whose old content could not be read gets none (the Diff button still works).
                         var inline = change?.IsWrite == true && writeSnapshot == null ? null
                             : InlineDiff.FromToolUse(ev.ToolName, ev.ToolInput, writeSnapshot == "" ? null : writeSnapshot);
-                        _view.AppendTool(ev.ToolUseId, ev.Text, ev.ToolInput?.ToString(), diff, inline, ev.ToolName, ev.ToolInput, _sessionDir);
+                        string changedPath = change != null ? TurnChanges.FullPath(change.FilePath, _sessionDir) : null;
+                        if (changedPath != null) _turnChanges.Record(changedPath, writeSnapshot); // for "Files changed" under the answer
+                        _view.AppendTool(ev.ToolUseId, ev.Text, ev.ToolInput?.ToString(), diff, inline, ev.ToolName, ev.ToolInput, _sessionDir, changedPath);
                         break;
                     case ClaudeEventKind.ToolResult:
                         _view.CompleteTool(ev.ToolUseId, ev.ResultChars, ev.IsError, ev.ResultText);
@@ -1749,6 +1756,7 @@ namespace ClaudeVS.ToolWindow
                         _view.AppendTurnFooter($"✓ {ev.DurationMs / 1000.0:0.0}s · {TokenMeter.Format(ev.Usage.Total)} tok · ${_meterModel?.LastTurnCostUsd:0.000}{used}",
                             string.IsNullOrWhiteSpace(answer) ? null : BookmarkToggle(turn.Prompt, answer, turn.Anchor), answer);
                         if (!string.IsNullOrWhiteSpace(answer)) _lastAnswer = answer;
+                        ShowTurnChanges(); // "Files changed" with Diff links
                         Announce(ev.IsError ? "Claude stopped with an error. " + Short(ev.Text) : ScreenReaderText.AnswerFinished(answer));
                         if (_queuedBubbles.Count > 0) { _queuedBubbles.Dequeue().Render(); RefreshQueuedPanel(); } // Claude starts on the next one now
                         break;
@@ -2085,6 +2093,7 @@ namespace ClaudeVS.ToolWindow
 
         private void ClearTurns()
         {
+            _turnChanges.Clear();
             _turnPrompts.Clear();
             _turnAnswer.Clear();
             _queuedBubbles.Clear();

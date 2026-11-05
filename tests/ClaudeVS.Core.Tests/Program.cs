@@ -824,6 +824,24 @@ namespace ClaudeVS.Core.Tests
             Eq("1,2", string.Join(",", fresh.Lines.Select(l => l.Number)), "a new file is numbered from 1");
         }
 
+        private static void Test_TurnChanges()
+        {
+            var files = new Dictionary<string, string> { [@"C:\r\a.cs"] = "x\ny\nz\n", [@"C:\r\new.cs"] = "1\n2\n", [@"C:\r\same.cs"] = "s\n" };
+            var t = new TurnChanges();
+            t.Record(@"C:\r\a.cs", "x\nz\n");
+            t.Record(@"C:\R\A.cs", "ignored: the first copy counts");
+            t.Record(@"C:\r\new.cs", "");
+            t.Record(@"C:\r\same.cs", "s\r\n");
+            t.Record(@"C:\r\gone.cs", "old\n");
+            var list = t.Collect(p => files.TryGetValue(p, out var c) ? c : "", p => files.ContainsKey(p));
+            Eq(@"C:\r\a.cs|C:\r\new.cs|C:\r\gone.cs", string.Join("|", list.Select(f => f.Path)), "in order, unchanged left out");
+            True(list[0].Added == 1 && list[0].Removed == 0 && !list[0].IsNew, "changed file counts");
+            True(list[1].IsNew && list[1].Added == 2, "new file");
+            True(list[2].IsDeleted, "deleted file");
+            Eq(@"C:\r\src\b.cs", TurnChanges.FullPath("src/b.cs", @"C:\r"), "relative to the solution, OS separators");
+            Eq(@"C:\x\y.cs", TurnChanges.FullPath("C:/x/y.cs", @"C:\r"), "a heredoc's forward-slash path");
+        }
+
         private static void Test_ToolCallView()
         {
             Eq(("Update", "src/a.cs"), ToolCallView.Title("Edit", JObject.Parse("{\"file_path\":\"C:\\\\repo\\\\src\\\\a.cs\"}"), "C:/repo"), "path relative to the solution");
