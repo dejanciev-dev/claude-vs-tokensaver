@@ -231,6 +231,7 @@ namespace ClaudeVS.Core.Cli
                 ToolUseId = (string)req["tool_use_id"],
                 ToolInput = req["input"] as JObject,
                 Text = DescribeTool((string)req["tool_name"], req["input"] as JObject),
+                Payload = req, // description, permission_suggestions (see PermissionPrompt)
             } };
         }
 

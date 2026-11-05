@@ -7,10 +7,15 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
-- **Activity strip** above the input box while Claude works: pulsing dots and a moving line in the color of
-  what Claude is doing (thinking in orange, writing in blue, tools in amber, "Waiting for you" in green), the
-  time the turn has taken, the CLI's estimate of the thinking tokens, and which tool runs with what (for example
-  "Running · dotnet test"). Follows Windows' "Show animations" setting.
+- **Activity strip** above the input box while Claude works, like the Claude Code terminal:
+  `✻ Imagining… (1m 05s · ↓ 9.5k tokens · thinking)` with a tip underneath. The spinner, the verb and a moving
+  line take the color of what Claude is doing (thinking in orange, writing in blue, tools in amber with the
+  command, "Waiting for you" in green). The token count is an estimate (the CLI's thinking estimates plus streamed
+  text and tool input). Follows Windows' "Show animations" setting.
+- **Permission card** instead of the one-line Allow/Deny bar: a plain question ("Run this command?"), Claude's
+  description, the command or file in a code box, and **Allow**, **Always allow `Bash(npm test *)`** (the CLI's
+  own suggested rule, saved in `.claude/settings.local.json`; verified with 2.1.318), **Deny**, and a box to tell
+  Claude what to do instead.
 - **Colored meter**: context % green, amber or red at the /compact thresholds (the bar too), cache hits green
   when most input comes from the cache, the cost in orange, the model colored by family.
 - **Generate Lean CLAUDE.md** knows more solution shapes: .NET Framework solutions get MSBuild and vstest

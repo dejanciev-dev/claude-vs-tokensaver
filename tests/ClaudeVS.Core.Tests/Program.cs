@@ -774,6 +774,34 @@ namespace ClaudeVS.Core.Tests
             Eq(1, events.Count(e => e.Kind == ClaudeEventKind.TurnCompleted), "turn completes");
         }
 
+        /// <summary>A real Bash permission request from Claude Code 2.1.318 (sanitized) and what the card shows.</summary>
+        private static void Test_PermissionPrompt_RealCli_Bash()
+        {
+            var line = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.318-permission-bash.jsonl"));
+            var ev = new ClaudeStreamParser().Parse(line).Single();
+            Eq(ClaudeEventKind.PermissionRequest, ev.Kind, "permission request");
+            var p = PermissionPrompt.From(ev.ToolName, ev.ToolInput, ev.Payload);
+            Eq("Run this command?", p.Title, "title");
+            Eq("echo probe-123 > out.txt", p.Detail, "the command");
+            True(p.DetailIsCode, "shown as code");
+            Eq("Write probe-123 into out.txt", p.Description, "Claude's description");
+            Eq("Bash(echo probe-123 *)", string.Join(",", p.AlwaysAllowRules), "only the addRules suggestion, as a settings rule");
+            Eq(1, p.AlwaysAllow.Count, "addDirectories is not sent back");
+            True(p.AlwaysAllowScope.Contains("settings.local.json"), "scope: " + p.AlwaysAllowScope);
+        }
+
+        private static void Test_PermissionPrompt_OtherTools()
+        {
+            var edit = PermissionPrompt.From("Edit", JObject.Parse("{\"file_path\":\"C:\\\\work\\\\a.cs\",\"old_string\":\"x\",\"new_string\":\"y\"}"), null);
+            Eq("Edit this file?", edit.Title, "edit title");
+            Eq("C:\\work\\a.cs", edit.Detail, "edit path");
+            True(!edit.DetailIsCode && edit.AlwaysAllow == null && edit.Description == null, "no code box, no suggestions, no description");
+            var mcp = PermissionPrompt.From("mcp__github__create_issue", new JObject(), null);
+            Eq("Allow github · create_issue?", mcp.Title, "MCP tool title");
+            var same = PermissionPrompt.From("Bash", JObject.Parse("{\"command\":\"ls\",\"description\":\"ls\"}"), null);
+            Eq(null, same.Description, "a description equal to the command is not repeated");
+        }
+
         private static void Test_Parser_Activity_ToolAndSubagent()
         {
             var parser = new ClaudeStreamParser();
