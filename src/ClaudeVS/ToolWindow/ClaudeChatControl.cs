@@ -1601,7 +1601,8 @@ namespace ClaudeVS.ToolWindow
                         _lastAnswer = item.Text;
                         break;
                     case TranscriptItemKind.Tool:
-                        _view.AppendTool(item.ToolUseId, item.Text, item.ToolInput?.ToString());
+                        _view.AppendTool(item.ToolUseId, item.Text, item.ToolInput?.ToString(), null,
+                            item.ToolName == "Write" ? null : InlineDiff.FromToolUse(item.ToolName, item.ToolInput)); // the content before an old Write is unknown
                         if (item.ResultChars >= 0) _view.CompleteTool(item.ToolUseId, item.ResultChars, item.IsError);
                         break;
                     case TranscriptItemKind.Compacted:
@@ -1705,7 +1706,10 @@ namespace ClaudeVS.ToolWindow
                         if (_turnAnswer.Length > 0) _turnAnswer.Append("\n\n"); // text before and after a tool call are separate paragraphs
                         Action diff = null;
                         if (change != null) diff = () => { ThreadHelper.ThrowIfNotOnUIThread(); ShowDiff(change, writeSnapshot); };
-                        _view.AppendTool(ev.ToolUseId, ev.Text, ev.ToolInput?.ToString(), diff);
+                        // Red / green lines under the row. A Write whose old content could not be read gets none (the Diff button still works).
+                        var inline = change?.IsWrite == true && writeSnapshot == null ? null
+                            : InlineDiff.FromToolUse(ev.ToolName, ev.ToolInput, writeSnapshot == "" ? null : writeSnapshot);
+                        _view.AppendTool(ev.ToolUseId, ev.Text, ev.ToolInput?.ToString(), diff, inline);
                         break;
                     case ClaudeEventKind.ToolResult:
                         _view.CompleteTool(ev.ToolUseId, ev.ResultChars, ev.IsError);

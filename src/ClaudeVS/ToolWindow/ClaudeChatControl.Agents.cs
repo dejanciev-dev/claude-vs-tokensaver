@@ -179,7 +179,7 @@ namespace ClaudeVS.ToolWindow
 
             var text = new StackPanel();
             var name = new TextBlock { FontSize = 11.5, TextTrimming = TextTrimming.CharacterEllipsis };
-            name.Inlines.Add(new System.Windows.Documents.Run(t.Description ?? (t.IsAgent ? "Agent" : "Command")) { FontWeight = FontWeights.SemiBold });
+            name.Inlines.Add(new System.Windows.Documents.Run(FirstLine(t.Description) ?? (t.IsAgent ? "Agent" : "Command")) { FontWeight = FontWeights.SemiBold });
             string kind = t.IsAgent ? t.SubagentType ?? "agent" : "command";
             name.Inlines.Add(new System.Windows.Documents.Run("  " + kind + (t.IsBackgrounded ? " · background" : "")) { Foreground = Brushes.Gray });
             ChatTheme.Text(name);
@@ -217,6 +217,19 @@ namespace ClaudeVS.ToolWindow
             s == AgentTaskStatus.Running ? "Running" : s == AgentTaskStatus.Completed ? "Done" : s == AgentTaskStatus.Failed ? "Failed" : "Stopped";
 
         private static string Shorten(string s, int max) => s.Length <= max ? s.Trim() : s.Substring(0, max - 1).Trim() + "…";
+
+        /// <summary>
+        /// A background command's description can be the whole command, heredoc and all: keep its first line
+        /// (at most 120 characters) so the row stays one line. The full text is in the transcript.
+        /// </summary>
+        private static string FirstLine(string s)
+        {
+            if (string.IsNullOrWhiteSpace(s)) return null;
+            s = s.Trim();
+            int nl = s.IndexOfAny(new[] { '\r', '\n' });
+            string first = nl < 0 ? s : s.Substring(0, nl).TrimEnd() + " …";
+            return Shorten(first, 120);
+        }
 
         private static Button SmallButton(string text, string tooltip)
         {

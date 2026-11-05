@@ -802,6 +802,39 @@ namespace ClaudeVS.Core.Tests
             Eq(null, same.Description, "a description equal to the command is not repeated");
         }
 
+        private static void Test_InlineDiff_Edit()
+        {
+            var input = JObject.Parse("{\"file_path\":\"C:\\\\work\\\\a.cs\",\"old_string\":\"a\\nb\\nc\\nd\",\"new_string\":\"a\\nB\\nc\\nd\\ne\"}");
+            var d = InlineDiff.FromToolUse("Edit", input);
+            Eq("C:\\work\\a.cs", d.FilePath, "path");
+            Eq(" a|-b|+B| c| d|+e", string.Join("|", d.Lines), "removed before added, context kept");
+            Eq(2, d.Added, "added");
+            Eq(1, d.Removed, "removed");
+            Eq(null, InlineDiff.FromToolUse("Read", input), "Read changes nothing");
+        }
+
+        private static void Test_InlineDiff_Write()
+        {
+            var input = JObject.Parse("{\"file_path\":\"x.txt\",\"content\":\"1\\n2\\n3\\n4\\n5\\n6\\n7\\n8\\nnine\\n10\\n\"}");
+            var fresh = InlineDiff.FromToolUse("Write", input);
+            True(fresh.IsNewFile && fresh.Added == 10 && fresh.Removed == 0, "new file: all added");
+            var changed = InlineDiff.FromToolUse("Write", input, "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n");
+            Eq(" 7| 8|-9|+nine| 10", string.Join("|", changed.Lines), "only the change with 2 context lines; the start is dropped");
+        }
+
+        private static void Test_InlineDiff_Heredoc()
+        {
+            string cmd = "cd \"C:/Users/me/repo\" && cat > src/Samples/WindowSamples.cs <<'EOF'\nnamespace X;\n\npublic static class W { }\nEOF\ncat > tests/T.cs <<'EOF'\nclass T { }\nEOF\ndotnet test";
+            var d = InlineDiff.FromToolUse("Bash", new JObject { ["command"] = cmd });
+            Eq("C:/Users/me/repo/src/Samples/WindowSamples.cs", d.FilePath, "first file, relative to the cd");
+            Eq(3, d.Added, "the heredoc body only");
+            True(!d.IsAppend, "replace");
+            var tagFirst = InlineDiff.FromHeredoc("cat <<EOF >> \"/tmp/log.txt\"\nline\nEOF");
+            Eq("/tmp/log.txt", tagFirst.FilePath, "tag before the redirect, quoted path");
+            True(tagFirst.IsAppend && tagFirst.Added == 1, "append");
+            Eq(null, InlineDiff.FromHeredoc("git commit -F - <<'EOF'\nmsg\nEOF"), "a heredoc that is not written to a file");
+        }
+
         private static void Test_Parser_Activity_ToolAndSubagent()
         {
             var parser = new ClaudeStreamParser();

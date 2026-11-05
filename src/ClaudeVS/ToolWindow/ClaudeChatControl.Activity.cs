@@ -288,6 +288,7 @@ namespace ClaudeVS.ToolWindow
             double cache = m.CacheHitPercent;
             Brush cacheBrush = m.SessionTotal.Total == 0 ? null : cache >= 70 ? a.Success : cache >= 30 ? a.Running : a.Failure;
             string model = _session?.CurrentModel.ToCli() ?? "-";
+            if (model.Length > 1 && char.IsLower(model[0])) model = char.ToUpperInvariant(model[0]) + model.Substring(1); // "Sonnet"
             string family = PriceTable.Family(model);
             Brush modelBrush = family == "opus" ? a.Brand : family == "sonnet" ? a.Link : family == "haiku" ? a.Success : null;
 
