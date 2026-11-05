@@ -172,11 +172,13 @@ namespace ClaudeVS.Core.Cli
             {
                 var c = block["content"];
                 int chars = c == null ? 0 : c.Type == JTokenType.String ? ((string)c).Length : c.ToString(Formatting.None).Length;
+                string text = ResultText(c);
                 events.Add(new ClaudeEvent
                 {
                     Kind = ClaudeEventKind.ToolResult,
                     ToolUseId = (string)block["tool_use_id"],
                     ResultChars = chars,
+                    ResultText = text,
                     IsError = block.Value<bool?>("is_error") ?? false,
                 });
             }
@@ -236,6 +238,20 @@ namespace ClaudeVS.Core.Cli
         }
 
         public const string SubagentToolPrefix = "↳ ";
+
+        /// <summary>How much of a tool result's text is kept for the chat (the CLI's own result can be much longer).</summary>
+        public const int MaxResultText = 20_000;
+
+        /// <summary>
+        /// A tool_result's text: its content string, or the {type: "text"} parts of its content array (images and
+        /// other parts are skipped), cut at <see cref="MaxResultText"/>.
+        /// </summary>
+        public static string ResultText(JToken content)
+        {
+            string text = content == null ? null : content.Type == JTokenType.String ? (string)content
+                : content is JArray parts ? string.Join("\n", parts.OfType<JObject>().Where(p => (string)p["type"] == "text").Select(p => (string)p["text"])) : null;
+            return text != null && text.Length > MaxResultText ? text.Substring(0, MaxResultText) : text;
+        }
 
         /// <summary>One short line per tool call for the transcript (never the whole payload).</summary>
         public static string DescribeTool(string name, JObject input)

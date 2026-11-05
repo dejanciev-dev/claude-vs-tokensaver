@@ -1602,8 +1602,9 @@ namespace ClaudeVS.ToolWindow
                         break;
                     case TranscriptItemKind.Tool:
                         _view.AppendTool(item.ToolUseId, item.Text, item.ToolInput?.ToString(), null,
-                            item.ToolName == "Write" ? null : InlineDiff.FromToolUse(item.ToolName, item.ToolInput)); // the content before an old Write is unknown
-                        if (item.ResultChars >= 0) _view.CompleteTool(item.ToolUseId, item.ResultChars, item.IsError);
+                            item.ToolName == "Write" ? null : InlineDiff.FromToolUse(item.ToolName, item.ToolInput), // the content before an old Write is unknown
+                            item.ToolName, item.ToolInput, _sessionDir);
+                        if (item.ResultChars >= 0) _view.CompleteTool(item.ToolUseId, item.ResultChars, item.IsError, item.ResultText);
                         break;
                     case TranscriptItemKind.Compacted:
                         _view.AppendCompaction(item.PreTokens, item.Trigger, item.Text);
@@ -1647,7 +1648,8 @@ namespace ClaudeVS.ToolWindow
             // A Write replaces the whole file, so its old content can't be rebuilt afterwards. Copy it now, on the
             // reader thread, before the CLI runs the tool (best effort: a very fast tool may already have run).
             FileChange change = ev.Kind == ClaudeEventKind.ToolUse ? FileChange.FromToolUse(ev.ToolName, ev.ToolInput) : null;
-            string writeSnapshot = change?.IsWrite == true ? ReadSnapshot(change.FilePath) : null;
+            // For an Edit the copy only gives the line numbers of the red / green lines.
+            string writeSnapshot = change != null ? ReadSnapshot(change.FilePath) : null;
 
             _events.Enqueue(new QueuedEvent { Session = sender as ClaudeSession, Event = ev, Change = change, WriteSnapshot = writeSnapshot });
             System.Threading.Interlocked.Exchange(ref _lastOutputTicks, DateTime.UtcNow.Ticks);
@@ -1709,10 +1711,10 @@ namespace ClaudeVS.ToolWindow
                         // Red / green lines under the row. A Write whose old content could not be read gets none (the Diff button still works).
                         var inline = change?.IsWrite == true && writeSnapshot == null ? null
                             : InlineDiff.FromToolUse(ev.ToolName, ev.ToolInput, writeSnapshot == "" ? null : writeSnapshot);
-                        _view.AppendTool(ev.ToolUseId, ev.Text, ev.ToolInput?.ToString(), diff, inline);
+                        _view.AppendTool(ev.ToolUseId, ev.Text, ev.ToolInput?.ToString(), diff, inline, ev.ToolName, ev.ToolInput, _sessionDir);
                         break;
                     case ClaudeEventKind.ToolResult:
-                        _view.CompleteTool(ev.ToolUseId, ev.ResultChars, ev.IsError);
+                        _view.CompleteTool(ev.ToolUseId, ev.ResultChars, ev.IsError, ev.ResultText);
                         break;
                     case ClaudeEventKind.PermissionRequest:
                         FlushText();

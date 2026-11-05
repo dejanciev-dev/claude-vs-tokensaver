@@ -22,6 +22,8 @@ namespace ClaudeVS.Core.Chat
         public JObject ToolInput { get; set; }
         /// <summary>Tool result size; -1 when no result was recorded (the call was interrupted).</summary>
         public int ResultChars { get; set; } = -1;
+        /// <summary>Tool: the result's text (cut like the live one), for the ⎿ summary line.</summary>
+        public string ResultText { get; set; }
         public bool IsError { get; set; }
         /// <summary>User: the message id in the CLI session (what rewind_files takes).</summary>
         public string Uuid { get; set; }
@@ -114,6 +116,7 @@ namespace ClaudeVS.Core.Chat
                             var c = b["content"];
                             tool.ResultChars = c == null ? 0 : c.Type == JTokenType.String ? ((string)c).Length : c.ToString(Formatting.None).Length;
                             tool.IsError = b.Value<bool?>("is_error") ?? false;
+                            tool.ResultText = Cli.ClaudeStreamParser.ResultText(c);
                         }
                         break;
                 }

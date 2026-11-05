@@ -91,6 +91,8 @@ namespace ClaudeVS.Core.Cli
         public string ToolUseId { get; set; }
         public JObject ToolInput { get; set; }
         public int ResultChars { get; set; }
+        /// <summary>ToolResult: the result's text, cut at <see cref="ClaudeStreamParser.MaxResultText"/> characters.</summary>
+        public string ResultText { get; set; }
         public bool IsError { get; set; }
         public string RequestId { get; set; }
         /// <summary>ControlResponse: the CLI's answer to our control request (e.g. the get_context_usage data).</summary>

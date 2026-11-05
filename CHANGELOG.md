@@ -18,10 +18,16 @@ All notable changes to this project are listed here. The format follows
   Claude what to do instead.
 - **Colored meter**: context % green, amber or red at the /compact thresholds (the bar too), cache hits green
   when most input comes from the cache, the cost in orange, the model colored by family and capitalized ("Sonnet").
-- **Changes in the chat**: each file change shows as red / green lines under its tool row, with the file name and
-  `+added −removed`, two unchanged lines around each change, scrolling when long. Covers Edit / MultiEdit, Write
-  (compared with the file as it was before) and shell commands that write a file with a heredoc
-  (`cat > file <<'EOF'`, the usual way on Windows), including after `cd "dir" &&`.
+- **Tool calls look like the Claude Code terminal**: `● Update(src/a.cs)`, `● Bash(dotnet test)`,
+  `● Read(…)`, `● Search(pattern: "…")` (paths relative to the solution), then a `⎿` line with the result:
+  "Added 13 lines, removed 2 lines", "Read 120 lines", "Wrote 78 lines to X.cs", or the first three lines of a
+  command's output and "… +N lines". Errors in red. Clicking the row shows the input and the whole output (up to
+  20,000 characters). Claude's text between tool calls starts with a `●` too.
+- **Changes in the chat**: each file change shows its lines under the tool row like the terminal: a line-number
+  gutter, `-` / `+` on full-width red / green rows, syntax colors from the file's extension, two unchanged lines
+  around each change, scrolling when long. Covers Edit / MultiEdit (numbered from where the change is in the file),
+  Write (compared with the file as it was before) and shell commands that write a file with a heredoc
+  (`cat > file <<'EOF'`, the usual way on Windows), including after `cd "dir" &&`. A change that fails is hidden.
 - **Generate Lean CLAUDE.md** knows more solution shapes: .NET Framework solutions get MSBuild and vstest
   commands (`dotnet build` can't build them), with packages from `packages.config` and web and test projects
   recognized; the target framework is read from `Directory.Build.props`; VB and F# projects are listed; React,
