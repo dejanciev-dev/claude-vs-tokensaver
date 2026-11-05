@@ -193,6 +193,9 @@ All notable changes to this project are listed here. The format follows
 - The line under a routed prompt reads `Auto → Sonnet, low effort` (was `auto → sonnet/low`), with the model in
   its meter color and who picked it and why on hover.
 - Model router matches keywords as whole words ("prefix" no longer counts as "fix").
+- Model router: add, update, extend, change, modify, improve and enhance count as task words, and the "short
+  prompt" discount only applies to prompts that ask for no change. "add more samples and update the existing
+  ones" now gets Sonnet at medium effort instead of low.
 - `dotnet test` runs the Core test runner instead of silently reporting zero tests.
 
 ### Fixed

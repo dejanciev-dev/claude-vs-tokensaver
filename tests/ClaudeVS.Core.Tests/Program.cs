@@ -1109,6 +1109,18 @@ namespace ClaudeVS.Core.Tests
             Eq(ModelChoice.Sonnet, d.Model, d.ToString());
         }
 
+        private static void Test_Router_ShortChangeRequest_NotLowEffort()
+        {
+            // From a real session: short, with typos, but it asks for code in several files.
+            var d = R.Route(new RouteRequest { Prompt = "add more samplees and updated exitesd with a news samples" });
+            Eq(ModelChoice.Sonnet, d.Model, d.ToString());
+            Eq(EffortChoice.Medium, d.Effort, d.ToString());
+            True(!d.Reason.Contains("short prompt"), d.ToString());
+            // A short question with no change still counts as short.
+            var q = R.Route(new RouteRequest { Prompt = "what does this method return?" });
+            True(q.Reason.Contains("short prompt"), q.ToString());
+        }
+
         private static void Test_Router_Hard_GoesOpus()
         {
             var d = R.Route(new RouteRequest { Prompt = "Investigate the root cause of the deadlock in the price ingestion pipeline and refactor the concurrency model across the solution." });
