@@ -15,14 +15,16 @@ All notable changes to this project are listed here. The format follows
 - **Permission card** instead of the one-line Allow/Deny bar: a plain question ("Run this command?"), Claude's
   description, the command or file in a code box, and **Allow**, **Always allow `Bash(npm test *)`** (the CLI's
   own suggested rule, saved in `.claude/settings.local.json`; verified with 2.1.318), **Deny**, and a box to tell
-  Claude what to do instead.
+  Claude what to do instead. A long command shows its first 6 lines and "… +N lines": up to 25 lines open in the
+  card (**Show less** folds them), a longer one opens in a read-only editor tab, so Allow / Deny stay in view. The
+  answer shows under the tool row as "✔ Allowed" or "✖ Denied".
 - **Colored meter**: context % green, amber or red at the /compact thresholds (the bar too), cache hits green
   when most input comes from the cache, the cost in orange, the model colored by family and capitalized ("Sonnet").
 - **Tool calls look like the Claude Code terminal**: `● Update(src/a.cs)`, `● Bash(dotnet test)`,
   `● Read(…)`, `● Search(pattern: "…")` (paths relative to the solution), then a `⎿` line with the result:
   "Added 13 lines, removed 2 lines", "Read 120 lines", "Wrote 78 lines to X.cs", or the first three lines of a
   command's output and "… +N lines". Errors in red. Clicking the row shows the input and the whole output (up to
-  20,000 characters). Claude's text between tool calls starts with a `●` too.
+  20,000 characters) at full height, without a scroll box of its own. Claude's text between tool calls starts with a `●` too.
 - **Changes in the chat**: each file change shows its lines under the tool row like the terminal: a line-number
   gutter, `-` / `+` on full-width red / green rows, syntax colors from the file's extension, two unchanged lines
   around each change. A long change shows its first 12 lines and "… +N lines (click to see all)" opens the rest
