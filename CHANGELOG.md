@@ -33,6 +33,11 @@ All notable changes to this project are listed here. The format follows
 - **Files changed** after each answer: every file the turn added, changed or deleted, with `+added −removed`; the
   path opens the file and **Diff** opens Visual Studio's diff of the file before the answer against now (several
   edits to one file show as one diff).
+- **Working folder** under the title (for example `linq-samples` or `linq-samples/src/App`): the folder Claude
+  Code runs in, which relative paths in the chat are based on. Click it to choose another folder (a subfolder or
+  another repository, with Visual Studio's folder picker), go back to the solution folder, open it in File Explorer
+  or copy its path. A new folder starts a new conversation, since Claude Code keeps conversations per folder; the
+  sessions list, `@` files and custom commands follow the folder.
 - **Generate Lean CLAUDE.md** knows more solution shapes: .NET Framework solutions get MSBuild and vstest
   commands (`dotnet build` can't build them), with packages from `packages.config` and web and test projects
   recognized; the target framework is read from `Directory.Build.props`; VB and F# projects are listed; React,

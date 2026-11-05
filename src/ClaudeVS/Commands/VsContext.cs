@@ -23,6 +23,35 @@ namespace ClaudeVS.Commands
         }
 
         /// <summary>Opens a file in the editor (Markdown files get VS's Markdown editor and preview).</summary>
+        /// <summary>Visual Studio's folder picker; null when cancelled.</summary>
+        public static string BrowseForFolder(string title, string initialDir)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (!(Package.GetGlobalService(typeof(SVsUIShell)) is IVsUIShell shell)) return null;
+            shell.GetDialogOwnerHwnd(out IntPtr owner);
+            const int maxPath = 1024;
+            IntPtr buffer = System.Runtime.InteropServices.Marshal.AllocCoTaskMem((maxPath + 1) * 2);
+            try
+            {
+                var info = new[]
+                {
+                    new VSBROWSEINFOW
+                    {
+                        lStructSize = (uint)System.Runtime.InteropServices.Marshal.SizeOf(typeof(VSBROWSEINFOW)),
+                        hwndOwner = owner,
+                        pwzDlgTitle = title,
+                        pwzInitialDir = initialDir,
+                        nMaxDirName = maxPath,
+                        pwzDirName = buffer,
+                    },
+                };
+                if (shell.GetDirectoryViaBrowseDlg(info) != Microsoft.VisualStudio.VSConstants.S_OK) return null;
+                string dir = System.Runtime.InteropServices.Marshal.PtrToStringUni(buffer);
+                return string.IsNullOrWhiteSpace(dir) ? null : dir;
+            }
+            finally { System.Runtime.InteropServices.Marshal.FreeCoTaskMem(buffer); }
+        }
+
         public static void OpenFile(string path)
         {
             ThreadHelper.ThrowIfNotOnUIThread();

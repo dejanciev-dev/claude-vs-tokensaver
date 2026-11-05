@@ -166,6 +166,7 @@ namespace ClaudeVS.ToolWindow
             _sessions = new ChatPopup(_historyBtn, withFilter: true, filterPlaceholder: "Search sessions…", width: 340, placement: PlacementMode.Bottom);
             _contextPopup = new ChatPopup(_meterArea, withFilter: false, width: 360, placement: PlacementMode.Bottom);
             _manage = new ChatPopup(_inputBox, withFilter: true, filterPlaceholder: "Filter…", width: 400);
+            InitFolderChip();
             BuildEmptyState();
             UpdateChips();
             _adviceAction.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); if (_adviceCommand != null) SendText(_adviceCommand, routed: false); };
@@ -258,6 +259,7 @@ namespace ClaudeVS.ToolWindow
 
             var top = new StackPanel { Margin = new Thickness(10, 6, 6, 4) };
             top.Children.Add(header);
+            top.Children.Add(_folderChip); // the working folder, under the title
             var meterStack = new StackPanel();
             meterStack.Children.Add(_meter);
             meterStack.Children.Add(_ctxBar);
@@ -387,7 +389,7 @@ namespace ClaudeVS.ToolWindow
             ThreadHelper.ThrowIfNotOnUIThread();
             string id = _session?.SessionId ?? _resumeId;
             if (id == null) { Append("Nothing to export yet: send a prompt first."); return; }
-            string dir = _sessionDir ?? VsContext.GetSolutionDirectory() ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            string dir = _sessionDir ?? WorkFolder;
             string source = SessionHistory.SessionFile(null, dir, id);
             if (!System.IO.File.Exists(source)) { Append("The conversation is not saved by Claude Code yet (no session file). Try again after the first answer."); return; }
 
@@ -488,7 +490,7 @@ namespace ClaudeVS.ToolWindow
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             if (_busy) { Append("Stop Claude first (Esc), then rewind."); return; }
-            string dir = _sessionDir ?? VsContext.GetSolutionDirectory() ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            string dir = _sessionDir ?? WorkFolder;
             EnsureSession(dir); // a resumed conversation has no process yet; starting one makes no model call
             var session = _session;
             string shortPrompt = SessionMetaStore.Clean(prompt) ?? "";
@@ -946,7 +948,7 @@ namespace ClaudeVS.ToolWindow
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             var parts = new System.Collections.Generic.List<string>();
-            string dir = VsContext.GetSolutionDirectory();
+            string dir = VsContext.GetSolutionDirectory() == null ? null : WorkFolder; // the folder Claude Code runs in
             if (_selection != null)
             {
                 int lines = _selection.EndLine - _selection.StartLine + 1;
@@ -1036,7 +1038,7 @@ namespace ClaudeVS.ToolWindow
             ThreadHelper.ThrowIfNotOnUIThread();
             _mention = AtMention.Find(_prompt.Text, _prompt.CaretIndex);
             if (_mention == null) { _filePopup.IsOpen = false; return; } // common case: no DTE call per keystroke
-            string dir = VsContext.GetSolutionDirectory();
+            string dir = VsContext.GetSolutionDirectory() == null ? null : WorkFolder; // the folder Claude Code runs in
             if (dir == null) { _filePopup.IsOpen = false; return; }
 
             if (_fileIndex == null || !string.Equals(_fileIndexDir, dir, StringComparison.OrdinalIgnoreCase))
@@ -1147,7 +1149,7 @@ namespace ClaudeVS.ToolWindow
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             var opts = Options;
-            string dir = VsContext.GetSolutionDirectory() ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            string dir = WorkFolder;
 
             // Typed text can carry invisible characters too (e.g. from autocomplete or IME); never send them.
             forClaude = PromptSanitizer.RemoveInvisible(forClaude ?? userText, out int hidden);
@@ -1346,6 +1348,7 @@ namespace ClaudeVS.ToolWindow
             _resumeId = null;
             _forkNext = false;
             _sessionDir = dir;
+            UpdateFolderChip();
             if (!_thinking) { var fresh = _session; Fire(() => fresh.SetThinkingAsync(false)); } // applied when the process starts
             _session.EventReceived += OnEvent;
             if (o?.LogRawCliTraffic == true) _session.RawLine += OnRawLine;
@@ -1372,7 +1375,7 @@ namespace ClaudeVS.ToolWindow
         private void RefreshCommands(bool force = false)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            string dir = VsContext.GetSolutionDirectory();
+            string dir = VsContext.GetSolutionDirectory() == null ? null : WorkFolder; // the folder Claude Code runs in
             if (!force && _commandsDir != null && string.Equals(dir, _commandsDir, StringComparison.OrdinalIgnoreCase)) return;
             _commandsDir = dir ?? "";
             _commands = SlashCommands.Discover(dir, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
@@ -1395,7 +1398,7 @@ namespace ClaudeVS.ToolWindow
         private void ShowHistoryMenu(bool refresh)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            string dir = VsContext.GetSolutionDirectory() ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            string dir = WorkFolder;
             var now = DateTime.UtcNow;
             List<SessionInfo> all;
             try { all = SessionMeta.Apply(SessionHistory.List(SessionHistory.DefaultProjectsRoot, dir, max: 80), Options?.AutoArchiveDays ?? 14, now); }
@@ -1632,6 +1635,7 @@ namespace ClaudeVS.ToolWindow
             SetBusy(false);
             SetTitle(null);
             SetEmptyState(true);
+            UpdateFolderChip();
         }
 
         // ---------------- Events from the CLI (background thread) ----------------
@@ -2134,7 +2138,7 @@ namespace ClaudeVS.ToolWindow
             get
             {
                 ThreadHelper.ThrowIfNotOnUIThread();
-                return _sessionDir ?? VsContext.GetSolutionDirectory() ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                return _sessionDir ?? WorkFolder;
             }
         }
 
