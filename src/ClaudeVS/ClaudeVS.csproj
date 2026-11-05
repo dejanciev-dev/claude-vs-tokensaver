@@ -71,6 +71,7 @@
     <Compile Include="ToolWindow\ClaudeChatControl.Activity.cs" />
     <Compile Include="ToolWindow\ClaudeChatControl.Permission.cs" />
     <Compile Include="ToolWindow\ClaudeChatControl.Changes.cs" />
+    <Compile Include="ToolWindow\ClaudeChatControl.Folder.cs" />
     <Compile Include="ToolWindow\TranscriptView.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
