@@ -435,7 +435,7 @@ namespace ClaudeVS.ToolWindow
         /// Without <paramref name="toolName"/> the older "Bash: command" header is used.
         /// </summary>
         public void AppendTool(string toolUseId, string description, string inputJson, Action onDiff = null, Core.Context.InlineDiff fileDiff = null,
-            string toolName = null, Newtonsoft.Json.Linq.JObject input = null, string baseDir = null)
+            string toolName = null, Newtonsoft.Json.Linq.JObject input = null, string baseDir = null, string openPath = null)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             EndAnswer();
@@ -447,7 +447,8 @@ namespace ClaudeVS.ToolWindow
                 ? CliToolHeader(toolName, input, baseDir, description, accents, out dot)
                 : ToolHeader(description, accents, out dot);
             object headerContent = header;
-            if (onDiff != null)
+            bool inlineDiff = fileDiff != null && fileDiff.Lines.Count > 0;
+            if (onDiff != null && !inlineDiff) // with the lines shown, the links above them do this
             {
                 var diff = SmallButton("Diff", "Compare the file before and after this change");
                 diff.Click += (s, e) => { onDiff(); e.Handled = true; };
@@ -477,7 +478,13 @@ namespace ClaudeVS.ToolWindow
             var result = new StackPanel { Margin = new Thickness(18, 0, 0, 0) };
             expander.Children.Add(result);
             UIElement diffElement = null;
-            if (fileDiff != null && fileDiff.Lines.Count > 0) expander.Children.Add(diffElement = DiffView(fileDiff, accents));
+            if (inlineDiff)
+            {
+                var block = new StackPanel();
+                block.Children.Add(FileLinks(openPath ?? fileDiff.FilePath, onDiff, accents, new Thickness(36, 2, 0, 1)));
+                block.Children.Add(DiffView(fileDiff, accents));
+                expander.Children.Add(diffElement = block);
+            }
             var toolRow = new ToolRow { Header = header, Dot = dot, ToolName = toolName, Diff = fileDiff, DiffElement = diffElement, Result = result, Body = bodyPanel };
 
             if (FocusView())
@@ -489,6 +496,84 @@ namespace ClaudeVS.ToolWindow
             }
             else _doc.Blocks.Add(new BlockUIContainer(expander) { Margin = new Thickness(0) });
             if (!string.IsNullOrEmpty(toolUseId)) _tools[toolUseId] = toolRow;
+            ScrollToEndIfNear();
+        }
+
+        /// <summary>"Open diff · Open file" above a change's lines.</summary>
+        private static TextBlock FileLinks(string path, Action onDiff, ChatTheme.AccentSet a, Thickness margin)
+        {
+            var links = new TextBlock { FontSize = 11.5, Margin = margin };
+            if (onDiff != null)
+            {
+                links.Inlines.Add(Link("Open diff", "Visual Studio's diff: the file before this change and now", onDiff, a));
+                var sep = new Run("  ·  ");
+                sep.SetResourceReference(TextElement.ForegroundProperty, EnvironmentColors.SystemGrayTextBrushKey);
+                links.Inlines.Add(sep);
+            }
+            links.Inlines.Add(Link("Open file", path, () => { ThreadHelper.ThrowIfNotOnUIThread(); OpenPath(path); }, a));
+            return links;
+        }
+
+        private static Hyperlink Link(string text, string tip, Action onClick, ChatTheme.AccentSet a)
+        {
+            var link = new Hyperlink(new Run(text)) { Foreground = a.Link, ToolTip = tip, Cursor = System.Windows.Input.Cursors.Hand, TextDecorations = null };
+            link.MouseEnter += (s, e) => link.TextDecorations = TextDecorations.Underline;
+            link.MouseLeave += (s, e) => link.TextDecorations = null;
+            link.Click += (s, e) => { onClick(); e.Handled = true; };
+            return link;
+        }
+
+        private static void OpenPath(string path)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            try { if (System.IO.File.Exists(path)) VsContext.OpenFile(path); }
+            catch (Exception ex) { Debug.WriteLine("Open file failed: " + ex.Message); }
+        }
+
+        /// <summary>
+        /// "Files changed" after an answer: one line per file the turn added, changed or deleted, with +added −removed,
+        /// the path (opens the file) and a Diff link (the file before the turn against now).
+        /// </summary>
+        public void AppendChangedFiles(IReadOnlyList<Core.Context.ChangedFile> files, string baseDir, Action<Core.Context.ChangedFile> onDiff, Action<string> onOpen)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            EndAnswer();
+            _plain = null;
+            var a = ChatTheme.Accents(Box);
+
+            var panel = new StackPanel();
+            var title = new TextBlock { FontSize = 12, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 3) };
+            title.Inlines.Add(new Run(files.Count == 1 ? "1 file changed" : $"{files.Count} files changed"));
+            int added = files.Sum(f => f.Added ?? 0), removed = files.Sum(f => f.Removed ?? 0);
+            if (added > 0) title.Inlines.Add(new Run("  +" + added) { Foreground = a.Success });
+            if (removed > 0) title.Inlines.Add(new Run("  −" + removed) { Foreground = a.Failure });
+            ChatTheme.Text(title);
+            panel.Children.Add(title);
+
+            foreach (var f in files)
+            {
+                var line = new TextBlock { FontSize = 12, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 1, 0, 1), ToolTip = f.Path };
+                var mark = new Run(f.IsNew ? "+ " : f.IsDeleted ? "− " : "~ ") { FontFamily = Mono, Foreground = f.IsNew ? a.Success : f.IsDeleted ? a.Failure : a.Running };
+                line.Inlines.Add(mark);
+                var file = f;
+                string shown = Core.Cli.ToolCallView.Relative(f.Path, baseDir)?.Replace('\\', '/');
+                if (f.IsDeleted) { var r = new Run(shown) { TextDecorations = TextDecorations.Strikethrough }; r.SetResourceReference(TextElement.ForegroundProperty, EnvironmentColors.SystemGrayTextBrushKey); line.Inlines.Add(r); }
+                else { var open = Link(shown, "Open " + f.Path, () => onOpen(file.Path), a); open.Foreground = a.Path; line.Inlines.Add(open); }
+                string note = f.IsNew ? "  new" : f.IsDeleted ? "  deleted" : "";
+                if (note.Length > 0) { var r = new Run(note); r.SetResourceReference(TextElement.ForegroundProperty, EnvironmentColors.SystemGrayTextBrushKey); line.Inlines.Add(r); }
+                if (f.Added > 0) line.Inlines.Add(new Run("  +" + f.Added) { Foreground = a.Success });
+                if (f.Removed > 0) line.Inlines.Add(new Run("  −" + f.Removed) { Foreground = a.Failure });
+                if (f.Before != null)
+                {
+                    line.Inlines.Add(new Run("   "));
+                    line.Inlines.Add(Link("Diff", "Visual Studio's diff: before this answer and now", () => onDiff(file), a));
+                }
+                panel.Children.Add(line);
+            }
+
+            var card = new Border { Child = panel, CornerRadius = new CornerRadius(4), BorderThickness = new Thickness(1), BorderBrush = ChatTheme.Hover, Background = ChatTheme.Subtle, Padding = new Thickness(10, 6, 10, 6), Margin = new Thickness(0, 2, 0, 8) };
+            System.Windows.Automation.AutomationProperties.SetName(card, title.Text);
+            _doc.Blocks.Add(new BlockUIContainer(card) { Margin = new Thickness(0) });
             ScrollToEndIfNear();
         }
 

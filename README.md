@@ -87,7 +87,8 @@ This extension attacks all three, and shows the numbers so you can see the effec
 |---|---|
 | **Markdown answers** | Headings, lists, quotes, inline code and links, rendered while the answer streams. |
 | **Code blocks** | **Copy** and **Insert** (at the cursor, one undo step). |
-| **Diff for Claude's edits** | Every file change shows up in the chat as red and green lines under its row, with the file name and `+added −removed`: Edit / MultiEdit, Write (against the file as it was), and shell commands that write a file (`cat > file <<'EOF'`). Rows for Edit / MultiEdit / Write also have a **Diff** button that opens Visual Studio's diff window. |
+| **Diff for Claude's edits** | Every file change shows up in the chat as numbered red and green lines under its row: Edit / MultiEdit, Write (against the file as it was), and shell commands that write a file (`cat > file <<'EOF'`). Above the lines, **Open diff** opens Visual Studio's diff window and **Open file** the file. |
+| **Files changed** | After each answer, a list of the files it added, changed or deleted, with `+added −removed`. Click a path to open the file, or **Diff** for the file before the answer against now. |
 | **Review each change** | In Manual mode, an edit or write with several changes asks with a card listing each one (− and + lines) with a check box. **Apply** only the checked ones, **Reject all**, or **Open diff** for the whole file. Claude is told which changes you rejected, so it neither assumes they are in the file nor applies them again. |
 | **Question cards** | When Claude asks a question, you get its options (plus "Other") and your answer goes back to Claude. |
 | **Plan approval cards** | Plans render as Markdown with **Approve** or **Request changes** (with feedback). |
