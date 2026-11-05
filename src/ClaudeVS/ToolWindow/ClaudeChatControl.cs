@@ -299,7 +299,9 @@ namespace ClaudeVS.ToolWindow
             _inputBox.Background = ChatTheme.Subtle;
             _inputBox.MouseLeftButtonDown += (s, e) => _prompt.Focus(); // clicking the box's padding focuses the text
 
+            InitActivity();
             var bottom = new StackPanel { Margin = new Thickness(10, 4, 10, 10) };
+            bottom.Children.Add(_activity);
             bottom.Children.Add(_agentsPanel);
             bottom.Children.Add(_stall);
             bottom.Children.Add(_queuedPanel);
@@ -359,8 +361,10 @@ namespace ClaudeVS.ToolWindow
         private void SetBusy(bool busy)
         {
             if (busy && !_busy) System.Threading.Interlocked.Exchange(ref _lastOutputTicks, DateTime.UtcNow.Ticks); // the 60 s count starts now
+            bool wasBusy = _busy;
             _busy = busy;
             if (!busy) SetStalled(false);
+            OnBusyChangedActivity(busy, wasBusy);
             _send.Content = busy ? ChatTheme.IconStop : ChatTheme.IconSend;
             _send.ToolTip = busy ? "Stop" : "Send (Enter)";
             System.Windows.Automation.AutomationProperties.SetName(_send, busy ? "Stop" : "Send");
@@ -1756,6 +1760,7 @@ namespace ClaudeVS.ToolWindow
                         AppendError("[claude] ", ev.Text);
                         break;
                 }
+                OnActivityEvent(ev);
             }
         }
 
@@ -1863,8 +1868,7 @@ namespace ClaudeVS.ToolWindow
             if (m == null) return;
             _ctxBar.Value = Math.Min(100, m.ContextPercent);
             long window = m.ContextWindow > 0 ? m.ContextWindow : 200_000;
-            _meter.Text = $"Context {m.ContextPercent:0}% ({TokenMeter.Format(m.ContextTokens)}/{TokenMeter.Format(window)})  ·  "
-                        + $"Session {TokenMeter.Format(m.SessionTotal.Total)} tok, ${m.SessionCostUsd:0.00}  ·  Cache {m.CacheHitPercent:0}%  ·  Model {(_session?.CurrentModel.ToCli() ?? "-")}";
+            RenderMeter(m, window);
 
             var advice = m.GetAdvice().OrderByDescending(a => a.Level).FirstOrDefault();
             _advice.Text = advice == null ? "" : (advice.Level == AdviceLevel.Critical ? "⚠ " : "💡 ") + advice.Message;
@@ -1888,6 +1892,7 @@ namespace ClaudeVS.ToolWindow
                 ThreadHelper.ThrowIfNotOnUIThread();
                 if (session != _session || session == null) { Append("\n  (that conversation has ended; the answer was not sent)\n"); return; }
                 _waitingForUser = false;
+                RenderActivity();
                 System.Threading.Interlocked.Exchange(ref _lastOutputTicks, DateTime.UtcNow.Ticks);
                 Append($"  {note}\n");
                 Fire(() => session.RespondToPermissionAsync(ev.RequestId, input ?? ev.ToolInput ?? new JObject(), allow, denyMessage));
@@ -2007,6 +2012,7 @@ namespace ClaudeVS.ToolWindow
             _pendingPermission = null;
             _permission.Visibility = Visibility.Collapsed;
             _waitingForUser = false;
+            RenderActivity();
             System.Threading.Interlocked.Exchange(ref _lastOutputTicks, DateTime.UtcNow.Ticks);
             if (req == null || _session == null) return;
             Append(allow ? "  ✔ allowed\n" : "  ✖ denied\n");
@@ -2102,6 +2108,7 @@ namespace ClaudeVS.ToolWindow
             _queuedBubbles.Clear();
             RefreshQueuedPanel();
             _waitingForUser = false;
+            RenderActivity();
             SetStalled(false);
             ClearTasks(); // the process is gone (exit, new session), and its tasks with it
         }
@@ -2313,6 +2320,7 @@ namespace ClaudeVS.ToolWindow
             _stall.Visibility = stalled ? Visibility.Visible : Visibility.Collapsed;
             if (stalled) _stall.Text = $"⚠ Not responding: no output from Claude Code for {(int)quiet.TotalMinutes} min. A long command may still be running; Esc stops it.";
             if (stalled && !wasStalled) Announce("Claude Code is not responding. A long command may still be running. Press Escape in the prompt box to stop it.");
+            if (stalled != wasStalled) RenderActivity(); // the red notice replaces the activity strip
         }
 
         // ---------------- Bookmarks ----------------
