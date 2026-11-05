@@ -61,6 +61,8 @@ namespace ClaudeVS.ToolWindow
         private long _turnThinkingTokens;    // the CLI's estimates, summed over the turn
         private long _turnOutputChars;       // streamed answer text and tool input
         private DateTime _turnStartedUtc = DateTime.UtcNow;
+        private TimeSpan _turnThought;       // thinking time this turn, for "thought for 4s"
+        private DateTime? _thinkingSinceUtc; // set while Claude is thinking
         private Brush _activityColor;
 
         private void InitActivity()
@@ -109,6 +111,8 @@ namespace ClaudeVS.ToolWindow
             _phaseTool = _phaseText = null;
             _turnThinkingTokens = 0;
             _turnOutputChars = 0;
+            _turnThought = TimeSpan.Zero;
+            _thinkingSinceUtc = null;
             _turnVerb = Verbs[Rng.Next(Verbs.Length)];
             _activityTip.Text = "⎿  Tip: " + Tips[Rng.Next(Tips.Length)];
         }
@@ -147,6 +151,9 @@ namespace ClaudeVS.ToolWindow
                 default:
                     return;
             }
+            // Time spent thinking: from the first thinking event to the first event of anything else.
+            if (_phase == Phase.Thinking) { if (_thinkingSinceUtc == null) _thinkingSinceUtc = DateTime.UtcNow; }
+            else if (_thinkingSinceUtc is DateTime since) { _turnThought += DateTime.UtcNow - since; _thinkingSinceUtc = null; }
             RenderActivity();
         }
 
@@ -200,6 +207,9 @@ namespace ClaudeVS.ToolWindow
             long tokens = _turnThinkingTokens + _turnOutputChars / 4;
             if (tokens > 0) detail += " · ↓ " + TokenMeter.Format(tokens) + " tokens";
             if (what != null) detail += " · " + what;
+            // Like the terminal: once Claude has stopped thinking, how long it thought (explains a long pause).
+            if (phase != Phase.Thinking && _turnThought.TotalSeconds >= 1)
+                detail += " · thought for " + Core.Cli.ToolCallView.Duration(_turnThought);
 
             _activityLabel.Text = label;
             _activityDetail.Text = "(" + detail + ")";
