@@ -467,11 +467,11 @@ namespace ClaudeVS.ToolWindow
                 BorderThickness = new Thickness(0),
                 Background = Brushes.Transparent,
                 TextWrapping = TextWrapping.Wrap,
-                MaxHeight = 240,
-                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Disabled, // the whole input; the chat scrolls, not this box
                 Margin = new Thickness(16, 2, 0, 2),
             };
             body.SetResourceReference(Control.ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
+            ForwardMouseWheel(body);
             var bodyPanel = new StackPanel();
             bodyPanel.Children.Add(body);
             var expander = Collapsible(headerContent, bodyPanel, new Thickness(0, 1, 0, 1));
@@ -647,11 +647,11 @@ namespace ClaudeVS.ToolWindow
                     BorderThickness = new Thickness(0),
                     Background = Brushes.Transparent,
                     TextWrapping = TextWrapping.Wrap,
-                    MaxHeight = 320,
-                    VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                    VerticalScrollBarVisibility = ScrollBarVisibility.Disabled, // the whole output; the chat scrolls, not this box
                     Margin = new Thickness(16, 2, 0, 4),
                 };
                 output.SetResourceReference(Control.ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
+                ForwardMouseWheel(output);
                 row.Body.Children.Add(label);
                 row.Body.Children.Add(output);
             }

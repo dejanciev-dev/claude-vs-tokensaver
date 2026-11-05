@@ -30,8 +30,13 @@ namespace ClaudeVS.ToolWindow
         private readonly TextBox _permDetail = new TextBox
         {
             IsReadOnly = true, TextWrapping = TextWrapping.Wrap, BorderThickness = new Thickness(0), Background = Brushes.Transparent,
-            Padding = new Thickness(0), MaxHeight = 130, VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            Padding = new Thickness(0), VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
         };
+        /// <summary>"… +N lines" under a long command: no scroll box, so the card keeps its size and Allow / Deny stay in view.</summary>
+        private readonly TextBlock _permDetailToggle = new TextBlock { FontSize = 11.5, Margin = new Thickness(0, 3, 0, 0) };
+        private string _permFullDetail;
+        private const int PermPreviewLines = 6;  // shown before "… +N lines"
+        private const int PermMaxInPlace = 25;   // longer than this opens in the editor instead of growing the card
         private readonly Button _permAllow = ChatTheme.PrimaryButton("Allow", "Allow this once");
         private readonly Button _permAlways = ChatTheme.TextButton("Always allow");
         private readonly Button _permDeny = ChatTheme.TextButton("Deny", "Deny; Claude is told you said no");
@@ -47,7 +52,10 @@ namespace ClaudeVS.ToolWindow
             _permDetail.FontSize = 12;
             _permDetail.SetResourceReference(System.Windows.Controls.Primitives.TextBoxBase.CaretBrushProperty, Microsoft.VisualStudio.PlatformUI.EnvironmentColors.ToolWindowTextBrushKey);
             _permDetailBox.Background = ChatTheme.Subtle;
-            _permDetailBox.Child = _permDetail;
+            var detail = new StackPanel();
+            detail.Children.Add(_permDetail);
+            detail.Children.Add(_permDetailToggle);
+            _permDetailBox.Child = detail;
 
             _permAllow.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); AnswerPermission(true); };
             _permAlways.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); AnswerPermission(true, always: true); };
@@ -101,7 +109,7 @@ namespace ClaudeVS.ToolWindow
 
             _permDescription.Text = p.Description ?? "";
             _permDescription.Visibility = p.Description == null ? Visibility.Collapsed : Visibility.Visible;
-            _permDetail.Text = p.Detail ?? "";
+            SetPermissionDetail(p.Detail ?? "", expanded: false);
             if (p.DetailIsCode) _permDetail.FontFamily = new FontFamily("Cascadia Mono, Consolas");
             else _permDetail.SetResourceReference(Control.FontFamilyProperty, VsFonts.EnvironmentFontFamilyKey);
             if (!p.DetailIsCode) _permDetail.Foreground = a.Path;
@@ -123,6 +131,71 @@ namespace ClaudeVS.ToolWindow
             Announce($"Claude asks: {p.Title} {p.Description ?? p.Detail}. The Allow and Deny buttons are above the prompt box.", assertive: true);
         }
 
+        /// <summary>
+        /// The command or file in the card. A long one shows its first lines and "… +N lines": up to 25 lines open in
+        /// the card ("Show less" folds them back); a longer one (a heredoc writing a whole file) opens in the editor,
+        /// so the card never grows past the window and the buttons stay in view.
+        /// </summary>
+        private void SetPermissionDetail(string full, bool expanded)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            _permFullDetail = full;
+            var lines = full.TrimEnd().Split('\n');
+            _permDetailToggle.Inlines.Clear();
+            if (lines.Length <= PermPreviewLines + 2)
+            {
+                _permDetail.Text = full;
+                _permDetailToggle.Visibility = Visibility.Collapsed;
+                return;
+            }
+            _permDetailToggle.Visibility = Visibility.Visible;
+            int hidden = lines.Length - PermPreviewLines;
+            if (expanded)
+            {
+                _permDetail.Text = full;
+                _permDetailToggle.Inlines.Add(PermLink("Show less", "Fold the command back to its first lines", () => SetPermissionDetail(_permFullDetail, expanded: false)));
+            }
+            else
+            {
+                _permDetail.Text = string.Join("\n", lines, 0, PermPreviewLines).TrimEnd('\r');
+                if (lines.Length <= PermMaxInPlace)
+                    _permDetailToggle.Inlines.Add(PermLink($"… +{hidden} lines (click to see all)", "Show the whole command here", () => SetPermissionDetail(_permFullDetail, expanded: true)));
+                else
+                    _permDetailToggle.Inlines.Add(PermLink($"… +{hidden} lines (open the whole command in the editor)", "Too long for the card: opens it in a read-only editor tab", OpenPermissionDetailInEditor));
+            }
+        }
+
+        private System.Windows.Documents.Hyperlink PermLink(string text, string tip, Action onClick)
+        {
+            var link = new System.Windows.Documents.Hyperlink(new System.Windows.Documents.Run(text))
+            {
+                Foreground = ChatTheme.Accents(this).Link, ToolTip = tip, Cursor = Cursors.Hand, TextDecorations = null,
+            };
+            link.MouseEnter += (s, e) => link.TextDecorations = TextDecorations.Underline;
+            link.MouseLeave += (s, e) => link.TextDecorations = null;
+            link.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); onClick(); e.Handled = true; };
+            return link;
+        }
+
+        /// <summary>Writes the command to a temp file (.sh / .ps1 for syntax colors) and opens it in Visual Studio.</summary>
+        private void OpenPermissionDetailInEditor()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            try
+            {
+                string tool = _pendingPermission?.ToolName ?? "";
+                string ext = tool.Equals("Bash", StringComparison.OrdinalIgnoreCase) ? ".sh"
+                           : tool.Equals("PowerShell", StringComparison.OrdinalIgnoreCase) ? ".ps1" : ".txt";
+                string dir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ClaudeVS", "commands");
+                System.IO.Directory.CreateDirectory(dir);
+                string path = System.IO.Path.Combine(dir, "command-" + DateTime.Now.ToString("HHmmss") + ext);
+                System.IO.File.WriteAllText(path, _permFullDetail ?? "");
+                System.IO.File.SetAttributes(path, System.IO.FileAttributes.ReadOnly);
+                Commands.VsContext.OpenFile(path);
+            }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine("Open command failed: " + ex.Message); }
+        }
+
         /// <summary>Allow (once or always) or deny; a denial can carry what to do instead.</summary>
         private void AnswerPermission(bool allow, bool always = false, string feedback = null)
         {
@@ -139,8 +212,8 @@ namespace ClaudeVS.ToolWindow
 
             feedback = string.IsNullOrWhiteSpace(feedback) ? null : feedback.Trim();
             JArray rules = always ? prompt?.AlwaysAllow : null;
-            if (allow) Append(rules != null ? $"  ✔ allowed, and from now on: {string.Join(", ", prompt.AlwaysAllowRules)}\n" : "  ✔ allowed\n");
-            else Append(feedback != null ? $"  ✖ denied: {feedback}\n" : "  ✖ denied\n");
+            if (allow) Append(rules != null ? $"  ✔ Allowed, and from now on: {string.Join(", ", prompt.AlwaysAllowRules)}\n" : "  ✔ Allowed\n");
+            else Append(feedback != null ? $"  ✖ Denied: {feedback}\n" : "  ✖ Denied\n");
             string denyMessage = feedback != null ? "The user denied this and said what to do instead: " + feedback : null;
             var session = _session;
             Fire(() => session.RespondToPermissionAsync(req.RequestId, req.ToolInput ?? new JObject(), allow, denyMessage, rules));
