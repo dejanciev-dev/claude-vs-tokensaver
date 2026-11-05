@@ -858,6 +858,19 @@ namespace ClaudeVS.Core.Tests
             Eq("ls && cd \"C:/r\" && ls", ToolCallView.WithoutCdToBase("ls && cd \"C:/r\" && ls", "C:/r"), "only at the start");
             Eq("cd \"C:/r\" && ls", ToolCallView.WithoutCdToBase("cd \"C:/r\" && ls", null), "no working folder");
 
+            Eq("Read 3 files, searched for 2 patterns", ToolCallView.LookSummary(3, 2, false), "reads and searches");
+            Eq("Read 1 file", ToolCallView.LookSummary(1, 0, false), "one file");
+            Eq("Searched for 1 pattern", ToolCallView.LookSummary(0, 1, false), "searches only");
+            Eq("Reading 2 files, searching for 1 pattern…", ToolCallView.LookSummary(2, 1, true), "still running");
+            True(ToolCallView.IsLookTool("Grep") && !ToolCallView.IsLookTool("Bash"), "look tools");
+
+            Eq("(timeout 10m)", ToolCallView.RunNote("Bash", new JObject { ["command"] = "x", ["timeout"] = 600000 }), "timeout in minutes");
+            Eq("(timeout 2m 30s, running in the background)", ToolCallView.RunNote("PowerShell", new JObject { ["timeout"] = 150000, ["run_in_background"] = true }), "timeout and background");
+            Eq(null, ToolCallView.RunNote("Bash", new JObject { ["command"] = "x" }), "defaults: no note");
+            Eq(null, ToolCallView.RunNote("Read", new JObject { ["timeout"] = 5000 }), "only shell tools");
+            Eq("45s", ToolCallView.Duration(TimeSpan.FromSeconds(45)), "seconds");
+            Eq("1h 30m", ToolCallView.Duration(TimeSpan.FromMinutes(90)), "hours");
+
             var bash = ToolCallView.Summarize("Bash", "l1\nl2\nl3\nl4\nl5\n", false);
             Eq("l1|l2|l3", string.Join("|", bash.Lines), "first three lines");
             Eq(2, bash.MoreLines, "… +2 lines");
