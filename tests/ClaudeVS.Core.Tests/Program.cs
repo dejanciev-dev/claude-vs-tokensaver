@@ -869,6 +869,39 @@ namespace ClaudeVS.Core.Tests
             Eq("ls && cd \"C:/r\" && ls", ToolCallView.WithoutCdToBase("ls && cd \"C:/r\" && ls", "C:/r"), "only at the start");
             Eq("cd \"C:/r\" && ls", ToolCallView.WithoutCdToBase("cd \"C:/r\" && ls", null), "no working folder");
 
+            Eq("Read 2 files, ran 3 read-only commands", ToolCallView.LookSummary(2, 0, false, 3), "with read-only commands");
+            Eq("Running 1 read-only command…", ToolCallView.LookSummary(0, 0, true, 1), "a command running");
+
+            // From a real session: Claude reading with the shell.
+            True(ToolCallView.IsReadOnlyCommand("git ls-files | head -50 && cat README.md | head -80"), "ls-files, cat, head");
+            True(ToolCallView.IsReadOnlyCommand("sed -n 80,140p README.md; git ls-files | tail -30; cat src/LinqSamples/Samples/BatchingSamples.cs"), "sed -n");
+            True(ToolCallView.IsReadOnlyCommand("cat tests/A.cs | head -40; grep -n \"Log\\|45\" tests/A.cs"), "grep with a quoted |");
+            True(ToolCallView.IsReadOnlyCommand("cd \"C:/r\" && git log --oneline -5 2>&1"), "cd, git log, 2>&1");
+            True(ToolCallView.IsReadOnlyCommand("git -C src status --short"), "git -C");
+            True(ToolCallView.IsReadOnlyCommand("git branch --show-current"), "git branch listing");
+            True(ToolCallView.IsReadOnlyCommand("find . -name '*.cs' 2>/dev/null | wc -l"), "find, /dev/null");
+            True(ToolCallView.IsReadOnlyCommand("Get-ChildItem src | Select-Object Name"), "PowerShell listing");
+            True(ToolCallView.IsReadOnlyCommand("grep -rn 'a > b' src"), "> inside quotes");
+
+            True(!ToolCallView.IsReadOnlyCommand("cat a.cs > b.cs"), "redirect into a file");
+            True(!ToolCallView.IsReadOnlyCommand("echo hi >> log.txt"), "append into a file");
+            True(!ToolCallView.IsReadOnlyCommand("sed -i 's/a/b/' x.cs"), "sed -i");
+            True(!ToolCallView.IsReadOnlyCommand("sed -ni 's/a/b/p' x.cs"), "sed -ni");
+            True(!ToolCallView.IsReadOnlyCommand("cat > f.cs <<'EOF'"), "heredoc");
+            True(!ToolCallView.IsReadOnlyCommand("ls && rm -rf bin"), "rm after ls");
+            True(!ToolCallView.IsReadOnlyCommand("git ls-files | xargs rm"), "xargs");
+            True(!ToolCallView.IsReadOnlyCommand("git checkout -b x"), "git checkout");
+            True(!ToolCallView.IsReadOnlyCommand("git branch -D x"), "git branch -D");
+            True(!ToolCallView.IsReadOnlyCommand("find . -name '*.tmp' -delete"), "find -delete");
+            True(!ToolCallView.IsReadOnlyCommand("find . -exec rm {} ;"), "find -exec");
+            True(!ToolCallView.IsReadOnlyCommand("cat $(ls)"), "command substitution");
+            True(!ToolCallView.IsReadOnlyCommand("echo \"`whoami`\""), "backticks in double quotes");
+            True(!ToolCallView.IsReadOnlyCommand("S=src && cat $S/a.cs"), "variable assignment");
+            True(!ToolCallView.IsReadOnlyCommand("dotnet test"), "a build tool");
+            True(!ToolCallView.IsReadOnlyCommand("sleep 5 &"), "background job");
+            True(!ToolCallView.IsReadOnlyCommand("cat a\nrm b"), "two lines");
+            True(!ToolCallView.IsReadOnlyCommand("cat 'unclosed"), "unclosed quote");
+
             Eq("Read 3 files, searched for 2 patterns", ToolCallView.LookSummary(3, 2, false), "reads and searches");
             Eq("Read 1 file", ToolCallView.LookSummary(1, 0, false), "one file");
             Eq("Searched for 1 pattern", ToolCallView.LookSummary(0, 1, false), "searches only");

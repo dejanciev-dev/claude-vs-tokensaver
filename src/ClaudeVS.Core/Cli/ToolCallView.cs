@@ -68,20 +68,127 @@ namespace ClaudeVS.Core.Cli
         public static bool IsLookTool(string toolName) => toolName == "Read" || toolName == "Grep" || toolName == "Glob";
 
         /// <summary>
-        /// The folded row's text, like the terminal: "Read 3 files, searched for 2 patterns", or while one is still
-        /// running "Reading 3 files, searching for 2 patterns…".
+        /// The folded row's text, like the terminal: "Read 3 files, searched for 2 patterns, ran 1 read-only
+        /// command", or while one is still running "Reading 3 files, searching for 2 patterns…".
         /// </summary>
-        public static string LookSummary(int reads, int searches, bool running)
+        public static string LookSummary(int reads, int searches, bool running, int commands = 0)
         {
             var parts = new List<string>();
             if (reads > 0) parts.Add((running ? "reading " : "read ") + Count(reads, "file"));
             if (searches > 0) parts.Add((running ? "searching for " : "searched for ") + Count(searches, "pattern"));
+            if (commands > 0) parts.Add((running ? "running " : "ran ") + Count(commands, "read-only command"));
             if (parts.Count == 0) return "";
             string s = string.Join(", ", parts);
             return char.ToUpperInvariant(s[0]) + s.Substring(1) + (running ? "…" : "");
         }
 
         private static string Count(int n, string noun) => n == 1 ? $"1 {noun}" : $"{n} {noun}s";
+
+        // Programs that only read. git and find are checked further below; sed only without -i; awk, xargs, env
+        // and anything else that can run another program are left out on purpose.
+        private static readonly HashSet<string> ReadOnlyPrograms = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "cat", "head", "tail", "ls", "dir", "grep", "egrep", "rg", "wc", "sed", "sort", "uniq", "cut", "tr", "nl",
+            "pwd", "echo", "tree", "file", "stat", "du", "which", "basename", "dirname", "realpath", "cd", "find", "git",
+            "type", "Get-Content", "gc", "Select-String", "sls", "Get-ChildItem", "gci", "Get-Item", "Get-Location",
+            "Resolve-Path", "Test-Path", "Measure-Object", "Select-Object", "Sort-Object", "Format-Table",
+        };
+        private static readonly HashSet<string> ReadOnlyGit = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "ls-files", "log", "status", "diff", "show", "grep", "rev-parse", "blame", "shortlog", "describe", "ls-tree", "cat-file",
+        };
+        private static readonly HashSet<string> ReadOnlyGitBranchFlags = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "-a", "-r", "-v", "-vv", "--all", "--list", "--show-current", "--remotes", "--no-color",
+        };
+
+        /// <summary>
+        /// True when every part of a shell command only reads: <c>cat</c>, <c>head</c>, <c>sed -n</c>, <c>grep</c>,
+        /// <c>git log</c>… joined by <c>&amp;&amp;</c>, <c>;</c> or <c>|</c>. No redirect into a file (only
+        /// <c>2&gt;&amp;1</c> and <c>/dev/null</c>), no <c>$( )</c> or backticks, no heredoc, no variable assignment,
+        /// no <c>sed -i</c> or <c>find -exec</c>. When unsure it says no, so the command keeps its own row.
+        /// </summary>
+        public static bool IsReadOnlyCommand(string command)
+        {
+            if (string.IsNullOrWhiteSpace(command) || command.IndexOf('\n') >= 0 || command.Length > 2000) return false;
+            var segments = new List<List<string>>();
+            var words = new List<string>();
+            var word = new System.Text.StringBuilder();
+            bool inWord = false;
+            char quote = '\0';
+            void EndWord() { if (inWord) { words.Add(word.ToString()); word.Clear(); inWord = false; } }
+            void EndSegment() { EndWord(); if (words.Count > 0) { segments.Add(words); words = new List<string>(); } }
+
+            for (int i = 0; i < command.Length; i++)
+            {
+                char c = command[i];
+                if (quote == '\'') { if (c == '\'') quote = '\0'; else word.Append(c); continue; }
+                if (c == '`' || (c == '$' && i + 1 < command.Length && command[i + 1] == '(')) return false; // runs a command
+                if (quote == '"') { if (c == '"') quote = '\0'; else word.Append(c); continue; }
+                switch (c)
+                {
+                    case '\'': case '"': quote = c; inWord = true; break;
+                    case ' ': case '\t': EndWord(); break;
+                    case ';': EndSegment(); break;
+                    case '|': EndSegment(); if (i + 1 < command.Length && command[i + 1] == '|') i++; break;
+                    case '&':
+                        if (i + 1 < command.Length && command[i + 1] == '&') { EndSegment(); i++; break; }
+                        if (i + 1 < command.Length && command[i + 1] == '>') break; // &>/dev/null, checked at '>'
+                        return false; // a background job
+                    case '<': return false; // heredoc or input redirect
+                    case '(': case ')': case '{': case '}': return false; // subshells and blocks
+                    case '>':
+                    {
+                        // Only into nothing: 2>&1, >/dev/null, 2> $null.
+                        if (inWord && word.ToString() is string fd && (fd == "1" || fd == "2")) { word.Clear(); inWord = false; }
+                        int j = i + 1;
+                        if (j < command.Length && command[j] == '>') j++;
+                        if (j + 1 < command.Length && command[j] == '&' && char.IsDigit(command[j + 1])) { i = j + 1; break; }
+                        while (j < command.Length && command[j] == ' ') j++;
+                        int start = j;
+                        while (j < command.Length && command[j] != ' ' && command[j] != ';' && command[j] != '|' && command[j] != '&') j++;
+                        string target = command.Substring(start, j - start);
+                        if (!target.Equals("/dev/null", StringComparison.Ordinal) && !target.Equals("$null", StringComparison.OrdinalIgnoreCase) && !target.Equals("nul", StringComparison.OrdinalIgnoreCase)) return false;
+                        i = j - 1;
+                        break;
+                    }
+                    default: word.Append(c); inWord = true; break;
+                }
+            }
+            if (quote != '\0') return false;
+            EndSegment();
+            if (segments.Count == 0) return false;
+            return segments.All(IsReadOnlySegment);
+        }
+
+        private static bool IsReadOnlySegment(List<string> w)
+        {
+            string program = w[0];
+            if (program.IndexOf('=') >= 0 || !ReadOnlyPrograms.Contains(program)) return false;
+            var args = w.Skip(1).ToList();
+            switch (program.ToLowerInvariant())
+            {
+                case "sed":
+                    return !args.Any(a => a.StartsWith("-i", StringComparison.Ordinal) || a.StartsWith("--in-place", StringComparison.Ordinal)
+                                          || (a.StartsWith("-", StringComparison.Ordinal) && !a.StartsWith("--", StringComparison.Ordinal) && a.IndexOf('i') > 0));
+                case "find":
+                    return !args.Any(a => a == "-exec" || a == "-execdir" || a == "-ok" || a == "-okdir" || a == "-delete" || a.StartsWith("-fprint", StringComparison.Ordinal) || a == "-fls");
+                case "git":
+                {
+                    // Skip global options like -C dir, --no-pager.
+                    int k = 0;
+                    while (k < args.Count && args[k].StartsWith("-", StringComparison.Ordinal)) k += args[k] == "-C" || args[k] == "-c" ? 2 : 1;
+                    if (k >= args.Count) return false;
+                    string sub = args[k];
+                    var rest = args.Skip(k + 1).ToList();
+                    if (sub == "branch") return rest.All(ReadOnlyGitBranchFlags.Contains);
+                    if (!ReadOnlyGit.Contains(sub)) return false;
+                    return !rest.Any(a => a.StartsWith("--output", StringComparison.Ordinal));
+                }
+                default:
+                    return true;
+            }
+        }
 
         /// <summary>
         /// The muted line under a shell command when Claude set how it runs: "(timeout 10m)", "(running in the
