@@ -77,7 +77,8 @@ namespace ClaudeVS.Core.Tokens
             "across the solution", "whole solution", "entire solution", "all projects", "end-to-end", "plan");
 
         private static readonly Regex[] Medium = Keywords(
-            "implement*", "add a", "add an", "creat*", "write test", "unit test", "fix", "bug", "endpoint", "controller",
+            "implement*", "add", "updat*", "extend*", "chang*", "modif*", "improv*", "enhanc*",
+            "creat*", "write test", "unit test", "fix", "bug", "endpoint", "controller",
             "component", "service", "repositor*", "query", "stored procedure", "migration script", "error", "exception");
 
         private static readonly Regex[] Easy = Keywords(
@@ -111,7 +112,9 @@ namespace ClaudeVS.Core.Tokens
             int len = p.Length;
             if (len > 1500) { score += 2; reasons.Add("long prompt"); }
             else if (len > 500) { score += 1; }
-            else if (len < 80) { score -= 1; reasons.Add("short prompt"); }
+            // Short is only a sign of an easy task when it asks for no change: "add more samples and update the
+            // existing ones" is short but means writing code in several files.
+            else if (len < 80 && hard == 0 && med == 0) { score -= 1; reasons.Add("short prompt"); }
 
             int files = FilePath.Matches(r.Prompt ?? "").Count + r.AttachedFiles;
             if (files >= 4) { score += 2; reasons.Add($"{files} files"); }
