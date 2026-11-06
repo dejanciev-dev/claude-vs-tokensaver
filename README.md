@@ -362,7 +362,6 @@ msbuild ClaudeVS.sln /restore /p:Configuration=Release /warnaserror     # → sr
   an earlier session (after a resume) has not been verified yet; if the CLI has no checkpoint for it, the chat says so.
 - **Write diffs** compare against a copy taken when the tool call arrives. If the CLI writes faster, the diff can look
   empty until the result comes in; with Claude Code 2.1.319 the result carries the CLI's own copy and the diff is redrawn from it.
-- Several answers to one multi-select question are sent joined with ", ". That format is not verified against the CLI yet.
 - The output-trimming hook (`trim-output.ps1`) assumes Windows PowerShell. Claude Code under WSL would need a bash version.
 - No Marketplace release yet.
 

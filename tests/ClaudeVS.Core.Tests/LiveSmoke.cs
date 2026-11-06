@@ -435,13 +435,14 @@ namespace ClaudeVS.Core.Tests
                         Console.WriteLine($"  permission request: {e.ToolName} (request {e.RequestId})");
                         Console.WriteLine("    input: " + e.ToolInput?.ToString(Newtonsoft.Json.Formatting.None));
                         var answer = (Newtonsoft.Json.Linq.JObject)(e.ToolInput?.DeepClone() ?? new Newtonsoft.Json.Linq.JObject());
-                        if (e.ToolName == "AskUserQuestion" && answer["questions"] is Newtonsoft.Json.Linq.JArray qs)
+                        if (e.ToolName == AskUserQuestionTool.Name)
                         {
-                            var answers = new Newtonsoft.Json.Linq.JObject();
-                            foreach (var q in qs.OfType<Newtonsoft.Json.Linq.JObject>())
-                                answers[(string)q["question"]] = (string)q["options"]?.First?["label"];
-                            answer["answers"] = answers;
-                            Console.WriteLine("    answering: " + answers.ToString(Newtonsoft.Json.Formatting.None));
+                            // Through the extension's own answer builder: the first option, or the first two of a
+                            // multi-select question (sent joined with ", ").
+                            var chosen = AskUserQuestionTool.Parse(e.ToolInput).ToDictionary(q => q.Text,
+                                q => (IReadOnlyList<string>)q.Options.Take(q.MultiSelect ? 2 : 1).Select(o => o.Label).ToList());
+                            answer = AskUserQuestionTool.BuildAnswer(e.ToolInput, chosen);
+                            Console.WriteLine("    answering: " + answer["answers"]?.ToString(Newtonsoft.Json.Formatting.None));
                         }
                         session.RespondToPermissionAsync(e.RequestId, answer, allow: true).GetAwaiter().GetResult();
                     }

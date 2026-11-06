@@ -51,7 +51,8 @@ namespace ClaudeVS.Core.Cli
 
         /// <summary>
         /// The updatedInput for an "allow" response: the original input plus an answers map. Several choices for a
-        /// multi-select question are joined with ", ". Unanswered questions are left out.
+        /// multi-select question are joined with ", " (verified with 2.1.319: Claude got "Apple, Banana" and named both).
+        /// Unanswered questions are left out.
         /// </summary>
         public static JObject BuildAnswer(JObject input, IDictionary<string, IReadOnlyList<string>> chosen)
         {
