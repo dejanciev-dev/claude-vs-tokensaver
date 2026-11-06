@@ -268,6 +268,8 @@ All notable changes to this project are listed here. The format follows
   repeated reads, command output floods, heavy MCP tools / memory / skills, costly output style, cold cache on
   resume) and the prompt cache line; they then go to the Output pane only. Billing, MCP server and permission
   mode notes always show.
+- **Thinking in the savings report**: the usage log records each turn's thinking tokens (`thinking`), and the
+  report adds `Thinking: 300k tokens ≈ $3.00 (60% of output tokens; …)`, priced at each turn's output price.
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.

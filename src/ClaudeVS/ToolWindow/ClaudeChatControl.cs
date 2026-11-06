@@ -1873,6 +1873,7 @@ namespace ClaudeVS.ToolWindow
             rec.ModelUsed = modelUsed;
             rec.InputTokens = ev.Usage.Input;
             rec.OutputTokens = ev.Usage.Output;
+            rec.ThinkingTokens = ev.Usage.Thinking;
             rec.CacheReadTokens = ev.Usage.CacheRead;
             rec.CacheWriteTokens = ev.Usage.CacheCreation;
             rec.CostUsd = _meterModel?.LastTurnCostUsd ?? 0;

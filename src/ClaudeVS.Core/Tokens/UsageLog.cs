@@ -47,6 +47,8 @@ namespace ClaudeVS.Core.Tokens
         [JsonProperty("out")] public long OutputTokens { get; set; }
         [JsonProperty("cacheRead")] public long CacheReadTokens { get; set; }
         [JsonProperty("cacheWrite")] public long CacheWriteTokens { get; set; }
+        /// <summary>Of <see cref="OutputTokens"/>: thinking (Claude Code 2.1.319 reports it); 0 in older lines.</summary>
+        [JsonProperty("thinking", DefaultValueHandling = DefaultValueHandling.Ignore)] public long ThinkingTokens { get; set; }
         [JsonProperty("cost")] public double CostUsd { get; set; }
         [JsonProperty("ms")] public long DurationMs { get; set; }
         [JsonProperty("error")] public bool IsError { get; set; }
