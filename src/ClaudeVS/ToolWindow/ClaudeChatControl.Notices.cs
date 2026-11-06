@@ -54,7 +54,25 @@ namespace ClaudeVS.ToolWindow
             if (important) Announce(text);
         }
 
+        // The large-read tip is given once per conversation, whichever file it was.
+        private bool _gaveLargeReadTip;
+
+        /// <summary>After a Read: the token tip when Claude read all of a large file.</summary>
+        private void LargeReadTip(ClaudeEvent ev)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (_gaveLargeReadTip || !(ev.ResultData is JObject data)) return;
+            string tip = SessionNotices.WholeFileRead(data, ev.ResultChars);
+            if (tip == null) return;
+            _gaveLargeReadTip = true;
+            Notice(tip);
+        }
+
         /// <summary>A new conversation: notes may be said again.</summary>
-        private void ResetNotices() => _saidNotices.Clear();
+        private void ResetNotices()
+        {
+            _saidNotices.Clear();
+            _gaveLargeReadTip = false;
+        }
     }
 }

@@ -228,6 +228,9 @@ All notable changes to this project are listed here. The format follows
     your settings' default mode applies and the picker follows it quietly.
   - **Output style**: with Explanatory or Learning on, every answer carries more explanation and costs more
     output tokens; the note says so and points to / → Output style… (Concise uses the fewest).
+  - **Whole large file read** (a token tip, once per conversation): when Claude reads all of a large file
+    (~8k tokens or more), the chat says what it costs, since it goes with every request from then on, and
+    suggests naming the method or lines you mean. A subagent's reads don't count (they stay out of this context).
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.

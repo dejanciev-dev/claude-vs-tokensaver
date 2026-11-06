@@ -279,7 +279,8 @@ Output pane).
       Checked on a process's first init only (approving a plan leaves plan mode on purpose); the picker follows
 - [x] **Output style that adds tokens**: Explanatory and Learning add explanation to every answer (`output_style`;
       Concise and custom styles get no note)
-- [ ] **Whole large file read**: a tip, once, when Claude reads all of a large file
+- [x] **Whole large file read**: a tip, once per conversation, when Claude reads all of a large file (Read's
+      `numLines == totalLines` from line 1, ≥ 8k tokens); tool results now know their subagent (`parent_tool_use_id`)
 - [ ] **Commands that print nothing by design**: Bash `noOutputExpected` → "Done" instead of "(No output)"
 
 ---
