@@ -103,7 +103,7 @@ This extension attacks all three, and shows the numbers so you can see the effec
 | **Claude Code dialogs** | `/` → *Claude Code*: **Status**, **Account & usage** (plan, every usage limit with its reset time, this session's cost), **Memory & instructions** (CLAUDE.md files and saved memories, with what each costs per request; click to open or create), **Output style** (switch for this project), **Permission rules** and **Hooks** (with the settings file each comes from). Read from Claude Code with no model call. |
 | **Screen readers** | Announcements through a UIA live region when Claude finishes (with the start of the answer), asks for permission, has a question or a plan, wants an edit reviewed, stops responding, or hits a usage limit. **Focus last message** (`Ctrl+Alt+K, M`) puts the keyboard at the start of Claude's last answer; `Esc` returns to the prompt box. |
 | **Several chat windows** | Each window has its own conversation, meter and model. |
-| **Prompt box helpers** | `Ctrl+Up/Down` prompt history; `/` lists commands, including your own `.claude/commands`; `@` picks a file. |
+| **Prompt box helpers** | `Ctrl+Up/Down` prompt history; `/` lists commands, including your own `.claude/commands` and your skills (project, user and plugin skills, as Claude Code reports them; picking one puts it in the box for its arguments); `@` picks a file. |
 | **Diagnostics** | An **Output → Claude Code** pane with route decisions, errors and plain-language hints (not logged in, sign-in expired, answer cut off at the output limit, rate limited, context too long…), plus optional raw CLI traffic. If Claude Code is older than 2.1.318, the chat says so once. |
 
 ## How it works

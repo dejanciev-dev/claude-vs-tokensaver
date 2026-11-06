@@ -252,6 +252,8 @@ Tool-result messages carry more than the text Claude sees: `tool_use_result` (th
 - [x] **Exact ⎿ lines for Read, Glob and Grep** from `tool_use_result`: Read's `file.numLines/startLine/
       totalLines` ("Read 20 of 301 lines (from line 10)"), Glob's and Grep's `numFiles` ("Found 2 files"), Grep
       content's `numLines`. Capture: `Fixtures/cli-2.1.319-tool-data.jsonl`
+- [x] **Skills in the `/` menu**: names in both `skills` and `slash_commands` of `init` (runnable by you; built-in
+      terminal commands and Claude-only skills stay out). Verified that a project skill runs from stream-json
 
 ---
 

@@ -1248,6 +1248,32 @@ namespace ClaudeVS.Core.Tests
             Eq(null, new ClaudeStreamParser().Parse("{\"type\":\"result\",\"subtype\":\"success\",\"result\":\"hi\"}").Single().TerminalReason, "older CLIs");
         }
 
+        // ---------- Skills in the / menu ----------
+        /// <summary>
+        /// init from Claude Code 2.1.319 (lists trimmed): skills and slash_commands. A project skill sent as
+        /// "/hello-check banana" over stream-json ran and answered "SKILL-RAN-banana".
+        /// </summary>
+        private static void Test_Skills_FromInit_2_1_319()
+        {
+            var init = new ClaudeStreamParser().Parse("{\"type\":\"system\",\"subtype\":\"init\",\"session_id\":\"s\",\"model\":\"claude-haiku-5-5\",\"claude_code_version\":\"2.1.319\","
+                + "\"slash_commands\":[\"hello-check\",\"simplify\",\"compact\",\"context\",\"anthropic-skills:pdf\",\"review\"],"
+                + "\"skills\":[\"hello-check\",\"simplify\",\"anthropic-skills:pdf\",\"claude-only\"],"
+                + "\"terminal_slash_commands\":[\"doctor\"]}").Single();
+            Eq(4, init.Skills.Count, "skills");
+            Eq(6, init.SlashCommands.Count, "slash_commands");
+
+            var files = new List<SlashCommand>(SlashCommands.BuiltIn) { new SlashCommand { Name = "review", Source = "project", Description = "ours" } };
+            var all = SlashCommands.WithSkills(files, init.Skills, init.SlashCommands);
+            var skills = all.Where(c => c.Source == "skill").Select(c => c.Name).ToList();
+            Eq("hello-check|simplify|anthropic-skills:pdf", string.Join("|", skills), "runnable skills, in order");
+            True(!all.Any(c => c.Name == "context"), "built-in commands that are not skills stay out");
+            True(!all.Any(c => c.Name == "claude-only"), "a skill only Claude can run stays out");
+            Eq("project", all.Single(c => c.Name == "review").Source, "your own command wins");
+            Eq("from plugin anthropic-skills", all.Single(c => c.Name == "anthropic-skills:pdf").Description, "plugin named");
+            Eq("hello-check", SlashCommands.Match(all, "/hel").Single().Name, "autocomplete finds skills");
+            Eq(files.Count, SlashCommands.WithSkills(files, null, null).Count, "older CLIs: unchanged");
+        }
+
         // ---------- Sign-in expiry ----------
         private static void Test_SignInExpiry_FromRealResult_2_1_318()
         {
