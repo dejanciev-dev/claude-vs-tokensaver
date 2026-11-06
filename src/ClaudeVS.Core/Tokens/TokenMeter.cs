@@ -46,6 +46,8 @@ namespace ClaudeVS.Core.Tokens
         public int LargestToolResultChars { get; private set; }
         public string LargestToolResultTool { get; private set; }
         public int CompactionsSaved { get; private set; }
+        /// <summary>How long the conversation stays in the prompt cache (from the main agent's requests).</summary>
+        public CacheWindow Cache { get; } = new CacheWindow();
 
         public double ContextPercent => (ContextWindow > 0 ? ContextWindow : _s.DefaultContextWindow) == 0 ? 0
             : 100.0 * ContextTokens / (ContextWindow > 0 ? ContextWindow : _s.DefaultContextWindow);
@@ -67,6 +69,7 @@ namespace ClaudeVS.Core.Tokens
             SessionTotal = default; LastTurn = default; ContextTokens = 0; ContextWindow = 0; Turns = 0;
             _costOffset = 0; _lastReportedCost = 0; LastTurnCostUsd = 0; LargestToolResultChars = 0; LargestToolResultTool = null;
             _toolNames.Clear();
+            Cache.Reset();
             Changed?.Invoke(this, EventArgs.Empty);
         }
 
@@ -75,6 +78,7 @@ namespace ClaudeVS.Core.Tokens
             switch (ev.Kind)
             {
                 case ClaudeEventKind.AssistantUsage when !ev.IsSubagent:
+                    Cache.Use(ev.Usage, DateTime.UtcNow);
                     ContextTokens = ev.Usage.ContextTokens; // live update while a long turn runs
                     break;
                 case ClaudeEventKind.ToolUse:

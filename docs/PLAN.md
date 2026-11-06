@@ -287,6 +287,20 @@ Output pane).
 
 ---
 
+## Phase 12 — More token tips
+
+Help that saves tokens, from what the extension already sees (usage, tool calls, results).
+
+- [x] **Prompt cache timer**: usage says whether the cache was written for 5 minutes or 1 hour
+      (`cache_creation.ephemeral_1h_input_tokens`; 2.1.319 on a claude.ai plan used 1 hour), and each request keeps
+      it again. While idle, a line under the meter says when a 1-hour cache is about to expire, then that it has, with
+      what the next prompt costs
+- [ ] **Repeated read**: Claude reads a file again that it already has, with no change in between
+- [ ] **Large command output**: point to the output-trimming hook when it is not installed
+- [ ] **Conversation cost warning**: an option to be told once when a conversation passes an amount
+
+---
+
 ## Working in Visual Studio — daily loop
 
 1. Core logic change → edit in `ClaudeVS.Core` → run tests (`ClaudeVS.Core.Tests` → Set as Startup → Ctrl+F5, or `dotnet run` in its folder).

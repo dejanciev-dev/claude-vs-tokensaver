@@ -1399,6 +1399,50 @@ namespace ClaudeVS.Core.Tests
             True(fork.All(e => !e.IsSubagent), "the Agent call's own result belongs to the main agent");
         }
 
+        // ---------- Prompt cache window ----------
+        private static void Test_CacheWindow_FromRealUsage_2_1_319()
+        {
+            // The real 2.1.319 thinking turn: Claude Code wrote the cache with the 1-hour lifetime.
+            var events = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.319-thinking-duration.jsonl"))
+                .SelectMany(l => new ClaudeStreamParser().Parse(l)).ToList();
+            var usage = events.Last(e => e.Kind == ClaudeEventKind.AssistantUsage && !e.IsSubagent).Usage;
+            True(usage.CacheCreation1h > 0 || usage.CacheRead > 0, "cache used");
+            var cache = new CacheWindow();
+            var t0 = new DateTime(2026, 11, 6, 12, 0, 0, DateTimeKind.Utc);
+            cache.Use(usage, t0);
+            if (usage.CacheCreation1h > 0) Eq(CacheWindow.Long, cache.Lifetime, "1-hour cache");
+        }
+
+        private static void Test_CacheWindow_Notes()
+        {
+            var t0 = new DateTime(2026, 11, 6, 12, 0, 0, DateTimeKind.Utc);
+            var big = new TokenUsage { Input = 10, CacheRead = 38_000, CacheCreation = 2_000, CacheCreation1h = 2_000, Output = 100 };
+            var cache = new CacheWindow();
+            Eq(null, cache.Status(t0), "nothing cached yet");
+            cache.Use(big, t0);
+            Eq("Prompt cache: warm for 60 more min (1-hour cache).", cache.Status(t0));
+            Eq(null, cache.SoonNote(t0.AddMinutes(50)), "not yet");
+            Eq("Prompt cache expires in 4 min: after that the next prompt sends ~40.0k tokens at the full input price.", cache.SoonNote(t0.AddMinutes(56)), "soon");
+            Eq(null, cache.ExpiredNote(t0.AddMinutes(59)), "still warm");
+            True(cache.ExpiredNote(t0.AddMinutes(61))?.StartsWith("Prompt cache expired (idle over an hour): the next prompt sends ~40.0k tokens") == true, cache.ExpiredNote(t0.AddMinutes(61)));
+            cache.Use(new TokenUsage { CacheRead = 40_000 }, t0.AddMinutes(30)); // a read keeps it again
+            Eq(null, cache.ExpiredNote(t0.AddMinutes(61)), "refreshed by a later request");
+
+            var shortCache = new CacheWindow();
+            shortCache.Use(new TokenUsage { CacheCreation = 20_000, CacheCreation5m = 20_000 }, t0);
+            Eq(CacheWindow.Short, shortCache.Lifetime);
+            Eq(null, shortCache.SoonNote(t0.AddMinutes(3)), "a 5-minute cache gets no 'soon' note");
+            True(shortCache.ExpiredNote(t0.AddMinutes(6))?.Contains("idle over 5 minutes") == true, "5-minute expiry");
+
+            var small = new CacheWindow();
+            small.Use(new TokenUsage { CacheCreation = 3_000, CacheCreation1h = 3_000 }, t0);
+            Eq(null, small.ExpiredNote(t0.AddHours(2)), "small context: not worth a note");
+
+            var u = TokenUsage.From(JObject.Parse("{\"input_tokens\":4,\"cache_creation_input_tokens\":462,\"cache_read_input_tokens\":23917,\"cache_creation\":{\"ephemeral_5m_input_tokens\":0,\"ephemeral_1h_input_tokens\":462}}"));
+            Eq(462L, u.CacheCreation1h, "parsed 1h");
+            Eq(0L, u.CacheCreation5m, "parsed 5m");
+        }
+
         // ---------- Sign-in expiry ----------
         private static void Test_SignInExpiry_FromRealResult_2_1_318()
         {
