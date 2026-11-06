@@ -310,7 +310,8 @@ Help that saves tokens, from what the extension already sees (usage, tool calls,
 - [x] **Cache share in the footer**: `· 94% cached`, the turn's input served from the prompt cache (from 1k input tokens)
 - [x] **Prompt size**: the input box shows `~N tokens` for a long prompt; a huge paste suggests a file reference
       (from 1k / 8k tokens, on the route line under the input box)
-- [ ] **Base context tip**: MCP tools or memory files that take a big slice of every request
+- [x] **Base context tip**: MCP tools or memory files that take a big slice of every request (from
+      `get_context_usage`: MCP tools / memory files ≥ 5k, skill listings ≥ 10k; the biggest, with where to cut it)
 - [ ] **Copy session summary**: `/` → tokens, cost, cache, turns as text
 - [ ] **File sizes in the `@` picker**: each file's size in tokens
 - [ ] **Resume note**: a session idle past its cache lifetime sends everything at full price on the next prompt

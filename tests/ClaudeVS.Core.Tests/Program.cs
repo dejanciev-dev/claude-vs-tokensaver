@@ -1520,6 +1520,23 @@ namespace ClaudeVS.Core.Tests
             True(huge.Contains("Ctrl+Alt+K, F"), "points to Attach Current File as Reference");
         }
 
+        private static void Test_SessionNotices_BaseContext()
+        {
+            // The real 2.1.317 breakdown: no MCP tools, 57 tokens of memory, 4.5k of skills: nothing heavy.
+            string line = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.317-context-usage.jsonl")).Trim();
+            var ev = new ClaudeStreamParser().Parse(line).Single();
+            var real = ContextUsage.Parse(ev.Payload);
+            Eq(null, SessionNotices.BaseContext(real), "nothing heavy in the real breakdown");
+
+            var heavy = ContextUsage.Parse(JObject.Parse("{\"totalTokens\":40000,\"maxTokens\":200000,\"categories\":[{\"name\":\"Skills\",\"tokens\":6000,\"kind\":\"used\"}],"
+                + "\"mcpTools\":[{\"name\":\"a\",\"tokens\":7000},{\"name\":\"b\",\"tokens\":5000}],\"memoryFiles\":[{\"path\":\"CLAUDE.md\",\"tokens\":6000}]}"));
+            string tip = SessionNotices.BaseContext(heavy);
+            True(tip?.StartsWith("MCP tools (2) take ~12.0k tokens of every request.") == true, tip);
+            var memory = ContextUsage.Parse(JObject.Parse("{\"totalTokens\":20000,\"categories\":[],\"memoryFiles\":[{\"path\":\"CLAUDE.md\",\"tokens\":9000}]}"));
+            True(SessionNotices.BaseContext(memory)?.Contains("Generate Lean CLAUDE.md") == true, "memory files");
+            Eq(null, SessionNotices.BaseContext(null), "no breakdown");
+        }
+
         // ---------- Conversation cost warning ----------
         private static void Test_CostWatch()
         {
