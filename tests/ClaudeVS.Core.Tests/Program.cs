@@ -1168,6 +1168,20 @@ namespace ClaudeVS.Core.Tests
             True(lines.Single(l => l.ToolName == "Bash" || l.ToolName == "PowerShell").Line.Contains("Exit code 3"), "failed command keeps its error line");
         }
 
+        /// <summary>Claude Code 2.1.319: `mkdir newdir` (noOutputExpected), whose result text is only the cwd-reset note.</summary>
+        private static void Test_ToolData_NoOutput_RealCli_2_1_319()
+        {
+            var events = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.319-no-output.jsonl"))
+                .SelectMany(l => new ClaudeStreamParser().Parse(l)).ToList();
+            var call = events.Single(e => e.Kind == ClaudeEventKind.ToolUse);
+            var result = events.Single(e => e.Kind == ClaudeEventKind.ToolResult);
+            True(result.ResultText.StartsWith("Shell cwd was reset to "), "the CLI's note is the whole text");
+            Eq("Done", ToolCallView.Summarize(call.ToolName, result.ResultText, false, null, result.ResultData).Lines.Single(), "nothing expected, nothing printed");
+
+            Eq("(No output)", ToolCallView.Summarize("Bash", "Shell cwd was reset to C:\\repo", false).Lines.Single(), "no data: as before, without the note");
+            Eq("hi", ToolCallView.Summarize("Bash", "hi\nShell cwd was reset to C:\\repo", false).Lines.Single(), "the note is dropped after real output");
+        }
+
         private static void Test_ToolData_Shapes()
         {
             Eq("Read 4 lines", ToolCallView.FromData("Read", JObject.Parse("{\"file\":{\"numLines\":4,\"startLine\":1,\"totalLines\":4}}")), "whole file");

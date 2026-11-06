@@ -307,7 +307,8 @@ namespace ClaudeVS.Core.Cli
                 case "Bash":
                 case "PowerShell":
                     if (diff != null && output.Count == 0) return One((diff.IsAppend ? "Appended " : "Wrote ") + Lines(diff.Added) + " to " + FileName(diff.FilePath));
-                    if (output.Count == 0) return One("(No output)");
+                    // mkdir, cp, git add…: the CLI knows these print nothing (noOutputExpected, 2.1.319).
+                    if (output.Count == 0) return One(data?["noOutputExpected"]?.Type == JTokenType.Boolean && (bool)data["noOutputExpected"] ? "Done" : "(No output)");
                     break;
             }
             if (output.Count == 0) return One("Done");
@@ -365,6 +366,8 @@ namespace ClaudeVS.Core.Cli
         private static string FileName(string path) => string.IsNullOrEmpty(path) ? "the file" : System.IO.Path.GetFileName(path.TrimEnd('/', '\\'));
         private static string Cut(string s) => s.Length > MaxLineChars ? s.Substring(0, MaxLineChars - 1) + "…" : s;
 
+        private const string CwdResetNote = "Shell cwd was reset to ";
+
         private static List<string> SplitOutput(string text)
         {
             if (string.IsNullOrWhiteSpace(text)) return new List<string>();
@@ -374,6 +377,9 @@ namespace ClaudeVS.Core.Cli
             // Claude Code wraps some tool output in <system-reminder> blocks; they are not the tool's output.
             int reminder = lines.FindIndex(l => l.TrimStart().StartsWith("<system-reminder>", StringComparison.Ordinal));
             if (reminder >= 0) lines = lines.Take(reminder).ToList();
+            // The CLI's own note after a command that left the shell in another folder (2.1.319 adds it to the result
+            // text, even for `mkdir x`): not the command's output.
+            lines.RemoveAll(l => l.StartsWith(CwdResetNote, StringComparison.Ordinal));
             while (lines.Count > 0 && lines[lines.Count - 1].Length == 0) lines.RemoveAt(lines.Count - 1);
             return lines;
         }

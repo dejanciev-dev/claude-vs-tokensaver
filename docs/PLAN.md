@@ -281,7 +281,9 @@ Output pane).
       Concise and custom styles get no note)
 - [x] **Whole large file read**: a tip, once per conversation, when Claude reads all of a large file (Read's
       `numLines == totalLines` from line 1, ≥ 8k tokens); tool results now know their subagent (`parent_tool_use_id`)
-- [ ] **Commands that print nothing by design**: Bash `noOutputExpected` → "Done" instead of "(No output)"
+- [x] **Commands that print nothing by design**: Bash `noOutputExpected` → "Done" instead of "(No output)". The
+      CLI's "Shell cwd was reset to …" note (2.1.319 puts it in the result text, even for `mkdir`) is not output.
+      Capture: `Fixtures/cli-2.1.319-no-output.jsonl`
 
 ---
 
