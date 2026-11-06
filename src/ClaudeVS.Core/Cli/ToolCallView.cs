@@ -48,7 +48,7 @@ namespace ClaudeVS.Core.Cli
                 case "WebFetch": return ("Fetch", Arg("url"));
                 case "WebSearch": return ("Web Search", Arg("query"));
                 case "Task":
-                case "Agent": return (Arg("subagent_type") ?? "Agent", Arg("description"));
+                case "Agent": return (AgentLabel(Arg("subagent_type")), Arg("description"));
                 case "TodoWrite": return ("Update Todos", null);
                 default:
                     if (toolName != null && toolName.StartsWith("mcp__", StringComparison.Ordinal))
@@ -215,6 +215,20 @@ namespace ClaudeVS.Core.Cli
             return s > 0 ? $"{m}m {s}s" : $"{m}m";
         }
 
+        /// <summary>
+        /// The tool row's name for an Agent call: the subagent type as the CLI names it ("general-purpose",
+        /// "Explore"), "Fork" for a fork of this conversation (on by default in <c>-p</c> since 2.1.302), "Agent" when none.
+        /// </summary>
+        public static string AgentLabel(string subagentType) =>
+            string.IsNullOrEmpty(subagentType) ? "Agent" : subagentType == ForkType ? "Fork" : subagentType;
+
+        /// <summary>The agents panel's gray tag: "fork of this chat" for a fork, otherwise the subagent type.</summary>
+        public static string AgentKind(string subagentType) =>
+            string.IsNullOrEmpty(subagentType) ? "agent" : subagentType == ForkType ? "fork of this chat" : subagentType;
+
+        /// <summary>A fork subagent: starts with a copy of the conversation so far.</summary>
+        public const string ForkType = "fork";
+
         /// <summary>What the ⎿ line says once the result is in.</summary>
         public static ToolResultSummary Summarize(string toolName, string resultText, bool isError, InlineDiff diff = null)
         {
@@ -239,6 +253,11 @@ namespace ClaudeVS.Core.Cli
                     return One($"Found {output.Count} {(output.Count == 1 ? "line" : "lines")}");
                 case "TodoWrite":
                     return One("Todos updated");
+                case "Task":
+                case "Agent":
+                    // A background agent's result is internal metadata Claude is told never to quote (2.1.319).
+                    if (output.Count > 0 && output[0].StartsWith("Async agent launched", StringComparison.Ordinal)) return One("Running in the background");
+                    break;
                 case "Bash":
                 case "PowerShell":
                     if (diff != null && output.Count == 0) return One((diff.IsAppend ? "Appended " : "Wrote ") + Lines(diff.Added) + " to " + FileName(diff.FilePath));
