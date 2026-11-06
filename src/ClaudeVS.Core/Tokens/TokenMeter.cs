@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using ClaudeVS.Core.Cli;
 
 namespace ClaudeVS.Core.Tokens
@@ -49,6 +50,27 @@ namespace ClaudeVS.Core.Tokens
         /// <summary>How long the conversation stays in the prompt cache (from the main agent's requests).</summary>
         public CacheWindow Cache { get; } = new CacheWindow();
 
+        private readonly Dictionary<string, long> _resultCharsByTool = new Dictionary<string, long>(StringComparer.Ordinal);
+
+        /// <summary>
+        /// Tokens the main agent's tool results added to the conversation, per tool (shell commands and searches
+        /// grouped, MCP tools as "MCP"), largest first.
+        /// </summary>
+        public IReadOnlyList<KeyValuePair<string, long>> ResultTokensByTool() =>
+            _resultCharsByTool.OrderByDescending(kv => kv.Value).Select(kv => new KeyValuePair<string, long>(kv.Key, kv.Value / 4)).ToList();
+
+        /// <summary>"Shell" for Bash / PowerShell, "Search" for Grep / Glob, "MCP" for mcp__ tools, else the tool name.</summary>
+        public static string ToolGroup(string tool)
+        {
+            switch (tool)
+            {
+                case "Bash": case "PowerShell": return "Shell";
+                case "Grep": case "Glob": return "Search";
+                case "Task": return "Agent";
+                default: return tool != null && tool.StartsWith("mcp__", StringComparison.Ordinal) ? "MCP" : tool ?? "tool";
+            }
+        }
+
         public double ContextPercent => (ContextWindow > 0 ? ContextWindow : _s.DefaultContextWindow) == 0 ? 0
             : 100.0 * ContextTokens / (ContextWindow > 0 ? ContextWindow : _s.DefaultContextWindow);
 
@@ -69,6 +91,7 @@ namespace ClaudeVS.Core.Tokens
             SessionTotal = default; LastTurn = default; ContextTokens = 0; ContextWindow = 0; Turns = 0;
             _costOffset = 0; _lastReportedCost = 0; LastTurnCostUsd = 0; LargestToolResultChars = 0; LargestToolResultTool = null;
             _toolNames.Clear();
+            _resultCharsByTool.Clear();
             Cache.Reset();
             Changed?.Invoke(this, EventArgs.Empty);
         }
@@ -85,6 +108,11 @@ namespace ClaudeVS.Core.Tokens
                     if (ev.ToolUseId != null) _toolNames[ev.ToolUseId] = ev.ToolName;
                     return;
                 case ClaudeEventKind.ToolResult:
+                    if (!ev.IsSubagent && ev.ResultChars > 0 && ev.ToolUseId != null && _toolNames.TryGetValue(ev.ToolUseId, out var tool))
+                    {
+                        string group = ToolGroup(tool);
+                        _resultCharsByTool[group] = (_resultCharsByTool.TryGetValue(group, out var sofar) ? sofar : 0) + ev.ResultChars;
+                    }
                     if (ev.ResultChars > LargestToolResultChars)
                     {
                         LargestToolResultChars = ev.ResultChars;
