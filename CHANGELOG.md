@@ -12,7 +12,8 @@ All notable changes to this project are listed here. The format follows
   line take the color of what Claude is doing (thinking in orange, writing in blue, tools in amber with the
   command, "Waiting for you" in green). The token count is an estimate (the CLI's thinking estimates plus streamed
   text and tool input). Follows Windows' "Show animations" setting. Once Claude stops thinking, the strip says for
-  how long: `· thought for 4s`.
+  how long: `· thought for 4s` (the CLI's own measure, `thinking_duration_ms`, from Claude Code 2.1.319;
+  timed by the extension with older versions).
 - **Permission card** instead of the one-line Allow/Deny bar: a plain question ("Run this command?"), Claude's
   description, the command or file in a code box, and **Allow**, **Always allow `Bash(npm test *)`** (the CLI's
   own suggested rule, saved in `.claude/settings.local.json`; verified with 2.1.318), **Deny**, and a box to tell

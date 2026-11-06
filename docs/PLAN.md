@@ -220,7 +220,7 @@ captures compared with the 2.1.316–2.1.318 fixtures. All live tests pass (`--l
 still answers with Sonnet when Haiku is asked for (`--live` in plan mode), as in 2.1.316.
 
 - [x] Note in Options and in the status table that plan mode still answers with Sonnet on 2.1.319
-- [ ] **"Thought for" from the CLI**. Assistant messages with a thinking block now carry `thinking_duration_ms`
+- [x] **"Thought for" from the CLI**. Assistant messages with a thinking block now carry `thinking_duration_ms`
       (e.g. 209 ms in a 6.9 s turn; capture in `Fixtures/cli-2.1.319-thinking-duration.jsonl`). It arrives just
       before the block's `content_block_stop`, so the strip can use it in place of its own timer, which also
       counts the gap before the next block. Keep the timer for CLIs that do not send it

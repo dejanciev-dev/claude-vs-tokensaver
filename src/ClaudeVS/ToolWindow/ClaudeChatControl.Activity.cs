@@ -63,6 +63,7 @@ namespace ClaudeVS.ToolWindow
         private DateTime _turnStartedUtc = DateTime.UtcNow;
         private TimeSpan _turnThought;       // thinking time this turn, for "thought for 4s"
         private DateTime? _thinkingSinceUtc; // set while Claude is thinking
+        private bool _thoughtFromCli;        // this thinking block was timed by the CLI (thinking_duration_ms, 2.1.319)
         private Brush _activityColor;
 
         private void InitActivity()
@@ -113,6 +114,7 @@ namespace ClaudeVS.ToolWindow
             _turnOutputChars = 0;
             _turnThought = TimeSpan.Zero;
             _thinkingSinceUtc = null;
+            _thoughtFromCli = false;
             _turnVerb = Verbs[Rng.Next(Verbs.Length)];
             _activityTip.Text = "⎿  Tip: " + Tips[Rng.Next(Tips.Length)];
         }
@@ -148,12 +150,25 @@ namespace ClaudeVS.ToolWindow
                     break;
                 case ClaudeEventKind.PermissionRequest:
                     break; // _waitingForUser is set: "Waiting for you"
+                case ClaudeEventKind.ThinkingDuration:
+                    // The CLI's own measure of this block replaces our timer, which would also count the gap until
+                    // the next block starts. It comes just before the block ends.
+                    _turnThought += TimeSpan.FromMilliseconds(ev.DurationMs);
+                    _thinkingSinceUtc = null;
+                    _thoughtFromCli = true;
+                    break;
                 default:
                     return;
             }
-            // Time spent thinking: from the first thinking event to the first event of anything else.
-            if (_phase == Phase.Thinking) { if (_thinkingSinceUtc == null) _thinkingSinceUtc = DateTime.UtcNow; }
-            else if (_thinkingSinceUtc is DateTime since) { _turnThought += DateTime.UtcNow - since; _thinkingSinceUtc = null; }
+            // Time spent thinking: from the first thinking event to the first event of anything else, unless the
+            // CLI already said how long this block took.
+            if (_phase == Phase.Thinking) { if (_thinkingSinceUtc == null && !_thoughtFromCli) _thinkingSinceUtc = DateTime.UtcNow; }
+            else
+            {
+                if (_thinkingSinceUtc is DateTime since) _turnThought += DateTime.UtcNow - since;
+                _thinkingSinceUtc = null;
+                _thoughtFromCli = false;
+            }
             RenderActivity();
         }
 
