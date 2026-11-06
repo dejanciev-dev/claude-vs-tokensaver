@@ -284,6 +284,8 @@ All notable changes to this project are listed here. The format follows
 - **What the prompt cache saved, in the savings report**: `Saved by the prompt cache: $1.59 (2.0M tokens read from
   the cache instead of sent in full)`, next to model routing and file references. The usage log now records
   1-hour cache writes (`cacheWrite1h`); older lines count as 5-minute writes.
+- **What the prompt cache saved, in the session summary**: `Cache hits: 75% (saved $0.49)` in / → Copy session
+  summary (from $0.01).
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.

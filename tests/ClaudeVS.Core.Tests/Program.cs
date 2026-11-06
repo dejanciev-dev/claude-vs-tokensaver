@@ -1599,6 +1599,7 @@ namespace ClaudeVS.Core.Tests
             m.Observe(new ClaudeEvent { Kind = ClaudeEventKind.AssistantUsage, Model = "claude-sonnet-5-5", Usage = new TokenUsage { Input = 10, CacheRead = 300_000 } });
             m.Observe(new ClaudeEvent { Kind = ClaudeEventKind.TurnCompleted, Usage = new TokenUsage { Input = 10, CacheRead = 300_000 } });
             Eq("Prompt cache: 75% of input read from the cache, saved $0.49 in this conversation (API prices).", m.CacheSavedLine(), "0.54 saved - 0.05 for the write");
+            True(SessionSummary.Format(m).Contains("\nCache hits: 75% (saved $0.49)"), "session summary: " + SessionSummary.Format(m));
         }
 
         private static void Test_PromptSize()
