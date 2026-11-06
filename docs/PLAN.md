@@ -191,6 +191,27 @@ telemetry and editor-group settings, reopen closed tab, continue after reload.
 
 ---
 
+## Phase 8 — Keep up with the CLI (from the Claude Code CHANGELOG 2.1.300–2.1.318)
+
+Entries that change what the extension sees from the CLI.
+
+- [ ] **Sign-in expiry notice** (2.1.318). The stream-json `result` carries `credential_expires_at` (seen in
+      `Fixtures/cli-2.1.318-thinking.jsonl`); the parser ignores it today. Read it into `TurnCompleted`, show
+      "Sign-in ends in N days" in the meter from 10 days out (the terminal's threshold, which `-p` only prints to
+      stderr in text mode). When the login has expired, the CLI's stderr error names `claude auth login` and
+      `claude setup-token`: turn that into a clickable "Run `claude auth login`" instead of a plain error line
+- [ ] **Warn when the CLI is older than verified**. Nothing checks the version, but much depends on 2.1.316–2.1.318
+      (`stop_task`, `update_settings`, `init` every turn, checkpoint variable, `~/.claude/sessions/<pid>.json`).
+      Read `claude_code_version` from `init`; below 2.1.318 show one line: "Some features need Claude Code
+      2.1.318+ — run `claude update`". Auto-resume (`ClaudeSession.EnsureRunning`) also gains from resume fixes in
+      2.1.300 (after compaction), 2.1.311 (transcript order) and 2.1.318 (`--continue` losing history)
+- [ ] **Fork subagents** (2.1.302: on by default in `-p`). `Agent` calls may now carry `subagent_type: "fork"`,
+      which `ToolCallView` and the agents panel would label `fork(…)`. Capture a fixture, give it a friendly
+      label ("Fork"), and check the agents panel handles it. Note: a subagent's own Agent calls now run in the
+      foreground by default in `-p`
+
+---
+
 ## Working in Visual Studio — daily loop
 
 1. Core logic change → edit in `ClaudeVS.Core` → run tests (`ClaudeVS.Core.Tests` → Set as Startup → Ctrl+F5, or `dotnet run` in its folder).
