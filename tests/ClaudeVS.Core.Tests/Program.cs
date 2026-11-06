@@ -1548,6 +1548,27 @@ namespace ClaudeVS.Core.Tests
             Eq(0, TurnFooter.CachedPercent(new TokenUsage { Input = 100, CacheCreation = 30_000 }), "cache just written: 0%");
         }
 
+        // ---------- Cache savings ----------
+        private static void Test_CacheSaved_RealTurn_2_1_319()
+        {
+            // The real Haiku turn: 14,256 read from the cache, 9,679 written with the 1-hour lifetime (2x input).
+            var meter = new TokenMeter();
+            foreach (var e in File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.319-thinking-duration.jsonl"))
+                .SelectMany(l => new ClaudeStreamParser().Parse(l))) meter.Observe(e);
+            True(Math.Abs(meter.LastTurnCacheSavedUsd - 0.00031514) < 1e-9, "haiku: 14,256 x (0.10-0.01) - 9,679 x 0.10, per MTok: " + meter.LastTurnCacheSavedUsd);
+            Eq(meter.LastTurnCacheSavedUsd, meter.SessionCacheSavedUsd, "one turn so far");
+            Eq(" · 56 thinking · 60% cached", TurnFooter.Extras(meter.LastTurn, meter.LastTurnCacheSavedUsd), "under $0.001: no amount");
+
+            var sonnet = new PriceTable().Sonnet; // input 2, cache write 2.5, cache read 0.2
+            True(Math.Abs(sonnet.CacheSavedUsd(14_256, 9_679, 9_679) - 0.0063028) < 1e-9, "the same turn on Sonnet");
+            True(Math.Abs(sonnet.CacheSavedUsd(0, 10_000, 0) + 0.005) < 1e-9, "a 5-minute write only: -0.25 x 2 per MTok");
+            True(Math.Abs(sonnet.CacheSavedUsd(1_000_000, 0, 0) - 1.8) < 1e-9, "1M read from the cache saves $1.80");
+            Eq(" · 90% cached (saved $0.018)", TurnFooter.Extras(new TokenUsage { Input = 1000, CacheRead = 9000 }, 0.018), "footer with an amount");
+
+            meter.Reset();
+            Eq(0.0, meter.SessionCacheSavedUsd, "reset");
+        }
+
         private static void Test_PromptSize()
         {
             Eq(null, PromptSize.Note("fix the null check in Save()"), "short prompt");

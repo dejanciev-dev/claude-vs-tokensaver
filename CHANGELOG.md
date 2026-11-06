@@ -274,6 +274,10 @@ All notable changes to this project are listed here. The format follows
   tokens each kind of tool result added to the conversation (main agent only; shell commands and searches grouped).
 - **Costliest turns in the savings report**: the five dearest turns with time, cost, model and tokens, and the
   prompt when previews are logged (else the route reason), so you can see where the money went.
+- **What the prompt cache saved, per answer**: the footer's cache share now says what it saved,
+  `· 90% cached (saved $0.018)` (from $0.001): tokens read from the cache at the cache-read price instead of the
+  full input price, minus the extra for writing them (1-hour writes cost 2x input), at the prices of the model
+  that answered (Options → Pricing; API prices).
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.

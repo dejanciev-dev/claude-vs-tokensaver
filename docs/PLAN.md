@@ -331,6 +331,20 @@ Help that saves tokens, from what the extension already sees (usage, tool calls,
 
 ---
 
+## Phase 15 — What the prompt cache saved
+
+Each token read from the cache costs the cache-read price instead of the full input price; writing it costs extra
+(5-minute write: the cache-write price, 1.25x input; 1-hour write: 2x input, which Claude Code uses on a claude.ai
+plan). Saved = reads × (input − cache read) − 5-minute writes × (cache write − input) − 1-hour writes × input, at
+the prices of the model that answered (`ModelPrice.CacheSavedUsd`).
+
+- [x] **Footer**: `· 90% cached (saved $0.018)` per answer (from $0.001)
+- [ ] **Meter**: the conversation's total in the meter's tooltip
+- [ ] **Savings report**: `Saved by the prompt cache` next to routing and file references
+- [ ] **Session summary**: the total in / → Copy session summary
+
+---
+
 ## Working in Visual Studio — daily loop
 
 1. Core logic change → edit in `ClaudeVS.Core` → run tests (`ClaudeVS.Core.Tests` → Set as Startup → Ctrl+F5, or `dotnet run` in its folder).
