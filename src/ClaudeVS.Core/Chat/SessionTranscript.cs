@@ -39,6 +39,11 @@ namespace ClaudeVS.Core.Chat
         public List<TranscriptItem> Items { get; } = new List<TranscriptItem>();
         /// <summary>Items left out at the start because the conversation is longer than the limit.</summary>
         public int Skipped { get; set; }
+        /// <summary>
+        /// The context the conversation had at its last answer (input + cache of that request's usage), which the next
+        /// prompt sends again; 0 when unknown or right after a compaction.
+        /// </summary>
+        public long LastContextTokens { get; set; }
 
         /// <summary>
         /// Reads a CLI session file (~/.claude/projects/&lt;folder&gt;/&lt;id&gt;.jsonl) into prompts, answers and tool calls,
@@ -66,8 +71,13 @@ namespace ClaudeVS.Core.Chat
                         switch ((string)o["type"])
                         {
                             case "user": ReadUser(o, t.Items, tools); break;
-                            case "assistant": ReadAssistant(o, t.Items, tools); break;
+                            case "assistant":
+                                ReadAssistant(o, t.Items, tools);
+                                var usage = Cli.TokenUsage.From(o.SelectToken("message.usage"));
+                                if (usage.ContextTokens > 0) t.LastContextTokens = usage.ContextTokens;
+                                break;
                             case "system":
+                                if ((string)o["subtype"] == "compact_boundary") t.LastContextTokens = 0; // the next answer says the new size
                                 if ((string)o["subtype"] == "compact_boundary")
                                     t.Items.Add(new TranscriptItem { Kind = TranscriptItemKind.Compacted, PreTokens = o.SelectToken("compactMetadata.preTokens")?.Value<long?>() ?? 0, Trigger = (string)o.SelectToken("compactMetadata.trigger") });
                                 break;
