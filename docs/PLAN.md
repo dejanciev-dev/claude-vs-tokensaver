@@ -256,6 +256,9 @@ Tool-result messages carry more than the text Claude sees: `tool_use_result` (th
       terminal commands and Claude-only skills stay out). Verified that a project skill runs from stream-json
 - [x] **Subagents per turn**: `subagent_stats` in the result: "· 2 agents" in the footer; refused (depth,
       concurrency, budget), failed or system-stopped agents get one line in the chat
+- [x] **Why a call was blocked**: a rejected `config` decision in `tool_result_meta` (a deny rule `Bash(echo *)`
+      gave `reason_type: "subcommandResults"`, `non_execution_kind: "permission-rule"`): the row says "denied by a
+      rule" (or "by the mode") in red. Capture: `Fixtures/cli-2.1.319-deny-rule.jsonl`
 
 ---
 

@@ -250,6 +250,25 @@ namespace ClaudeVS.Core.Cli
             }
         }
 
+        /// <summary>
+        /// "denied by a rule" / "denied by the mode" for any call Claude Code's settings blocked, with a tooltip;
+        /// null for reasons we don't know.
+        /// </summary>
+        public static (string Text, string Tip)? DeniedNote(string deniedBy)
+        {
+            switch (deniedBy)
+            {
+                case "rule":
+                case "subcommandResults":
+                    return ("denied by a rule", "Blocked without asking: a deny rule in your Claude Code settings covers it."
+                        + "\n/ → Claude Code → Permission rules lists them.");
+                case "mode":
+                    return ("denied by the mode", "Blocked without asking: the permission mode does not allow it (for example Plan mode is read-only).");
+                default:
+                    return null;
+            }
+        }
+
         /// <summary>A fork subagent: starts with a copy of the conversation so far.</summary>
         public const string ForkType = "fork";
 

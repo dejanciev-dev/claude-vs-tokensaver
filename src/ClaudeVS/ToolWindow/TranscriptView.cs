@@ -1290,8 +1290,9 @@ namespace ClaudeVS.ToolWindow
         /// lines drawn when the call arrived (those came from our copy, which a fast tool can beat).
         /// </param>
         /// <param name="allowedBy">Why Claude Code's settings let the call run without asking (see <see cref="Core.Cli.ClaudeEvent.AllowedBy"/>).</param>
+        /// <param name="deniedBy">Why Claude Code's settings blocked it (see <see cref="Core.Cli.ClaudeEvent.DeniedBy"/>).</param>
         public void CompleteTool(string toolUseId, int resultChars, bool isError, string resultText = null, Core.Context.InlineDiff confirmedDiff = null, string allowedBy = null,
-            Newtonsoft.Json.Linq.JObject resultData = null)
+            Newtonsoft.Json.Linq.JObject resultData = null, string deniedBy = null)
         {
             if (!isError && confirmedDiff != null && confirmedDiff.Lines.Count > 0 && !string.IsNullOrEmpty(toolUseId)
                 && _tools.TryGetValue(toolUseId, out var changed) && changed.ToolName != null && changed.Expander != null)
@@ -1320,6 +1321,11 @@ namespace ClaudeVS.ToolWindow
                 var note = new Run("  · " + allowedText) { FontSize = 11, ToolTip = allowedTip };
                 note.SetResourceReference(TextElement.ForegroundProperty, EnvironmentColors.SystemGrayTextBrushKey);
                 header.Inlines.Add(note);
+            }
+            if (Core.Cli.ToolCallView.DeniedNote(deniedBy) is var (deniedText, deniedTip))
+            {
+                // "· denied by a rule": your settings blocked it, Claude was not refused by you just now.
+                header.Inlines.Add(new Run("  · " + deniedText) { FontSize = 11, ToolTip = deniedTip, Foreground = a.Failure });
             }
             // Large results are what fill the context window; make them stand out.
             if (resultChars / 4 >= 5000) header.FontWeight = FontWeights.SemiBold;
