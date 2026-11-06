@@ -15,7 +15,19 @@ namespace ClaudeVS.Core.Tokens
             var parts = new List<string>();
             // Thinking is billed as output, the dearest kind of token: worth seeing per answer.
             if (turn.Thinking > 0) parts.Add($"{TokenMeter.Format(turn.Thinking)} thinking");
+            if (CachedPercent(turn) is int cached) parts.Add($"{cached}% cached");
             return parts.Count == 0 ? "" : " · " + string.Join(" · ", parts);
+        }
+
+        /// <summary>
+        /// The turn's input served from the prompt cache (cached input costs a tenth of the full price): a low number
+        /// right after a model switch or a long pause explains a dearer answer. Null below 1,000 input tokens.
+        /// </summary>
+        public static int? CachedPercent(TokenUsage turn)
+        {
+            long input = turn.Input + turn.CacheRead + turn.CacheCreation;
+            if (input < 1000) return null;
+            return (int)System.Math.Round(100.0 * turn.CacheRead / input);
         }
     }
 }

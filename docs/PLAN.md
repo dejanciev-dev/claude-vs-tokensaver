@@ -307,7 +307,7 @@ Help that saves tokens, from what the extension already sees (usage, tool calls,
 ## Phase 13 — See what each answer and prompt costs
 
 - [x] **Thinking tokens in the footer**: `· 1.2k thinking` from `output_tokens_details.thinking_tokens`
-- [ ] **Cache share in the footer**: `· 94% cached`, the turn's input served from the prompt cache
+- [x] **Cache share in the footer**: `· 94% cached`, the turn's input served from the prompt cache (from 1k input tokens)
 - [ ] **Prompt size**: the input box shows `~N tokens` for a long prompt; a huge paste suggests a file reference
 - [ ] **Base context tip**: MCP tools or memory files that take a big slice of every request
 - [ ] **Copy session summary**: `/` → tokens, cost, cache, turns as text
