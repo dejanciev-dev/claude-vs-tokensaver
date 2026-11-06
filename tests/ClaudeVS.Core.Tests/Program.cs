@@ -597,6 +597,25 @@ namespace ClaudeVS.Core.Tests
             True(!Newtonsoft.Json.JsonConvert.SerializeObject(new UsageRecord()).Contains("\"thinking\""), "0 is left out");
         }
 
+        private static void Test_Savings_PromptCache()
+        {
+            var prices = new PriceTable(); // Sonnet: input 2, cache write 2.5, cache read 0.2; Haiku: 0.1, 0.125, 0.01
+            var recs = new[]
+            {
+                new UsageRecord { ModelUsed = "claude-sonnet-5-5", CacheReadTokens = 1_000_000, CacheWriteTokens = 100_000, CacheWrite1hTokens = 100_000 }, // 1.80 - 0.20
+                new UsageRecord { ModelUsed = "claude-sonnet-5-5", CacheWriteTokens = 200_000 },                                                         // older line: 5-minute, -0.10
+                new UsageRecord { ModelUsed = "claude-haiku-5-5", CacheReadTokens = 1_000_000 },                                                         // 0.09
+            };
+            var r = SavingsReport.Build(recs, prices);
+            True(Math.Abs(r.CacheSavedUsd - 1.59) < 1e-9, "1.60 - 0.10 + 0.09 = " + r.CacheSavedUsd);
+            Eq(2_000_000L, r.CacheReadTokens);
+            True(r.ToText().Contains("Saved by the prompt cache:  $1.59  (2.0M tokens read from the cache instead of sent in full)"), r.ToText());
+
+            var line = Newtonsoft.Json.JsonConvert.SerializeObject(new UsageRecord { CacheWriteTokens = 5, CacheWrite1hTokens = 5 });
+            True(line.Contains("\"cacheWrite1h\":5"), line);
+            True(!Newtonsoft.Json.JsonConvert.SerializeObject(new UsageRecord()).Contains("cacheWrite1h"), "0 left out");
+        }
+
         private static void Test_Savings_Costliest()
         {
             var t = new DateTime(2026, 11, 6, 9, 0, 0, DateTimeKind.Utc);

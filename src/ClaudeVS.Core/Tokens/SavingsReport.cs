@@ -118,6 +118,12 @@ namespace ClaudeVS.Core.Tokens
         /// <summary>Avoided tokens priced as input of the model that handled each turn.</summary>
         public double ReferencesSavedUsd { get; set; }
         public double CacheHitPercent { get; set; }
+        /// <summary>
+        /// What the prompt cache saved: reads at the cache-read price instead of the input price, minus the extra for
+        /// writes (lines without the 1-hour split count as 5-minute writes). Can be negative.
+        /// </summary>
+        public double CacheSavedUsd { get; set; }
+        public long CacheReadTokens { get; set; }
         public long OutputTokens { get; set; }
         /// <summary>Of <see cref="OutputTokens"/>: thinking, and what it cost at each turn's output price.</summary>
         public long ThinkingTokens { get; set; }
@@ -162,6 +168,8 @@ namespace ClaudeVS.Core.Tokens
                 rep.ReferencesSavedUsd += avoided * (prices.For(r.ModelUsed) ?? prices.Sonnet).Input / 1_000_000.0;
                 input += r.InputTokens + r.CacheReadTokens + r.CacheWriteTokens;
                 cacheRead += r.CacheReadTokens;
+                rep.CacheReadTokens += r.CacheReadTokens;
+                rep.CacheSavedUsd += (prices.For(r.ModelUsed) ?? prices.Sonnet).CacheSavedUsd(r.CacheReadTokens, r.CacheWriteTokens, r.CacheWrite1hTokens);
                 rep.OutputTokens += r.OutputTokens;
                 rep.ThinkingTokens += r.ThinkingTokens;
                 rep.ThinkingCostUsd += r.ThinkingTokens * (prices.For(r.ModelUsed) ?? prices.Sonnet).Output / 1_000_000.0;
@@ -204,6 +212,7 @@ namespace ClaudeVS.Core.Tokens
             sb.AppendLine($"Same tokens at Opus prices: ${OpusEquivalentUsd:0.00}  (estimate)");
             sb.AppendLine($"Saved by model routing:     ${RoutingSavedUsd:0.00}  ({RoutingSavedPercent:0}%)");
             sb.AppendLine($"Saved by file references:   ~{TokenMeter.Format(TokensAvoided)} tokens ≈ ${ReferencesSavedUsd:0.00}");
+            sb.AppendLine($"Saved by the prompt cache:  ${CacheSavedUsd:0.00}  ({TokenMeter.Format(CacheReadTokens)} tokens read from the cache instead of sent in full)");
             sb.AppendLine($"Cache hit rate:             {CacheHitPercent:0}%");
             if (ThinkingTokens > 0)
                 sb.AppendLine($"Thinking:                   {TokenMeter.Format(ThinkingTokens)} tokens ≈ ${ThinkingCostUsd:0.00}  ({(OutputTokens > 0 ? 100.0 * ThinkingTokens / OutputTokens : 0):0}% of output tokens; Thinking off or lower effort cuts it)");
