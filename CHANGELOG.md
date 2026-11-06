@@ -189,6 +189,9 @@ All notable changes to this project are listed here. The format follows
   10 days before a stored claude.ai sign-in ends (the CLI's `credential_expires_at`, 2.1.318; API-key users see
   nothing), and in red once it has expired or the CLI refuses with an expired-login error. **Sign in** opens a
   console running `claude auth login`. The not-logged-in hint names `claude auth login` too.
+- **Old CLI warning**: when Claude Code reports a version older than 2.1.318 (the one this extension is tested
+  with; `claude_code_version` in `init`), the chat says so once, with `claude update`. Every version is logged
+  once in the Claude Code output pane.
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.

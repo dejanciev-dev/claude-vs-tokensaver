@@ -62,7 +62,7 @@ namespace ClaudeVS.Core.Cli
                     SessionId = (string)json["session_id"] ?? SessionId;
                     _model = (string)json["model"] ?? _model;
                     _lastMainUsage = default;
-                    return new[] { new ClaudeEvent { Kind = ClaudeEventKind.SessionStarted, SessionId = SessionId, Model = _model } };
+                    return new[] { new ClaudeEvent { Kind = ClaudeEventKind.SessionStarted, SessionId = SessionId, Model = _model, CliVersion = (string)json["claude_code_version"] } };
                 case "compact_boundary":
                     _lastMainUsage = default;
                     return new[] { new ClaudeEvent

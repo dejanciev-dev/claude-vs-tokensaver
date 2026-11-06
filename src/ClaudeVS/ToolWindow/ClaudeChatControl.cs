@@ -1707,6 +1707,7 @@ namespace ClaudeVS.ToolWindow
                     case ClaudeEventKind.SessionStarted:
                         ClaudeOutputPane.WriteLine($"Session {ev.SessionId} started, model {ev.Model}");
                         OnTurnStarted(); // init comes at the start of every turn (2.1.318)
+                        CheckCliVersion(ev.CliVersion);
                         string named = _sessionName;
                         if (named != null && ev.SessionId != null && SessionMeta.Get(ev.SessionId)?.Name != named)
                             SaveSessionMeta(() => SessionMeta.SetName(ev.SessionId, named)); // named before the session had an id
@@ -1779,6 +1780,24 @@ namespace ClaudeVS.ToolWindow
         /// The CLI can accept a model (its init event reports it) and still answer with another one, for example
         /// in plan mode. Routing to a cheaper model then silently costs more, so say so once per conversation.
         /// </summary>
+        // The CLI versions already logged (and warned about, when old) in this Visual Studio session.
+        private static readonly HashSet<string> _seenCliVersions = new HashSet<string>(StringComparer.Ordinal);
+
+        /// <summary>
+        /// Logs the CLI version once, and when it is older than the version this extension was verified with, says
+        /// so once in the chat: many features rely on 2.1.316–2.1.318 control requests and messages.
+        /// </summary>
+        private void CheckCliVersion(string version)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (string.IsNullOrEmpty(version) || !_seenCliVersions.Add(version)) return;
+            ClaudeOutputPane.WriteLine($"Claude Code {version} (tested with {CliVersion.Tested})");
+            string notice = CliVersion.Notice(version);
+            if (notice == null) return;
+            Append("\n  ⚠ " + notice + "\n");
+            Announce(notice);
+        }
+
         private void CheckModelMismatch(string modelUsed)
         {
             ThreadHelper.ThrowIfNotOnUIThread();

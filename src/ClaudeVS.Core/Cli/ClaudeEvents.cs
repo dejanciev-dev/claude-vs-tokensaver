@@ -115,6 +115,10 @@ namespace ClaudeVS.Core.Cli
         /// <summary>When the stored claude.ai sign-in ends (<c>credential_expires_at</c>, 2.1.318); null for API keys.</summary>
         public System.DateTime? CredentialExpiresUtc { get; set; }
 
+        // SessionStarted
+        /// <summary>The CLI's <c>claude_code_version</c> from <c>init</c>, e.g. "2.1.318".</summary>
+        public string CliVersion { get; set; }
+
         // Compacted
         public long PreCompactTokens { get; set; }
 
