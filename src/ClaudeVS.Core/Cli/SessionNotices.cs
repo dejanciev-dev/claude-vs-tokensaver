@@ -76,6 +76,25 @@ namespace ClaudeVS.Core.Cli
                 + $"provider don't allow {asked.Describe().Label} here. The mode picker now shows {actual.Value.Describe().Label}.";
         }
 
+        /// <summary>
+        /// Output styles that make every answer longer: the built-in Explanatory (adds insights) and Learning (asks you
+        /// to write parts yourself, with explanations). <c>output_style</c> was "default" with 2.1.319; Concise and
+        /// custom styles get no note.
+        /// </summary>
+        public static string OutputStyle(JObject init)
+        {
+            string style = (string)init?["output_style"];
+            switch (style?.ToLowerInvariant())
+            {
+                case "explanatory":
+                case "learning":
+                    return $"Output style “{style}” is on: it adds explanation to every answer, so answers use more output tokens. "
+                        + "Switch under / → Output style… (Concise uses the fewest).";
+                default:
+                    return null;
+            }
+        }
+
         private static string Names(System.Collections.Generic.List<string> names) => string.Join(", ", names.Select(n => "“" + n + "”"));
     }
 }

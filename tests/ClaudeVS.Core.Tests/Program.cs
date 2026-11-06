@@ -1353,6 +1353,16 @@ namespace ClaudeVS.Core.Tests
             True(!p.Parse(init).Single().IsFirstInit, "the next turn's init");
         }
 
+        private static void Test_SessionNotices_OutputStyle()
+        {
+            Eq(null, SessionNotices.OutputStyle(Init("\"output_style\":\"default\"")), "default (the real 2.1.319 value)");
+            Eq(null, SessionNotices.OutputStyle(Init("\"output_style\":\"Concise\"")), "concise saves tokens");
+            Eq(null, SessionNotices.OutputStyle(Init("\"output_style\":\"my-team-style\"")), "custom: unknown");
+            Eq(null, SessionNotices.OutputStyle(Init("")), "older CLIs");
+            True(SessionNotices.OutputStyle(Init("\"output_style\":\"Explanatory\""))?.StartsWith("Output style “Explanatory” is on") == true, "explanatory");
+            True(SessionNotices.OutputStyle(Init("\"output_style\":\"learning\""))?.Contains("more output tokens") == true, "learning, any case");
+        }
+
         // ---------- Sign-in expiry ----------
         private static void Test_SignInExpiry_FromRealResult_2_1_318()
         {

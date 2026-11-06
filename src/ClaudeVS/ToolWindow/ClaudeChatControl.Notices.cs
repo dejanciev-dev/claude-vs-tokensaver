@@ -23,6 +23,7 @@ namespace ClaudeVS.ToolWindow
             if (!(ev.Payload is JObject init)) return;
             Notice(SessionNotices.ApiKey(init), important: true);
             Notice(SessionNotices.McpServers(init));
+            Notice(SessionNotices.OutputStyle(init));
             if (ev.IsFirstInit) SyncPermissionMode(init);
         }
 
