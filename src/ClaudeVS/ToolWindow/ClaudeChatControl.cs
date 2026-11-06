@@ -1719,16 +1719,22 @@ namespace ClaudeVS.ToolWindow
                         FlushText();
                         if (_turnAnswer.Length > 0) _turnAnswer.Append("\n\n"); // text before and after a tool call are separate paragraphs
                         Action diff = null;
-                        if (change != null) diff = () => { ThreadHelper.ThrowIfNotOnUIThread(); ShowDiff(change, writeSnapshot); };
+                        string changedPath = change != null ? TurnChanges.FullPath(change.FilePath, _sessionDir) : null;
+                        if (change != null)
+                        {
+                            // Kept until the result, which may bring the CLI's own copy of the file (originalFile).
+                            var call = new FileCall { ToolName = ev.ToolName, Input = ev.ToolInput, Path = changedPath, Snapshot = writeSnapshot };
+                            call.FirstInTurn = changedPath != null && _turnChanges.Record(changedPath, writeSnapshot); // for "Files changed" under the answer
+                            if (!string.IsNullOrEmpty(ev.ToolUseId)) _fileCalls[ev.ToolUseId] = call;
+                            diff = () => { ThreadHelper.ThrowIfNotOnUIThread(); ShowDiff(change, call.Snapshot); };
+                        }
                         // Red / green lines under the row. A Write whose old content could not be read gets none (the Diff button still works).
                         var inline = change?.IsWrite == true && writeSnapshot == null ? null
                             : InlineDiff.FromToolUse(ev.ToolName, ev.ToolInput, writeSnapshot == "" ? null : writeSnapshot);
-                        string changedPath = change != null ? TurnChanges.FullPath(change.FilePath, _sessionDir) : null;
-                        if (changedPath != null) _turnChanges.Record(changedPath, writeSnapshot); // for "Files changed" under the answer
                         _view.AppendTool(ev.ToolUseId, ev.Text, ev.ToolInput?.ToString(), diff, inline, ev.ToolName, ev.ToolInput, _sessionDir, changedPath);
                         break;
                     case ClaudeEventKind.ToolResult:
-                        _view.CompleteTool(ev.ToolUseId, ev.ResultChars, ev.IsError, ev.ResultText);
+                        _view.CompleteTool(ev.ToolUseId, ev.ResultChars, ev.IsError, ev.ResultText, ConfirmFileChange(ev));
                         break;
                     case ClaudeEventKind.PermissionRequest:
                         FlushText();
@@ -2117,9 +2123,39 @@ namespace ClaudeVS.ToolWindow
             catch (Exception) { Append("The clipboard is busy; try again."); }
         }
 
+        /// <summary>An Edit / Write waiting for its result.</summary>
+        private sealed class FileCall
+        {
+            public string ToolName;
+            public Newtonsoft.Json.Linq.JObject Input;
+            public string Path;
+            public string Snapshot;   // the file before the change: our copy, then the CLI's
+            public bool FirstInTurn;  // its copy is the "before" of Files changed
+        }
+
+        private readonly Dictionary<string, FileCall> _fileCalls = new Dictionary<string, FileCall>(StringComparer.Ordinal);
+
+        /// <summary>
+        /// When an Edit / Write result carries the CLI's copy of the file before the change (2.1.319), it replaces
+        /// ours, which a fast tool can beat: for the Diff button, for Files changed, and for the lines under the row
+        /// (returned, rebuilt from it). Null when there is nothing to correct.
+        /// </summary>
+        private InlineDiff ConfirmFileChange(ClaudeEvent ev)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (string.IsNullOrEmpty(ev.ToolUseId) || !_fileCalls.TryGetValue(ev.ToolUseId, out var call)) return null;
+            _fileCalls.Remove(ev.ToolUseId);
+            if (ev.IsError || ev.OriginalFile == null || ev.OriginalFile == call.Snapshot) return null; // ours was right
+            ClaudeOutputPane.WriteLine($"{call.ToolName} {call.Path}: diff corrected from the CLI's copy of the file");
+            call.Snapshot = ev.OriginalFile;
+            if (call.FirstInTurn) _turnChanges.Confirm(call.Path, ev.OriginalFile);
+            return InlineDiff.FromToolUse(call.ToolName, call.Input, ev.OriginalFile == "" ? null : ev.OriginalFile);
+        }
+
         private void ClearTurns()
         {
             _turnChanges.Clear();
+            _fileCalls.Clear();
             _turnPrompts.Clear();
             _turnAnswer.Clear();
             _queuedBubbles.Clear();

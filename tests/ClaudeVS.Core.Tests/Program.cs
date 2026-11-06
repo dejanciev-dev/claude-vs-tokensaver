@@ -1104,6 +1104,49 @@ namespace ClaudeVS.Core.Tests
             True(!sub.Any(e => e.Kind == ClaudeEventKind.ThinkingDuration), "subagent ignored");
         }
 
+        /// <summary>Edit then Write from Claude Code 2.1.319: each result carries the file as it was (originalFile).</summary>
+        private static void Test_Parser_OriginalFile_RealCli_2_1_319()
+        {
+            var parser = new ClaudeStreamParser();
+            var events = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.319-edit-write.jsonl"))
+                .SelectMany(l => parser.Parse(l)).ToList();
+            var calls = events.Where(e => e.Kind == ClaudeEventKind.ToolUse).ToDictionary(e => e.ToolUseId);
+            var results = events.Where(e => e.Kind == ClaudeEventKind.ToolResult).ToList();
+
+            var edit = results.Single(r => calls[r.ToolUseId].ToolName == "Edit");
+            Eq("alpha\nbeta\ngamma\n", edit.OriginalFile, "Edit: originalFile");
+            var write = results.Single(r => calls[r.ToolUseId].ToolName == "Write");
+            Eq("old content\n", write.OriginalFile, "Write (update): originalFile");
+            True(results.Where(r => calls[r.ToolUseId].ToolName == "Read").All(r => r.OriginalFile == null), "Read results carry none");
+
+            // The diff rebuilt from it: line numbers for the Edit, the old line for the Write.
+            var editDiff = InlineDiff.FromToolUse("Edit", calls[edit.ToolUseId].ToolInput, edit.OriginalFile);
+            Eq(1, editDiff.Removed, "edit removed");
+            Eq(1, editDiff.Added, "edit added");
+            True(editDiff.Lines.Any(l => l.Kind == DiffLineKind.Removed && l.Text == "beta" && l.Number == 2), "beta removed on line 2: " + string.Join("|", editDiff.Lines.Select(l => l.Kind + ":" + l.Number + ":" + l.Text)));
+            var writeDiff = InlineDiff.FromToolUse("Write", calls[write.ToolUseId].ToolInput, write.OriginalFile);
+            Eq(1, writeDiff.Removed, "write removed the old line");
+            True(!writeDiff.IsNewFile, "not a new file");
+        }
+
+        private static void Test_Parser_OriginalFile_Shapes()
+        {
+            Eq("", ClaudeStreamParser.OriginalFile(JObject.Parse("{\"type\":\"create\",\"filePath\":\"C:\\\\r\\\\n.txt\",\"content\":\"x\",\"originalFile\":null}")), "created: empty");
+            Eq(null, ClaudeStreamParser.OriginalFile(JObject.Parse("{\"type\":\"text\",\"file\":{\"filePath\":\"a\",\"content\":\"x\"}}")), "Read");
+            Eq(null, ClaudeStreamParser.OriginalFile(new JValue("Async agent launched")), "not an object");
+            Eq(null, ClaudeStreamParser.OriginalFile(null), "missing");
+
+            // Two results in one message: the structured result can't be matched to one of them.
+            var two = new ClaudeStreamParser().Parse("{\"type\":\"user\",\"message\":{\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"a\",\"content\":\"ok\"},{\"type\":\"tool_result\",\"tool_use_id\":\"b\",\"content\":\"ok\"}]},\"tool_use_result\":{\"filePath\":\"x\",\"originalFile\":\"old\"}}");
+            True(two.All(e => e.OriginalFile == null), "ambiguous: none");
+
+            var changes = new TurnChanges();
+            True(changes.Record(@"C:\r\a.cs", null), "first change recorded");
+            True(!changes.Record(@"C:\r\a.cs", "later"), "second keeps the first");
+            changes.Confirm(@"C:\r\a.cs", "exact");
+            Eq("exact", changes.Collect(p => "now", p => true).Single().Before, "confirmed copy is the before");
+        }
+
         // ---------- CLI version ----------
         private static void Test_CliVersion_FromRealInit_2_1_316()
         {

@@ -434,6 +434,9 @@ namespace ClaudeVS.ToolWindow
             public UIElement DiffElement;
             public StackPanel Result;   // the ⎿ lines, always visible
             public StackPanel Body;     // input and full output, shown when the row is opened
+            public Panel Expander;      // the row's stack: header, ⎿ lines, diff
+            public Action OnDiff;
+            public string OpenPath;
         }
 
         /// <summary>
@@ -501,7 +504,8 @@ namespace ClaudeVS.ToolWindow
                 block.Children.Add(DiffView(fileDiff, accents));
                 expander.Children.Add(diffElement = block);
             }
-            var toolRow = new ToolRow { Header = header, Dot = dot, ToolName = toolName, Diff = fileDiff, DiffElement = diffElement, Result = result, Body = bodyPanel };
+            var toolRow = new ToolRow { Header = header, Dot = dot, ToolName = toolName, Diff = fileDiff, DiffElement = diffElement, Result = result, Body = bodyPanel,
+                Expander = expander, OnDiff = onDiff, OpenPath = openPath };
 
             if (FocusView())
             {
@@ -1281,8 +1285,15 @@ namespace ClaudeVS.ToolWindow
         /// Adds the result size (≈ chars / 4 tokens) to a tool row and marks failed calls; with the result text,
         /// the ⎿ summary under the row and the whole output inside it.
         /// </summary>
-        public void CompleteTool(string toolUseId, int resultChars, bool isError, string resultText = null)
+        /// <param name="confirmedDiff">
+        /// For a file change, the diff rebuilt from the CLI's own copy of the file before the change; it replaces the
+        /// lines drawn when the call arrived (those came from our copy, which a fast tool can beat).
+        /// </param>
+        public void CompleteTool(string toolUseId, int resultChars, bool isError, string resultText = null, Core.Context.InlineDiff confirmedDiff = null)
         {
+            if (!isError && confirmedDiff != null && confirmedDiff.Lines.Count > 0 && !string.IsNullOrEmpty(toolUseId)
+                && _tools.TryGetValue(toolUseId, out var changed) && changed.ToolName != null && changed.Expander != null)
+                ReplaceDiff(changed, confirmedDiff);
             ThreadHelper.ThrowIfNotOnUIThread();
             if (!string.IsNullOrEmpty(toolUseId) && _toolGroupOf.TryGetValue(toolUseId, out var group))
             {
@@ -1304,6 +1315,20 @@ namespace ClaudeVS.ToolWindow
             // Large results are what fill the context window; make them stand out.
             if (resultChars / 4 >= 5000) header.FontWeight = FontWeights.SemiBold;
             if (row.ToolName != null) ShowResult(row, resultText, isError, a);
+        }
+
+        private void ReplaceDiff(ToolRow row, Core.Context.InlineDiff diff)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var accents = ChatTheme.Accents(Box);
+            var block = new StackPanel();
+            block.Children.Add(FileLinks(row.OpenPath ?? diff.FilePath, row.OnDiff, accents, new Thickness(36, 2, 0, 1)));
+            block.Children.Add(DiffView(diff, accents));
+            int at = row.DiffElement != null ? row.Expander.Children.IndexOf(row.DiffElement) : -1;
+            if (at >= 0) { row.Expander.Children.RemoveAt(at); row.Expander.Children.Insert(at, block); }
+            else row.Expander.Children.Add(block);
+            row.DiffElement = block;
+            row.Diff = diff; // the ⎿ line counts come from it
         }
 
         public void EndAnswer()

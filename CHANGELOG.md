@@ -212,6 +212,9 @@ All notable changes to this project are listed here. The format follows
 - `dotnet test` runs the Core test runner instead of silently reporting zero tests.
 
 ### Fixed
+- Diffs of Claude's edits and writes are exact even when the tool runs before the extension reads the file:
+  the result's `originalFile` (Claude Code 2.1.319) replaces that copy for the red / green lines, the Diff button
+  and Files changed. The Output pane notes each correction.
 - The conversation keeps following new output when it grows after it was added (a tool row filling in its
   result) or when the chat gets shorter (the permission card or agents panel opening below it). Scrolling up
   still stops the following.

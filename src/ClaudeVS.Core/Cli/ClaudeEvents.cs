@@ -98,6 +98,11 @@ namespace ClaudeVS.Core.Cli
         public int ResultChars { get; set; }
         /// <summary>ToolResult: the result's text, cut at <see cref="ClaudeStreamParser.MaxResultText"/> characters.</summary>
         public string ResultText { get; set; }
+        /// <summary>
+        /// ToolResult of an Edit / Write: the file before the change, as the CLI read it (<c>tool_use_result.originalFile</c>,
+        /// 2.1.319); "" when the Write created the file; null when the CLI did not say.
+        /// </summary>
+        public string OriginalFile { get; set; }
         public bool IsError { get; set; }
         public string RequestId { get; set; }
         /// <summary>ControlResponse: the CLI's answer to our control request (e.g. the get_context_usage data).</summary>
