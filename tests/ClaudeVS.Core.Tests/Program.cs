@@ -597,6 +597,24 @@ namespace ClaudeVS.Core.Tests
             True(!Newtonsoft.Json.JsonConvert.SerializeObject(new UsageRecord()).Contains("\"thinking\""), "0 is left out");
         }
 
+        private static void Test_Savings_Costliest()
+        {
+            var t = new DateTime(2026, 11, 6, 9, 0, 0, DateTimeKind.Utc);
+            var recs = Enumerable.Range(1, 7).Select(i => new UsageRecord
+            {
+                Timestamp = t.AddMinutes(i), ModelUsed = i == 7 ? "claude-opus-5-5" : "claude-sonnet-5-5", CostUsd = i * 0.1, InputTokens = i * 1000,
+                PromptPreview = i == 7 ? "refactor the whole\nbilling module across all projects and update every test" : null,
+                RouteReason = i == 6 ? "long prompt" : null,
+            }).ToList();
+            var r = SavingsReport.Build(recs, new PriceTable());
+            Eq("0.7|0.6|0.5|0.4|0.3", string.Join("|", r.Costliest.Select(x => x.CostUsd.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture))), "top five, dearest first");
+            string text = r.ToText();
+            True(text.Contains("Costliest turns:"), text);
+            True(text.Contains("opus") && text.Contains("“refactor the whole billing module across all projects and u…”"), "prompt on one line, cut: " + text);
+            True(text.Contains("(long prompt)"), "route reason when no prompt was logged");
+            True(!SavingsReport.Build(recs.Take(1), new PriceTable()).ToText().Contains("Costliest turns:"), "one turn: no list");
+        }
+
         private static void Test_Savings_RoutingAndReferences()
         {
             var prices = new PriceTable(); // Opus 4/20, Sonnet 2/10, Haiku 0.1/0.5 per MTok
