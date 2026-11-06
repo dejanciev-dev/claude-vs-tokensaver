@@ -1049,6 +1049,32 @@ namespace ClaudeVS.Core.Tests
             Eq(null, ClaudeErrorHints.Explain(""), "empty");
         }
 
+        // ---------- CLI version ----------
+        private static void Test_CliVersion_FromRealInit_2_1_316()
+        {
+            var parser = new ClaudeStreamParser();
+            var init = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.316-turn.jsonl"))
+                .SelectMany(l => parser.Parse(l)).First(e => e.Kind == ClaudeEventKind.SessionStarted);
+            Eq("2.1.316", init.CliVersion, "claude_code_version from init");
+            True(CliVersion.IsOlderThanTested(init.CliVersion), "2.1.316 is older than tested");
+            True(CliVersion.Notice(init.CliVersion).StartsWith("Claude Code 2.1.316 is older than " + CliVersion.Tested), "notice");
+            True(CliVersion.Notice(init.CliVersion).Contains("claude update"), "says how to fix it");
+        }
+
+        private static void Test_CliVersion_Compare()
+        {
+            Eq(new Version(2, 1, 319), CliVersion.Parse("2.1.319 (Claude Code)"), "claude --version output");
+            Eq(null, CliVersion.Parse("dev"), "not a version");
+            Eq(null, CliVersion.Parse(null), "missing");
+            True(!CliVersion.IsOlderThanTested(CliVersion.Tested), "the tested version itself");
+            True(!CliVersion.IsOlderThanTested("2.1.319"), "newer");
+            True(!CliVersion.IsOlderThanTested("2.2.0"), "newer minor");
+            True(CliVersion.IsOlderThanTested("2.1.99"), "numeric, not string, comparison");
+            True(CliVersion.IsOlderThanTested("1.0.128"), "old major");
+            Eq(null, CliVersion.Notice("dev"), "unknown versions are not flagged");
+            Eq(null, CliVersion.Notice(""), "empty");
+        }
+
         // ---------- Sign-in expiry ----------
         private static void Test_SignInExpiry_FromRealResult_2_1_318()
         {

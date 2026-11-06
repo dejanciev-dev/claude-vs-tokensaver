@@ -200,7 +200,7 @@ Entries that change what the extension sees from the CLI.
       "Sign-in ends in N days" in the meter from 10 days out (the terminal's threshold, which `-p` only prints to
       stderr in text mode). When the login has expired, the CLI's stderr error names `claude auth login` and
       `claude setup-token`: turn that into a clickable "Run `claude auth login`" instead of a plain error line
-- [ ] **Warn when the CLI is older than verified**. Nothing checks the version, but much depends on 2.1.316–2.1.318
+- [x] **Warn when the CLI is older than verified**. Nothing checks the version, but much depends on 2.1.316–2.1.318
       (`stop_task`, `update_settings`, `init` every turn, checkpoint variable, `~/.claude/sessions/<pid>.json`).
       Read `claude_code_version` from `init`; below 2.1.318 show one line: "Some features need Claude Code
       2.1.318+ — run `claude update`". Auto-resume (`ClaudeSession.EnsureRunning`) also gains from resume fixes in
