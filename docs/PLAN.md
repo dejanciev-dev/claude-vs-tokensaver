@@ -11,7 +11,7 @@ Tick the boxes as you go. Each phase ends with something you can run.
 |---|---|
 | `ClaudeVS.Core` (CLI session, parser, router, meter, context, setup) | ✅ Written, 16/16 tests pass |
 | `ClaudeVS` VSIX (package, tool window, commands, options) | ✅ Builds clean (0 warnings); not yet run in the experimental instance |
-| Real end-to-end run against `claude` CLI | ⚠️ Core verified against CLI 2.1.316 (`--live` smoke test): sessions, streaming, usage, cost, cache OK; Haiku routing works in acceptEdits ($0.002 vs $0.042 per turn on Sonnet); in plan mode the CLI answers with Sonnet even when Haiku is requested. VS UI not run yet |
+| Real end-to-end run against `claude` CLI | ⚠️ Core verified against CLI 2.1.316 (`--live` smoke test): sessions, streaming, usage, cost, cache OK; Haiku routing works in acceptEdits ($0.002 vs $0.042 per turn on Sonnet); in plan mode the CLI answers with Sonnet even when Haiku is requested (still so in 2.1.319, where all live smoke tests pass). VS UI not run yet |
 | Markdown transcript, diffs, history, question cards | ❌ Not started |
 
 ---
@@ -209,6 +209,24 @@ Entries that change what the extension sees from the CLI.
       which `ToolCallView` and the agents panel would label `fork(…)`. Capture a fixture, give it a friendly
       label ("Fork"), and check the agents panel handles it. Note: a subagent's own Agent calls now run in the
       foreground by default in `-p`
+
+---
+
+## Phase 9 — Claude Code 2.1.319 (no changelog; checked by running it)
+
+The cached and attached changelogs stop at 2.1.318, so 2.1.319 was checked with the live smoke tests and fresh
+captures compared with the 2.1.316–2.1.318 fixtures. All live tests pass (`--live-dialogs`, `--live-mcp`,
+`--live-edit-review`, `--live-haiku-router`, `--live-setup`, `--live-session`, `--live` in acceptEdits). Plan mode
+still answers with Sonnet when Haiku is asked for (`--live` in plan mode), as in 2.1.316.
+
+- [x] Note in Options and in the status table that plan mode still answers with Sonnet on 2.1.319
+- [ ] **"Thought for" from the CLI**. Assistant messages with a thinking block now carry `thinking_duration_ms`
+      (e.g. 209 ms in a 6.9 s turn; capture in `Fixtures/cli-2.1.319-thinking-duration.jsonl`). It arrives just
+      before the block's `content_block_stop`, so the strip can use it in place of its own timer, which also
+      counts the gap before the next block. Keep the timer for CLIs that do not send it
+- Not adopted: `result.origin` (`{"kind":"task-notification", …}`) marks a turn the CLI started after a background
+  task finished. It only arrives at the end of the turn, so the guess at `init` (no prompt of ours waiting) is
+  still needed, and the fork capture shows the two agree
 
 ---
 
