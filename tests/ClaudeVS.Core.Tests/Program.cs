@@ -1149,6 +1149,36 @@ namespace ClaudeVS.Core.Tests
             Eq(null, ToolCallView.AllowedNote("Bash", "somethingNew"), "unknown reasons");
         }
 
+        /// <summary>Claude Code 2.1.319: part of a file read, a Glob, Grep in both modes and a failing command.</summary>
+        private static void Test_ToolData_RealCli_2_1_319()
+        {
+            var parser = new ClaudeStreamParser();
+            var events = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.319-tool-data.jsonl"))
+                .SelectMany(l => parser.Parse(l)).ToList();
+            var calls = events.Where(e => e.Kind == ClaudeEventKind.ToolUse).ToDictionary(e => e.ToolUseId);
+            var lines = events.Where(e => e.Kind == ClaudeEventKind.ToolResult).Select(r =>
+            {
+                var call = calls[r.ToolUseId];
+                return (call.ToolName, Mode: (string)call.ToolInput?["output_mode"], Line: ToolCallView.Summarize(call.ToolName, r.ResultText, r.IsError, null, r.ResultData).Lines.First());
+            }).ToList();
+            Eq("Read 20 of 301 lines (from line 10)", lines.Single(l => l.ToolName == "Read").Line, "partial read");
+            Eq("Found 2 files", lines.Single(l => l.ToolName == "Glob").Line, "glob");
+            Eq("Found 3 files", lines.Single(l => l.ToolName == "Grep" && l.Mode == "files_with_matches").Line, "grep files");
+            Eq("Found 4 lines", lines.Single(l => l.ToolName == "Grep" && l.Mode == "content").Line, "grep content");
+            True(lines.Single(l => l.ToolName == "Bash" || l.ToolName == "PowerShell").Line.Contains("Exit code 3"), "failed command keeps its error line");
+        }
+
+        private static void Test_ToolData_Shapes()
+        {
+            Eq("Read 4 lines", ToolCallView.FromData("Read", JObject.Parse("{\"file\":{\"numLines\":4,\"startLine\":1,\"totalLines\":4}}")), "whole file");
+            Eq("Read 50 of 2,000 lines", ToolCallView.FromData("Read", JObject.Parse("{\"file\":{\"numLines\":50,\"startLine\":1,\"totalLines\":2000}}")), "the start of a file");
+            Eq(null, ToolCallView.FromData("Read", JObject.Parse("{\"type\":\"image\",\"file\":{\"base64\":\"x\"}}")), "an image: no line counts");
+            Eq("Found 1 file (list cut short)", ToolCallView.FromData("Glob", JObject.Parse("{\"numFiles\":1,\"truncated\":true}")), "truncated glob");
+            Eq("No files found", ToolCallView.FromData("Glob", JObject.Parse("{\"numFiles\":0}")), "nothing");
+            Eq(null, ToolCallView.FromData("Grep", JObject.Parse("{\"mode\":\"count\",\"numMatches\":3}")), "count mode: not known, falls back");
+            Eq("Read 3 lines", ToolCallView.Summarize("Read", "     1\ta\n     2\tb\n     3\tc", false).Lines.Single(), "no data: as before");
+        }
+
         private static void Test_Parser_AllowedBy_Shapes()
         {
             var meta = JArray.Parse("[{\"id\":\"a\",\"permission_decision\":{\"decision\":\"accept\",\"source\":\"config\",\"reason_type\":\"rule\"}},"

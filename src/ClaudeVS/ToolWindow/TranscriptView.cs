@@ -653,9 +653,9 @@ namespace ClaudeVS.ToolWindow
         }
 
         /// <summary>The ⎿ lines under a finished tool call, and its whole output in the row's body.</summary>
-        private void ShowResult(ToolRow row, string resultText, bool isError, ChatTheme.AccentSet a)
+        private void ShowResult(ToolRow row, string resultText, bool isError, ChatTheme.AccentSet a, Newtonsoft.Json.Linq.JObject resultData = null)
         {
-            var summary = Core.Cli.ToolCallView.Summarize(row.ToolName, resultText, isError, row.Diff);
+            var summary = Core.Cli.ToolCallView.Summarize(row.ToolName, resultText, isError, row.Diff, resultData);
             row.Result.Children.Clear();
             for (int i = 0; i < summary.Lines.Count; i++)
             {
@@ -1290,7 +1290,8 @@ namespace ClaudeVS.ToolWindow
         /// lines drawn when the call arrived (those came from our copy, which a fast tool can beat).
         /// </param>
         /// <param name="allowedBy">Why Claude Code's settings let the call run without asking (see <see cref="Core.Cli.ClaudeEvent.AllowedBy"/>).</param>
-        public void CompleteTool(string toolUseId, int resultChars, bool isError, string resultText = null, Core.Context.InlineDiff confirmedDiff = null, string allowedBy = null)
+        public void CompleteTool(string toolUseId, int resultChars, bool isError, string resultText = null, Core.Context.InlineDiff confirmedDiff = null, string allowedBy = null,
+            Newtonsoft.Json.Linq.JObject resultData = null)
         {
             if (!isError && confirmedDiff != null && confirmedDiff.Lines.Count > 0 && !string.IsNullOrEmpty(toolUseId)
                 && _tools.TryGetValue(toolUseId, out var changed) && changed.ToolName != null && changed.Expander != null)
@@ -1322,7 +1323,7 @@ namespace ClaudeVS.ToolWindow
             }
             // Large results are what fill the context window; make them stand out.
             if (resultChars / 4 >= 5000) header.FontWeight = FontWeights.SemiBold;
-            if (row.ToolName != null) ShowResult(row, resultText, isError, a);
+            if (row.ToolName != null) ShowResult(row, resultText, isError, a, resultData);
         }
 
         private void ReplaceDiff(ToolRow row, Core.Context.InlineDiff diff)

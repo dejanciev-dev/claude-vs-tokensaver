@@ -104,6 +104,11 @@ namespace ClaudeVS.Core.Cli
         /// </summary>
         public string OriginalFile { get; set; }
         /// <summary>
+        /// ToolResult: the tool's structured output (<c>tool_use_result</c>, 2.1.319), e.g. Read's
+        /// <c>file.numLines/startLine/totalLines</c>, Glob's and Grep's <c>numFiles</c>; null when not an object.
+        /// </summary>
+        public JObject ResultData { get; set; }
+        /// <summary>
         /// ToolResult: why the call ran without asking, when Claude Code's settings allowed it
         /// (<c>tool_result_meta[].permission_decision.reason_type</c>, 2.1.319): "mode", "rule", "subcommandResults"…
         /// Null when you were asked, or the CLI did not say.
