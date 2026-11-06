@@ -1,3 +1,4 @@
+using System.Linq;
 using Newtonsoft.Json.Linq;
 
 namespace ClaudeVS.Core.Cli
@@ -32,5 +33,34 @@ namespace ClaudeVS.Core.Cli
                     return $"Claude Code is using an API key ({source}), so this session is billed per token to that key.";
             }
         }
+
+        /// <summary>
+        /// MCP servers Claude can't use: <c>mcp_servers[] = {name, status, source}</c>, where 2.1.319 reported
+        /// "needs-auth" (a claude.ai connector not signed in) and "pending" (still connecting, not mentioned).
+        /// </summary>
+        public static string McpServers(JObject init)
+        {
+            if (!(init?["mcp_servers"] is JArray servers)) return null;
+            var needAuth = new System.Collections.Generic.List<string>();
+            var failed = new System.Collections.Generic.List<string>();
+            foreach (var s in servers.OfType<JObject>())
+            {
+                string name = (string)s["name"];
+                if (string.IsNullOrEmpty(name)) continue;
+                switch ((string)s["status"])
+                {
+                    case "needs-auth": needAuth.Add(name); break;
+                    case "failed": failed.Add(name); break;
+                }
+            }
+            if (needAuth.Count == 0 && failed.Count == 0) return null;
+            var parts = new System.Collections.Generic.List<string>();
+            if (needAuth.Count > 0) parts.Add(Names(needAuth) + (needAuth.Count == 1 ? " needs" : " need") + " you to sign in");
+            if (failed.Count > 0) parts.Add(Names(failed) + " could not connect");
+            return "MCP " + (needAuth.Count + failed.Count == 1 ? "server " : "servers ") + string.Join("; ", parts)
+                + ", so Claude can't use " + (needAuth.Count + failed.Count == 1 ? "its" : "their") + " tools. Fix it under / → MCP servers….";
+        }
+
+        private static string Names(System.Collections.Generic.List<string> names) => string.Join(", ", names.Select(n => "“" + n + "”"));
     }
 }

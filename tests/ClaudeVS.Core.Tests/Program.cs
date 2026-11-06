@@ -1325,6 +1325,17 @@ namespace ClaudeVS.Core.Tests
             True(SessionNotices.ApiKey(Init("\"apiKeySource\":\"project\"")).Contains("(project)"), "other sources named");
         }
 
+        private static void Test_SessionNotices_McpServers()
+        {
+            // The real 2.1.319 list: one connector still connecting, one not signed in.
+            string real = SessionNotices.McpServers(Init("\"mcp_servers\":[{\"name\":\"claude.ai Claude Docs\",\"status\":\"pending\",\"source\":\"claudeai\"},{\"name\":\"claude.ai Google Drive\",\"status\":\"needs-auth\",\"source\":\"claudeai\"}]"));
+            Eq("MCP server “claude.ai Google Drive” needs you to sign in, so Claude can't use its tools. Fix it under / → MCP servers….", real, "needs-auth");
+            string two = SessionNotices.McpServers(Init("\"mcp_servers\":[{\"name\":\"a\",\"status\":\"failed\"},{\"name\":\"b\",\"status\":\"needs-auth\"},{\"name\":\"c\",\"status\":\"connected\"}]"));
+            Eq("MCP servers “b” needs you to sign in; “a” could not connect, so Claude can't use their tools. Fix it under / → MCP servers….", two, "both kinds");
+            Eq(null, SessionNotices.McpServers(Init("\"mcp_servers\":[{\"name\":\"visualstudio\",\"status\":\"connected\"}]")), "all fine");
+            Eq(null, SessionNotices.McpServers(Init("")), "older CLIs");
+        }
+
         // ---------- Sign-in expiry ----------
         private static void Test_SignInExpiry_FromRealResult_2_1_318()
         {
