@@ -1468,6 +1468,28 @@ namespace ClaudeVS.Core.Tests
             Eq(null, ReadTracker.Tip(@"C:\r\a.cs", 500), "small file: no tip");
         }
 
+        // ---------- Large command output ----------
+        private static void Test_LargeCommandOutput()
+        {
+            string without = SessionNotices.LargeCommandOutput("Bash", 48_000, hookInstalled: false);
+            True(without?.StartsWith("That command put ~12.0k tokens of output into the context.") == true, without);
+            True(without.Contains("Install Token-Saving Settings and Hooks"), "points to the setup");
+            True(SessionNotices.LargeCommandOutput("PowerShell", 48_000, hookInstalled: true).Contains("Asking Claude to filter it"), "hook in place: filter");
+            Eq(null, SessionNotices.LargeCommandOutput("Bash", 8_000, false), "small output");
+            Eq(null, SessionNotices.LargeCommandOutput("Read", 80_000, false), "not a shell command");
+
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-hook-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                Directory.CreateDirectory(dir);
+                True(!TokenSaverSetup.IsInstalled(dir), "fresh folder");
+                TokenSaverSetup.Apply(dir);
+                True(TokenSaverSetup.IsInstalled(dir), "after Install Token-Saving Settings and Hooks");
+                True(!TokenSaverSetup.IsInstalled(null), "no folder");
+            }
+            finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
+        }
+
         // ---------- Sign-in expiry ----------
         private static void Test_SignInExpiry_FromRealResult_2_1_318()
         {

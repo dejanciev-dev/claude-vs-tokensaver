@@ -241,6 +241,9 @@ All notable changes to this project are listed here. The format follows
 - **Repeated read tip** (once per conversation): when Claude reads a whole file again that it already has (same
   content, not edited by Claude in between, no compaction since), the chat says the same text now sits in the
   context twice and suggests telling it "you already have Big.cs". Each repeat is logged in the Output pane.
+- **Large command output tip** (once per conversation): after a shell command puts ~5k tokens or more into the
+  context, the chat says so and, when the output-trimming hook is not installed in the folder, points to
+  Tools → Claude Code → Install Token-Saving Settings and Hooks; with it, suggests asking for filtered output.
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.

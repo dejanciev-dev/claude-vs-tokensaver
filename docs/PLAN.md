@@ -297,7 +297,8 @@ Help that saves tokens, from what the extension already sees (usage, tool calls,
       what the next prompt costs
 - [x] **Repeated read**: Claude reads a file again that it already has, with no change in between (`ReadTracker`:
       whole reads only, same content hash, no Edit / Write of it and no compaction since; main agent only)
-- [ ] **Large command output**: point to the output-trimming hook when it is not installed
+- [x] **Large command output**: point to the output-trimming hook when it is not installed (≥ 5k tokens from a
+      main-agent shell command; `TokenSaverSetup.IsInstalled` looks for the hook's marker)
 - [ ] **Conversation cost warning**: an option to be told once when a conversation passes an amount
 
 ---

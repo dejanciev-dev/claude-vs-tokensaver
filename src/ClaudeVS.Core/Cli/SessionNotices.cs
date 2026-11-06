@@ -116,6 +116,23 @@ namespace ClaudeVS.Core.Cli
                 + "Naming the method or lines you mean (\"look at Save() in " + name + "\") reads less.";
         }
 
+        /// <summary>A shell command's output this large (in tokens) earns the tip.</summary>
+        public const int LargeOutputTokens = 5000;
+
+        /// <summary>
+        /// A token tip after a shell command printed a lot into the context: without the output-trimming hook, point
+        /// to Install Token-Saving Settings and Hooks (it caps shell output and quiets builds, tests and git log);
+        /// with it, suggest asking for filtered output. Null for other tools and smaller outputs.
+        /// </summary>
+        public static string LargeCommandOutput(string toolName, int resultChars, bool hookInstalled)
+        {
+            if ((toolName != "Bash" && toolName != "PowerShell") || resultChars / 4 < LargeOutputTokens) return null;
+            string size = $"That command put ~{Tokens.TokenMeter.Format(resultChars / 4)} tokens of output into the context.";
+            return hookInstalled
+                ? size + " Asking Claude to filter it (only errors, the first lines, a quieter flag) keeps it small."
+                : size + " Tools → Claude Code → Install Token-Saving Settings and Hooks caps shell output and runs dotnet build / test, msbuild and git log quietly.";
+        }
+
         private static string Names(System.Collections.Generic.List<string> names) => string.Join(", ", names.Select(n => "“" + n + "”"));
     }
 }
