@@ -281,6 +281,9 @@ All notable changes to this project are listed here. The format follows
 - **What the prompt cache saved, per conversation**: the meter's tooltip adds `Prompt cache: 75% of input read from
   the cache, saved $0.49 in this conversation (API prices).` (or, after the first turn, that writing it cost more
   than it saved so far).
+- **What the prompt cache saved, in the savings report**: `Saved by the prompt cache: $1.59 (2.0M tokens read from
+  the cache instead of sent in full)`, next to model routing and file references. The usage log now records
+  1-hour cache writes (`cacheWrite1h`); older lines count as 5-minute writes.
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.

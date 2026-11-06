@@ -1876,6 +1876,7 @@ namespace ClaudeVS.ToolWindow
             rec.ThinkingTokens = ev.Usage.Thinking;
             rec.CacheReadTokens = ev.Usage.CacheRead;
             rec.CacheWriteTokens = ev.Usage.CacheCreation;
+            rec.CacheWrite1hTokens = ev.Usage.CacheCreation1h;
             rec.CostUsd = _meterModel?.LastTurnCostUsd ?? 0;
             rec.DurationMs = ev.DurationMs;
             rec.IsError = ev.IsError;
