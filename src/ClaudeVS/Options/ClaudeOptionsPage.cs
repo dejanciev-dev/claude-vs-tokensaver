@@ -56,6 +56,9 @@ namespace ClaudeVS.Options
         [Category("Token saving"), DisplayName("Urge /compact at (%)")]
         public int CompactUrgentPercent { get; set; } = 85;
 
+        [Category("Token saving"), DisplayName("Warn at conversation cost (USD)"), Description("The chat says so once each time a conversation passes another multiple of this amount (at API prices, as Claude Code reports them). 0 turns it off.")]
+        public double CostWarningUsd { get; set; } = 5;
+
         [Category("Token saving"), DisplayName("Auto-approve quiet rewrites"), Description("When installing hooks: run rewritten dotnet build/test commands without asking.")]
         public bool AutoApproveHookRewrites { get; set; } = false;
 

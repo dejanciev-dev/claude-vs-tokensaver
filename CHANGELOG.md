@@ -244,6 +244,9 @@ All notable changes to this project are listed here. The format follows
 - **Large command output tip** (once per conversation): after a shell command puts ~5k tokens or more into the
   context, the chat says so and, when the output-trimming hook is not installed in the folder, points to
   Tools → Claude Code → Install Token-Saving Settings and Hooks; with it, suggests asking for filtered output.
+- **Conversation cost warning**: Options → Token saving → *Warn at conversation cost (USD)* (default 5, 0 = off).
+  Each time a conversation passes another multiple ($5, $10…) at API prices, the chat says so once and suggests
+  a New chat for the next task or /compact.
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.

@@ -1490,6 +1490,21 @@ namespace ClaudeVS.Core.Tests
             finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
         }
 
+        // ---------- Conversation cost warning ----------
+        private static void Test_CostWatch()
+        {
+            var w = new CostWatch(5);
+            Eq(null, w.Check(4.99), "below the step");
+            Eq("This conversation has passed $5.00 ($5.12 so far at API prices). A New chat for the next task, or /compact, keeps the next prompts cheaper.", w.Check(5.12), "first step");
+            Eq(null, w.Check(7.80), "same step: said already");
+            True(w.Check(11.02)?.StartsWith("This conversation has passed $10.00 ($11.02") == true, "next step");
+            Eq(null, w.Check(14.00), "still the second step");
+            w.Reset();
+            True(w.Check(5.00) != null, "a new conversation starts over");
+            Eq(null, new CostWatch(0).Check(100), "0 turns it off");
+            Eq(null, new CostWatch(5).Check(double.NaN), "no cost known");
+        }
+
         // ---------- Sign-in expiry ----------
         private static void Test_SignInExpiry_FromRealResult_2_1_318()
         {

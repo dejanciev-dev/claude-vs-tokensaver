@@ -299,7 +299,8 @@ Help that saves tokens, from what the extension already sees (usage, tool calls,
       whole reads only, same content hash, no Edit / Write of it and no compaction since; main agent only)
 - [x] **Large command output**: point to the output-trimming hook when it is not installed (≥ 5k tokens from a
       main-agent shell command; `TokenSaverSetup.IsInstalled` looks for the hook's marker)
-- [ ] **Conversation cost warning**: an option to be told once when a conversation passes an amount
+- [x] **Conversation cost warning**: an option to be told once when a conversation passes an amount
+      (*Warn at conversation cost (USD)*, default 5: once per multiple, from the CLI's `total_cost_usd`)
 
 ---
 
