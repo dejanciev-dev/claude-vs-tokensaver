@@ -339,7 +339,7 @@ plan). Saved = reads × (input − cache read) − 5-minute writes × (cache wri
 the prices of the model that answered (`ModelPrice.CacheSavedUsd`).
 
 - [x] **Footer**: `· 90% cached (saved $0.018)` per answer (from $0.001)
-- [ ] **Meter**: the conversation's total in the meter's tooltip
+- [x] **Meter**: the conversation's total in the meter's tooltip (`TokenMeter.CacheSavedLine`)
 - [ ] **Savings report**: `Saved by the prompt cache` next to routing and file references
 - [ ] **Session summary**: the total in / → Copy session summary
 

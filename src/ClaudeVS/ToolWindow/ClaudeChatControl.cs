@@ -559,7 +559,7 @@ namespace ClaudeVS.ToolWindow
                 if (u != null)
                 {
                     _contextUsage = u;
-                    _meterArea.ToolTip = ContextTooltip(u);
+                    UpdateMeterTooltip();
                     _meterModel?.ApplyContextUsage(u.TotalTokens, u.MaxTokens); // the CLI's own number, also right after /compact
                     BaseContextTip(u);
                 }
@@ -1960,6 +1960,15 @@ namespace ClaudeVS.ToolWindow
             _adviceCommand = advice?.SuggestedCommand;
             _adviceAction.Content = _adviceCommand;
             _adviceAction.Visibility = _adviceCommand == null ? Visibility.Collapsed : Visibility.Visible;
+            UpdateMeterTooltip();
+        }
+
+        /// <summary>The meter's tooltip: what fills the context (once measured), then what the prompt cache saved.</summary>
+        private void UpdateMeterTooltip()
+        {
+            string tip = _contextUsage != null ? ContextTooltip(_contextUsage) : "Click for what fills the context window";
+            if (_meterModel?.CacheSavedLine() is string cache) tip += "\n\n" + cache;
+            _meterArea.ToolTip = tip;
         }
 
         /// <summary>
@@ -2587,7 +2596,7 @@ namespace ClaudeVS.ToolWindow
             _warnedModelMismatch = false;
             ResetNotices();
             _contextUsage = null;
-            _meterArea.ToolTip = "Click for what fills the context window";
+            UpdateMeterTooltip();
             lock (_pendingText) _pendingText.Clear();
             _permission.Visibility = Visibility.Collapsed;
         }
