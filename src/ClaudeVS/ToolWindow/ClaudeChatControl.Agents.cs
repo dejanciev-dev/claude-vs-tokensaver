@@ -204,7 +204,7 @@ namespace ClaudeVS.ToolWindow
             string described = FirstLine(Core.Cli.ToolCallView.WithoutCdToBase(t.Description?.Trim(), _sessionDir));
             name.Inlines.Add(new System.Windows.Documents.Run(described ?? (t.IsAgent ? "Agent" : "Command")) { FontWeight = FontWeights.SemiBold });
             // Commands are most of the list: only agents (and background runs) say what kind they are.
-            string kind = t.IsAgent ? t.SubagentType ?? "agent" : "command";
+            string kind = t.IsAgent ? Core.Cli.ToolCallView.AgentKind(t.SubagentType) : "command";
             string tag = t.IsAgent ? kind + (t.IsBackgrounded ? " · background" : "") : t.IsBackgrounded ? "background" : null;
             if (tag != null) name.Inlines.Add(new System.Windows.Documents.Run("  " + tag) { Foreground = Brushes.Gray });
             ChatTheme.Text(name);

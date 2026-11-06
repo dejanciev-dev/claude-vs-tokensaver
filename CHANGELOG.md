@@ -192,6 +192,10 @@ All notable changes to this project are listed here. The format follows
 - **Old CLI warning**: when Claude Code reports a version older than 2.1.318 (the one this extension is tested
   with; `claude_code_version` in `init`), the chat says so once, with `claude update`. Every version is logged
   once in the Claude Code output pane.
+- **Fork subagents** (on by default in `-p` since 2.1.302) show as `● Fork(Count to three)`, tagged "fork of this
+  chat · background" in the agents panel. A background agent's ⎿ line says "Running in the background" instead
+  of the CLI's internal "Async agent launched…" metadata (verified with 2.1.319, capture in
+  `Fixtures/cli-2.1.319-fork.jsonl`).
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.

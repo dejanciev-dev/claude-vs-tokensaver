@@ -205,7 +205,7 @@ Entries that change what the extension sees from the CLI.
       Read `claude_code_version` from `init`; below 2.1.318 show one line: "Some features need Claude Code
       2.1.318+ — run `claude update`". Auto-resume (`ClaudeSession.EnsureRunning`) also gains from resume fixes in
       2.1.300 (after compaction), 2.1.311 (transcript order) and 2.1.318 (`--continue` losing history)
-- [ ] **Fork subagents** (2.1.302: on by default in `-p`). `Agent` calls may now carry `subagent_type: "fork"`,
+- [x] **Fork subagents** (2.1.302: on by default in `-p`). `Agent` calls may now carry `subagent_type: "fork"`,
       which `ToolCallView` and the agents panel would label `fork(…)`. Capture a fixture, give it a friendly
       label ("Fork"), and check the agents panel handles it. Note: a subagent's own Agent calls now run in the
       foreground by default in `-p`

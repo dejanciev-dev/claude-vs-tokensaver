@@ -292,6 +292,41 @@ namespace ClaudeVS.Core.Tests
             File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.318-agents.jsonl"))
                 .Where(l => l.Trim().Length > 0).Select(JObject.Parse).ToList();
 
+        /// <summary>A fork subagent from Claude Code 2.1.319 (`claude -p`, sanitized): runs in the background.</summary>
+        private static void Test_AgentTasks_Fork_RealCli_2_1_319()
+        {
+            var parser = new ClaudeStreamParser();
+            var list = new AgentTaskList();
+            var events = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.319-fork.jsonl"))
+                .SelectMany(l => parser.Parse(l)).ToList();
+            foreach (var ev in events.Where(e => e.Kind == ClaudeEventKind.Task)) list.Apply(ev.Payload);
+
+            var call = events.Single(e => e.Kind == ClaudeEventKind.ToolUse);
+            Eq(("Fork", "Count to three"), ToolCallView.Title(call.ToolName, call.ToolInput), "tool row");
+            var result = events.Single(e => e.Kind == ClaudeEventKind.ToolResult);
+            Eq("Running in the background", ToolCallView.Summarize(call.ToolName, result.ResultText, result.IsError).Lines.Single(), "no internal metadata on the ⎿ line");
+
+            var fork = list.Find("a3930c38f13bbef71");
+            True(fork != null, "the fork is in the agents panel");
+            Eq(ToolCallView.ForkType, fork.SubagentType, "subagent_type");
+            True(fork.IsAgent && fork.IsBackgrounded, "an agent, in the background");
+            Eq(AgentTaskStatus.Completed, fork.Status, "finished");
+            Eq("fork of this chat", ToolCallView.AgentKind(fork.SubagentType), "panel tag");
+
+            var text = events.Where(e => e.Kind == ClaudeEventKind.AssistantText).Select(e => e.Text).ToList();
+            True(!text.Any(t => t.Contains("one two three") && t.StartsWith("Task:")), "the fork's own reply is not shown as Claude's answer");
+            True(text.Contains("done"), "Claude's answer is");
+        }
+
+        private static void Test_AgentLabels()
+        {
+            Eq("Agent", ToolCallView.AgentLabel(null));
+            Eq("general-purpose", ToolCallView.AgentLabel("general-purpose"));
+            Eq("agent", ToolCallView.AgentKind(""));
+            Eq("Explore", ToolCallView.AgentKind("Explore"));
+            Eq("Agent", ToolCallView.Title("Agent", new JObject { ["description"] = "x" }).Item1, "no type");
+        }
+
         private static void Test_AgentTasks_ReplayCapture()
         {
             var lines = AgentFixture();
