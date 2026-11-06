@@ -62,7 +62,11 @@ namespace ClaudeVS.Core.Cli
                     SessionId = (string)json["session_id"] ?? SessionId;
                     _model = (string)json["model"] ?? _model;
                     _lastMainUsage = default;
-                    return new[] { new ClaudeEvent { Kind = ClaudeEventKind.SessionStarted, SessionId = SessionId, Model = _model, CliVersion = (string)json["claude_code_version"] } };
+                    return new[] { new ClaudeEvent
+                    {
+                        Kind = ClaudeEventKind.SessionStarted, SessionId = SessionId, Model = _model, CliVersion = (string)json["claude_code_version"],
+                        Skills = Strings(json["skills"]), SlashCommands = Strings(json["slash_commands"]),
+                    } };
                 case "compact_boundary":
                     _lastMainUsage = default;
                     return new[] { new ClaudeEvent
@@ -224,6 +228,9 @@ namespace ClaudeVS.Core.Cli
             if ((string)r["type"] == "create") return "";
             return r["originalFile"]?.Type == JTokenType.String ? (string)r["originalFile"] : null;
         }
+
+        private static IReadOnlyList<string> Strings(JToken t) =>
+            t is JArray a ? a.Where(x => x.Type == JTokenType.String).Select(x => (string)x).ToList() : null;
 
         private IReadOnlyList<ClaudeEvent> ParseResult(JObject json)
         {

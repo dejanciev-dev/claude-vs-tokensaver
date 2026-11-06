@@ -35,6 +35,25 @@ namespace ClaudeVS.Core.Chat
             return list.GroupBy(c => c.Name, StringComparer.OrdinalIgnoreCase).Select(g => g.First()).ToList();
         }
 
+        /// <summary>
+        /// Adds the skills Claude Code reports in <c>init</c> (2.1.319) that you can run yourself: names in both
+        /// <c>skills</c> and <c>slash_commands</c>, so Claude-only skills and the built-in commands (many need the
+        /// terminal) stay out. Commands already listed (built-in, project, user) win; source "skill".
+        /// </summary>
+        public static List<SlashCommand> WithSkills(IEnumerable<SlashCommand> commands, IEnumerable<string> skills, IEnumerable<string> slashCommands)
+        {
+            var list = new List<SlashCommand>(commands ?? Enumerable.Empty<SlashCommand>());
+            var runnable = new HashSet<string>(slashCommands ?? Enumerable.Empty<string>(), StringComparer.OrdinalIgnoreCase);
+            var have = new HashSet<string>(list.Select(c => c.Name), StringComparer.OrdinalIgnoreCase);
+            foreach (var s in skills ?? Enumerable.Empty<string>())
+            {
+                if (string.IsNullOrWhiteSpace(s) || !runnable.Contains(s) || !have.Add(s)) continue;
+                int colon = s.IndexOf(':');
+                list.Add(new SlashCommand { Name = s, Source = "skill", Description = colon > 0 ? "from plugin " + s.Substring(0, colon) : "" });
+            }
+            return list;
+        }
+
         /// <summary>Commands whose name starts with what follows the '/' in <paramref name="typed"/>.</summary>
         public static List<SlashCommand> Match(IEnumerable<SlashCommand> commands, string typed)
         {

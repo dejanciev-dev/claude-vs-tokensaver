@@ -204,6 +204,10 @@ All notable changes to this project are listed here. The format follows
 - **Exact ⎿ lines for reads and searches** from the tool's structured result (Claude Code 2.1.319): `Read 20 of
   301 lines (from line 10)` when Claude reads part of a file, `Found 2 files` for Glob and Grep's file lists
   (counted lines before), and the Grep content mode's own line count.
+- **Skills in the `/` menu and autocomplete**: the skills Claude Code reports in `init` that you can run yourself
+  (project, user and plugin skills, e.g. `/anthropic-skills:pdf`) join your own commands. Picking one puts
+  `/name ` in the prompt box for its arguments. Verified with 2.1.319: a project skill sent as `/hello-check
+  banana` ran.
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.

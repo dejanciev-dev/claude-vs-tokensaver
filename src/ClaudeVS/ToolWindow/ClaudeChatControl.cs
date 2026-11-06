@@ -750,11 +750,19 @@ namespace ClaudeVS.ToolWindow
             entries.AddRange(ModeEntries("Mode"));
             entries.AddRange(_commands.Where(c => !string.Equals(c.Name, "compact", StringComparison.OrdinalIgnoreCase)).Select(c => new ChatPopup.Entry
             {
-                Group = "Commands",
+                Group = c.Source == "skill" ? "Skills" : "Commands",
                 Label = "/" + c.Name,
                 Description = c.Description,
                 Detail = c.Source,
-                Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); SendText("/" + c.Name, routed: false); },
+                Run = () =>
+                {
+                    ThreadHelper.ThrowIfNotOnUIThread();
+                    if (c.Source != "skill") { SendText("/" + c.Name, routed: false); return; }
+                    // Skills usually take arguments: put the command in the prompt box to finish and send.
+                    _prompt.Text = "/" + c.Name + " ";
+                    _prompt.CaretIndex = _prompt.Text.Length;
+                    _prompt.Focus();
+                },
             }));
             entries.AddRange(DialogEntries());
             entries.Add(new ChatPopup.Entry { Group = "Other", Label = "Show savings report", Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); VsContext.ExecuteCommand("Tools.ShowSavingsReport"); } });
@@ -1380,7 +1388,23 @@ namespace ClaudeVS.ToolWindow
             string dir = VsContext.GetSolutionDirectory() == null ? null : WorkFolder; // the folder Claude Code runs in
             if (!force && _commandsDir != null && string.Equals(dir, _commandsDir, StringComparison.OrdinalIgnoreCase)) return;
             _commandsDir = dir ?? "";
-            _commands = SlashCommands.Discover(dir, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+            _fileCommands = SlashCommands.Discover(dir, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+            _commands = SlashCommands.WithSkills(_fileCommands, _cliSkills, _cliSlashCommands);
+        }
+
+        // Your .claude/commands, and the skills Claude Code reported in its last init (2.1.319).
+        private List<SlashCommand> _fileCommands = new List<SlashCommand>(SlashCommands.BuiltIn);
+        private IReadOnlyList<string> _cliSkills, _cliSlashCommands;
+
+        /// <summary>From each init: the session's skills join the / menu and autocomplete.</summary>
+        private void OnCliCommands(ClaudeEvent ev)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (ev.Skills == null || ev.SlashCommands == null) return;
+            if (_cliSkills != null && _cliSkills.SequenceEqual(ev.Skills) && _cliSlashCommands.SequenceEqual(ev.SlashCommands)) return;
+            _cliSkills = ev.Skills;
+            _cliSlashCommands = ev.SlashCommands;
+            _commands = SlashCommands.WithSkills(_fileCommands, _cliSkills, _cliSlashCommands);
         }
 
         /// <summary>Session picker like VS Code's: search box, titles, compact ages ("5m", "2d").</summary>
@@ -1708,6 +1732,7 @@ namespace ClaudeVS.ToolWindow
                         ClaudeOutputPane.WriteLine($"Session {ev.SessionId} started, model {ev.Model}");
                         OnTurnStarted(); // init comes at the start of every turn (2.1.318)
                         CheckCliVersion(ev.CliVersion);
+                        OnCliCommands(ev);
                         string named = _sessionName;
                         if (named != null && ev.SessionId != null && SessionMeta.Get(ev.SessionId)?.Name != named)
                             SaveSessionMeta(() => SessionMeta.SetName(ev.SessionId, named)); // named before the session had an id
