@@ -1490,6 +1490,17 @@ namespace ClaudeVS.Core.Tests
             finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
         }
 
+        // ---------- Turn footer ----------
+        private static void Test_TurnFooter_Thinking_RealCli_2_1_319()
+        {
+            var done = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.319-thinking-duration.jsonl"))
+                .SelectMany(l => new ClaudeStreamParser().Parse(l)).Single(e => e.Kind == ClaudeEventKind.TurnCompleted);
+            Eq(56L, done.Usage.Thinking, "output_tokens_details.thinking_tokens");
+            True(TurnFooter.Extras(done.Usage).StartsWith(" · 56 thinking"), TurnFooter.Extras(done.Usage));
+            Eq("", TurnFooter.Extras(new TokenUsage { Output = 10 }), "no thinking, nothing added");
+            Eq(" · 1.2k thinking", TurnFooter.Extras(new TokenUsage { Output = 1500, Thinking = 1200 }));
+        }
+
         // ---------- Conversation cost warning ----------
         private static void Test_CostWatch()
         {

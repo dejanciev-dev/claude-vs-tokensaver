@@ -304,6 +304,18 @@ Help that saves tokens, from what the extension already sees (usage, tool calls,
 
 ---
 
+## Phase 13 — See what each answer and prompt costs
+
+- [x] **Thinking tokens in the footer**: `· 1.2k thinking` from `output_tokens_details.thinking_tokens`
+- [ ] **Cache share in the footer**: `· 94% cached`, the turn's input served from the prompt cache
+- [ ] **Prompt size**: the input box shows `~N tokens` for a long prompt; a huge paste suggests a file reference
+- [ ] **Base context tip**: MCP tools or memory files that take a big slice of every request
+- [ ] **Copy session summary**: `/` → tokens, cost, cache, turns as text
+- [ ] **File sizes in the `@` picker**: each file's size in tokens
+- [ ] **Resume note**: a session idle past its cache lifetime sends everything at full price on the next prompt
+
+---
+
 ## Working in Visual Studio — daily loop
 
 1. Core logic change → edit in `ClaudeVS.Core` → run tests (`ClaudeVS.Core.Tests` → Set as Startup → Ctrl+F5, or `dotnet run` in its folder).
