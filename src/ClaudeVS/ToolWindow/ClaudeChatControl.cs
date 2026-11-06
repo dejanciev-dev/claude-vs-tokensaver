@@ -1064,7 +1064,7 @@ namespace ClaudeVS.ToolWindow
                 return;
             }
 
-            var hits = _fileIndex.Search(_mention.Query, 10);
+            var hits = _fileIndex.SearchWithSizes(_mention.Query, 10); // with "~3.2k tok": what reading it would cost
             _fileList.IsEnabled = hits.Count > 0;
             _fileList.ItemsSource = hits.Count > 0 ? (System.Collections.IEnumerable)hits : new[] { "No matching file" };
             _fileList.SelectedIndex = hits.Count > 0 ? 0 : -1;
@@ -1119,7 +1119,8 @@ namespace ClaudeVS.ToolWindow
         private void PickFile()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            if (!(_fileList.SelectedItem is string rel) || _mention == null || _fileIndex == null || !_fileList.IsEnabled) return;
+            if (!(_fileList.SelectedItem is FileHit hit) || _mention == null || _fileIndex == null || !_fileList.IsEnabled) return;
+            string rel = hit.Path;
             var m = _mention;
             _filePopup.IsOpen = false;
             _prompt.Text = _prompt.Text.Remove(m.Start, m.Length);

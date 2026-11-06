@@ -259,6 +259,8 @@ All notable changes to this project are listed here. The format follows
   instructions… with Generate Lean CLAUDE.md, or / → Skills…. From the CLI's context breakdown after each turn.
 - **Copy session summary** (`/` → Context): turns, cost at API prices, tokens (input, output, thinking, cache
   read and write), cache hits and context now, as plain text for a ticket or a commit message.
+- **File sizes in the `@` picker**: each file shows what reading it would cost, `src/Big.cs   ~3.2k tok`
+  (about 4 bytes per token), so a huge file stands out before you mention it.
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.

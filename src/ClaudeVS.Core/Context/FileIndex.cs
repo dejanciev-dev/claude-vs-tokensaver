@@ -30,6 +30,20 @@ namespace ClaudeVS.Core.Context
         }
     }
 
+    /// <summary>A file in the "@" picker: its relative path (what gets inserted) and size.</summary>
+    public sealed class FileHit
+    {
+        public string Path { get; set; }
+        /// <summary>Size in bytes; null when it could not be read.</summary>
+        public long? Bytes { get; set; }
+
+        /// <summary>"~3.2k tok" (about 4 bytes per token for text), "" when unknown or empty.</summary>
+        public string SizeLabel => Bytes is long b && b > 0 ? "~" + Tokens.TokenMeter.Format((b + 3) / 4) + " tok" : "";
+
+        /// <summary>What the list shows: "src/Big.cs   ~3.2k tok".</summary>
+        public override string ToString() => SizeLabel.Length == 0 ? Path : Path + "   " + SizeLabel;
+    }
+
     /// <summary>
     /// Relative paths of the files in a solution folder, for the "@" file picker. Skips the same noise folders
     /// the CLAUDE.md scanner does (bin, obj, node_modules, .git, ...) and caps the count for huge repos.
@@ -101,6 +115,19 @@ namespace ClaudeVS.Core.Context
         }
 
         public string FullPath(string relative) => Path.Combine(Root, relative.Replace('/', Path.DirectorySeparatorChar));
+
+        /// <summary>
+        /// <see cref="Search"/> with each file's size, for the picker to show what reading it would cost (sizes are
+        /// read now, for the few hits only).
+        /// </summary>
+        public List<FileHit> SearchWithSizes(string query, int max = 8) =>
+            Search(query, max).Select(rel =>
+            {
+                long? bytes;
+                try { bytes = new FileInfo(FullPath(rel)).Length; }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is NotSupportedException || ex is ArgumentException) { bytes = null; }
+                return new FileHit { Path = rel, Bytes = bytes };
+            }).ToList();
 
         private static int Score(string path, string q)
         {
