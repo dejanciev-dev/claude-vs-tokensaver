@@ -38,6 +38,15 @@ namespace ClaudeVS.Core.Setup
             "Read(./**/.angular/**)", "Read(./**/coverage/**)",
         };
 
+        /// <summary>True when the output-trimming hook this setup writes is in <paramref name="rootDir"/> (any version).</summary>
+        public static bool IsInstalled(string rootDir)
+        {
+            if (string.IsNullOrEmpty(rootDir)) return false;
+            string hookPath = Path.Combine(rootDir, ".claude", "hooks", HookFileName);
+            try { return File.Exists(hookPath) && File.ReadAllText(hookPath).Contains(HookMarker); }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { return false; }
+        }
+
         public static SetupResult Apply(string rootDir, bool autoApproveRewrites = false)
         {
             var result = new SetupResult();

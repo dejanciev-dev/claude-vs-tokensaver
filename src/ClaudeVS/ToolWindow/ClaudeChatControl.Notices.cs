@@ -73,7 +73,29 @@ namespace ClaudeVS.ToolWindow
         private readonly Core.Tokens.ReadTracker _reads = new Core.Tokens.ReadTracker();
         private bool _gaveRepeatReadTip;
 
-        /// <summary>Every event: the tip, once per conversation, when Claude reads an unchanged file it already has.</summary>
+        // The main agent's shell calls waiting for their result: tool_use_id → tool name.
+        private readonly Dictionary<string, string> _shellCalls = new Dictionary<string, string>(StringComparer.Ordinal);
+        private bool _gaveLargeOutputTip;
+
+        /// <summary>Every event: the token tips that watch tool calls (repeated reads, large command output).</summary>
+        private void TrackTips(ClaudeEvent ev)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            TrackReads(ev);
+            if (ev.Kind == ClaudeEventKind.ToolUse && !ev.IsSubagent && ev.ToolUseId != null && (ev.ToolName == "Bash" || ev.ToolName == "PowerShell"))
+                _shellCalls[ev.ToolUseId] = ev.ToolName;
+            else if (ev.Kind == ClaudeEventKind.ToolResult && ev.ToolUseId != null && _shellCalls.TryGetValue(ev.ToolUseId, out var tool))
+            {
+                _shellCalls.Remove(ev.ToolUseId);
+                if (ev.IsError || _gaveLargeOutputTip) return;
+                string tip = SessionNotices.LargeCommandOutput(tool, ev.ResultChars, Core.Setup.TokenSaverSetup.IsInstalled(_sessionDir));
+                if (tip == null) return;
+                _gaveLargeOutputTip = true;
+                Notice(tip);
+            }
+        }
+
+        /// <summary>The tip, once per conversation, when Claude reads an unchanged file it already has.</summary>
         private void TrackReads(ClaudeEvent ev)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -114,6 +136,8 @@ namespace ClaudeVS.ToolWindow
             _saidNotices.Clear();
             _gaveLargeReadTip = false;
             _gaveRepeatReadTip = false;
+            _gaveLargeOutputTip = false;
+            _shellCalls.Clear();
             _reads.Reset();
         }
     }
