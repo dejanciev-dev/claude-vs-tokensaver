@@ -254,8 +254,11 @@ namespace ClaudeVS.Core.Cli
         public const string ForkType = "fork";
 
         /// <summary>What the ⎿ line says once the result is in.</summary>
-        public static ToolResultSummary Summarize(string toolName, string resultText, bool isError, InlineDiff diff = null)
+        /// <param name="data">The CLI's structured result (<c>tool_use_result</c>, 2.1.319), when there is one: exact
+        /// counts for Read, Glob and Grep instead of counting output lines.</param>
+        public static ToolResultSummary Summarize(string toolName, string resultText, bool isError, InlineDiff diff = null, JObject data = null)
         {
+            if (!isError && data != null && FromData(toolName, data) is string exact) return One(exact);
             var output = SplitOutput(resultText);
             if (isError)
                 return new ToolResultSummary { IsError = true, Lines = output.Take(PreviewLines).Select(Cut).DefaultIfEmpty("Error").ToList(), MoreLines = Math.Max(0, output.Count - PreviewLines) };
@@ -291,6 +294,44 @@ namespace ClaudeVS.Core.Cli
             if (output.Count == 0) return One("Done");
             return new ToolResultSummary { Lines = output.Take(PreviewLines).Select(Cut).ToList(), MoreLines = Math.Max(0, output.Count - PreviewLines) };
         }
+
+        /// <summary>
+        /// The ⎿ line from the structured result: "Read 20 of 301 lines (from line 10)" for part of a file,
+        /// "Found 2 files" for Glob and Grep's file lists, "Found 4 lines" for Grep's content mode. Null otherwise.
+        /// </summary>
+        public static string FromData(string toolName, JObject data)
+        {
+            long? N(JToken t) => t != null && (t.Type == JTokenType.Integer) ? (long?)t : null;
+            switch (toolName)
+            {
+                case "Read":
+                {
+                    var file = data["file"] as JObject;
+                    long? read = N(file?["numLines"]), total = N(file?["totalLines"]), start = N(file?["startLine"]);
+                    if (read == null) return null;
+                    bool part = (start ?? 1) > 1 || (total != null && read < total);
+                    if (!part) return $"Read {Lines((int)read)}";
+                    return $"Read {read:N0} of {total:N0} lines" + ((start ?? 1) > 1 ? $" (from line {start:N0})" : "");
+                }
+                case "Glob":
+                {
+                    long? files = N(data["numFiles"]);
+                    if (files == null) return null;
+                    return Found(files.Value) + (data["truncated"]?.Type == JTokenType.Boolean && (bool)data["truncated"] ? " (list cut short)" : "");
+                }
+                case "Grep":
+                {
+                    string mode = (string)data["mode"];
+                    if (mode == "files_with_matches" && N(data["numFiles"]) is long files) return Found(files);
+                    if (mode == "content" && N(data["numLines"]) is long lines) return lines == 0 ? "No matches" : $"Found {(lines == 1 ? "1 line" : $"{lines:N0} lines")}";
+                    return null;
+                }
+                default:
+                    return null;
+            }
+        }
+
+        private static string Found(long files) => files == 0 ? "No files found" : files == 1 ? "Found 1 file" : $"Found {files:N0} files";
 
         public static string Changes(int added, int removed)
         {

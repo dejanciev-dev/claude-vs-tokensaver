@@ -175,6 +175,7 @@ namespace ClaudeVS.Core.Cli
             var results = content.OfType<JObject>().Where(b => (string)b["type"] == "tool_result").ToList();
             // The CLI's structured result sits beside the message, so it only belongs to a block when there is one.
             string original = results.Count == 1 ? OriginalFile(json["tool_use_result"]) : null;
+            var data = results.Count == 1 ? json["tool_use_result"] as JObject : null;
             foreach (var block in results)
             {
                 var c = block["content"];
@@ -188,6 +189,7 @@ namespace ClaudeVS.Core.Cli
                     ResultText = text,
                     IsError = block.Value<bool?>("is_error") ?? false,
                     OriginalFile = original,
+                    ResultData = data,
                     AllowedBy = AllowedBy(json["tool_result_meta"], (string)block["tool_use_id"]),
                 });
             }

@@ -201,6 +201,9 @@ All notable changes to this project are listed here. The format follows
   says so on its row, `● Bash(npm test) · allowed by a rule`, with a tooltip pointing to Permission rules. A shell
   command run on the permission mode alone says "allowed by the mode"; edits in Accept edits mode stay quiet.
   From the result's `tool_result_meta` (Claude Code 2.1.319).
+- **Exact ⎿ lines for reads and searches** from the tool's structured result (Claude Code 2.1.319): `Read 20 of
+  301 lines (from line 10)` when Claude reads part of a file, `Found 2 files` for Glob and Grep's file lists
+  (counted lines before), and the Grep content mode's own line count.
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.
