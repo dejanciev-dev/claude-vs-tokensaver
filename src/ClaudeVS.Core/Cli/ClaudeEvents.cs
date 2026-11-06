@@ -118,7 +118,7 @@ namespace ClaudeVS.Core.Cli
         public string DeniedBy { get; set; }
         public bool IsError { get; set; }
         public string RequestId { get; set; }
-        /// <summary>ControlResponse: the CLI's answer to our control request (e.g. the get_context_usage data).</summary>
+        /// <summary>ControlResponse: the CLI's answer to our control request (e.g. the get_context_usage data). SessionStarted: the whole init.</summary>
         public JObject Payload { get; set; }
         /// <summary>McpMessage: which of our MCP servers the message is for.</summary>
         public string ServerName { get; set; }

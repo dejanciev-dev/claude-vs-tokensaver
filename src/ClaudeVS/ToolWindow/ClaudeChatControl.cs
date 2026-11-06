@@ -1733,6 +1733,7 @@ namespace ClaudeVS.ToolWindow
                         OnTurnStarted(); // init comes at the start of every turn (2.1.318)
                         CheckCliVersion(ev.CliVersion);
                         OnCliCommands(ev);
+                        OnSessionFacts(ev);
                         string named = _sessionName;
                         if (named != null && ev.SessionId != null && SessionMeta.Get(ev.SessionId)?.Name != named)
                             SaveSessionMeta(() => SessionMeta.SetName(ev.SessionId, named)); // named before the session had an id
@@ -2560,6 +2561,7 @@ namespace ClaudeVS.ToolWindow
             _requestedFamilies.Clear();
             ClearTurns();
             _warnedModelMismatch = false;
+            ResetNotices();
             _contextUsage = null;
             _meterArea.ToolTip = "Click for what fills the context window";
             lock (_pendingText) _pendingText.Clear();

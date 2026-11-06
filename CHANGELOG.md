@@ -217,6 +217,10 @@ All notable changes to this project are listed here. The format follows
 - **Extra usage in the limit banner**: once a plan limit is reached, the banner says whether extra usage carries
   you past it ("Using extra usage.") or not ("Extra usage is off (no credits left)."), and its tooltip lists it
   with the windows. From `overageStatus` / `overageDisabledReason` in `rate_limit_event`.
+- **Session notes** (`ℹ` in the chat, once per conversation, also in the Output pane) for things that change what
+  a session costs or does without you seeing them, from Claude Code's `init`:
+  - **Billing**: when Claude Code uses an API key (an `ANTHROPIC_API_KEY` in the environment, `apiKeyHelper`, a
+    Console login) instead of your claude.ai plan, the chat says the session is billed per token to that key.
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.
