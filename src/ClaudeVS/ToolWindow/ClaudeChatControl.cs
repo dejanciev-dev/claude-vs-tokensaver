@@ -1817,6 +1817,7 @@ namespace ClaudeVS.ToolWindow
                         break;
                 }
                 OnActivityEvent(ev);
+                TrackReads(ev);
             }
         }
 
