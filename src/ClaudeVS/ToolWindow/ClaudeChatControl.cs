@@ -1786,6 +1786,13 @@ namespace ClaudeVS.ToolWindow
                         if (ev.TerminalReason != null && ev.TerminalReason != "completed") ClaudeOutputPane.WriteLine("Turn ended: " + ev.TerminalReason);
                         OnSignInExpiry(ev);
                         string used = _turnModel != null ? " · " + _turnModel : "";
+                        if (ev.Subagents?.FooterNote() is string agents) used += " · " + agents;
+                        if (ev.Subagents?.Warning() is string agentTrouble)
+                        {
+                            FlushText();
+                            Append("\n  ⚠ " + agentTrouble + "\n");
+                            ClaudeOutputPane.WriteLine(agentTrouble);
+                        }
                         CheckModelMismatch(_turnModel);
                         RecordUsage(ev, _turnModel);
                         RefreshContextUsage(show: false); // control request, no model call

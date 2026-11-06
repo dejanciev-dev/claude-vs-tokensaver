@@ -1274,6 +1274,28 @@ namespace ClaudeVS.Core.Tests
             Eq(files.Count, SlashCommands.WithSkills(files, null, null).Count, "older CLIs: unchanged");
         }
 
+        // ---------- Subagent stats ----------
+        private static void Test_SubagentStats_FromRealResults()
+        {
+            // The fork run (2.1.319): one background fork that completed.
+            var fork = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.319-fork.jsonl"))
+                .SelectMany(l => new ClaudeStreamParser().Parse(l)).Last(e => e.Kind == ClaudeEventKind.TurnCompleted);
+            Eq(1, fork.Subagents.Spawned, "spawned");
+            Eq("1 agent", fork.Subagents.FooterNote(), "footer");
+            Eq(null, fork.Subagents.Warning(), "nothing went wrong");
+
+            // A turn without agents (2.1.319 thinking capture): no footer note.
+            var plain = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.319-thinking-duration.jsonl"))
+                .SelectMany(l => new ClaudeStreamParser().Parse(l)).Single(e => e.Kind == ClaudeEventKind.TurnCompleted);
+            True(plain.Subagents != null && plain.Subagents.FooterNote() == null, "no agents, no note");
+
+            var trouble = SubagentStats.Parse(JObject.Parse("{\"spawned\":4,\"completed\":1,\"failed\":1,\"killed\":{\"parent\":0,\"user\":1,\"system\":1},"
+                + "\"refused\":{\"depth_limit\":0,\"concurrency_limit\":2,\"budget\":0}}"));
+            Eq("4 agents", trouble.FooterNote());
+            Eq("Claude Code refused 2 subagents (too many at once); 1 subagent failed; stopped 1 subagent.", trouble.Warning(), "warning");
+            Eq(null, SubagentStats.Parse(null), "older CLIs");
+        }
+
         // ---------- Sign-in expiry ----------
         private static void Test_SignInExpiry_FromRealResult_2_1_318()
         {

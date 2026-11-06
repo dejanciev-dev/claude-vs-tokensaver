@@ -254,6 +254,8 @@ Tool-result messages carry more than the text Claude sees: `tool_use_result` (th
       content's `numLines`. Capture: `Fixtures/cli-2.1.319-tool-data.jsonl`
 - [x] **Skills in the `/` menu**: names in both `skills` and `slash_commands` of `init` (runnable by you; built-in
       terminal commands and Claude-only skills stay out). Verified that a project skill runs from stream-json
+- [x] **Subagents per turn**: `subagent_stats` in the result: "· 2 agents" in the footer; refused (depth,
+      concurrency, budget), failed or system-stopped agents get one line in the chat
 
 ---
 
