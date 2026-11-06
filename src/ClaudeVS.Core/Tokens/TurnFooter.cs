@@ -10,12 +10,14 @@ namespace ClaudeVS.Core.Tokens
     public static class TurnFooter
     {
         /// <summary>" · 1.2k thinking" and the like; "" when there is nothing to add.</summary>
-        public static string Extras(TokenUsage turn)
+        /// <param name="cacheSavedUsd">What the cache saved this turn (<see cref="TokenMeter.LastTurnCacheSavedUsd"/>); shown from $0.001.</param>
+        public static string Extras(TokenUsage turn, double cacheSavedUsd = 0)
         {
             var parts = new List<string>();
             // Thinking is billed as output, the dearest kind of token: worth seeing per answer.
             if (turn.Thinking > 0) parts.Add($"{TokenMeter.Format(turn.Thinking)} thinking");
-            if (CachedPercent(turn) is int cached) parts.Add($"{cached}% cached");
+            if (CachedPercent(turn) is int cached)
+                parts.Add($"{cached}% cached" + (cacheSavedUsd >= 0.0005 ? " (saved $" + cacheSavedUsd.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture) + ")" : ""));
             return parts.Count == 0 ? "" : " · " + string.Join(" · ", parts);
         }
 

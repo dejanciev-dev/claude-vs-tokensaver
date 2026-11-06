@@ -44,6 +44,13 @@ namespace ClaudeVS.Core.Tokens
         public int Turns { get; private set; }
         public double SessionCostUsd => _costOffset + _lastReportedCost;
         public double LastTurnCostUsd { get; private set; }
+        /// <summary>What the prompt cache saved in the last turn and in the whole conversation (USD at <see cref="Prices"/>; can be negative for a turn that only wrote the cache).</summary>
+        public double LastTurnCacheSavedUsd { get; private set; }
+        public double SessionCacheSavedUsd { get; private set; }
+        /// <summary>Prices for the cache saving; the defaults when not set (Options → Pricing).</summary>
+        public PriceTable Prices { get; set; }
+        private string _turnModel; // the main agent's model in the running turn
+        private static readonly PriceTable DefaultPrices = new PriceTable();
         public int LargestToolResultChars { get; private set; }
         public string LargestToolResultTool { get; private set; }
         public int CompactionsSaved { get; private set; }
@@ -93,6 +100,7 @@ namespace ClaudeVS.Core.Tokens
             _toolNames.Clear();
             _resultCharsByTool.Clear();
             Cache.Reset();
+            LastTurnCacheSavedUsd = 0; SessionCacheSavedUsd = 0; _turnModel = null;
             Changed?.Invoke(this, EventArgs.Empty);
         }
 
@@ -102,6 +110,7 @@ namespace ClaudeVS.Core.Tokens
             {
                 case ClaudeEventKind.AssistantUsage when !ev.IsSubagent:
                     Cache.Use(ev.Usage, DateTime.UtcNow);
+                    if (!string.IsNullOrEmpty(ev.Model)) _turnModel = ev.Model;
                     ContextTokens = ev.Usage.ContextTokens; // live update while a long turn runs
                     break;
                 case ClaudeEventKind.ToolUse:
@@ -128,6 +137,11 @@ namespace ClaudeVS.Core.Tokens
                 case ClaudeEventKind.TurnCompleted:
                     Turns++;
                     LastTurn = ev.Usage;
+                    // Priced at the model that answered (Sonnet when unknown); the turn's usage sums all its requests.
+                    var prices = Prices ?? DefaultPrices;
+                    LastTurnCacheSavedUsd = (prices.For(_turnModel) ?? prices.Sonnet).CacheSavedUsd(ev.Usage);
+                    SessionCacheSavedUsd += LastTurnCacheSavedUsd;
+                    _turnModel = null;
                     SessionTotal += ev.Usage;
                     if (!ev.LastRequestUsage.IsEmpty) ContextTokens = ev.LastRequestUsage.ContextTokens;
                     if (ev.ContextWindow.HasValue && ev.ContextWindow.Value > 0) ContextWindow = ev.ContextWindow.Value;

@@ -18,6 +18,21 @@ namespace ClaudeVS.Core.Tokens
         public double Cost(UsageRecord r) =>
             (r.InputTokens * Input + r.OutputTokens * Output + r.CacheWriteTokens * CacheWrite + r.CacheReadTokens * CacheRead) / 1_000_000.0;
 
+        /// <summary>
+        /// What the prompt cache saved: every token read from it costs <see cref="CacheRead"/> instead of the full
+        /// <see cref="Input"/> price, minus the extra for writing it (a 5-minute write costs <see cref="CacheWrite"/>,
+        /// a 1-hour write twice the input price). Negative when a turn wrote more than it read (the first turn).
+        /// </summary>
+        public double CacheSavedUsd(long cacheRead, long cacheWrite, long cacheWrite1h)
+        {
+            long write1h = Math.Min(Math.Max(0, cacheWrite1h), Math.Max(0, cacheWrite));
+            long write5m = Math.Max(0, cacheWrite) - write1h;
+            double saved = cacheRead * (Input - CacheRead) - write5m * (CacheWrite - Input) - write1h * Input; // 1h write = 2x input
+            return saved / 1_000_000.0;
+        }
+
+        public double CacheSavedUsd(Cli.TokenUsage u) => CacheSavedUsd(u.CacheRead, u.CacheCreation, u.CacheCreation1h);
+
         /// <summary>Parses "input, output, cacheWrite, cacheRead" (invariant culture). Returns null when malformed.</summary>
         public static ModelPrice Parse(string text)
         {
