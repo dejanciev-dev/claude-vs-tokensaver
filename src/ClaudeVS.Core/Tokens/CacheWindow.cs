@@ -66,6 +66,19 @@ namespace ClaudeVS.Core.Tokens
         }
 
         /// <summary>
+        /// When resuming a conversation idle for longer than the longest cache lifetime (1 hour) with a context worth
+        /// mentioning: its cache is surely gone, so the first prompt sends it all at the full input price. Null otherwise.
+        /// </summary>
+        public static string ResumeNote(DateTime lastActiveUtc, long contextTokens, DateTime nowUtc)
+        {
+            var idle = nowUtc - lastActiveUtc;
+            if (idle <= Long || contextTokens < WorthMentioningTokens) return null;
+            string ago = idle.TotalDays >= 2 ? $"{(int)idle.TotalDays} days" : idle.TotalHours >= 2 ? $"{(int)idle.TotalHours} hours" : "over an hour";
+            return $"This conversation was last active {ago} ago, so its prompt cache has expired: the first prompt sends ~{TokenMeter.Format(contextTokens)} tokens "
+                + "at the full input price. For a new task, a New chat is cheaper.";
+        }
+
+        /// <summary>
         /// Once the cache has expired with a context worth mentioning: what the next prompt costs. Null otherwise.
         /// </summary>
         public string ExpiredNote(DateTime nowUtc)

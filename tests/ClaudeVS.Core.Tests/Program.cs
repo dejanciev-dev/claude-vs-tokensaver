@@ -1572,6 +1572,33 @@ namespace ClaudeVS.Core.Tests
             finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
         }
 
+        private static void Test_ResumeNote()
+        {
+            var now = new DateTime(2026, 11, 6, 15, 0, 0, DateTimeKind.Utc);
+            Eq(null, CacheWindow.ResumeNote(now.AddMinutes(-40), 50_000, now), "within the hour: may still be warm");
+            Eq(null, CacheWindow.ResumeNote(now.AddHours(-5), 4_000, now), "small context");
+            Eq("This conversation was last active 5 hours ago, so its prompt cache has expired: the first prompt sends ~45.0k tokens at the full input price. For a new task, a New chat is cheaper.",
+                CacheWindow.ResumeNote(now.AddHours(-5), 45_000, now));
+            True(CacheWindow.ResumeNote(now.AddDays(-3), 45_000, now).Contains("last active 3 days ago"), "days");
+            True(CacheWindow.ResumeNote(now.AddMinutes(-70), 45_000, now).Contains("last active over an hour ago"), "just past the hour");
+
+            // A session file: the last main answer's usage is the context; a compaction resets it until the next answer.
+            string file = Path.Combine(Path.GetTempPath(), "cvs-resume-" + Guid.NewGuid().ToString("N") + ".jsonl");
+            try
+            {
+                File.WriteAllLines(file, new[]
+                {
+                    "{\"type\":\"user\",\"uuid\":\"u1\",\"message\":{\"role\":\"user\",\"content\":\"hi\"}}",
+                    "{\"type\":\"assistant\",\"uuid\":\"a1\",\"message\":{\"id\":\"m1\",\"content\":[{\"type\":\"text\",\"text\":\"hello\"}],\"usage\":{\"input_tokens\":4,\"cache_read_input_tokens\":30000,\"cache_creation_input_tokens\":2000,\"output_tokens\":10}}}",
+                    "{\"type\":\"assistant\",\"uuid\":\"s1\",\"isSidechain\":true,\"message\":{\"id\":\"m2\",\"content\":[],\"usage\":{\"input_tokens\":99999}}}",
+                });
+                Eq(32_004L, SessionTranscript.Read(file).LastContextTokens, "last main answer; subagent lines skipped");
+                File.AppendAllLines(file, new[] { "{\"type\":\"system\",\"subtype\":\"compact_boundary\",\"uuid\":\"c1\",\"compactMetadata\":{\"preTokens\":32004,\"trigger\":\"manual\"}}" });
+                Eq(0L, SessionTranscript.Read(file).LastContextTokens, "right after a compaction: unknown");
+            }
+            finally { try { File.Delete(file); } catch (IOException) { } }
+        }
+
         // ---------- Conversation cost warning ----------
         private static void Test_CostWatch()
         {

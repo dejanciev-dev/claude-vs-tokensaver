@@ -261,6 +261,9 @@ All notable changes to this project are listed here. The format follows
   read and write), cache hits and context now, as plain text for a ticket or a commit message.
 - **File sizes in the `@` picker**: each file shows what reading it would cost, `src/Big.cs   ~3.2k tok`
   (about 4 bytes per token), so a huge file stands out before you mention it.
+- **Resume note**: resuming a conversation idle for over an hour (longer than any prompt cache) with ~10k tokens
+  of context or more says the first prompt sends it all at the full input price, and that a New chat is cheaper
+  for a new task. The size comes from the last answer's usage in the session file.
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.
