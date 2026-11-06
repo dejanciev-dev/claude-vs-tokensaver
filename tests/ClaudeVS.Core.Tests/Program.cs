@@ -1510,6 +1510,16 @@ namespace ClaudeVS.Core.Tests
             Eq(0, TurnFooter.CachedPercent(new TokenUsage { Input = 100, CacheCreation = 30_000 }), "cache just written: 0%");
         }
 
+        private static void Test_PromptSize()
+        {
+            Eq(null, PromptSize.Note("fix the null check in Save()"), "short prompt");
+            Eq(null, PromptSize.Note(""), "empty");
+            Eq("~2.0k tokens", PromptSize.Note(new string('a', 8_000)), "long prompt: just the size");
+            string huge = PromptSize.Note(new string('a', 40_000));
+            True(huge.StartsWith("~10.0k tokens: it goes with every later request."), huge);
+            True(huge.Contains("Ctrl+Alt+K, F"), "points to Attach Current File as Reference");
+        }
+
         // ---------- Conversation cost warning ----------
         private static void Test_CostWatch()
         {

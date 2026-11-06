@@ -1325,14 +1325,15 @@ namespace ClaudeVS.ToolWindow
                     : string.Join("   ", matches.Take(6).Select(c => c + (string.IsNullOrEmpty(c.Description) ? "" : " — " + c.Description)));
                 return;
             }
+            string size = PromptSize.Note(_prompt.Text); // a long prompt goes with every later request
             if (_modelChoice != ModelChoice.Auto || string.IsNullOrWhiteSpace(_prompt.Text) || _prompt.Text.TrimStart().StartsWith("/"))
             {
-                _route.Text = "";
+                _route.Text = size ?? "";
                 return;
             }
             int lines = _selection == null ? 0 : _selection.EndLine - _selection.StartLine + 1;
             var d = Route(_prompt.Text, lines, _attachedFiles.Count);
-            _route.Text = $"Auto: {d.Model.ToCli()} / {d.Effort.ToCli()} — {d.Reason}";
+            _route.Text = $"Auto: {d.Model.ToCli()} / {d.Effort.ToCli()} — {d.Reason}" + (size != null ? "   ·   " + size : "");
         }
 
         private void EnsureSession(string dir)

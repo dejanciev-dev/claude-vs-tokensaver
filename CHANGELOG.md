@@ -251,6 +251,9 @@ All notable changes to this project are listed here. The format follows
   `output_tokens_details.thinking_tokens` (Claude Code 2.1.319). Thinking is billed as output, the dearest kind.
 - **Cache share in the footer**: `· 60% cached`, the turn's input served from the prompt cache (a tenth of the
   price). A low number right after a model switch or a long pause explains a dearer answer.
+- **Prompt size while typing**: from ~1k tokens the line under the input box shows the prompt's size
+  (`~2.0k tokens`, after the Auto route); from ~8k it adds that a paste this large goes with every later request
+  and suggests a file reference (`Ctrl+Alt+K, F`).
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.
