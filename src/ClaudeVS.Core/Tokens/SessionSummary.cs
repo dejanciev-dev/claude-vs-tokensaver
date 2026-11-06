@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Linq;
 using System.Text;
 
 namespace ClaudeVS.Core.Tokens
@@ -28,6 +29,9 @@ namespace ClaudeVS.Core.Tokens
                 if (window > 0) sb.Append($" of {TokenMeter.Format(window)} ({m.ContextPercent.ToString("0", c)}%)");
             }
             sb.Append('\n');
+            var byTool = m.ResultTokensByTool().Where(kv => kv.Value > 0).Take(5).ToList();
+            if (byTool.Count > 0)
+                sb.Append("Tool results: ").Append(string.Join(" · ", byTool.Select(kv => $"{kv.Key} {TokenMeter.Format(kv.Value)}"))).Append('\n');
             if (m.CompactionsSaved > 0) sb.Append($"Compactions: {m.CompactionsSaved}\n");
             if (!string.IsNullOrEmpty(sessionId)) sb.Append($"Session: {sessionId}\n");
             return sb.ToString().TrimEnd('\n');

@@ -325,7 +325,7 @@ Help that saves tokens, from what the extension already sees (usage, tool calls,
       line; they then go to the Output pane only. Billing, MCP server and permission mode notes stay
 - [x] **Thinking tokens in the usage log and savings report** (`thinking` in each log line, written only when
       above 0; the report prices it at each turn's output price)
-- [ ] **Tool results by tool**: the session summary says which tools filled the context
+- [x] **Tool results by tool**: the session summary says which tools filled the context (`TokenMeter.ResultTokensByTool`)
 - [ ] **Costliest turns in the savings report**: the five dearest turns, with model, tokens and prompt (if logged)
 
 ---

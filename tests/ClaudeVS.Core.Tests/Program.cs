@@ -1592,6 +1592,31 @@ namespace ClaudeVS.Core.Tests
             finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
         }
 
+        private static void Test_ResultTokensByTool()
+        {
+            // The real 2.1.319 tool capture: a partial Read, Glob, two Greps and a failing command.
+            var meter = new TokenMeter();
+            foreach (var e in File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.319-tool-data.jsonl"))
+                .SelectMany(l => new ClaudeStreamParser().Parse(l))) meter.Observe(e);
+            var groups = meter.ResultTokensByTool().Select(kv => kv.Key).ToList();
+            True(groups.Contains("Read") && groups.Contains("Search") && groups.Contains("Shell"), string.Join(",", groups));
+            True(!groups.Contains("Grep") && !groups.Contains("Glob"), "searches grouped");
+
+            var m = new TokenMeter();
+            void Call(string id, string tool, int chars, bool sub = false)
+            {
+                m.Observe(new ClaudeEvent { Kind = ClaudeEventKind.ToolUse, ToolUseId = id, ToolName = tool, IsSubagent = sub });
+                m.Observe(new ClaudeEvent { Kind = ClaudeEventKind.ToolResult, ToolUseId = id, ResultChars = chars, IsSubagent = sub });
+            }
+            Call("1", "Read", 40_000); Call("2", "Bash", 8_000); Call("3", "PowerShell", 4_000); Call("4", "mcp__visualstudio__get_error_list", 400);
+            Call("5", "Read", 99_000, sub: true); // a subagent's own context
+            Eq("Read 10000|Shell 3000|MCP 100", string.Join("|", m.ResultTokensByTool().Select(kv => kv.Key + " " + kv.Value)));
+            m.Observe(new ClaudeEvent { Kind = ClaudeEventKind.TurnCompleted, Usage = new TokenUsage { Input = 10 } });
+            True(SessionSummary.Format(m).EndsWith("\nTool results: Read 10.0k · Shell 3.0k · MCP 100"), SessionSummary.Format(m));
+            m.Reset();
+            Eq(0, m.ResultTokensByTool().Count, "reset");
+        }
+
         private static void Test_ResumeNote()
         {
             var now = new DateTime(2026, 11, 6, 15, 0, 0, DateTimeKind.Utc);

@@ -270,6 +270,8 @@ All notable changes to this project are listed here. The format follows
   mode notes always show.
 - **Thinking in the savings report**: the usage log records each turn's thinking tokens (`thinking`), and the
   report adds `Thinking: 300k tokens ≈ $3.00 (60% of output tokens; …)`, priced at each turn's output price.
+- **Where the tokens went**: the session summary adds `Tool results: Read 10.0k · Shell 3.0k · MCP 100`, the
+  tokens each kind of tool result added to the conversation (main agent only; shell commands and searches grouped).
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.
