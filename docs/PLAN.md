@@ -342,7 +342,7 @@ the prices of the model that answered (`ModelPrice.CacheSavedUsd`).
 - [x] **Meter**: the conversation's total in the meter's tooltip (`TokenMeter.CacheSavedLine`)
 - [x] **Savings report**: `Saved by the prompt cache` next to routing and file references (the usage log records
       `cacheWrite1h`; older lines count as 5-minute writes)
-- [ ] **Session summary**: the total in / → Copy session summary
+- [x] **Session summary**: the total in / → Copy session summary (`Cache hits: 75% (saved $0.49)`, from $0.01)
 
 ---
 

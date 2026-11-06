@@ -22,6 +22,7 @@ namespace ClaudeVS.Core.Tokens
             if (s.Thinking > 0) sb.Append($" of which thinking {TokenMeter.Format(s.Thinking)}");
             sb.Append($", cache read {TokenMeter.Format(s.CacheRead)}, cache write {TokenMeter.Format(s.CacheCreation)})\n");
             sb.Append($"Cache hits: {m.CacheHitPercent.ToString("0", c)}%");
+            if (m.SessionCacheSavedUsd >= 0.005) sb.Append($" (saved ${m.SessionCacheSavedUsd.ToString("0.00", c)})");
             if (m.ContextTokens > 0)
             {
                 long window = m.ContextWindow > 0 ? m.ContextWindow : 0;
