@@ -268,6 +268,7 @@ namespace ClaudeVS.ToolWindow
             top.Children.Add(_meterArea);
             top.Children.Add(adviceRow);
             top.Children.Add(_limitBanner);
+            top.Children.Add(_signInBanner);
 
             // Input box: text (with placeholder) on top; footer: + / model … mode send.
             var textArea = new Grid();
@@ -1750,6 +1751,7 @@ namespace ClaudeVS.ToolWindow
                         FlushText();
                         SetBusy(_pendingUsages.Count > 1); // still busy if more prompts were queued
                         if (ev.IsError && !string.IsNullOrEmpty(ev.Text)) AppendError("[error] ", ev.Text);
+                        OnSignInExpiry(ev);
                         string used = _turnModel != null ? " · " + _turnModel : "";
                         CheckModelMismatch(_turnModel);
                         RecordUsage(ev, _turnModel);
@@ -2308,6 +2310,7 @@ namespace ClaudeVS.ToolWindow
             var quiet = DateTime.UtcNow - new DateTime(System.Threading.Interlocked.Read(ref _lastOutputTicks), DateTimeKind.Utc);
             SetStalled(_busy && !_waitingForUser && quiet >= StallAfter, quiet);
             if (_limitBanner.Visibility == Visibility.Visible) UpdateLimitBanner(); // hide it once the limit has reset
+            if (_signInBanner.Visibility == Visibility.Visible && !_signInExpired) UpdateSignInBanner(); // days left, then expired
         }
 
         private void SetStalled(bool stalled, TimeSpan quiet = default)
@@ -2410,6 +2413,7 @@ namespace ClaudeVS.ToolWindow
             string hint = ClaudeErrorHints.Explain(text);
             if (hint != null && hint != _lastHint) Append("  → " + hint + "\n");
             _lastHint = hint;
+            CheckSignInError(text);
         }
 
         private static void OnRawLine(object sender, RawLineEventArgs e)

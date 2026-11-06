@@ -1049,6 +1049,52 @@ namespace ClaudeVS.Core.Tests
             Eq(null, ClaudeErrorHints.Explain(""), "empty");
         }
 
+        // ---------- Sign-in expiry ----------
+        private static void Test_SignInExpiry_FromRealResult_2_1_318()
+        {
+            var parser = new ClaudeStreamParser();
+            var done = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.318-thinking.jsonl"))
+                .SelectMany(l => parser.Parse(l)).Single(e => e.Kind == ClaudeEventKind.TurnCompleted);
+            Eq(new DateTime(2026, 11, 21, 13, 48, 10, 889, DateTimeKind.Utc), done.CredentialExpiresUtc, "credential_expires_at, in UTC");
+            Eq(DateTimeKind.Utc, done.CredentialExpiresUtc.Value.Kind, "kind");
+
+            var noField = new ClaudeStreamParser().Parse("{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"result\":\"hi\"}").Single();
+            Eq(null, noField.CredentialExpiresUtc, "API-key users get no field");
+            Eq(null, SignInExpiry.Parse(JValue.CreateNull()), "null");
+            Eq(null, SignInExpiry.Parse(new JValue("soon")), "unreadable");
+        }
+
+        private static void Test_SignInExpiry_Notice()
+        {
+            var now = new DateTime(2026, 11, 6, 12, 0, 0, DateTimeKind.Utc);
+            Eq(LimitLevel.None, SignInExpiry.Notice(null, now).Level, "no expiry known");
+            Eq(LimitLevel.None, SignInExpiry.Notice(now.AddDays(15), now).Level, "far off");
+            Eq(LimitLevel.None, SignInExpiry.Notice(now.AddDays(10).AddMinutes(1), now).Level, "just past 10 days");
+
+            var (level, text) = SignInExpiry.Notice(now.AddDays(5), now);
+            Eq(LimitLevel.Warning, level, "within 10 days");
+            True(text.StartsWith("Your Claude sign-in ends in "), "days: " + text);
+            True(text.Contains("days ("), "with the date: " + text);
+
+            var soon = SignInExpiry.Notice(now.AddMinutes(30), now);
+            Eq(LimitLevel.Warning, soon.Level, "half an hour left");
+            True(soon.Text.Contains("today at ") || soon.Text.Contains("tomorrow at "), "today (or tomorrow near local midnight): " + soon.Text);
+
+            var gone = SignInExpiry.Notice(now.AddSeconds(-1), now);
+            Eq(LimitLevel.Reached, gone.Level, "expired");
+            Eq("Your Claude sign-in has expired.", gone.Text);
+        }
+
+        private static void Test_SignInExpiry_ExpiredError()
+        {
+            True(SignInExpiry.IsExpiredError("Your claude.ai login has expired. Run `claude auth login`, or `claude setup-token` for a long-lived token."), "2.1.318 wording");
+            True(SignInExpiry.IsExpiredError("OAuth token has expired"), "oauth expired");
+            True(!SignInExpiry.IsExpiredError("Not logged in · Please run /login"), "not logged in is a different case");
+            True(!SignInExpiry.IsExpiredError("The certificate has expired"), "other expiries");
+            True(ClaudeErrorHints.Explain("OAuth token has expired")?.Contains("claude auth login") == true, "hint names the command");
+            True(ClaudeErrorHints.Explain("Not logged in · Please run /login")?.Contains("claude auth login") == true, "not-logged-in hint too");
+        }
+
         // ---------- Parser ----------
         private static void Test_Parser_FullTurn()
         {

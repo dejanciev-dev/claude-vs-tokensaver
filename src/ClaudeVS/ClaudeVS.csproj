@@ -70,6 +70,7 @@
     <Compile Include="ToolWindow\ClaudeChatControl.Accessibility.cs" />
     <Compile Include="ToolWindow\ClaudeChatControl.Activity.cs" />
     <Compile Include="ToolWindow\ClaudeChatControl.Permission.cs" />
+    <Compile Include="ToolWindow\ClaudeChatControl.SignIn.cs" />
     <Compile Include="ToolWindow\ClaudeChatControl.Changes.cs" />
     <Compile Include="ToolWindow\ClaudeChatControl.Folder.cs" />
     <Compile Include="ToolWindow\TranscriptView.cs" />
