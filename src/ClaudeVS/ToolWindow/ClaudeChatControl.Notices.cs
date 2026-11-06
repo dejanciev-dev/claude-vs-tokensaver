@@ -106,6 +106,24 @@ namespace ClaudeVS.ToolWindow
             Notice(tip);
         }
 
+        // ---------------- Conversation cost ----------------
+
+        private readonly Core.Tokens.CostWatch _costWatch = new Core.Tokens.CostWatch();
+
+        /// <summary>After each turn: once per step of Options → Warn at conversation cost, say what the conversation cost.</summary>
+        private void CheckCost()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (_meterModel == null) return;
+            _costWatch.StepUsd = Options?.CostWarningUsd ?? 5;
+            string warning = _costWatch.Check(_meterModel.SessionCostUsd);
+            if (warning == null) return;
+            ClaudeOutputPane.WriteLine(warning);
+            FlushText();
+            Append("\n  💲 " + warning + "\n");
+            Announce(warning);
+        }
+
         // ---------------- Prompt cache ----------------
 
         private readonly System.Windows.Controls.TextBlock _cacheNote = new System.Windows.Controls.TextBlock
@@ -138,6 +156,7 @@ namespace ClaudeVS.ToolWindow
             _gaveRepeatReadTip = false;
             _gaveLargeOutputTip = false;
             _shellCalls.Clear();
+            _costWatch.Reset();
             _reads.Reset();
         }
     }
