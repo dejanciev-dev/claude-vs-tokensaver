@@ -247,6 +247,8 @@ All notable changes to this project are listed here. The format follows
 - **Conversation cost warning**: Options → Token saving → *Warn at conversation cost (USD)* (default 5, 0 = off).
   Each time a conversation passes another multiple ($5, $10…) at API prices, the chat says so once and suggests
   a New chat for the next task or /compact.
+- **Thinking tokens in the footer**: `✓ 6.9s · 26k tok · $0.002 · claude-haiku-5-5 · 56 thinking`, from
+  `output_tokens_details.thinking_tokens` (Claude Code 2.1.319). Thinking is billed as output, the dearest kind.
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.

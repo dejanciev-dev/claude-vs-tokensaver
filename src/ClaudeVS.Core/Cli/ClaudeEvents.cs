@@ -13,6 +13,8 @@ namespace ClaudeVS.Core.Cli
         public long CacheCreation1h;
         /// <summary>Of <see cref="CacheCreation"/>: written with the 5-minute lifetime (<c>cache_creation.ephemeral_5m_input_tokens</c>).</summary>
         public long CacheCreation5m;
+        /// <summary>Of <see cref="Output"/>: thinking (<c>output_tokens_details.thinking_tokens</c>, 2.1.319).</summary>
+        public long Thinking;
 
         /// <summary>Tokens the model had to read for this request = how full the context window is.</summary>
         public long ContextTokens => Input + CacheRead + CacheCreation;
@@ -30,6 +32,7 @@ namespace ClaudeVS.Core.Cli
                 CacheCreation = u.Value<long?>("cache_creation_input_tokens") ?? 0,
                 CacheCreation1h = u.SelectToken("cache_creation.ephemeral_1h_input_tokens")?.Type == JTokenType.Integer ? (long)u.SelectToken("cache_creation.ephemeral_1h_input_tokens") : 0,
                 CacheCreation5m = u.SelectToken("cache_creation.ephemeral_5m_input_tokens")?.Type == JTokenType.Integer ? (long)u.SelectToken("cache_creation.ephemeral_5m_input_tokens") : 0,
+                Thinking = u.SelectToken("output_tokens_details.thinking_tokens")?.Type == JTokenType.Integer ? (long)u.SelectToken("output_tokens_details.thinking_tokens") : 0,
             };
         }
 
@@ -41,6 +44,7 @@ namespace ClaudeVS.Core.Cli
             CacheCreation = a.CacheCreation + b.CacheCreation,
             CacheCreation1h = a.CacheCreation1h + b.CacheCreation1h,
             CacheCreation5m = a.CacheCreation5m + b.CacheCreation5m,
+            Thinking = a.Thinking + b.Thinking,
         };
     }
 
