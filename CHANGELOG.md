@@ -231,6 +231,9 @@ All notable changes to this project are listed here. The format follows
   - **Whole large file read** (a token tip, once per conversation): when Claude reads all of a large file
     (~8k tokens or more), the chat says what it costs, since it goes with every request from then on, and
     suggests naming the method or lines you mean. A subagent's reads don't count (they stay out of this context).
+- A shell command that prints nothing by design (`mkdir`, `git add`…) says `⎿ Done` instead of `(No output)`
+  (`noOutputExpected`, Claude Code 2.1.319), and the CLI's own "Shell cwd was reset to …" note no longer shows up
+  as a command's output on the ⎿ line.
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.
