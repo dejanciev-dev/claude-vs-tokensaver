@@ -269,6 +269,7 @@ namespace ClaudeVS.ToolWindow
             top.Children.Add(adviceRow);
             top.Children.Add(_limitBanner);
             top.Children.Add(_signInBanner);
+            top.Children.Add(_cacheNote);
 
             // Input box: text (with placeholder) on top; footer: + / model … mode send.
             var textArea = new Grid();
@@ -355,9 +356,11 @@ namespace ClaudeVS.ToolWindow
 
         private void SetBusy(bool busy)
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
             if (busy && !_busy) System.Threading.Interlocked.Exchange(ref _lastOutputTicks, DateTime.UtcNow.Ticks); // the 60 s count starts now
             bool wasBusy = _busy;
             _busy = busy;
+            UpdateCacheNote(); // only while idle
             if (!busy) SetStalled(false);
             OnBusyChangedActivity(busy, wasBusy);
             _send.Content = busy ? ChatTheme.IconStop : ChatTheme.IconSend;
@@ -2401,6 +2404,7 @@ namespace ClaudeVS.ToolWindow
             SetStalled(_busy && !_waitingForUser && quiet >= StallAfter, quiet);
             if (_limitBanner.Visibility == Visibility.Visible) UpdateLimitBanner(); // hide it once the limit has reset
             if (_signInBanner.Visibility == Visibility.Visible && !_signInExpired) UpdateSignInBanner(); // days left, then expired
+            UpdateCacheNote();
         }
 
         private void SetStalled(bool stalled, TimeSpan quiet = default)

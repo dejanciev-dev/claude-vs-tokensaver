@@ -234,6 +234,10 @@ All notable changes to this project are listed here. The format follows
 - A shell command that prints nothing by design (`mkdir`, `git add`…) says `⎿ Done` instead of `(No output)`
   (`noOutputExpected`, Claude Code 2.1.319), and the CLI's own "Shell cwd was reset to …" note no longer shows up
   as a command's output on the ⎿ line.
+- **Prompt cache timer**: while Claude is idle, a line under the meter says `⏱ Prompt cache expires in 4 min: …`
+  in the last minutes of a 1-hour cache, then `Prompt cache expired (idle over an hour): the next prompt sends
+  ~40k tokens of context at the full input price`. The lifetime comes from the usage (`ephemeral_1h` or `5m`),
+  and every request keeps the cache again; small contexts get no note.
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.

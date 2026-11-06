@@ -68,6 +68,30 @@ namespace ClaudeVS.ToolWindow
             Notice(tip);
         }
 
+        // ---------------- Prompt cache ----------------
+
+        private readonly System.Windows.Controls.TextBlock _cacheNote = new System.Windows.Controls.TextBlock
+        {
+            FontSize = 11.5, TextWrapping = System.Windows.TextWrapping.Wrap, Margin = new System.Windows.Thickness(0, 4, 0, 0), Visibility = System.Windows.Visibility.Collapsed,
+        };
+
+        /// <summary>
+        /// While Claude is idle: "⏱ Prompt cache expires in 4 min: …" in the last minutes of a 1-hour cache, then
+        /// "Prompt cache expired …" with what the next prompt costs. Refreshed by the 5-second timer.
+        /// </summary>
+        private void UpdateCacheNote()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var cache = _meterModel?.Cache;
+            var now = DateTime.UtcNow;
+            string text = _busy || cache == null ? null : cache.ExpiredNote(now) ?? cache.SoonNote(now);
+            if (text == null) { _cacheNote.Visibility = System.Windows.Visibility.Collapsed; return; }
+            if (_cacheNote.Text != "⏱ " + text) _cacheNote.Text = "⏱ " + text;
+            _cacheNote.ToolTip = cache.Status(now) + "\nEach request keeps the conversation cached for this long again; cached input costs a tenth of the full price.";
+            ChatTheme.Muted(_cacheNote);
+            _cacheNote.Visibility = System.Windows.Visibility.Visible;
+        }
+
         /// <summary>A new conversation: notes may be said again.</summary>
         private void ResetNotices()
         {
