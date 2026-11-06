@@ -29,6 +29,10 @@ namespace ClaudeVS.Core.Tokens
         public string RateLimitType { get; set; }
         public DateTime? ResetsAtUtc { get; set; }
         public bool IsUsingOverage { get; set; }
+        /// <summary>Extra usage past the plan's limits: "allowed", "rejected"… (overageStatus); null when not sent.</summary>
+        public string OverageStatus { get; set; }
+        /// <summary>Why extra usage is off, e.g. "out_of_credits" (overageDisabledReason).</summary>
+        public string OverageDisabledReason { get; set; }
         public List<UsageWindow> Windows { get; } = new List<UsageWindow>();
 
         /// <summary>A window this full shows the banner even before the CLI warns.</summary>
@@ -42,6 +46,8 @@ namespace ClaudeVS.Core.Tokens
                 RateLimitType = (string)info?["rateLimitType"],
                 ResetsAtUtc = Epoch(info?["resetsAt"]),
                 IsUsingOverage = info?["isUsingOverage"]?.Type == JTokenType.Boolean && (bool)info["isUsingOverage"],
+                OverageStatus = (string)info?["overageStatus"],
+                OverageDisabledReason = (string)info?["overageDisabledReason"],
             };
             if (info?["unifiedWindows"] is JObject windows)
                 foreach (var p in windows.Properties())
@@ -86,6 +92,7 @@ namespace ClaudeVS.Core.Tokens
                 string name = DisplayName(w?.Name ?? RateLimitType);
                 string text = $"{name} reached." + Resets(w?.ResetsAtUtc ?? ResetsAtUtc, nowUtc);
                 if (IsUsingOverage) text += " Using extra usage.";
+                else if (ExtraUsageOff() is string off) text += " " + off; // nothing carries you past it until the reset
                 return (LimitLevel.Reached, text);
             }
 
@@ -96,10 +103,33 @@ namespace ClaudeVS.Core.Tokens
             return (LimitLevel.Warning, label + used + Resets(warn?.ResetsAtUtc ?? ResetsAtUtc, nowUtc));
         }
 
-        /// <summary>One line per window for a tooltip: "5-hour limit: 19% · resets at 15:00".</summary>
-        public string Details(DateTime nowUtc) =>
-            string.Join("\n", Windows.Select(w =>
-                $"{DisplayName(w.Name)}: {Math.Round(w.Utilization * 100):0}%" + (w.ResetsAtUtc == null ? "" : " · resets at " + When(w.ResetsAtUtc.Value, nowUtc))));
+        /// <summary>
+        /// One line per window for a tooltip: "5-hour limit: 19% · resets at 15:00", then whether extra usage is on
+        /// ("Extra usage: off (no credits left)").
+        /// </summary>
+        public string Details(DateTime nowUtc)
+        {
+            var lines = Windows.Select(w =>
+                $"{DisplayName(w.Name)}: {Math.Round(w.Utilization * 100):0}%" + (w.ResetsAtUtc == null ? "" : " · resets at " + When(w.ResetsAtUtc.Value, nowUtc))).ToList();
+            if (IsUsingOverage) lines.Add("Extra usage: in use");
+            else if (OverageStatus == "rejected") lines.Add("Extra usage: off" + (Reason() is string r ? $" ({r})" : ""));
+            else if (OverageStatus == "allowed") lines.Add("Extra usage: available past the limits");
+            return string.Join("\n", lines);
+        }
+
+        /// <summary>"Extra usage is off (no credits left)." when the plan can't go past its limits; null otherwise.</summary>
+        public string ExtraUsageOff() =>
+            OverageStatus == "rejected" ? "Extra usage is off" + (Reason() is string r ? $" ({r})" : "") + "." : null;
+
+        private string Reason()
+        {
+            switch (OverageDisabledReason)
+            {
+                case null: case "": return null;
+                case "out_of_credits": return "no credits left";
+                default: return OverageDisabledReason.Replace('_', ' ');
+            }
+        }
 
         private static string Resets(DateTime? resetsUtc, DateTime nowUtc) =>
             resetsUtc == null ? "" : $" Resets at {When(resetsUtc.Value, nowUtc)}.";
