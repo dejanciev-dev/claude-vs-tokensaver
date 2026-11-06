@@ -11,7 +11,7 @@ warm, and shows what every turn costs.
 ## Requirements
 
 - Visual Studio 2022 (17.x) or 2026 (18.x), x64 or ARM64
-- [Claude Code](https://claude.com/product/claude-code) installed and logged in, so that `claude` works in a terminal
+- [Claude Code](https://claude.com/product/claude-code) 2.1.318 or newer, installed and logged in, so that `claude` works in a terminal (`claude update` updates it)
 
 ## Spend fewer tokens
 

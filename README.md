@@ -33,8 +33,8 @@ Pre-release (v0.1 → v0.2).
 
 | Layer | State |
 |---|---|
-| Core library (CLI session, parser, router, meter, context, Markdown, usage log) | ✅ 68 automated tests, plus regression tests built from real CLI output |
-| Core against the real `claude` CLI | ✅ Verified with Claude Code 2.1.316 via the opt-in live test: streaming, usage, cost, prompt cache, question and plan approval |
+| Core library (CLI session, parser, router, meter, context, Markdown, usage log) | ✅ 112 automated tests, many replaying real CLI output (2.1.316–2.1.319) |
+| Core against the real `claude` CLI | ✅ Verified with Claude Code 2.1.319 via the opt-in live tests: streaming, usage, cost, prompt cache, model switch, resume, `/compact`, dialogs, edit review, MCP, question and plan approval. Needs 2.1.318 or newer |
 | Visual Studio extension (UI) | ⚠️ Builds with zero warnings in CI, but not yet run in the experimental instance |
 
 ## Why this exists
@@ -72,11 +72,12 @@ This extension attacks all three, and shows the numbers so you can see the effec
 
 | Feature | What it does |
 |---|---|
-| **Activity strip** | While Claude works, a strip above the input box shows what it is doing, like the terminal: `✻ Imagining… (1m 05s · ↓ 9.5k tokens · thinking)`, then *Writing…*, *Running… dotnet test*, *Editing…*, *Waiting for you*, colored by phase, with a tip underneath. |
+| **Activity strip** | While Claude works, a strip above the input box shows what it is doing, like the terminal: `✻ Imagining… (1m 05s · ↓ 9.5k tokens · thinking)`, then *Writing…*, *Running… dotnet test*, *Editing…*, *Waiting for you*, colored by phase, with a tip underneath. Once Claude stops thinking, it says for how long (`· thought for 4s`). |
 | **Live token meter** | Context fill %, session tokens and cost, cache-hit rate and the current model, colored: context green / amber / red at the /compact thresholds, cache hits green when high. Suggests `/compact` at 60% context and urges it at 85%. Click it for a breakdown of what fills the context (system prompt, tools, memory files, tool results…), from the CLI with no model call. |
 | **Per-turn footer** | `✓ 3.1s · 12.4k tok · $0.004 · claude-haiku-5-5`, showing the model that *actually* answered. |
+| **Sign-in expiry notice** | From 10 days before your claude.ai sign-in ends: `⚠ Your Claude sign-in ends in 4 days (Nov 21). Sign in` under the meter, red once it has expired. **Sign in** opens a console running `claude auth login`. API-key users never see it. |
 | **Model mismatch warning** | If the CLI answers with a different model than the one requested (for example in plan mode), the chat tells you. |
-| **Agents panel** | Claude's subagents and background commands above the input box, as a tree: what each is doing, its tokens, tool calls and time, and its result. **Background** lets Claude carry on while an agent works; **Stop** ends one agent (and what it started) without stopping Claude. A subagent's own tool calls are marked `↳` in the conversation. |
+| **Agents panel** | Claude's subagents and background commands above the input box, as a tree: what each is doing, its tokens, tool calls and time, and its result. **Background** lets Claude carry on while an agent works; **Stop** ends one agent (and what it started) without stopping Claude. A subagent's own tool calls are marked `↳` in the conversation. Forks (subagents that start with a copy of the conversation) show as `● Fork(…)`. |
 | **Tool rows with sizes** | Tool calls read like the terminal: `● Update(src/a.cs)` with a `⎿ Added 13 lines` line, `● Bash(dotnet test)` with the first lines of its output. Each row shows the size of its result in tokens; results of 5k+ tokens are in bold, because those fill the context. Click a row for its input and whole output. |
 | **Savings report** | Actual cost vs the same tokens at Opus prices, tokens saved by references, cost per model, cache-hit rate by day. |
 | **Router replay** | With the opt-in prompt preview, the report re-runs your real prompts through the current router rules and lists those that would now route differently. |
@@ -103,7 +104,7 @@ This extension attacks all three, and shows the numbers so you can see the effec
 | **Screen readers** | Announcements through a UIA live region when Claude finishes (with the start of the answer), asks for permission, has a question or a plan, wants an edit reviewed, stops responding, or hits a usage limit. **Focus last message** (`Ctrl+Alt+K, M`) puts the keyboard at the start of Claude's last answer; `Esc` returns to the prompt box. |
 | **Several chat windows** | Each window has its own conversation, meter and model. |
 | **Prompt box helpers** | `Ctrl+Up/Down` prompt history; `/` lists commands, including your own `.claude/commands`; `@` picks a file. |
-| **Diagnostics** | An **Output → Claude Code** pane with route decisions, errors and plain-language hints (not logged in, rate limited, context too long…), plus optional raw CLI traffic. |
+| **Diagnostics** | An **Output → Claude Code** pane with route decisions, errors and plain-language hints (not logged in, sign-in expired, rate limited, context too long…), plus optional raw CLI traffic. If Claude Code is older than 2.1.318, the chat says so once. |
 
 ## How it works
 
@@ -224,7 +225,12 @@ claude --print --input-format stream-json --output-format stream-json --verbose
 
 Requirements:
 - Visual Studio 2022 (17.x) or 2026 (18.x), x64 or ARM64
-- [Claude Code](https://claude.com/product/claude-code) installed and logged in, so that `claude` works in a terminal
+- [Claude Code](https://claude.com/product/claude-code) **2.1.318 or newer** (tested with 2.1.319), installed and
+  logged in, so that `claude` works in a terminal. `claude --version` shows yours; `claude update` updates it.
+  Older versions lack control requests the extension uses (Stop for one agent, settings changes, rewind
+  checkpoints in headless mode) and resume fixes. On Windows, recent versions also fix tool calls refused on some
+  volumes and on exFAT / FAT32 drives (2.1.302, 2.1.317), Grep and Glob hanging (2.1.316), and PowerShell hooks
+  failing open (2.1.309, 2.1.310).
 
 There is no Marketplace release yet. Either install the `.vsix` from a
 [GitHub release](https://github.com/dejanciev-dev/claude-vs-tokensaver/releases) or from a CI build's
@@ -346,8 +352,8 @@ msbuild ClaudeVS.sln /restore /p:Configuration=Release /warnaserror     # → sr
 
 - **The VS UI has not been run yet.** Everything builds and the Core is verified against the real CLI, but the
   first F5 session may still turn up UI issues. Please [open an issue](https://github.com/dejanciev-dev/claude-vs-tokensaver/issues).
-- **Plan mode ignores Haiku.** With Claude Code 2.1.316, plan mode answered with Sonnet even when Haiku was
-  requested. The chat warns you when this happens.
+- **Plan mode ignores Haiku.** With Claude Code 2.1.316 to 2.1.319, plan mode answered with Sonnet even when Haiku
+  was requested. The chat warns you when this happens.
 - **Resume** redraws at most the last 300 items (prompts, answers, tool calls) of a conversation. Redrawn tool
   rows have no Diff button.
 - **Renaming a running session** shows the new name here at once, but the CLI only records it (`--name`) the next
