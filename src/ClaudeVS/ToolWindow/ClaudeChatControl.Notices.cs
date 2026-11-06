@@ -23,7 +23,7 @@ namespace ClaudeVS.ToolWindow
             if (!(ev.Payload is JObject init)) return;
             Notice(SessionNotices.ApiKey(init), important: true);
             Notice(SessionNotices.McpServers(init));
-            Notice(SessionNotices.OutputStyle(init));
+            Tip(SessionNotices.OutputStyle(init));
             if (ev.IsFirstInit) SyncPermissionMode(init);
         }
 
@@ -41,6 +41,18 @@ namespace ClaudeVS.ToolWindow
             ClaudeOutputPane.WriteLine($"Mode: the CLI runs in {actual.Value.ToControl()}, the chat asked for {_mode.ToControl()}");
             _mode = actual.Value;
             UpdateChips();
+        }
+
+        /// <summary>Token tips are on unless turned off in Options → Token saving → Token tips.</summary>
+        private static bool TipsOn => Options?.TokenTips ?? true;
+
+        /// <summary>A token tip: in the chat like a note, or only in the Output pane when token tips are off.</summary>
+        private void Tip(string text)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (string.IsNullOrEmpty(text)) return;
+            if (TipsOn) Notice(text);
+            else if (_saidNotices.Add(text)) ClaudeOutputPane.WriteLine("Tip (token tips are off): " + text);
         }
 
         /// <summary>Says a note once per conversation; important ones are also read out by screen readers.</summary>
@@ -65,7 +77,7 @@ namespace ClaudeVS.ToolWindow
             string tip = SessionNotices.WholeFileRead(data, ev.ResultChars);
             if (tip == null) return;
             _gaveLargeReadTip = true;
-            Notice(tip);
+            Tip(tip);
         }
 
         // ---------------- Repeated reads ----------------
@@ -91,7 +103,7 @@ namespace ClaudeVS.ToolWindow
                 string tip = SessionNotices.LargeCommandOutput(tool, ev.ResultChars, Core.Setup.TokenSaverSetup.IsInstalled(_sessionDir));
                 if (tip == null) return;
                 _gaveLargeOutputTip = true;
-                Notice(tip);
+                Tip(tip);
             }
         }
 
@@ -103,7 +115,7 @@ namespace ClaudeVS.ToolWindow
             ClaudeOutputPane.WriteLine($"Repeated read: {path} (~{Core.Tokens.TokenMeter.Format(tokens)} tokens)");
             if (_gaveRepeatReadTip || Core.Tokens.ReadTracker.Tip(path, tokens) is not string tip) return;
             _gaveRepeatReadTip = true;
-            Notice(tip);
+            Tip(tip);
         }
 
         // ---------------- Base context ----------------
@@ -116,7 +128,7 @@ namespace ClaudeVS.ToolWindow
             ThreadHelper.ThrowIfNotOnUIThread();
             if (_gaveBaseContextTip || SessionNotices.BaseContext(u) is not string tip) return;
             _gaveBaseContextTip = true;
-            Notice(tip);
+            Tip(tip);
         }
 
         // ---------------- Conversation cost ----------------
@@ -153,7 +165,7 @@ namespace ClaudeVS.ToolWindow
             ThreadHelper.ThrowIfNotOnUIThread();
             var cache = _meterModel?.Cache;
             var now = DateTime.UtcNow;
-            string text = _busy || cache == null ? null : cache.ExpiredNote(now) ?? cache.SoonNote(now);
+            string text = _busy || cache == null || !TipsOn ? null : cache.ExpiredNote(now) ?? cache.SoonNote(now);
             if (text == null) { _cacheNote.Visibility = System.Windows.Visibility.Collapsed; return; }
             if (_cacheNote.Text != "⏱ " + text) _cacheNote.Text = "⏱ " + text;
             _cacheNote.ToolTip = cache.Status(now) + "\nEach request keeps the conversation cached for this long again; cached input costs a tenth of the full price.";

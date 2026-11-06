@@ -289,6 +289,7 @@ Editor commands go to the chat window you used last.
 | Token saving | Inline selection up to (lines) | 60 | Larger selections become references. |
 | Token saving | Keep model above context (tokens) | 30000 | Cache-aware routing threshold. |
 | Token saving | Suggest / Urge /compact at (%) | 60 / 85 | Meter advice. |
+| Token saving | Token tips | On | One-time tips when something costs more than it needs to (large or repeated reads, output floods, heavy MCP tools, cold cache). Off: Output pane only. |
 | Token saving | Warn at conversation cost (USD) | 5 | Said once each time a conversation passes another multiple ($5, $10…). 0 = off. |
 | Token saving | Auto-approve quiet rewrites | Off | Hook installer: run rewritten build/test commands without asking. |
 | Token saving | Claude can read the Error List | On | The `get_error_list` tool, for new sessions. |
