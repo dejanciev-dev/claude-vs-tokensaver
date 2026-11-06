@@ -188,9 +188,28 @@ namespace ClaudeVS.Core.Cli
                     ResultText = text,
                     IsError = block.Value<bool?>("is_error") ?? false,
                     OriginalFile = original,
+                    AllowedBy = AllowedBy(json["tool_result_meta"], (string)block["tool_use_id"]),
                 });
             }
             return events;
+        }
+
+        /// <summary>
+        /// Why Claude Code's settings let a call run without asking, from <c>tool_result_meta</c> (an entry per call,
+        /// matched by id; verified with 2.1.319): the <c>reason_type</c> of an accepted <c>config</c> decision, e.g.
+        /// "mode" (acceptEdits), "rule" (an allow rule or <c>--allowedTools</c>), "subcommandResults" (every part of a
+        /// shell command matched a rule). Null otherwise.
+        /// </summary>
+        public static string AllowedBy(JToken meta, string toolUseId)
+        {
+            if (!(meta is JArray entries) || string.IsNullOrEmpty(toolUseId)) return null;
+            foreach (var e in entries.OfType<JObject>())
+            {
+                if ((string)e["id"] != toolUseId || !(e["permission_decision"] is JObject d)) continue;
+                if ((string)d["decision"] != "accept" || (string)d["source"] != "config") return null;
+                return d["reason_type"]?.Type == JTokenType.String ? (string)d["reason_type"] : null;
+            }
+            return null;
         }
 
         /// <summary>

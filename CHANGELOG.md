@@ -197,6 +197,10 @@ All notable changes to this project are listed here. The format follows
   chat · background" in the agents panel. A background agent's ⎿ line says "Running in the background" instead
   of the CLI's internal "Async agent launched…" metadata (verified with 2.1.319, capture in
   `Fixtures/cli-2.1.319-fork.jsonl`).
+- **Why a call ran without asking**: a shell command or file change that your Claude Code settings let through
+  says so on its row, `● Bash(npm test) · allowed by a rule`, with a tooltip pointing to Permission rules. A shell
+  command run on the permission mode alone says "allowed by the mode"; edits in Accept edits mode stay quiet.
+  From the result's `tool_result_meta` (Claude Code 2.1.319).
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.

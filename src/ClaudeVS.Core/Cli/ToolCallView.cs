@@ -226,6 +226,30 @@ namespace ClaudeVS.Core.Cli
         public static string AgentKind(string subagentType) =>
             string.IsNullOrEmpty(subagentType) ? "agent" : subagentType == ForkType ? "fork of this chat" : subagentType;
 
+        /// <summary>
+        /// "allowed by a rule" / "allowed by the mode" after a shell command or file change that ran without asking,
+        /// with a tooltip; null for other tools (reads are allowed anyway) and for reasons we don't know.
+        /// </summary>
+        public static (string Text, string Tip)? AllowedNote(string toolName, string allowedBy)
+        {
+            bool shell = toolName == "Bash" || toolName == "PowerShell";
+            bool fileChange = toolName == "Edit" || toolName == "MultiEdit" || toolName == "Write" || toolName == "NotebookEdit";
+            if (!shell && !fileChange) return null;
+            switch (allowedBy)
+            {
+                case "rule":
+                case "subcommandResults":
+                    return ("allowed by a rule", "Ran without asking: an allow rule in your Claude Code settings (or --allowedTools) covers it."
+                        + "\n/ → Claude Code → Permission rules lists them.");
+                case "mode":
+                    // Accept edits applies every edit: saying so on each one is noise. A shell command that runs on
+                    // the mode alone (auto, bypass) is worth pointing out.
+                    return shell ? ("allowed by the mode", "Ran without asking: the permission mode lets shell commands run.") : ((string, string)?)null;
+                default:
+                    return null;
+            }
+        }
+
         /// <summary>A fork subagent: starts with a copy of the conversation so far.</summary>
         public const string ForkType = "fork";
 

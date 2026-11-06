@@ -1129,6 +1129,36 @@ namespace ClaudeVS.Core.Tests
             True(!writeDiff.IsNewFile, "not a new file");
         }
 
+        /// <summary>Claude Code 2.1.319: an allow rule, --allowedTools and acceptEdits, each in tool_result_meta.</summary>
+        private static void Test_Parser_AllowedBy_RealCli_2_1_319()
+        {
+            var parser = new ClaudeStreamParser();
+            var events = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.319-permission-decisions.jsonl"))
+                .SelectMany(l => parser.Parse(l)).ToList();
+            var tool = events.Where(e => e.Kind == ClaudeEventKind.ToolUse).ToDictionary(e => e.ToolUseId, e => e.ToolName);
+            var by = events.Where(e => e.Kind == ClaudeEventKind.ToolResult).ToDictionary(e => tool[e.ToolUseId], e => e.AllowedBy);
+            Eq("subcommandResults", by["Bash"], "Bash(echo *) in settings.local.json");
+            Eq("rule", by["Read"], "--allowedTools Read");
+            Eq("mode", by["Edit"], "acceptEdits");
+
+            Eq("allowed by a rule", ToolCallView.AllowedNote("Bash", by["Bash"])?.Text, "shell command, rule");
+            Eq(null, ToolCallView.AllowedNote("Read", by["Read"]), "reads: no note");
+            Eq(null, ToolCallView.AllowedNote("Edit", by["Edit"]), "edits in acceptEdits: no note on every one");
+            Eq("allowed by a rule", ToolCallView.AllowedNote("Edit", "rule")?.Text, "an edit allowed by a rule");
+            Eq("allowed by the mode", ToolCallView.AllowedNote("PowerShell", "mode")?.Text, "a command run on the mode alone");
+            Eq(null, ToolCallView.AllowedNote("Bash", "somethingNew"), "unknown reasons");
+        }
+
+        private static void Test_Parser_AllowedBy_Shapes()
+        {
+            var meta = JArray.Parse("[{\"id\":\"a\",\"permission_decision\":{\"decision\":\"accept\",\"source\":\"config\",\"reason_type\":\"rule\"}},"
+                + "{\"id\":\"b\",\"permission_decision\":{\"decision\":\"accept\",\"source\":\"user\",\"reason_type\":\"prompt\"}}]");
+            Eq("rule", ClaudeStreamParser.AllowedBy(meta, "a"), "matched by id");
+            Eq(null, ClaudeStreamParser.AllowedBy(meta, "b"), "you were asked: not from settings");
+            Eq(null, ClaudeStreamParser.AllowedBy(meta, "c"), "no entry");
+            Eq(null, ClaudeStreamParser.AllowedBy(null, "a"), "no meta");
+        }
+
         private static void Test_Parser_OriginalFile_Shapes()
         {
             Eq("", ClaudeStreamParser.OriginalFile(JObject.Parse("{\"type\":\"create\",\"filePath\":\"C:\\\\r\\\\n.txt\",\"content\":\"x\",\"originalFile\":null}")), "created: empty");
