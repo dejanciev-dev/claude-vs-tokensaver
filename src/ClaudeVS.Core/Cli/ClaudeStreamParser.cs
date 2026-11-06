@@ -21,6 +21,7 @@ namespace ClaudeVS.Core.Cli
         private string _currentStreamMessageId;
         private TokenUsage _lastMainUsage;
         private string _model;
+        private int _inits; // init messages seen by this parser (one parser per CLI process)
 
         public string SessionId { get; private set; }
 
@@ -67,6 +68,7 @@ namespace ClaudeVS.Core.Cli
                         Kind = ClaudeEventKind.SessionStarted, SessionId = SessionId, Model = _model, CliVersion = (string)json["claude_code_version"],
                         Skills = Strings(json["skills"]), SlashCommands = Strings(json["slash_commands"]),
                         Payload = json, // the whole init, for SessionNotices
+                        IsFirstInit = ++_inits == 1,
                     } };
                 case "compact_boundary":
                     _lastMainUsage = default;

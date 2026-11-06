@@ -63,6 +63,20 @@ namespace ClaudeVS.Core.Cli
         /// </summary>
         public static string ToControl(this PermissionModeChoice p) => p.ToCli() ?? "default";
 
+        /// <summary>The CLI's mode name ("default", "acceptEdits", "plan", "bypassPermissions", "auto") as a choice; null when unknown.</summary>
+        public static PermissionModeChoice? FromCli(string mode)
+        {
+            switch (mode)
+            {
+                case "default": return PermissionModeChoice.Default;
+                case "acceptEdits": return PermissionModeChoice.AcceptEdits;
+                case "plan": return PermissionModeChoice.Plan;
+                case "bypassPermissions": return PermissionModeChoice.BypassPermissions;
+                case "auto": return PermissionModeChoice.Auto;
+                default: return null;
+            }
+        }
+
         /// <summary>Label and one-line description, as shown in the mode picker.</summary>
         public static (string Label, string Description) Describe(this PermissionModeChoice p)
         {

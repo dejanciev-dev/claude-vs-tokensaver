@@ -1336,6 +1336,23 @@ namespace ClaudeVS.Core.Tests
             Eq(null, SessionNotices.McpServers(Init("")), "older CLIs");
         }
 
+        private static void Test_SessionNotices_PermissionMode()
+        {
+            var accept = Init("\"permissionMode\":\"acceptEdits\""); // as 2.1.319 reported for --permission-mode acceptEdits
+            Eq(null, SessionNotices.PermissionMode(accept, PermissionModeChoice.AcceptEdits), "as asked");
+            Eq("Claude Code started in Manual mode, not Auto: your settings, account or provider don't allow Auto here. The mode picker now shows Manual.",
+                SessionNotices.PermissionMode(Init("\"permissionMode\":\"default\""), PermissionModeChoice.Auto), "auto refused");
+            Eq(null, SessionNotices.PermissionMode(accept, PermissionModeChoice.Default), "Manual: your settings' defaultMode decides");
+            Eq(null, SessionNotices.PermissionMode(Init("\"permissionMode\":\"somethingNew\""), PermissionModeChoice.Auto), "unknown mode");
+            Eq(PermissionModeChoice.BypassPermissions, ChoiceNames.FromCli("bypassPermissions"));
+
+            // Only the first init of a process is checked.
+            var p = new ClaudeStreamParser();
+            string init = "{\"type\":\"system\",\"subtype\":\"init\",\"session_id\":\"s\",\"permissionMode\":\"plan\"}";
+            True(p.Parse(init).Single().IsFirstInit, "first");
+            True(!p.Parse(init).Single().IsFirstInit, "the next turn's init");
+        }
+
         // ---------- Sign-in expiry ----------
         private static void Test_SignInExpiry_FromRealResult_2_1_318()
         {
