@@ -133,6 +133,31 @@ namespace ClaudeVS.Core.Cli
                 : size + " Tools → Claude Code → Install Token-Saving Settings and Hooks caps shell output and runs dotnet build / test, msbuild and git log quietly.";
         }
 
+        /// <summary>A fixed part of the context this large (tokens) earns the tip.</summary>
+        public const long HeavyPartTokens = 5000;
+
+        /// <summary>
+        /// What goes with every request before you type anything, from the CLI's context breakdown
+        /// (<c>get_context_usage</c>): the largest of MCP tools, memory / instruction files and skill listings when it
+        /// passes <see cref="HeavyPartTokens"/> (skills: twice that), with where to cut it. Null otherwise.
+        /// </summary>
+        public static string BaseContext(Tokens.ContextUsage u)
+        {
+            if (u == null) return null;
+            long skills = u.Categories.Where(c => c.IsUsed && c.Name == "Skills").Sum(c => c.Tokens);
+            var parts = new[]
+            {
+                (Tokens: u.McpToolTokens, Min: HeavyPartTokens,
+                 Text: $"MCP tools ({u.McpToolCount}) take ~{Tokens.TokenMeter.Format(u.McpToolTokens)} tokens of every request. Turning off servers you don't need (/ → MCP servers…) shrinks that."),
+                (Tokens: u.MemoryFileTokens, Min: HeavyPartTokens,
+                 Text: $"Memory and instruction files (CLAUDE.md…) take ~{Tokens.TokenMeter.Format(u.MemoryFileTokens)} tokens of every request. / → Memory & instructions… shows what each costs; Tools → Claude Code → Generate Lean CLAUDE.md writes a short one."),
+                (Tokens: skills, Min: 2 * HeavyPartTokens,
+                 Text: $"Skill listings take ~{Tokens.TokenMeter.Format(skills)} tokens of every request. Turning off skills you don't use (/ → Skills…) shrinks that."),
+            };
+            var worst = parts.Where(p => p.Tokens >= p.Min).OrderByDescending(p => p.Tokens).FirstOrDefault();
+            return worst.Text;
+        }
+
         private static string Names(System.Collections.Generic.List<string> names) => string.Join(", ", names.Select(n => "“" + n + "”"));
     }
 }

@@ -106,6 +106,19 @@ namespace ClaudeVS.ToolWindow
             Notice(tip);
         }
 
+        // ---------------- Base context ----------------
+
+        private bool _gaveBaseContextTip;
+
+        /// <summary>After each context breakdown: once per conversation, the biggest fixed cost worth cutting.</summary>
+        private void BaseContextTip(Core.Tokens.ContextUsage u)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (_gaveBaseContextTip || SessionNotices.BaseContext(u) is not string tip) return;
+            _gaveBaseContextTip = true;
+            Notice(tip);
+        }
+
         // ---------------- Conversation cost ----------------
 
         private readonly Core.Tokens.CostWatch _costWatch = new Core.Tokens.CostWatch();
@@ -157,6 +170,7 @@ namespace ClaudeVS.ToolWindow
             _gaveLargeOutputTip = false;
             _shellCalls.Clear();
             _costWatch.Reset();
+            _gaveBaseContextTip = false;
             _reads.Reset();
         }
     }

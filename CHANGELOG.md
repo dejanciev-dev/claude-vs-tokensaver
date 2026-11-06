@@ -254,6 +254,9 @@ All notable changes to this project are listed here. The format follows
 - **Prompt size while typing**: from ~1k tokens the line under the input box shows the prompt's size
   (`~2.0k tokens`, after the Auto route); from ~8k it adds that a paste this large goes with every later request
   and suggests a file reference (`Ctrl+Alt+K, F`).
+- **Base context tip** (once per conversation): when MCP tools or memory files take ~5k tokens or more of every
+  request (skill listings ~10k), the chat names the biggest one and where to cut it: / → MCP servers…, / → Memory &
+  instructions… with Generate Lean CLAUDE.md, or / → Skills…. From the CLI's context breakdown after each turn.
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.

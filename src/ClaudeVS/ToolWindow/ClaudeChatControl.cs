@@ -561,6 +561,7 @@ namespace ClaudeVS.ToolWindow
                     _contextUsage = u;
                     _meterArea.ToolTip = ContextTooltip(u);
                     _meterModel?.ApplyContextUsage(u.TotalTokens, u.MaxTokens); // the CLI's own number, also right after /compact
+                    BaseContextTip(u);
                 }
                 if (show) ShowContextBreakdownNow();
             }).FileAndForget("ClaudeVS/ChatControl/ContextUsage");
