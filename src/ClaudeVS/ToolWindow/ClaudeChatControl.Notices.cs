@@ -22,6 +22,7 @@ namespace ClaudeVS.ToolWindow
             ThreadHelper.ThrowIfNotOnUIThread();
             if (!(ev.Payload is JObject init)) return;
             Notice(SessionNotices.ApiKey(init), important: true);
+            Notice(SessionNotices.McpServers(init));
         }
 
         /// <summary>Says a note once per conversation; important ones are also read out by screen readers.</summary>

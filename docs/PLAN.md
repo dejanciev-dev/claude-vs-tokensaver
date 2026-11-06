@@ -273,7 +273,8 @@ Output pane).
 
 - [x] **Billing**: `apiKeySource` other than `none` (e.g. `ANTHROPIC_API_KEY`) means an API key pays per token, not
       the claude.ai plan
-- [ ] **MCP servers needing attention**: `mcp_servers[].status` `needs-auth` / `failed`
+- [x] **MCP servers needing attention**: `mcp_servers[].status` `needs-auth` / `failed` (2.1.319 also sends
+      `pending` while connecting: not mentioned; a later init says if it failed)
 - [ ] **Permission mode not the one asked for**: `permissionMode` differs from the mode the chat started with
 - [ ] **Output style that adds tokens**: Explanatory and Learning add explanation to every answer
 - [ ] **Whole large file read**: a tip, once, when Claude reads all of a large file
