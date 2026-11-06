@@ -1569,6 +1569,19 @@ namespace ClaudeVS.Core.Tests
             Eq(0.0, meter.SessionCacheSavedUsd, "reset");
         }
 
+        private static void Test_CacheSavedLine()
+        {
+            var m = new TokenMeter();
+            Eq(null, m.CacheSavedLine(), "before the first turn");
+            // Sonnet: first turn writes the cache (5-minute), the second reads it.
+            m.Observe(new ClaudeEvent { Kind = ClaudeEventKind.AssistantUsage, Model = "claude-sonnet-5-5", Usage = new TokenUsage { Input = 10, CacheCreation = 100_000, CacheCreation5m = 100_000 } });
+            m.Observe(new ClaudeEvent { Kind = ClaudeEventKind.TurnCompleted, Usage = new TokenUsage { Input = 10, CacheCreation = 100_000, CacheCreation5m = 100_000 } });
+            Eq("Prompt cache: 0% of input read from the cache, writing it cost $0.05 more than it saved so far (it pays off on the next prompts).", m.CacheSavedLine());
+            m.Observe(new ClaudeEvent { Kind = ClaudeEventKind.AssistantUsage, Model = "claude-sonnet-5-5", Usage = new TokenUsage { Input = 10, CacheRead = 300_000 } });
+            m.Observe(new ClaudeEvent { Kind = ClaudeEventKind.TurnCompleted, Usage = new TokenUsage { Input = 10, CacheRead = 300_000 } });
+            Eq("Prompt cache: 75% of input read from the cache, saved $0.49 in this conversation (API prices).", m.CacheSavedLine(), "0.54 saved - 0.05 for the write");
+        }
+
         private static void Test_PromptSize()
         {
             Eq(null, PromptSize.Note("fix the null check in Save()"), "short prompt");

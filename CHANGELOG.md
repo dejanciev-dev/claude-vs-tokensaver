@@ -278,6 +278,9 @@ All notable changes to this project are listed here. The format follows
   `· 90% cached (saved $0.018)` (from $0.001): tokens read from the cache at the cache-read price instead of the
   full input price, minus the extra for writing them (1-hour writes cost 2x input), at the prices of the model
   that answered (Options → Pricing; API prices).
+- **What the prompt cache saved, per conversation**: the meter's tooltip adds `Prompt cache: 75% of input read from
+  the cache, saved $0.49 in this conversation (API prices).` (or, after the first turn, that writing it cost more
+  than it saved so far).
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.

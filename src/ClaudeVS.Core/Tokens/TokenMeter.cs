@@ -66,6 +66,20 @@ namespace ClaudeVS.Core.Tokens
         public IReadOnlyList<KeyValuePair<string, long>> ResultTokensByTool() =>
             _resultCharsByTool.OrderByDescending(kv => kv.Value).Select(kv => new KeyValuePair<string, long>(kv.Key, kv.Value / 4)).ToList();
 
+        /// <summary>
+        /// "Prompt cache: 94% of input read from the cache, saved $0.42 in this conversation (API prices)." for the
+        /// meter's tooltip; null before the first turn.
+        /// </summary>
+        public string CacheSavedLine()
+        {
+            if (Turns == 0) return null;
+            var c = System.Globalization.CultureInfo.InvariantCulture;
+            string share = $"Prompt cache: {CacheHitPercent.ToString("0", c)}% of input read from the cache, ";
+            return SessionCacheSavedUsd >= 0
+                ? share + $"saved ${SessionCacheSavedUsd.ToString("0.00", c)} in this conversation (API prices)."
+                : share + $"writing it cost ${(-SessionCacheSavedUsd).ToString("0.00", c)} more than it saved so far (it pays off on the next prompts).";
+        }
+
         /// <summary>"Shell" for Bash / PowerShell, "Search" for Grep / Glob, "MCP" for mcp__ tools, else the tool name.</summary>
         public static string ToolGroup(string tool)
         {
