@@ -257,6 +257,8 @@ All notable changes to this project are listed here. The format follows
 - **Base context tip** (once per conversation): when MCP tools or memory files take ~5k tokens or more of every
   request (skill listings ~10k), the chat names the biggest one and where to cut it: / → MCP servers…, / → Memory &
   instructions… with Generate Lean CLAUDE.md, or / → Skills…. From the CLI's context breakdown after each turn.
+- **Copy session summary** (`/` → Context): turns, cost at API prices, tokens (input, output, thinking, cache
+  read and write), cache hits and context now, as plain text for a ticket or a commit message.
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.
