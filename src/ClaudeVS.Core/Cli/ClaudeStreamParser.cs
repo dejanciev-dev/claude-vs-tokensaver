@@ -253,6 +253,7 @@ namespace ClaudeVS.Core.Cli
                 NumTurns = json.Value<int?>("num_turns") ?? 0,
                 ContextWindow = window,
                 CredentialExpiresUtc = SignInExpiry.Parse(json["credential_expires_at"]),
+                TerminalReason = (string)json["terminal_reason"],
             } };
         }
 

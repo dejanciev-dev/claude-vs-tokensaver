@@ -1203,6 +1203,21 @@ namespace ClaudeVS.Core.Tests
             Eq(null, CliVersion.Notice(""), "empty");
         }
 
+        /// <summary>Claude Code 2.1.319 with CLAUDE_CODE_MAX_OUTPUT_TOKENS=60: the cut-off answer ends as an error result.</summary>
+        private static void Test_OutputLimit_RealResult_2_1_319()
+        {
+            var line = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.319-output-limit-result.jsonl")).Single();
+            var done = new ClaudeStreamParser().Parse(line).Single();
+            Eq(ClaudeEventKind.TurnCompleted, done.Kind);
+            True(done.IsError, "is_error");
+            Eq("api_error", done.TerminalReason, "terminal_reason");
+            True(ClaudeErrorHints.Explain(done.Text)?.Contains("output token limit") == true, "hint: " + ClaudeErrorHints.Explain(done.Text));
+
+            var normal = new ClaudeStreamParser().Parse("{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"result\":\"hi\",\"terminal_reason\":\"completed\"}").Single();
+            Eq("completed", normal.TerminalReason, "normal turn");
+            Eq(null, new ClaudeStreamParser().Parse("{\"type\":\"result\",\"subtype\":\"success\",\"result\":\"hi\"}").Single().TerminalReason, "older CLIs");
+        }
+
         // ---------- Sign-in expiry ----------
         private static void Test_SignInExpiry_FromRealResult_2_1_318()
         {

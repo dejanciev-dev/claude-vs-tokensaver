@@ -244,6 +244,11 @@ Tool-result messages carry more than the text Claude sees: `tool_use_result` (th
       `subcommandResults` for a shell command whose parts all match rules). Shell and file-change rows say
       "allowed by a rule"; shell commands run on the mode alone say "allowed by the mode" (edits in Accept edits
       mode stay quiet, it would be on every one)
+- [x] **Multi-select answers verified**: `--live-ask` answers through `AskUserQuestionTool.BuildAnswer`; with
+      2.1.319 the CLI passed "Apple, Banana" to Claude, the same form as its own dialog
+- [x] **Answer cut off at the output limit**: the CLI ends the turn as an error result (`terminal_reason:
+      "api_error"`, "exceeded the N output token maximum"); the chat now explains it, and any end reason other
+      than `completed` is logged in the Output pane
 
 ---
 

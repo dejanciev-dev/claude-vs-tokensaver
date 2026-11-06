@@ -182,7 +182,7 @@ All notable changes to this project are listed here. The format follows
 - Local usage log (`%LocalAppData%\claude-vs-tokensaver\usage.jsonl`), rotated at 5 MB.
 - **Attach Current File as Reference** (`Ctrl+Alt+K, F`) and **Attach Error List** (`Ctrl+Alt+K, E`).
 - "Claude Code" pane in the Output window: route decisions, errors, optional raw CLI traffic.
-- Plain-language hints for common errors (not logged in, limits, rate limits, overload,
+- Plain-language hints for common errors (not logged in, limits, rate limits, overload, an answer cut off at the output token limit,
   context too long, CLI not found).
 - The footer under each answer shows the model that actually answered.
 - GitHub Actions build: Release build with warnings as errors, Core tests, `.vsix` artifact.

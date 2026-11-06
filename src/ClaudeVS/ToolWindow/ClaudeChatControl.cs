@@ -1758,6 +1758,7 @@ namespace ClaudeVS.ToolWindow
                         FlushText();
                         SetBusy(_pendingUsages.Count > 1); // still busy if more prompts were queued
                         if (ev.IsError && !string.IsNullOrEmpty(ev.Text)) AppendError("[error] ", ev.Text);
+                        if (ev.TerminalReason != null && ev.TerminalReason != "completed") ClaudeOutputPane.WriteLine("Turn ended: " + ev.TerminalReason);
                         OnSignInExpiry(ev);
                         string used = _turnModel != null ? " · " + _turnModel : "";
                         CheckModelMismatch(_turnModel);
