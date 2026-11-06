@@ -264,6 +264,23 @@ Tool-result messages carry more than the text Claude sees: `tool_use_result` (th
 
 ---
 
+## Phase 11 — Session notes and token tips
+
+Things that change what a session costs or does without you seeing them. The CLI's `init` (every turn) says how
+the session is billed, which MCP servers are up, which permission mode and output style apply; tool results say
+how much of a file was read. Each note is said once per conversation (`SessionNotices`, `ℹ` in the chat, and the
+Output pane).
+
+- [x] **Billing**: `apiKeySource` other than `none` (e.g. `ANTHROPIC_API_KEY`) means an API key pays per token, not
+      the claude.ai plan
+- [ ] **MCP servers needing attention**: `mcp_servers[].status` `needs-auth` / `failed`
+- [ ] **Permission mode not the one asked for**: `permissionMode` differs from the mode the chat started with
+- [ ] **Output style that adds tokens**: Explanatory and Learning add explanation to every answer
+- [ ] **Whole large file read**: a tip, once, when Claude reads all of a large file
+- [ ] **Commands that print nothing by design**: Bash `noOutputExpected` → "Done" instead of "(No output)"
+
+---
+
 ## Working in Visual Studio — daily loop
 
 1. Core logic change → edit in `ClaudeVS.Core` → run tests (`ClaudeVS.Core.Tests` → Set as Startup → Ctrl+F5, or `dotnet run` in its folder).

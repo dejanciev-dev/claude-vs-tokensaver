@@ -66,6 +66,7 @@ namespace ClaudeVS.Core.Cli
                     {
                         Kind = ClaudeEventKind.SessionStarted, SessionId = SessionId, Model = _model, CliVersion = (string)json["claude_code_version"],
                         Skills = Strings(json["skills"]), SlashCommands = Strings(json["slash_commands"]),
+                        Payload = json, // the whole init, for SessionNotices
                     } };
                 case "compact_boundary":
                     _lastMainUsage = default;

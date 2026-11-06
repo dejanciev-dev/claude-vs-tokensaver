@@ -1311,6 +1311,20 @@ namespace ClaudeVS.Core.Tests
             Eq(null, SubagentStats.Parse(null), "older CLIs");
         }
 
+        // ---------- Session notices (from init) ----------
+        private static JObject Init(string fields) => (JObject)new ClaudeStreamParser().Parse(
+            "{\"type\":\"system\",\"subtype\":\"init\",\"session_id\":\"s\",\"model\":\"claude-haiku-5-5\"" + (fields.Length > 0 ? "," + fields : "") + "}").Single().Payload;
+
+        private static void Test_SessionNotices_ApiKey()
+        {
+            Eq(null, SessionNotices.ApiKey(Init("\"apiKeySource\":\"none\"")), "claude.ai sign-in (the real 2.1.319 value)");
+            Eq(null, SessionNotices.ApiKey(Init("")), "older CLIs");
+            True(SessionNotices.ApiKey(Init("\"apiKeySource\":\"ANTHROPIC_API_KEY\"")).Contains("ANTHROPIC_API_KEY environment variable"), "env var");
+            True(SessionNotices.ApiKey(Init("\"apiKeySource\":\"apiKeyHelper\"")).Contains("apiKeyHelper"), "helper");
+            True(SessionNotices.ApiKey(Init("\"apiKeySource\":\"/login managed key\"")).Contains("Console account"), "Console login");
+            True(SessionNotices.ApiKey(Init("\"apiKeySource\":\"project\"")).Contains("(project)"), "other sources named");
+        }
+
         // ---------- Sign-in expiry ----------
         private static void Test_SignInExpiry_FromRealResult_2_1_318()
         {
