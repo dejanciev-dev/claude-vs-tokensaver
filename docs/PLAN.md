@@ -277,7 +277,8 @@ Output pane).
       `pending` while connecting: not mentioned; a later init says if it failed)
 - [x] **Permission mode not the one asked for**: `permissionMode` differs from the mode the chat started with.
       Checked on a process's first init only (approving a plan leaves plan mode on purpose); the picker follows
-- [ ] **Output style that adds tokens**: Explanatory and Learning add explanation to every answer
+- [x] **Output style that adds tokens**: Explanatory and Learning add explanation to every answer (`output_style`;
+      Concise and custom styles get no note)
 - [ ] **Whole large file read**: a tip, once, when Claude reads all of a large file
 - [ ] **Commands that print nothing by design**: Bash `noOutputExpected` → "Done" instead of "(No output)"
 

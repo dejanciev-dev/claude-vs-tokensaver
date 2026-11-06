@@ -226,6 +226,8 @@ All notable changes to this project are listed here. The format follows
   - **Permission mode**: when Claude Code starts in another mode than the one picked (e.g. Auto where the account
     or provider does not offer it), the chat says so and the mode picker shows the real mode. With Manual picked,
     your settings' default mode applies and the picker follows it quietly.
+  - **Output style**: with Explanatory or Learning on, every answer carries more explanation and costs more
+    output tokens; the note says so and points to / → Output style… (Concise uses the fewest).
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.
