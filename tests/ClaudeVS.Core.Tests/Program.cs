@@ -577,6 +577,26 @@ namespace ClaudeVS.Core.Tests
         }
 
         // ---------- Savings report ----------
+        private static void Test_Savings_Thinking()
+        {
+            var prices = new PriceTable(); // Sonnet output $10, Haiku output $0.5 per MTok
+            var recs = new[]
+            {
+                new UsageRecord { ModelUsed = "claude-sonnet-5-5", OutputTokens = 400_000, ThinkingTokens = 300_000, CostUsd = 4 },
+                new UsageRecord { ModelUsed = "claude-haiku-5-5", OutputTokens = 100_000, ThinkingTokens = 0, CostUsd = 0.1 },
+            };
+            var r = SavingsReport.Build(recs, prices);
+            Eq(300_000L, r.ThinkingTokens);
+            True(Math.Abs(r.ThinkingCostUsd - 3.0) < 1e-9, "priced at each turn's output price " + r.ThinkingCostUsd);
+            True(r.ToText().Contains("Thinking:                   300k tokens ≈ $3.00  (60% of output tokens;") || r.ToText().Contains("Thinking:                   300.0k tokens ≈ $3.00  (60% of output tokens;"), r.ToText());
+            True(!SavingsReport.Build(new[] { new UsageRecord { ModelUsed = "claude-haiku-5-5", OutputTokens = 10 } }, prices).ToText().Contains("Thinking:"), "no thinking logged: no line");
+
+            // Older log lines have no "thinking"; it is written only when there is some.
+            var old = Newtonsoft.Json.JsonConvert.DeserializeObject<UsageRecord>("{\"model\":\"m\",\"out\":5}");
+            Eq(0L, old.ThinkingTokens, "old line");
+            True(!Newtonsoft.Json.JsonConvert.SerializeObject(new UsageRecord()).Contains("\"thinking\""), "0 is left out");
+        }
+
         private static void Test_Savings_RoutingAndReferences()
         {
             var prices = new PriceTable(); // Opus 4/20, Sonnet 2/10, Haiku 0.1/0.5 per MTok

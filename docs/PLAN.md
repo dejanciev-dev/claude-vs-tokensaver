@@ -323,7 +323,8 @@ Help that saves tokens, from what the extension already sees (usage, tool calls,
 
 - [x] **Token tips option**: Options → Token saving → *Token tips* (on) turns off all token tips and the prompt cache
       line; they then go to the Output pane only. Billing, MCP server and permission mode notes stay
-- [ ] **Thinking tokens in the usage log and savings report**
+- [x] **Thinking tokens in the usage log and savings report** (`thinking` in each log line, written only when
+      above 0; the report prices it at each turn's output price)
 - [ ] **Tool results by tool**: the session summary says which tools filled the context
 - [ ] **Costliest turns in the savings report**: the five dearest turns, with model, tokens and prompt (if logged)
 

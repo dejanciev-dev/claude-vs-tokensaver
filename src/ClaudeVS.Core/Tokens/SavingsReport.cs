@@ -103,6 +103,10 @@ namespace ClaudeVS.Core.Tokens
         /// <summary>Avoided tokens priced as input of the model that handled each turn.</summary>
         public double ReferencesSavedUsd { get; set; }
         public double CacheHitPercent { get; set; }
+        public long OutputTokens { get; set; }
+        /// <summary>Of <see cref="OutputTokens"/>: thinking, and what it cost at each turn's output price.</summary>
+        public long ThinkingTokens { get; set; }
+        public double ThinkingCostUsd { get; set; }
         public List<ModelBreakdown> ByModel { get; } = new List<ModelBreakdown>();
         /// <summary>Turns routed by the Haiku router, how many picked the same model as the local rules, its cost and time.</summary>
         public int HaikuRouted { get; set; }
@@ -139,6 +143,9 @@ namespace ClaudeVS.Core.Tokens
                 rep.ReferencesSavedUsd += avoided * (prices.For(r.ModelUsed) ?? prices.Sonnet).Input / 1_000_000.0;
                 input += r.InputTokens + r.CacheReadTokens + r.CacheWriteTokens;
                 cacheRead += r.CacheReadTokens;
+                rep.OutputTokens += r.OutputTokens;
+                rep.ThinkingTokens += r.ThinkingTokens;
+                rep.ThinkingCostUsd += r.ThinkingTokens * (prices.For(r.ModelUsed) ?? prices.Sonnet).Output / 1_000_000.0;
             }
             rep.CacheHitPercent = input > 0 ? 100.0 * cacheRead / input : 0;
             var timed = list.Where(r => r.RouterMs > 0).ToList();
@@ -171,6 +178,8 @@ namespace ClaudeVS.Core.Tokens
             sb.AppendLine($"Saved by model routing:     ${RoutingSavedUsd:0.00}  ({RoutingSavedPercent:0}%)");
             sb.AppendLine($"Saved by file references:   ~{TokenMeter.Format(TokensAvoided)} tokens ≈ ${ReferencesSavedUsd:0.00}");
             sb.AppendLine($"Cache hit rate:             {CacheHitPercent:0}%");
+            if (ThinkingTokens > 0)
+                sb.AppendLine($"Thinking:                   {TokenMeter.Format(ThinkingTokens)} tokens ≈ ${ThinkingCostUsd:0.00}  ({(OutputTokens > 0 ? 100.0 * ThinkingTokens / OutputTokens : 0):0}% of output tokens; Thinking off or lower effort cuts it)");
             if (HaikuRouted > 0 || RouterCostUsd > 0)
             {
                 sb.AppendLine($"Haiku router:               {HaikuRouted} prompts, same model as the local rules {(HaikuRouted > 0 ? 100.0 * HaikuAgreed / HaikuRouted : 0):0}% of the time");
