@@ -95,6 +95,27 @@ namespace ClaudeVS.Core.Cli
             }
         }
 
+        /// <summary>A whole-file read this large (in tokens, from the result size) earns the tip.</summary>
+        public const int LargeReadTokens = 8000;
+
+        /// <summary>
+        /// A token tip when Claude read all of a large file (Read's <c>tool_use_result.file</c>: <c>numLines ==
+        /// totalLines</c> from line 1, verified with 2.1.319) of at least <see cref="LargeReadTokens"/>: the whole
+        /// file now sits in the context and is sent again with every request. Null otherwise.
+        /// </summary>
+        public static string WholeFileRead(JObject readData, int resultChars)
+        {
+            if (!(readData?["file"] is JObject file)) return null;
+            long? lines = file["numLines"]?.Type == JTokenType.Integer ? (long?)file["numLines"] : null;
+            long? total = file["totalLines"]?.Type == JTokenType.Integer ? (long?)file["totalLines"] : null;
+            long start = file["startLine"]?.Type == JTokenType.Integer ? (long)file["startLine"] : 1;
+            int tokens = resultChars / 4;
+            if (lines == null || total == null || lines < total || start > 1 || tokens < LargeReadTokens) return null;
+            string name = System.IO.Path.GetFileName((string)file["filePath"] ?? "") is string n && n.Length > 0 ? n : "a file";
+            return $"Claude read all {total:N0} lines of {name} (~{Tokens.TokenMeter.Format(tokens)} tokens), which now go with every request. "
+                + "Naming the method or lines you mean (\"look at Save() in " + name + "\") reads less.";
+        }
+
         private static string Names(System.Collections.Generic.List<string> names) => string.Join(", ", names.Select(n => "“" + n + "”"));
     }
 }

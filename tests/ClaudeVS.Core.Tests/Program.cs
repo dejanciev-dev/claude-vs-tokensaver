@@ -1363,6 +1363,28 @@ namespace ClaudeVS.Core.Tests
             True(SessionNotices.OutputStyle(Init("\"output_style\":\"learning\""))?.Contains("more output tokens") == true, "learning, any case");
         }
 
+        private static void Test_SessionNotices_WholeFileRead()
+        {
+            JObject Read(int numLines, int totalLines, int startLine = 1) => JObject.Parse(
+                $"{{\"type\":\"text\",\"file\":{{\"filePath\":\"C:\\\\repo\\\\src\\\\Big.cs\",\"numLines\":{numLines},\"startLine\":{startLine},\"totalLines\":{totalLines}}}}}");
+            string tip = SessionNotices.WholeFileRead(Read(2400, 2400), 120_000);
+            True(tip?.StartsWith("Claude read all 2,400 lines of Big.cs (~30") == true, tip);
+            True(tip.Contains("look at Save() in Big.cs"), "names the file in the example");
+            Eq(null, SessionNotices.WholeFileRead(Read(200, 2400), 120_000), "only part of it");
+            Eq(null, SessionNotices.WholeFileRead(Read(2400, 2400, 10), 120_000), "not from the start");
+            Eq(null, SessionNotices.WholeFileRead(Read(300, 300), 9_000), "small file");
+            Eq(null, SessionNotices.WholeFileRead(JObject.Parse("{\"type\":\"image\",\"file\":{\"base64\":\"x\"}}"), 200_000), "an image");
+
+            // From the real 2.1.319 capture: part of big.txt (lines 10-29 of 301) earns no tip; results know their agent.
+            var events = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.319-tool-data.jsonl"))
+                .SelectMany(l => new ClaudeStreamParser().Parse(l)).Where(e => e.Kind == ClaudeEventKind.ToolResult).ToList();
+            True(events.All(e => SessionNotices.WholeFileRead(e.ResultData, 1_000_000) == null), "partial read");
+            True(events.All(e => !e.IsSubagent), "main agent's results");
+            var fork = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.319-fork.jsonl"))
+                .SelectMany(l => new ClaudeStreamParser().Parse(l)).Where(e => e.Kind == ClaudeEventKind.ToolResult).ToList();
+            True(fork.All(e => !e.IsSubagent), "the Agent call's own result belongs to the main agent");
+        }
+
         // ---------- Sign-in expiry ----------
         private static void Test_SignInExpiry_FromRealResult_2_1_318()
         {

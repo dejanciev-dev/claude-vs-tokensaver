@@ -1761,6 +1761,7 @@ namespace ClaudeVS.ToolWindow
                         break;
                     case ClaudeEventKind.ToolResult:
                         _view.CompleteTool(ev.ToolUseId, ev.ResultChars, ev.IsError, ev.ResultText, ConfirmFileChange(ev), ev.AllowedBy, ev.ResultData, ev.DeniedBy);
+                        if (!ev.IsError && !ev.IsSubagent) LargeReadTip(ev); // a subagent's reads stay out of this context
                         break;
                     case ClaudeEventKind.PermissionRequest:
                         FlushText();

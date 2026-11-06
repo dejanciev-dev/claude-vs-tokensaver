@@ -197,6 +197,7 @@ namespace ClaudeVS.Core.Cli
                     IsError = block.Value<bool?>("is_error") ?? false,
                     OriginalFile = original,
                     ResultData = data,
+                    IsSubagent = json["parent_tool_use_id"] != null && json["parent_tool_use_id"].Type != JTokenType.Null,
                     AllowedBy = AllowedBy(json["tool_result_meta"], (string)block["tool_use_id"]),
                     DeniedBy = DeniedBy(json["tool_result_meta"], (string)block["tool_use_id"]),
                 });
