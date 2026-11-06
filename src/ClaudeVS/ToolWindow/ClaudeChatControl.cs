@@ -1610,7 +1610,7 @@ namespace ClaudeVS.ToolWindow
                 await Jtf.SwitchToMainThreadAsync();
                 if (generation != _resumeGeneration || _session != null) return; // another session was opened, or a prompt already sent
                 RenderTranscript(transcript);
-                Notice(CacheWindow.ResumeNote(s.LastWriteUtc, transcript.LastContextTokens, DateTime.UtcNow)); // a cold cache costs the first prompt
+                Tip(CacheWindow.ResumeNote(s.LastWriteUtc, transcript.LastContextTokens, DateTime.UtcNow)); // a cold cache costs the first prompt
             }).FileAndForget("ClaudeVS/ChatControl/Resume");
         }
 

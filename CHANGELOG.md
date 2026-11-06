@@ -264,6 +264,10 @@ All notable changes to this project are listed here. The format follows
 - **Resume note**: resuming a conversation idle for over an hour (longer than any prompt cache) with ~10k tokens
   of context or more says the first prompt sends it all at the full input price, and that a New chat is cheaper
   for a new task. The size comes from the last answer's usage in the session file.
+- **Token tips option**: Options → Token saving → *Token tips* (on by default) turns off the token tips (large or
+  repeated reads, command output floods, heavy MCP tools / memory / skills, costly output style, cold cache on
+  resume) and the prompt cache line; they then go to the Output pane only. Billing, MCP server and permission
+  mode notes always show.
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.
