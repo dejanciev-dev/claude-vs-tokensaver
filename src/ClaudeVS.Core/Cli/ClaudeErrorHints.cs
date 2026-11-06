@@ -11,8 +11,10 @@ namespace ClaudeVS.Core.Cli
             if (string.IsNullOrWhiteSpace(error)) return null;
             string e = error.ToLowerInvariant();
 
+            if (SignInExpiry.IsExpiredError(error))
+                return "Your Claude sign-in has expired. Click Sign in under the meter, or run `claude auth login` in a terminal, then send again.";
             if (Has(e, "not logged in", "please run /login", "/login", "invalid api key", "authentication_error", "unauthorized", "oauth token"))
-                return "Claude Code is not logged in. Open a terminal, run `claude`, then type /login. Restart the chat afterwards (New).";
+                return "Claude Code is not logged in. Run `claude auth login` in a terminal (or `claude`, then /login). Restart the chat afterwards (New).";
             if (Has(e, "credit balance", "insufficient_quota", "billing", "usage limit", "limit reached"))
                 return "Your Claude plan or API credit limit was reached. Check your usage at claude.ai or console.anthropic.com.";
             if (Has(e, "rate_limit", "rate limit", "too many requests"))

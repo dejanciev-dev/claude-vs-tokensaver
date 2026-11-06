@@ -112,6 +112,8 @@ namespace ClaudeVS.Core.Cli
         public long DurationMs { get; set; }
         public int NumTurns { get; set; }
         public long? ContextWindow { get; set; }
+        /// <summary>When the stored claude.ai sign-in ends (<c>credential_expires_at</c>, 2.1.318); null for API keys.</summary>
+        public System.DateTime? CredentialExpiresUtc { get; set; }
 
         // Compacted
         public long PreCompactTokens { get; set; }

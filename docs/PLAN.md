@@ -195,7 +195,7 @@ telemetry and editor-group settings, reopen closed tab, continue after reload.
 
 Entries that change what the extension sees from the CLI.
 
-- [ ] **Sign-in expiry notice** (2.1.318). The stream-json `result` carries `credential_expires_at` (seen in
+- [x] **Sign-in expiry notice** (2.1.318). The stream-json `result` carries `credential_expires_at` (seen in
       `Fixtures/cli-2.1.318-thinking.jsonl`); the parser ignores it today. Read it into `TurnCompleted`, show
       "Sign-in ends in N days" in the meter from 10 days out (the terminal's threshold, which `-p` only prints to
       stderr in text mode). When the login has expired, the CLI's stderr error names `claude auth login` and
