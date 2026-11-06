@@ -1553,6 +1553,25 @@ namespace ClaudeVS.Core.Tests
             Eq("Session: abc-123", lines.Last());
         }
 
+        private static void Test_FileIndex_Sizes()
+        {
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-sizes-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(dir, "src"));
+                File.WriteAllText(Path.Combine(dir, "src", "Big.cs"), new string('x', 12_800));
+                File.WriteAllText(Path.Combine(dir, "src", "Empty.cs"), "");
+                var index = FileIndex.Build(dir);
+                var big = index.SearchWithSizes("big").Single();
+                Eq("src/Big.cs", big.Path, "the path is what gets inserted");
+                Eq("~3.2k tok", big.SizeLabel);
+                Eq("src/Big.cs   ~3.2k tok", big.ToString(), "what the list shows");
+                Eq("src/Empty.cs", index.SearchWithSizes("empty").Single().ToString(), "empty file: no size");
+                Eq("", new FileHit { Path = "gone.cs" }.SizeLabel, "unreadable: no size");
+            }
+            finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
+        }
+
         // ---------- Conversation cost warning ----------
         private static void Test_CostWatch()
         {

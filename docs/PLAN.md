@@ -313,7 +313,7 @@ Help that saves tokens, from what the extension already sees (usage, tool calls,
 - [x] **Base context tip**: MCP tools or memory files that take a big slice of every request (from
       `get_context_usage`: MCP tools / memory files ≥ 5k, skill listings ≥ 10k; the biggest, with where to cut it)
 - [x] **Copy session summary**: `/` → tokens, cost, cache, turns as text (`SessionSummary`, from the meter)
-- [ ] **File sizes in the `@` picker**: each file's size in tokens
+- [x] **File sizes in the `@` picker**: each file's size in tokens (`FileIndex.SearchWithSizes`, read for the hits only)
 - [ ] **Resume note**: a session idle past its cache lifetime sends everything at full price on the next prompt
 
 ---
