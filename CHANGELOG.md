@@ -238,6 +238,9 @@ All notable changes to this project are listed here. The format follows
   in the last minutes of a 1-hour cache, then `Prompt cache expired (idle over an hour): the next prompt sends
   ~40k tokens of context at the full input price`. The lifetime comes from the usage (`ephemeral_1h` or `5m`),
   and every request keeps the cache again; small contexts get no note.
+- **Repeated read tip** (once per conversation): when Claude reads a whole file again that it already has (same
+  content, not edited by Claude in between, no compaction since), the chat says the same text now sits in the
+  context twice and suggests telling it "you already have Big.cs". Each repeat is logged in the Output pane.
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.

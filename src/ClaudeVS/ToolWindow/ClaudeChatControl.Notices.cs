@@ -68,6 +68,22 @@ namespace ClaudeVS.ToolWindow
             Notice(tip);
         }
 
+        // ---------------- Repeated reads ----------------
+
+        private readonly Core.Tokens.ReadTracker _reads = new Core.Tokens.ReadTracker();
+        private bool _gaveRepeatReadTip;
+
+        /// <summary>Every event: the tip, once per conversation, when Claude reads an unchanged file it already has.</summary>
+        private void TrackReads(ClaudeEvent ev)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (!(_reads.Observe(ev) is var (path, tokens))) return;
+            ClaudeOutputPane.WriteLine($"Repeated read: {path} (~{Core.Tokens.TokenMeter.Format(tokens)} tokens)");
+            if (_gaveRepeatReadTip || Core.Tokens.ReadTracker.Tip(path, tokens) is not string tip) return;
+            _gaveRepeatReadTip = true;
+            Notice(tip);
+        }
+
         // ---------------- Prompt cache ----------------
 
         private readonly System.Windows.Controls.TextBlock _cacheNote = new System.Windows.Controls.TextBlock
@@ -97,6 +113,8 @@ namespace ClaudeVS.ToolWindow
         {
             _saidNotices.Clear();
             _gaveLargeReadTip = false;
+            _gaveRepeatReadTip = false;
+            _reads.Reset();
         }
     }
 }

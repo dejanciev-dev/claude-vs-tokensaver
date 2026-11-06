@@ -1443,6 +1443,31 @@ namespace ClaudeVS.Core.Tests
             Eq(0L, u.CacheCreation5m, "parsed 5m");
         }
 
+        // ---------- Repeated reads ----------
+        private static void Test_ReadTracker()
+        {
+            var t = new ReadTracker();
+            string body = new string('x', 12_000);
+            ClaudeEvent Read(string id, string path, string extra = "") => new ClaudeEvent { Kind = ClaudeEventKind.ToolUse, ToolName = "Read", ToolUseId = id, ToolInput = JObject.Parse("{\"file_path\":\"" + path.Replace("\\", "\\\\") + "\"" + extra + "}") };
+            ClaudeEvent Result(string id, string text, bool sub = false) => new ClaudeEvent { Kind = ClaudeEventKind.ToolResult, ToolUseId = id, ResultText = text, ResultChars = text.Length, IsSubagent = sub };
+
+            t.Observe(Read("1", @"C:\r\Big.cs")); Eq(null, t.Observe(Result("1", body)), "first read");
+            t.Observe(Read("2", @"c:\r\big.cs")); Eq((@"c:\r\big.cs", 3000), t.Observe(Result("2", body)), "same file, same text: repeated");
+            Eq(3000L, t.RepeatedTokens);
+
+            t.Observe(new ClaudeEvent { Kind = ClaudeEventKind.ToolUse, ToolName = "Edit", ToolUseId = "3", ToolInput = JObject.Parse("{\"file_path\":\"C:\\\\r\\\\Big.cs\"}") });
+            t.Observe(Read("4", @"C:\r\Big.cs")); Eq(null, t.Observe(Result("4", body)), "after Claude's edit: new");
+            t.Observe(Read("5", @"C:\r\Big.cs")); Eq(null, t.Observe(Result("5", body + "y")), "changed by you: new");
+            t.Observe(Read("6", @"C:\r\Big.cs", ",\"offset\":10,\"limit\":20")); Eq(null, t.Observe(Result("6", body + "y")), "part of the file: not compared");
+            t.Observe(new ClaudeEvent { Kind = ClaudeEventKind.Compacted });
+            t.Observe(Read("7", @"C:\r\Big.cs")); Eq(null, t.Observe(Result("7", body + "y")), "after compaction the earlier copy is gone");
+            t.Observe(new ClaudeEvent { Kind = ClaudeEventKind.ToolUse, ToolName = "Read", ToolUseId = "8", IsSubagent = true, ToolInput = JObject.Parse("{\"file_path\":\"C:\\\\r\\\\Big.cs\"}") });
+            Eq(null, t.Observe(Result("8", body + "y", sub: true)), "a subagent's read: its own context");
+
+            True(ReadTracker.Tip(@"C:\r\Big.cs", 3000).StartsWith("Claude read Big.cs again (~3.0k tokens)"), ReadTracker.Tip(@"C:\r\Big.cs", 3000));
+            Eq(null, ReadTracker.Tip(@"C:\r\a.cs", 500), "small file: no tip");
+        }
+
         // ---------- Sign-in expiry ----------
         private static void Test_SignInExpiry_FromRealResult_2_1_318()
         {

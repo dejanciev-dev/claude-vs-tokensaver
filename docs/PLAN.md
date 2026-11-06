@@ -295,7 +295,8 @@ Help that saves tokens, from what the extension already sees (usage, tool calls,
       (`cache_creation.ephemeral_1h_input_tokens`; 2.1.319 on a claude.ai plan used 1 hour), and each request keeps
       it again. While idle, a line under the meter says when a 1-hour cache is about to expire, then that it has, with
       what the next prompt costs
-- [ ] **Repeated read**: Claude reads a file again that it already has, with no change in between
+- [x] **Repeated read**: Claude reads a file again that it already has, with no change in between (`ReadTracker`:
+      whole reads only, same content hash, no Edit / Write of it and no compaction since; main agent only)
 - [ ] **Large command output**: point to the output-trimming hook when it is not installed
 - [ ] **Conversation cost warning**: an option to be told once when a conversation passes an amount
 
