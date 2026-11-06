@@ -272,6 +272,8 @@ All notable changes to this project are listed here. The format follows
   report adds `Thinking: 300k tokens ≈ $3.00 (60% of output tokens; …)`, priced at each turn's output price.
 - **Where the tokens went**: the session summary adds `Tool results: Read 10.0k · Shell 3.0k · MCP 100`, the
   tokens each kind of tool result added to the conversation (main agent only; shell commands and searches grouped).
+- **Costliest turns in the savings report**: the five dearest turns with time, cost, model and tokens, and the
+  prompt when previews are logged (else the route reason), so you can see where the money went.
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.

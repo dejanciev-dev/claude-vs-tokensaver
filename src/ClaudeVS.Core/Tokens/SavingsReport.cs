@@ -113,6 +113,10 @@ namespace ClaudeVS.Core.Tokens
         public int HaikuAgreed { get; set; }
         public double RouterCostUsd { get; set; }
         public long RouterAverageMs { get; set; }
+        /// <summary>The dearest turns, dearest first (at most <see cref="CostliestCount"/>).</summary>
+        public List<UsageRecord> Costliest { get; } = new List<UsageRecord>();
+        public const int CostliestCount = 5;
+
         /// <summary>Cache hit % per day, oldest first.</summary>
         public List<KeyValuePair<DateTime, double>> CacheTrend { get; } = new List<KeyValuePair<DateTime, double>>();
 
@@ -156,6 +160,8 @@ namespace ClaudeVS.Core.Tokens
                 .Select(g => new ModelBreakdown { Family = g.Key, Turns = g.Count(), CostUsd = g.Sum(r => r.CostUsd) })
                 .OrderByDescending(b => b.Turns));
 
+            rep.Costliest.AddRange(list.Where(r => r.CostUsd > 0).OrderByDescending(r => r.CostUsd).Take(CostliestCount));
+
             foreach (var day in list.GroupBy(r => r.Timestamp.ToLocalTime().Date))
             {
                 long dIn = day.Sum(r => r.InputTokens + r.CacheReadTokens + r.CacheWriteTokens);
@@ -163,6 +169,12 @@ namespace ClaudeVS.Core.Tokens
                 rep.CacheTrend.Add(new KeyValuePair<DateTime, double>(day.Key, dIn > 0 ? 100.0 * dRead / dIn : 0));
             }
             return rep;
+        }
+
+        private static string OneLine(string s, int max)
+        {
+            string one = string.Join(" ", (s ?? "").Split(new[] { '\r', '\n', '\t', ' ' }, StringSplitOptions.RemoveEmptyEntries));
+            return one.Length <= max ? one : one.Substring(0, max - 1) + "…";
         }
 
         public string ToText()
@@ -189,6 +201,18 @@ namespace ClaudeVS.Core.Tokens
             sb.AppendLine("By model:");
             foreach (var b in ByModel)
                 sb.AppendLine($"  {b.Family,-7} {b.Turns,5} turns  ${b.CostUsd,8:0.00}  ({100.0 * b.Turns / Turns:0}% of turns)");
+            if (Costliest.Count > 1)
+            {
+                // Where the money went: the turns worth looking at (and the prompt, when previews are logged).
+                sb.AppendLine();
+                sb.AppendLine("Costliest turns:");
+                foreach (var r in Costliest)
+                {
+                    string what = !string.IsNullOrWhiteSpace(r.PromptPreview) ? "“" + OneLine(r.PromptPreview, 60) + "”"
+                        : !string.IsNullOrEmpty(r.RouteReason) ? "(" + OneLine(r.RouteReason, 60) + ")" : "";
+                    sb.AppendLine($"  {r.Timestamp.ToLocalTime():yyyy-MM-dd HH:mm}  ${r.CostUsd,6:0.00}  {PriceTable.Family(r.ModelUsed) ?? "other",-6} {TokenMeter.Format(r.TotalTokens),7} tok  {what}".TrimEnd());
+                }
+            }
             if (CacheTrend.Count > 1)
             {
                 sb.AppendLine();
