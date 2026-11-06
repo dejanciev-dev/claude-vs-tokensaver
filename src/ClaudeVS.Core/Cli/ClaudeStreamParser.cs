@@ -155,6 +155,10 @@ namespace ClaudeVS.Core.Cli
                 }
             }
 
+            // 2.1.319: the message holding a thinking block says how long the model thought.
+            if (!isSub && json["thinking_duration_ms"] is JValue thought && (thought.Type == JTokenType.Integer || thought.Type == JTokenType.Float))
+                events.Add(new ClaudeEvent { Kind = ClaudeEventKind.ThinkingDuration, DurationMs = Math.Max(0, (long)thought) });
+
             var usage = TokenUsage.From(msg["usage"]);
             if (!usage.IsEmpty)
             {

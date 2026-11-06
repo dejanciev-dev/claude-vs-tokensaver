@@ -65,6 +65,11 @@ namespace ClaudeVS.Core.Cli
         /// Subagents' blocks are not reported.
         /// </summary>
         Activity,
+        /// <summary>
+        /// How long the main agent thought for one thinking block, in <see cref="ClaudeEvent.DurationMs"/>: the CLI's
+        /// <c>thinking_duration_ms</c> on the block's assistant message (2.1.319; older versions do not send it).
+        /// </summary>
+        ThinkingDuration,
         Error,
     }
 

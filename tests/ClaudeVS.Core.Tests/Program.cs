@@ -1084,6 +1084,26 @@ namespace ClaudeVS.Core.Tests
             Eq(null, ClaudeErrorHints.Explain(""), "empty");
         }
 
+        /// <summary>A streamed thinking turn from Claude Code 2.1.319: the block's message carries thinking_duration_ms.</summary>
+        private static void Test_Parser_ThinkingDuration_RealCli_2_1_319()
+        {
+            var parser = new ClaudeStreamParser();
+            var events = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.319-thinking-duration.jsonl"))
+                .SelectMany(l => parser.Parse(l)).ToList();
+            var thought = events.Single(e => e.Kind == ClaudeEventKind.ThinkingDuration);
+            Eq(209L, thought.DurationMs, "thinking_duration_ms");
+            int at = events.IndexOf(thought);
+            True(events.FindIndex(e => e.Kind == ClaudeEventKind.Activity && e.Activity == ClaudeActivity.Thinking) < at, "after thinking started");
+            True(events.FindIndex(e => e.Kind == ClaudeEventKind.Activity && e.Activity == ClaudeActivity.Writing) > at, "before writing starts, so the strip can use it");
+
+            // Older captures have no field; a subagent's thinking is not the main agent's.
+            var old = new ClaudeStreamParser();
+            True(!File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.318-thinking.jsonl"))
+                .SelectMany(l => old.Parse(l)).Any(e => e.Kind == ClaudeEventKind.ThinkingDuration), "2.1.318 sends none");
+            var sub = new ClaudeStreamParser().Parse("{\"type\":\"assistant\",\"parent_tool_use_id\":\"toolu_1\",\"thinking_duration_ms\":900,\"message\":{\"id\":\"m\",\"content\":[{\"type\":\"thinking\",\"thinking\":\"\"}]}}");
+            True(!sub.Any(e => e.Kind == ClaudeEventKind.ThinkingDuration), "subagent ignored");
+        }
+
         // ---------- CLI version ----------
         private static void Test_CliVersion_FromRealInit_2_1_316()
         {
