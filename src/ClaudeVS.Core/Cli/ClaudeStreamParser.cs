@@ -172,7 +172,10 @@ namespace ClaudeVS.Core.Cli
         {
             if (!(json.SelectToken("message.content") is JArray content)) return None;
             var events = new List<ClaudeEvent>();
-            foreach (var block in content.OfType<JObject>().Where(b => (string)b["type"] == "tool_result"))
+            var results = content.OfType<JObject>().Where(b => (string)b["type"] == "tool_result").ToList();
+            // The CLI's structured result sits beside the message, so it only belongs to a block when there is one.
+            string original = results.Count == 1 ? OriginalFile(json["tool_use_result"]) : null;
+            foreach (var block in results)
             {
                 var c = block["content"];
                 int chars = c == null ? 0 : c.Type == JTokenType.String ? ((string)c).Length : c.ToString(Formatting.None).Length;
@@ -184,9 +187,21 @@ namespace ClaudeVS.Core.Cli
                     ResultChars = chars,
                     ResultText = text,
                     IsError = block.Value<bool?>("is_error") ?? false,
+                    OriginalFile = original,
                 });
             }
             return events;
+        }
+
+        /// <summary>
+        /// The file as it was before an Edit / Write, from the CLI's <c>tool_use_result</c> (verified with 2.1.319):
+        /// <c>originalFile</c>, or "" for a Write that created the file (<c>type: "create"</c>). Null for other tools.
+        /// </summary>
+        public static string OriginalFile(JToken toolUseResult)
+        {
+            if (!(toolUseResult is JObject r) || r["filePath"]?.Type != JTokenType.String) return null;
+            if ((string)r["type"] == "create") return "";
+            return r["originalFile"]?.Type == JTokenType.String ? (string)r["originalFile"] : null;
         }
 
         private IReadOnlyList<ClaudeEvent> ParseResult(JObject json)

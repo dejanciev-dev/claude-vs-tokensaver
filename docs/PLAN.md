@@ -230,6 +230,22 @@ still answers with Sonnet when Haiku is asked for (`--live` in plan mode), as in
 
 ---
 
+## Phase 10 — Use the CLI's structured tool results (2.1.319)
+
+Tool-result messages carry more than the text Claude sees: `tool_use_result` (the tool's structured output) and
+`tool_result_meta` (how the call was approved). Captures in `Fixtures/cli-2.1.319-edit-write.jsonl` and
+`Fixtures/cli-2.1.319-permission-decisions.jsonl`.
+
+- [x] **Exact diffs for Edit / Write**. `tool_use_result.originalFile` is the file before the change (`type:
+      "create"` for a new file). When it differs from the copy we read as the call arrived (a fast tool can beat
+      it), it replaces that copy for the lines under the row, the Diff button and Files changed
+- [ ] **Why a call ran without asking**. `tool_result_meta[].permission_decision` (`decision: "accept"`, `source:
+      "config"`, `reason_type`: `mode` for acceptEdits, `rule` for an allow rule or `--allowedTools`,
+      `subcommandResults` for a shell command whose parts all match rules). Show "allowed by rule" / "allowed by
+      mode" on shell and file-change rows, so it is clear why nothing was asked
+
+---
+
 ## Working in Visual Studio — daily loop
 
 1. Core logic change → edit in `ClaudeVS.Core` → run tests (`ClaudeVS.Core.Tests` → Set as Startup → Ctrl+F5, or `dotnet run` in its folder).

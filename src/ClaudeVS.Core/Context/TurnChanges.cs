@@ -32,11 +32,22 @@ namespace ClaudeVS.Core.Context
         /// Remembers a file before its first change in this turn; later changes keep the first copy.
         /// <paramref name="before"/>: the content, "" when the file did not exist, null when unreadable.
         /// </summary>
-        public void Record(string fullPath, string before)
+        /// <returns>True when this was the file's first change in the turn (the copy was kept).</returns>
+        public bool Record(string fullPath, string before)
         {
-            if (string.IsNullOrEmpty(fullPath) || _before.ContainsKey(fullPath)) return;
+            if (string.IsNullOrEmpty(fullPath) || _before.ContainsKey(fullPath)) return false;
             _order.Add(fullPath);
             _before[fullPath] = before;
+            return true;
+        }
+
+        /// <summary>
+        /// Replaces the copy taken for a file's first change with the CLI's own (<c>originalFile</c>), which is exact
+        /// even when the tool ran before our copy was read. Ignored for files not recorded.
+        /// </summary>
+        public void Confirm(string fullPath, string before)
+        {
+            if (!string.IsNullOrEmpty(fullPath) && before != null && _before.ContainsKey(fullPath)) _before[fullPath] = before;
         }
 
         /// <summary>
