@@ -1887,6 +1887,24 @@ namespace ClaudeVS.Core.Tests
             Eq("Weekly Opus limit", RateLimitInfo.DisplayName("seven_day_opus"));
         }
 
+        /// <summary>The real event (2.1.317) says extra usage is off for lack of credits; the reached banner says so.</summary>
+        private static void Test_RateLimit_ExtraUsage()
+        {
+            var now = new DateTime(2026, 11, 3, 12, 0, 0, DateTimeKind.Utc);
+            string line = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.317-rate-limit.jsonl")).Trim();
+            var real = RateLimitInfo.Parse(new ClaudeStreamParser().Parse(line).Single().Payload);
+            Eq("rejected", real.OverageStatus);
+            Eq("out_of_credits", real.OverageDisabledReason);
+            True(real.Details(now).EndsWith("\nExtra usage: off (no credits left)"), real.Details(now));
+
+            long reset = (long)(now.AddHours(2) - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalSeconds;
+            RateLimitInfo Reached(string overage) => RateLimitInfo.Parse(JObject.Parse(
+                $"{{\"status\":\"rejected\",\"rateLimitType\":\"five_hour\",\"resetsAt\":{reset},{overage}\"unifiedWindows\":{{\"five_hour\":{{\"utilization\":1.0,\"resetsAt\":{reset},\"status\":\"rejected\"}}}}}}"));
+            True(Reached("\"overageStatus\":\"rejected\",\"overageDisabledReason\":\"out_of_credits\",").Banner(now).Text.EndsWith(" Extra usage is off (no credits left)."), "reached, no extra usage");
+            True(Reached("\"overageStatus\":\"allowed\",\"isUsingOverage\":true,").Banner(now).Text.EndsWith(" Using extra usage."), "reached, carried by extra usage");
+            True(!Reached("").Banner(now).Text.Contains("Extra usage"), "older events: as before");
+        }
+
         // ---------- Images ----------
         private static void Test_Images_TokensAndFit()
         {

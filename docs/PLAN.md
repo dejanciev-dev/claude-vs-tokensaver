@@ -259,6 +259,8 @@ Tool-result messages carry more than the text Claude sees: `tool_use_result` (th
 - [x] **Why a call was blocked**: a rejected `config` decision in `tool_result_meta` (a deny rule `Bash(echo *)`
       gave `reason_type: "subcommandResults"`, `non_execution_kind: "permission-rule"`): the row says "denied by a
       rule" (or "by the mode") in red. Capture: `Fixtures/cli-2.1.319-deny-rule.jsonl`
+- [x] **Extra usage in the limit banner**: `rate_limit_event`'s `overageStatus` / `overageDisabledReason`. A reached
+      limit says "Extra usage is off (no credits left)." when nothing carries you past it; the tooltip lists it
 
 ---
 

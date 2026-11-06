@@ -214,6 +214,9 @@ All notable changes to this project are listed here. The format follows
 - **Why a call was blocked**: a call your Claude Code settings block says so on its row, `● Bash(echo hi) ·
   denied by a rule` in red, with a tooltip pointing to Permission rules ("denied by the mode" when the permission
   mode does not allow it). From the result's `tool_result_meta` (Claude Code 2.1.319).
+- **Extra usage in the limit banner**: once a plan limit is reached, the banner says whether extra usage carries
+  you past it ("Using extra usage.") or not ("Extra usage is off (no credits left)."), and its tooltip lists it
+  with the windows. From `overageStatus` / `overageDisabledReason` in `rate_limit_event`.
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.
