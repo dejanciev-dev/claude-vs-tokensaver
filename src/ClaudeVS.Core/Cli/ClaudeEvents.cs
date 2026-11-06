@@ -103,6 +103,12 @@ namespace ClaudeVS.Core.Cli
         /// 2.1.319); "" when the Write created the file; null when the CLI did not say.
         /// </summary>
         public string OriginalFile { get; set; }
+        /// <summary>
+        /// ToolResult: why the call ran without asking, when Claude Code's settings allowed it
+        /// (<c>tool_result_meta[].permission_decision.reason_type</c>, 2.1.319): "mode", "rule", "subcommandResults"…
+        /// Null when you were asked, or the CLI did not say.
+        /// </summary>
+        public string AllowedBy { get; set; }
         public bool IsError { get; set; }
         public string RequestId { get; set; }
         /// <summary>ControlResponse: the CLI's answer to our control request (e.g. the get_context_usage data).</summary>

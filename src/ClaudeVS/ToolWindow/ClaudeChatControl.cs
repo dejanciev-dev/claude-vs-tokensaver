@@ -1734,7 +1734,7 @@ namespace ClaudeVS.ToolWindow
                         _view.AppendTool(ev.ToolUseId, ev.Text, ev.ToolInput?.ToString(), diff, inline, ev.ToolName, ev.ToolInput, _sessionDir, changedPath);
                         break;
                     case ClaudeEventKind.ToolResult:
-                        _view.CompleteTool(ev.ToolUseId, ev.ResultChars, ev.IsError, ev.ResultText, ConfirmFileChange(ev));
+                        _view.CompleteTool(ev.ToolUseId, ev.ResultChars, ev.IsError, ev.ResultText, ConfirmFileChange(ev), ev.AllowedBy);
                         break;
                     case ClaudeEventKind.PermissionRequest:
                         FlushText();

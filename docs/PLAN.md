@@ -239,10 +239,11 @@ Tool-result messages carry more than the text Claude sees: `tool_use_result` (th
 - [x] **Exact diffs for Edit / Write**. `tool_use_result.originalFile` is the file before the change (`type:
       "create"` for a new file). When it differs from the copy we read as the call arrived (a fast tool can beat
       it), it replaces that copy for the lines under the row, the Diff button and Files changed
-- [ ] **Why a call ran without asking**. `tool_result_meta[].permission_decision` (`decision: "accept"`, `source:
+- [x] **Why a call ran without asking**. `tool_result_meta[].permission_decision` (`decision: "accept"`, `source:
       "config"`, `reason_type`: `mode` for acceptEdits, `rule` for an allow rule or `--allowedTools`,
-      `subcommandResults` for a shell command whose parts all match rules). Show "allowed by rule" / "allowed by
-      mode" on shell and file-change rows, so it is clear why nothing was asked
+      `subcommandResults` for a shell command whose parts all match rules). Shell and file-change rows say
+      "allowed by a rule"; shell commands run on the mode alone say "allowed by the mode" (edits in Accept edits
+      mode stay quiet, it would be on every one)
 
 ---
 
