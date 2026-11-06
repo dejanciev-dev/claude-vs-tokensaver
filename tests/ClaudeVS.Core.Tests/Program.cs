@@ -1537,6 +1537,22 @@ namespace ClaudeVS.Core.Tests
             Eq(null, SessionNotices.BaseContext(null), "no breakdown");
         }
 
+        private static void Test_SessionSummary()
+        {
+            Eq("", SessionSummary.Format(null), "no meter");
+            // The real 2.1.319 thinking turn through the meter.
+            var meter = new TokenMeter();
+            foreach (var e in File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.319-thinking-duration.jsonl"))
+                .SelectMany(l => new ClaudeStreamParser().Parse(l))) meter.Observe(e);
+            string s = SessionSummary.Format(meter, "Train times", "abc-123");
+            var lines = s.Split('\n');
+            Eq("Claude Code session: Train times", lines[0]);
+            True(lines[1].StartsWith("Turns: 1 · Cost: $0.00"), lines[1]);
+            True(lines[2].StartsWith("Tokens: ") && lines[2].Contains("of which thinking 56") && lines[2].Contains("cache read 14.3k"), lines[2]);
+            True(lines[3].StartsWith("Cache hits: 60%"), lines[3]);
+            Eq("Session: abc-123", lines.Last());
+        }
+
         // ---------- Conversation cost warning ----------
         private static void Test_CostWatch()
         {

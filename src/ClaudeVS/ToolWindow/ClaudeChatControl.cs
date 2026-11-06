@@ -746,6 +746,7 @@ namespace ClaudeVS.ToolWindow
                 new ChatPopup.Entry { Group = "Context", Label = "Rewind…", Detail = "Esc Esc", Description = "Put files back to before one of your prompts", Run = ShowRewindPicker },
                 new ChatPopup.Entry { Group = "Context", Label = "Focus view", Description = "Collapse tool calls into one summary row", Checked = Options?.FocusView == true, Run = ToggleFocusView },
                 new ChatPopup.Entry { Group = "Context", Label = "Copy last response", Description = "Claude's last answer as Markdown", Run = CopyLastAnswer },
+                new ChatPopup.Entry { Group = "Context", Label = "Copy session summary", Description = "Turns, cost, tokens, cache and context as text", Run = CopySessionSummary },
                 new ChatPopup.Entry { Group = "Context", Label = "Focus last message", Detail = "Ctrl+Alt+K, M", Description = "Move the keyboard to Claude's last answer (for screen readers)", Run = FocusLastMessage },
                 new ChatPopup.Entry { Group = "Context", Label = "Export conversation…", Description = "Save the whole conversation as Markdown", Run = ExportConversation },
                 new ChatPopup.Entry { Group = "Context", Label = "Bookmarks", Description = "Answers you starred", Run = ToggleBookmarksPanel },
@@ -2157,6 +2158,16 @@ namespace ClaudeVS.ToolWindow
         }
 
         /// <summary>/ → Copy last response (like /copy in VS Code): Claude's last answer as Markdown.</summary>
+        /// <summary>/ → Copy session summary: turns, cost, tokens, cache and context as plain text.</summary>
+        private void CopySessionSummary()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (_meterModel == null || _meterModel.Turns == 0) { Append("No turns in this conversation yet."); return; }
+            string text = SessionSummary.Format(_meterModel, _fullTitle ?? _sessionName, _session?.SessionId ?? _resumeId);
+            try { Clipboard.SetText(text); Append("Copied the session summary."); }
+            catch (Exception) { Append("The clipboard is busy; try again."); }
+        }
+
         private void CopyLastAnswer()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
