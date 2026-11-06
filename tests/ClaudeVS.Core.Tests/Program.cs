@@ -1501,6 +1501,15 @@ namespace ClaudeVS.Core.Tests
             Eq(" · 1.2k thinking", TurnFooter.Extras(new TokenUsage { Output = 1500, Thinking = 1200 }));
         }
 
+        private static void Test_TurnFooter_Cached_RealCli_2_1_319()
+        {
+            var done = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.319-thinking-duration.jsonl"))
+                .SelectMany(l => new ClaudeStreamParser().Parse(l)).Single(e => e.Kind == ClaudeEventKind.TurnCompleted);
+            Eq(" · 56 thinking · 60% cached", TurnFooter.Extras(done.Usage), "14,256 of 23,937 input tokens from the cache");
+            Eq(null, TurnFooter.CachedPercent(new TokenUsage { Input = 500 }), "too small to say");
+            Eq(0, TurnFooter.CachedPercent(new TokenUsage { Input = 100, CacheCreation = 30_000 }), "cache just written: 0%");
+        }
+
         // ---------- Conversation cost warning ----------
         private static void Test_CostWatch()
         {

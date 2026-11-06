@@ -249,6 +249,8 @@ All notable changes to this project are listed here. The format follows
   a New chat for the next task or /compact.
 - **Thinking tokens in the footer**: `✓ 6.9s · 26k tok · $0.002 · claude-haiku-5-5 · 56 thinking`, from
   `output_tokens_details.thinking_tokens` (Claude Code 2.1.319). Thinking is billed as output, the dearest kind.
+- **Cache share in the footer**: `· 60% cached`, the turn's input served from the prompt cache (a tenth of the
+  price). A low number right after a model switch or a long pause explains a dearer answer.
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.
