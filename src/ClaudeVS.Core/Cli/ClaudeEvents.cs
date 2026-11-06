@@ -145,6 +145,8 @@ namespace ClaudeVS.Core.Cli
         // SessionStarted
         /// <summary>The CLI's <c>claude_code_version</c> from <c>init</c>, e.g. "2.1.318".</summary>
         public string CliVersion { get; set; }
+        /// <summary>The first init of this CLI process (it comes again at the start of every turn).</summary>
+        public bool IsFirstInit { get; set; }
         /// <summary>The session's skills (<c>skills</c> in <c>init</c>); null when not sent.</summary>
         public System.Collections.Generic.IReadOnlyList<string> Skills { get; set; }
         /// <summary>The commands you can run (<c>slash_commands</c> in <c>init</c>); null when not sent.</summary>

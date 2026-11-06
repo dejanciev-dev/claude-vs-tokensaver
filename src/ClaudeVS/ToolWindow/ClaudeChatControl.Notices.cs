@@ -23,6 +23,23 @@ namespace ClaudeVS.ToolWindow
             if (!(ev.Payload is JObject init)) return;
             Notice(SessionNotices.ApiKey(init), important: true);
             Notice(SessionNotices.McpServers(init));
+            if (ev.IsFirstInit) SyncPermissionMode(init);
+        }
+
+        /// <summary>
+        /// On a process's first init: when the CLI started in another mode than the chat asked for, say so (unless
+        /// Manual was asked, where your settings' default mode applies) and make the mode picker show the real one,
+        /// without sending a switch back.
+        /// </summary>
+        private void SyncPermissionMode(JObject init)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var actual = ChoiceNames.FromCli((string)init["permissionMode"]);
+            if (actual == null || actual == _mode) return;
+            Notice(SessionNotices.PermissionMode(init, _mode), important: true);
+            ClaudeOutputPane.WriteLine($"Mode: the CLI runs in {actual.Value.ToControl()}, the chat asked for {_mode.ToControl()}");
+            _mode = actual.Value;
+            UpdateChips();
         }
 
         /// <summary>Says a note once per conversation; important ones are also read out by screen readers.</summary>

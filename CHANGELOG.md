@@ -223,6 +223,9 @@ All notable changes to this project are listed here. The format follows
     Console login) instead of your claude.ai plan, the chat says the session is billed per token to that key.
   - **MCP servers**: servers that need you to sign in (`needs-auth`, e.g. a claude.ai connector) or could not
     connect are named, since Claude can't use their tools; the note points to / → MCP servers….
+  - **Permission mode**: when Claude Code starts in another mode than the one picked (e.g. Auto where the account
+    or provider does not offer it), the chat says so and the mode picker shows the real mode. With Manual picked,
+    your settings' default mode applies and the picker follows it quietly.
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.

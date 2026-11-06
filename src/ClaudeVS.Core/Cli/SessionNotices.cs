@@ -61,6 +61,21 @@ namespace ClaudeVS.Core.Cli
                 + ", so Claude can't use " + (needAuth.Count + failed.Count == 1 ? "its" : "their") + " tools. Fix it under / → MCP servers….";
         }
 
+        /// <summary>
+        /// The mode the CLI actually started in (<c>permissionMode</c>, verified "acceptEdits" with 2.1.319) when it is
+        /// not the one asked for, e.g. Auto where the account or provider does not offer it (2.1.302 starts
+        /// <c>-p</c> sessions in default mode on third-party providers). Check only the first init of a process:
+        /// approving a plan leaves plan mode on purpose.
+        /// </summary>
+        public static string PermissionMode(JObject init, PermissionModeChoice asked)
+        {
+            var actual = ChoiceNames.FromCli((string)init?["permissionMode"]);
+            // Manual is launched with no flag, so your settings' defaultMode decides: not a refusal.
+            if (actual == null || actual == asked || asked == PermissionModeChoice.Default) return null;
+            return $"Claude Code started in {actual.Value.Describe().Label} mode, not {asked.Describe().Label}: your settings, account or "
+                + $"provider don't allow {asked.Describe().Label} here. The mode picker now shows {actual.Value.Describe().Label}.";
+        }
+
         private static string Names(System.Collections.Generic.List<string> names) => string.Join(", ", names.Select(n => "“" + n + "”"));
     }
 }
