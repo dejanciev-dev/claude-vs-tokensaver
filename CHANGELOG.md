@@ -208,6 +208,9 @@ All notable changes to this project are listed here. The format follows
   (project, user and plugin skills, e.g. `/anthropic-skills:pdf`) join your own commands. Picking one puts
   `/name ` in the prompt box for its arguments. Verified with 2.1.319: a project skill sent as `/hello-check
   banana` ran.
+- **Subagents in the per-turn footer**: `✓ 12.0s · 48k tok · $0.031 · claude-sonnet-5-5 · 2 agents`. When Claude
+  Code refuses subagents (too deeply nested, too many at once, over the budget), one fails, or the system stops
+  one, the chat says so in one line. From `subagent_stats` in the result (Claude Code 2.1.319).
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.

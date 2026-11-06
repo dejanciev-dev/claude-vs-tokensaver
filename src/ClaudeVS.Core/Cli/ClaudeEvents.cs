@@ -137,6 +137,8 @@ namespace ClaudeVS.Core.Cli
         public System.DateTime? CredentialExpiresUtc { get; set; }
         /// <summary>Why the turn ended (<c>terminal_reason</c>, 2.1.319): "completed", "api_error"…; null when not sent.</summary>
         public string TerminalReason { get; set; }
+        /// <summary>The turn's subagents (<c>subagent_stats</c>, 2.1.319); null when not sent.</summary>
+        public SubagentStats Subagents { get; set; }
 
         // SessionStarted
         /// <summary>The CLI's <c>claude_code_version</c> from <c>init</c>, e.g. "2.1.318".</summary>
