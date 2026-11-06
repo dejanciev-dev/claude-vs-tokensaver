@@ -195,6 +195,7 @@ namespace ClaudeVS.Core.Cli
                     OriginalFile = original,
                     ResultData = data,
                     AllowedBy = AllowedBy(json["tool_result_meta"], (string)block["tool_use_id"]),
+                    DeniedBy = DeniedBy(json["tool_result_meta"], (string)block["tool_use_id"]),
                 });
             }
             return events;
@@ -206,13 +207,22 @@ namespace ClaudeVS.Core.Cli
         /// "mode" (acceptEdits), "rule" (an allow rule or <c>--allowedTools</c>), "subcommandResults" (every part of a
         /// shell command matched a rule). Null otherwise.
         /// </summary>
-        public static string AllowedBy(JToken meta, string toolUseId)
+        public static string AllowedBy(JToken meta, string toolUseId) => ConfigDecision(meta, toolUseId, "accept");
+
+        /// <summary>
+        /// Why Claude Code's settings blocked a call: the <c>reason_type</c> of a rejected <c>config</c> decision
+        /// (verified with 2.1.319: a deny rule <c>Bash(echo *)</c> gave "subcommandResults", with
+        /// <c>non_execution_kind: "permission-rule"</c>). Null otherwise.
+        /// </summary>
+        public static string DeniedBy(JToken meta, string toolUseId) => ConfigDecision(meta, toolUseId, "reject");
+
+        private static string ConfigDecision(JToken meta, string toolUseId, string decision)
         {
             if (!(meta is JArray entries) || string.IsNullOrEmpty(toolUseId)) return null;
             foreach (var e in entries.OfType<JObject>())
             {
                 if ((string)e["id"] != toolUseId || !(e["permission_decision"] is JObject d)) continue;
-                if ((string)d["decision"] != "accept" || (string)d["source"] != "config") return null;
+                if ((string)d["decision"] != decision || (string)d["source"] != "config") return null;
                 return d["reason_type"]?.Type == JTokenType.String ? (string)d["reason_type"] : null;
             }
             return null;

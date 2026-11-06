@@ -211,6 +211,9 @@ All notable changes to this project are listed here. The format follows
 - **Subagents in the per-turn footer**: `✓ 12.0s · 48k tok · $0.031 · claude-sonnet-5-5 · 2 agents`. When Claude
   Code refuses subagents (too deeply nested, too many at once, over the budget), one fails, or the system stops
   one, the chat says so in one line. From `subagent_stats` in the result (Claude Code 2.1.319).
+- **Why a call was blocked**: a call your Claude Code settings block says so on its row, `● Bash(echo hi) ·
+  denied by a rule` in red, with a tooltip pointing to Permission rules ("denied by the mode" when the permission
+  mode does not allow it). From the result's `tool_result_meta` (Claude Code 2.1.319).
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.

@@ -1179,6 +1179,21 @@ namespace ClaudeVS.Core.Tests
             Eq("Read 3 lines", ToolCallView.Summarize("Read", "     1\ta\n     2\tb\n     3\tc", false).Lines.Single(), "no data: as before");
         }
 
+        /// <summary>Claude Code 2.1.319 with the deny rule Bash(echo *): the call is blocked by the settings.</summary>
+        private static void Test_Parser_DeniedBy_RealCli_2_1_319()
+        {
+            var parser = new ClaudeStreamParser();
+            var events = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.319-deny-rule.jsonl"))
+                .SelectMany(l => parser.Parse(l)).ToList();
+            var result = events.First(e => e.Kind == ClaudeEventKind.ToolResult);
+            True(result.IsError, "blocked call is an error");
+            Eq("subcommandResults", result.DeniedBy, "rejected by a config rule");
+            Eq(null, result.AllowedBy, "not allowed");
+            Eq("denied by a rule", ToolCallView.DeniedNote(result.DeniedBy)?.Text, "row note");
+            Eq("denied by the mode", ToolCallView.DeniedNote("mode")?.Text, "mode");
+            Eq(null, ToolCallView.DeniedNote(null), "you denied it (or nothing): no note");
+        }
+
         private static void Test_Parser_AllowedBy_Shapes()
         {
             var meta = JArray.Parse("[{\"id\":\"a\",\"permission_decision\":{\"decision\":\"accept\",\"source\":\"config\",\"reason_type\":\"rule\"}},"
