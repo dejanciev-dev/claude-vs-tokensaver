@@ -50,6 +50,8 @@ namespace ClaudeVS.Core.Tokens
         /// <summary>Prices for the cache saving; the defaults when not set (Options → Pricing).</summary>
         public PriceTable Prices { get; set; }
         private string _turnModel; // the main agent's model in the running turn
+        /// <summary>The model of the main agent's last request: the one the conversation is cached for.</summary>
+        public string LastModel { get; private set; }
         private static readonly PriceTable DefaultPrices = new PriceTable();
         public int LargestToolResultChars { get; private set; }
         public string LargestToolResultTool { get; private set; }
@@ -121,7 +123,7 @@ namespace ClaudeVS.Core.Tokens
             _resultCharsByTool.Clear();
             Cache.Reset();
             _breaks.Reset(); _pendingBreak = null;
-            LastTurnCacheSavedUsd = 0; SessionCacheSavedUsd = 0; _turnModel = null;
+            LastTurnCacheSavedUsd = 0; SessionCacheSavedUsd = 0; _turnModel = null; LastModel = null;
             Changed?.Invoke(this, EventArgs.Empty);
         }
 
@@ -132,7 +134,7 @@ namespace ClaudeVS.Core.Tokens
                 case ClaudeEventKind.AssistantUsage when !ev.IsSubagent:
                     _pendingBreak = _breaks.Observe(ev.Usage, ev.Model, ev.MessageId, DateTime.UtcNow, Prices ?? DefaultPrices) ?? _pendingBreak;
                     Cache.Use(ev.Usage, DateTime.UtcNow);
-                    if (!string.IsNullOrEmpty(ev.Model)) _turnModel = ev.Model;
+                    if (!string.IsNullOrEmpty(ev.Model)) _turnModel = LastModel = ev.Model;
                     ContextTokens = ev.Usage.ContextTokens; // live update while a long turn runs
                     break;
                 case ClaudeEventKind.ToolUse:

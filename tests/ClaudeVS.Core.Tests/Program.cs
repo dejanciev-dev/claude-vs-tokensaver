@@ -1794,6 +1794,41 @@ namespace ClaudeVS.Core.Tests
         }
 
         // ---------- Conversation cost warning ----------
+        private static void Test_NextPromptPrice()
+        {
+            var t0 = new DateTime(2026, 11, 9, 10, 0, 0, DateTimeKind.Utc);
+            var prices = new PriceTable();
+            var cache = new CacheWindow();
+            cache.Use(new TokenUsage { CacheRead = 90_000, CacheCreation = 10_000, CacheCreation5m = 10_000 }, t0); // 100k context, 5-minute cache
+
+            var warm = NextPromptPrice.Estimate(cache, "claude-sonnet-5-5", null, 1000, prices, t0.AddMinutes(1));
+            True(warm.Cached && !warm.Expired && !warm.OtherModel, "warm, same model");
+            True(Math.Abs(warm.InputUsd - (100_000 * 0.2 + 1000 * 2.5) / 1e6) < 1e-12, "context at cache read, prompt at cache write: " + warm.InputUsd);
+            Eq("~$0.02 to send (context cached)", warm.Note(), "note");
+
+            var cold = NextPromptPrice.Estimate(cache, "claude-sonnet-5-5", "sonnet", 1000, prices, t0.AddMinutes(6));
+            True(cold.Expired && !cold.Cached, "expired after 5 minutes");
+            True(Math.Abs(cold.InputUsd - 101_000 * 2.5 / 1e6) < 1e-12, "all written again: " + cold.InputUsd);
+            Eq("~$0.25 to send (cache expired: ~100.0k tokens of context at the full price)", cold.Note(), "cold note");
+
+            var other = NextPromptPrice.Estimate(cache, "claude-sonnet-5-5", "opus", 0, prices, t0.AddMinutes(1));
+            True(other.OtherModel && !other.Cached && !other.Expired, "another model has no cache");
+            True(Math.Abs(other.InputUsd - 100_000 * 5.0 / 1e6) < 1e-12, "Opus cache write: " + other.InputUsd);
+            True(other.Note().StartsWith("~$0.50 to send (another model:"), other.Note());
+
+            var hour = new CacheWindow();
+            hour.Use(new TokenUsage { CacheCreation = 40_000, CacheCreation1h = 40_000 }, t0);
+            var h = NextPromptPrice.Estimate(hour, "claude-haiku-5-5", null, 0, prices, t0.AddMinutes(61));
+            True(h.Expired && Math.Abs(h.InputUsd - 40_000 * 0.2 / 1e6) < 1e-12, "1-hour write at 2x Haiku input: " + h.InputUsd);
+            Eq("<$0.01 to send (cache expired: ~40.0k tokens of context at the full price)", h.Note(), "small amount");
+
+            var meter = new TokenMeter();
+            meter.Observe(new ClaudeEvent { Kind = ClaudeEventKind.AssistantUsage, Usage = new TokenUsage { CacheCreation = 5000 }, Model = "claude-opus-5-5", MessageId = "a" });
+            Eq("claude-opus-5-5", meter.LastModel, "the cached model");
+            meter.Reset();
+            Eq(null, meter.LastModel, "reset");
+        }
+
         private static void Test_SavingsReport_ByDay()
         {
             var d1 = new DateTime(2026, 11, 7, 12, 0, 0, DateTimeKind.Local).ToUniversalTime();

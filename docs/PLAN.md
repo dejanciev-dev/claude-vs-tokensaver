@@ -364,6 +364,19 @@ the prices of the model that answered (`ModelPrice.CacheSavedUsd`).
 
 ---
 
+## Phase 17 — Spend at a glance
+
+- [x] **Next prompt's price**: while typing in a conversation with context, the line under the input box adds
+      `~$0.02 to send (context cached)`, or why it costs more: the cache expired, or the prompt goes to another model
+      (which has no cache for it). The least the prompt costs: its first request's input (context at the cache-read
+      price when warm, else written again; the prompt written to the cache), not the output or later tool calls
+      (`NextPromptPrice`)
+- [ ] **Month and solutions in the savings report**: this month's total with a month-end projection; cost per solution
+- [ ] **Sessions list totals**: the folder's total cost in the footer; costliest sessions first as a filter option
+- [ ] **Usage CSV export**: one row per logged turn, for a spreadsheet
+
+---
+
 ## Working in Visual Studio — daily loop
 
 1. Core logic change → edit in `ClaudeVS.Core` → run tests (`ClaudeVS.Core.Tests` → Set as Startup → Ctrl+F5, or `dotnet run` in its folder).

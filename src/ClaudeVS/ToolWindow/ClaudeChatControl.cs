@@ -1331,12 +1331,25 @@ namespace ClaudeVS.ToolWindow
             string size = PromptSize.Note(_prompt.Text); // a long prompt goes with every later request
             if (_modelChoice != ModelChoice.Auto || string.IsNullOrWhiteSpace(_prompt.Text) || _prompt.Text.TrimStart().StartsWith("/"))
             {
-                _route.Text = size ?? "";
+                string send = _modelChoice != ModelChoice.Auto ? _modelChoice.ToCli() : null;
+                _route.Text = string.Join("   ·   ", new[] { size, PriceNote(send) }.Where(s => s != null));
                 return;
             }
             int lines = _selection == null ? 0 : _selection.EndLine - _selection.StartLine + 1;
             var d = Route(_prompt.Text, lines, _attachedFiles.Count);
-            _route.Text = $"Auto: {d.Model.ToCli()} / {d.Effort.ToCli()} — {d.Reason}" + (size != null ? "   ·   " + size : "");
+            _route.Text = $"Auto: {d.Model.ToCli()} / {d.Effort.ToCli()} — {d.Reason}" + (size != null ? "   ·   " + size : "") + (PriceNote(d.Model.ToCli()) is string price ? "   ·   " + price : "");
+        }
+
+        /// <summary>
+        /// "~$0.02 to send (context cached)" while a prompt is typed into a conversation with context: the least the
+        /// prompt costs (its first request's input). Null for an empty prompt or a new conversation.
+        /// </summary>
+        private string PriceNote(string sendModel)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var m = _meterModel;
+            if (m == null || string.IsNullOrWhiteSpace(_prompt.Text) || m.Cache.ContextTokens < PromptSize.ShowFrom) return null;
+            return NextPromptPrice.Estimate(m.Cache, m.LastModel, sendModel, PromptSize.Estimate(_prompt.Text), Options?.ToPriceTable(), DateTime.UtcNow).Note();
         }
 
         private void EnsureSession(string dir)
