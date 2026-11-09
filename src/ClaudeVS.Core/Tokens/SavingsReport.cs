@@ -18,6 +18,14 @@ namespace ClaudeVS.Core.Tokens
         public double Cost(UsageRecord r) =>
             (r.InputTokens * Input + r.OutputTokens * Output + r.CacheWriteTokens * CacheWrite + r.CacheReadTokens * CacheRead) / 1_000_000.0;
 
+        /// <summary>One request's (or a sum of requests') cost: 1-hour cache writes at twice the input price, the rest at <see cref="CacheWrite"/>.</summary>
+        public double Cost(Cli.TokenUsage u)
+        {
+            long write1h = Math.Min(Math.Max(0, u.CacheCreation1h), Math.Max(0, u.CacheCreation));
+            long write5m = Math.Max(0, u.CacheCreation) - write1h;
+            return (u.Input * Input + u.Output * Output + write5m * CacheWrite + write1h * 2 * Input + u.CacheRead * CacheRead) / 1_000_000.0;
+        }
+
         /// <summary>
         /// What the prompt cache saved: every token read from it costs <see cref="CacheRead"/> instead of the full
         /// <see cref="Input"/> price, minus the extra for writing it (a 5-minute write costs <see cref="CacheWrite"/>,

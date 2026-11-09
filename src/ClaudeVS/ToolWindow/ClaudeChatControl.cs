@@ -1456,7 +1456,7 @@ namespace ClaudeVS.ToolWindow
                     Glyph = elsewhere != null ? ChatTheme.IconOpenRing : null,
                     Label = s.Title,
                     Description = elsewhere != null ? $"open in {(ourPids.Contains(elsewhere.Pid) ? "another chat window here" : elsewhere.Where)} · {elsewhere.StatusText}" : s.AutoArchived ? $"archived after {Options?.AutoArchiveDays ?? 14} days without use" : null,
-                    Detail = SessionHistory.TimeAgo(s.LastWriteUtc, now),
+                    Detail = SessionCost.Cached(s.FilePath, s.LastWriteUtc, s.SizeBytes)?.Short() is string cost ? cost + " · " + SessionHistory.TimeAgo(s.LastWriteUtc, now) : SessionHistory.TimeAgo(s.LastWriteUtc, now),
                     Checked = s.Id == currentId,
                     Run = () => ResumeSession(s),
                     Rename = name =>
@@ -1535,6 +1535,33 @@ namespace ClaudeVS.ToolWindow
                 });
             _sessions.Footer = "Hover a session to rename, fork, group or archive it";
             _sessions.Show(entries, _historyBtn, keepFilter: refresh);
+            LoadSessionCosts(visible);
+        }
+
+        private bool _loadingSessionCosts;
+
+        /// <summary>
+        /// Reads what each listed session cost that is not known yet (off the UI thread; session files can be large),
+        /// then shows the list again with the amounts if it is still open.
+        /// </summary>
+        private void LoadSessionCosts(List<SessionInfo> sessions)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var missing = sessions.Where(s => SessionCost.Cached(s.FilePath, s.LastWriteUtc, s.SizeBytes) == null).ToList();
+            if (missing.Count == 0 || _loadingSessionCosts) return;
+            _loadingSessionCosts = true;
+            var prices = Options?.ToPriceTable();
+            Jtf.RunAsync(async () =>
+            {
+                try { await System.Threading.Tasks.Task.Run(() => { foreach (var s in missing) SessionCost.Get(s.FilePath, prices); }); }
+                finally
+                {
+                    await Jtf.SwitchToMainThreadAsync();
+                    _loadingSessionCosts = false;
+                }
+                // Only once: a session written meanwhile (the open one) shows its amount the next time.
+                if (_sessions.IsOpen && missing.Any(s => SessionCost.Cached(s.FilePath, s.LastWriteUtc, s.SizeBytes) != null)) ShowHistoryMenu(refresh: true);
+            }).FileAndForget("ClaudeVS/ChatControl/SessionCosts");
         }
 
         /// <summary>Move a session to a group: pick one, type a new name to create it, rename or delete groups.</summary>
