@@ -303,6 +303,10 @@ All notable changes to this project are listed here. The format follows
 - **Spend by day in the savings report**: `By day:` lists the last 14 days with turns, each with turns, tokens,
   cost, cache hits and what the cache saved, and a bar for the cost (the dearest day full). It replaces
   *Cache hit rate by day*.
+- **Next prompt's price**: while you type in a conversation with context, the line under the input box adds what
+  sending costs in input, `~$0.02 to send (context cached)`, and why it costs more when it does: `cache expired:
+  ~100.0k tokens of context at the full price`, or `another model: … cached again` when the prompt would go to
+  another model (picked, or routed). Priced at the model it goes to; the answer and tool calls come on top.
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.
