@@ -292,6 +292,7 @@ Editor commands go to the chat window you used last.
 | Token saving | Suggest / Urge /compact at (%) | 60 / 85 | Meter advice. |
 | Token saving | Token tips | On | One-time tips when something costs more than it needs to (large or repeated reads, output floods, heavy MCP tools, cold or rebuilt cache). Off: Output pane only. |
 | Token saving | Warn at conversation cost (USD) | 5 | Said once each time a conversation passes another multiple ($5, $10…). 0 = off. |
+| Token saving | Warn at daily cost (USD) | 20 | Said once each time today's spend in Visual Studio, all conversations together, passes another multiple ($20, $40…). Earlier turns today come from the usage log. 0 = off. |
 | Token saving | Auto-approve quiet rewrites | Off | Hook installer: run rewritten build/test commands without asking. |
 | Token saving | Claude can read the Error List | On | The `get_error_list` tool, for new sessions. |
 | Token saving | Max attached errors | 20 | For Attach Error List. |

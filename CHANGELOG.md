@@ -296,6 +296,10 @@ All notable changes to this project are listed here. The format follows
   from its session file and its subagents' files (each API message once, priced per model at Options → Pricing,
   1-hour cache writes at 2x input). Read in the background the first time the list opens, then kept until the
   file changes.
+- **Daily cost warning**: Options → Token saving → *Warn at daily cost (USD)* (default 20): the chat says so once
+  each time today's spend in Visual Studio, all conversations and chat windows together, passes another multiple
+  (`Today's Claude Code spend in Visual Studio has passed $20.00 ($21.37 so far …)`). Today's turns from before
+  Visual Studio started are read from the usage log and do not warn again. 0 turns it off.
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.

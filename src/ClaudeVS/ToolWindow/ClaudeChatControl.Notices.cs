@@ -141,12 +141,40 @@ namespace ClaudeVS.ToolWindow
             ThreadHelper.ThrowIfNotOnUIThread();
             if (_meterModel == null) return;
             _costWatch.StepUsd = Options?.CostWarningUsd ?? 5;
-            string warning = _costWatch.Check(_meterModel.SessionCostUsd);
+            CostWarning(_costWatch.Check(_meterModel.SessionCostUsd));
+            DailyCost.StepUsd = Options?.DailyCostWarningUsd ?? 20;
+            LoadDailyCost();
+            // The change in the conversation's total: a result without a cost adds nothing.
+            double total = _meterModel.SessionCostUsd, added = Math.Max(0, total - _dailyCounted);
+            _dailyCounted = total;
+            CostWarning(DailyCost.Add(added, DateTime.UtcNow));
+        }
+
+        private void CostWarning(string warning)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
             if (warning == null) return;
             ClaudeOutputPane.WriteLine(warning);
             FlushText();
             Append("\n  💲 " + warning + "\n");
             Announce(warning);
+        }
+
+        /// <summary>Today's spend in all chat windows (Options → Warn at daily cost).</summary>
+        private static readonly Core.Tokens.DailyCostWatch DailyCost = new Core.Tokens.DailyCostWatch();
+        private static bool _dailyCostLoaded;
+        private double _dailyCounted; // of this meter's SessionCostUsd, already added to DailyCost
+
+        /// <summary>Once per Visual Studio session: today's earlier turns from the usage log (in the background).</summary>
+        private static void LoadDailyCost()
+        {
+            if (_dailyCostLoaded || Options?.KeepUsageLog == false) return;
+            _dailyCostLoaded = true;
+            _ = System.Threading.Tasks.Task.Run(() =>
+            {
+                try { DailyCost.Load(Usage.ReadAll()); }
+                catch (Exception ex) { ClaudeOutputPane.WriteLine("Could not read usage log: " + ex.Message); }
+            });
         }
 
         // ---------------- Cache breaks ----------------

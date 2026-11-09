@@ -2132,6 +2132,7 @@ namespace ClaudeVS.ToolWindow
         {
             if (_meterModel != null) _meterModel.Changed -= OnMeterChanged;
             _meterModel = new TokenMeter(Options?.ToMeterSettings()) { Prices = Options?.ToPriceTable() };
+            _dailyCounted = 0;
             _meterModel.Changed += OnMeterChanged;
             OnMeterChanged(this, EventArgs.Empty);
         }
