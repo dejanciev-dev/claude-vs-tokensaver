@@ -46,6 +46,7 @@ namespace ClaudeVS.ToolWindow
         public const string IconOpenRing = "";   // hollow ring: open somewhere else
         public const string IconFolder = "";
         public const string IconFilter = "";
+        public const string IconSort = "";    // Segoe MDL2 "Sort"
         public const string IconArchive = "";    // box
         public const string IconUnarchive = "";  // undo
 

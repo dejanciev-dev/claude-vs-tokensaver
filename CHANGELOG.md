@@ -310,6 +310,8 @@ All notable changes to this project are listed here. The format follows
 - **This month and each solution in the savings report**: `This month: $12.30 so far, ~$41.00 at this pace by
   Nov 30` (the projection from the 3rd of the month), and under the all-solutions summary `By solution:`, the
   turns and cost of each solution folder, dearest first.
+- **Sessions list totals**: the list's footer says what the sessions shown cost together, `12 sessions, $41.20 in
+  total (API prices)`, and a **Newest first / Costliest first** entry next to the filter sorts them by cost.
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.
