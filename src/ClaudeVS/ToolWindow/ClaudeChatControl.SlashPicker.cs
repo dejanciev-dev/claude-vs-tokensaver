@@ -47,7 +47,7 @@ namespace ClaudeVS.ToolWindow
             if (typed == null || _prompt.Text == _commandDismissedFor) { _commandPopup.IsOpen = false; return; }
             _commandDismissedFor = null;
             RefreshCommands();
-            _commandMatches = SlashCommands.Match(_commands, _prompt.Text);
+            _commandMatches = SlashCommands.Match(SlashCommands.ForPicker(_commands), _prompt.Text);
             _commandList.Items.Clear();
             if (_commandMatches.Count == 0)
             {

@@ -317,11 +317,11 @@ All notable changes to this project are listed here. The format follows
   logged, the prompt preview. UTF-8 for Excel; text that starts like a formula is kept as text.
 
 ### Changed
-- Typing `/` opens a list of commands above the input box instead of one long line of text under it: one row per
-  command with its plugin or folder muted and the name in bold (`/anthropic-skills:`**`docs`**), what it does
-  underneath, and where it comes from (Skill, Project, User, Built-in) on the right. ↑ ↓ (and Page Up / Down)
+- Typing `/` opens a list of commands above the input box instead of one long line of text under it: `/compact`
+  and your own `.claude/commands`, one row each with what it does underneath and where it comes from on the right
+  (skills are no longer in it: they stay in the `/` button menu under Skills). ↑ ↓ (and Page Up / Down)
   choose, Tab or Enter puts the command in the box for its arguments, Enter on a command typed in full sends it,
-  Esc closes the list. The part after a plugin or folder matches too: `/docs` finds `anthropic-skills:docs`. Once
+  Esc closes the list. The part after a folder matches too: `/pr` finds `git:pr`. Once
   you type arguments, the line under the box shows what the command does.
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.
 - The agents panel shows only the first line of a background command (a heredoc no longer fills the panel).
