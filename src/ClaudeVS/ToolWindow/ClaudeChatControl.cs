@@ -180,8 +180,10 @@ namespace ClaudeVS.ToolWindow
                 _routeTimer.Stop();
                 _routeTimer.Start();
                 UpdateFilePicker();
+                UpdateCommandPicker();
             };
             _filePopup = BuildFilePicker();
+            _commandPopup = BuildCommandPicker();
             GotKeyboardFocus += (s, e) => LastActive = this;
             lock (Instances) Instances.Add(this);
             LastActive = LastActive ?? this;
@@ -991,6 +993,7 @@ namespace ClaudeVS.ToolWindow
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             if (_filePopup.IsOpen && HandleFilePickerKey(e.Key)) { e.Handled = true; return; }
+            if (_commandPopup.IsOpen && HandleCommandPickerKey(e.Key)) { e.Handled = true; return; }
             if (TryPasteImage(e)) { e.Handled = true; return; }
             if (e.Key == Key.Tab && (Keyboard.Modifiers & ModifierKeys.Shift) != 0)
             {
@@ -1321,11 +1324,12 @@ namespace ClaudeVS.ToolWindow
             ThreadHelper.ThrowIfNotOnUIThread();
             if (_prompt.Text.TrimStart().StartsWith("/"))
             {
+                // The list above the box shows the commands; this line says how to use it, or what the chosen one does.
                 RefreshCommands();
-                var matches = SlashCommands.Match(_commands, _prompt.Text);
-                _route.Text = matches.Count == 0
-                    ? "No matching command. Custom commands live in .claude/commands/*.md"
-                    : string.Join("   ", matches.Take(6).Select(c => c + (string.IsNullOrEmpty(c.Description) ? "" : " — " + c.Description)));
+                var chosen = SlashCommands.TypedName(_prompt.Text) == null ? SlashCommands.Match(_commands, _prompt.Text).FirstOrDefault() : null;
+                _route.Text = chosen != null
+                    ? "/" + chosen.Name + (string.IsNullOrWhiteSpace(chosen.Description) ? "" : " — " + chosen.Description)
+                    : _commandPopup.IsOpen && _commandMatches.Count > 0 ? "↑ ↓ to choose · Tab or Enter to insert · Esc to close" : "";
                 return;
             }
             string size = PromptSize.Note(_prompt.Text); // a long prompt goes with every later request

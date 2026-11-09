@@ -756,6 +756,8 @@ namespace ClaudeVS.Core.Tests
                 Eq("/review", string.Join(",", ClaudeVS.Core.Chat.SlashCommands.Match(all, "/rev")), "/review");
                 Eq(4, ClaudeVS.Core.Chat.SlashCommands.Match(all, "/").Count, "all");
                 Eq(0, ClaudeVS.Core.Chat.SlashCommands.Match(all, "review").Count, "needs slash");
+                Eq("/git:pr", string.Join(",", ClaudeVS.Core.Chat.SlashCommands.Match(all, "/pr")), "the part after the folder");
+                Eq("/review", string.Join(",", ClaudeVS.Core.Chat.SlashCommands.Match(all, "/review now")), "arguments after the name");
             }
             finally { Directory.Delete(root, true); }
         }
@@ -1862,6 +1864,32 @@ namespace ClaudeVS.Core.Tests
             True(early.MonthToDateUsd > 0 && early.MonthProjectedUsd == null, "no projection on day 2");
             True(!early.MonthLine().Contains("pace"), early.MonthLine());
             Eq(null, SavingsReport.Build(recs, new PriceTable(), nowUtc: At(12, 5)).MonthLine(), "nothing in December yet");
+        }
+
+        private static void Test_SlashPicker_Matching()
+        {
+            var cmds = new List<SlashCommand>
+            {
+                new SlashCommand { Name = "compact", Source = "built-in" },
+                new SlashCommand { Name = "anthropic-skills:docs", Source = "skill" },
+                new SlashCommand { Name = "anthropic-skills:docx", Source = "skill" },
+                new SlashCommand { Name = "docs-review", Source = "project" },
+            };
+            Eq("/docs-review,/anthropic-skills:docs", string.Join(",", SlashCommands.Match(cmds, "/docs")), "whole-name matches first, then the part after the plugin");
+            Eq("/anthropic-skills:docs,/anthropic-skills:docx", string.Join(",", SlashCommands.Match(cmds, "/anthropic-skills:doc")), "full name typed");
+            Eq(4, SlashCommands.Match(cmds, "/").Count, "all for a bare slash");
+
+            Eq("anthropic-skills:", cmds[1].Prefix, "prefix");
+            Eq("docs", cmds[1].ShortName, "short name");
+            Eq("", cmds[0].Prefix, "no prefix");
+            Eq("compact", cmds[0].ShortName, "short = name");
+            Eq("Built-in", cmds[0].SourceLabel, "label");
+
+            Eq("doc", SlashCommands.TypedName("  /doc"), "typing the name");
+            Eq("", SlashCommands.TypedName("/"), "just the slash");
+            Eq(null, SlashCommands.TypedName("/docs write a memo"), "arguments: no list");
+            Eq(null, SlashCommands.TypedName("/docs\n"), "line break: no list");
+            Eq(null, SlashCommands.TypedName("fix /this"), "not a command");
         }
 
         private static void Test_UsageCsv()
