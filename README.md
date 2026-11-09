@@ -82,6 +82,7 @@ This extension attacks all three, and shows the numbers so you can see the effec
 | **Agents panel** | Claude's subagents and background commands above the input box, as a tree: what each is doing, its tokens, tool calls and time, and its result. **Background** lets Claude carry on while an agent works; **Stop** ends one agent (and what it started) without stopping Claude. A subagent's own tool calls are marked `↳` in the conversation. Forks (subagents that start with a copy of the conversation) show as `● Fork(…)`. |
 | **Tool rows with sizes** | Tool calls read like the terminal: `● Update(src/a.cs)` with a `⎿ Added 13 lines` line, `● Read(big.txt)` with `⎿ Read 20 of 301 lines (from line 10)`, `● Bash(dotnet test)` with the first lines of its output. Each row shows the size of its result in tokens; results of 5k+ tokens are in bold, because those fill the context. A command or edit your settings let through without asking says so (`· allowed by a rule`), and one they block says `· denied by a rule`. Click a row for its input and whole output. |
 | **Savings report** | Actual cost vs the same tokens at Opus prices, tokens saved by references, what the prompt cache saved, cost per model and per solution, this month so far with a month-end projection, and per day: turns, tokens, cost, cache hits and what the cache saved. |
+| **Usage CSV export** | Tools → Claude Code → *Export Usage as CSV…* saves the usage log as a spreadsheet: one row per turn with time, solution, model, routing, tokens (input, output, thinking, cache), cost and duration. |
 | **Router replay** | With the opt-in prompt preview, the report re-runs your real prompts through the current router rules and lists those that would now route differently. |
 
 ### Chat
@@ -256,6 +257,7 @@ First run:
 | Attach Error List | Tools → Claude Code | `Ctrl+Alt+K, E` |
 | Focus last message (keyboard to Claude's last answer; `Esc` goes back) | Tools → Claude Code · `/` | `Ctrl+Alt+K, M` |
 | Show Savings Report | Tools → Claude Code | |
+| Export Usage as CSV… | Tools → Claude Code | |
 | Generate Lean CLAUDE.md | Tools → Claude Code | |
 | Install Token-Saving Settings and Hooks | Tools → Claude Code | |
 

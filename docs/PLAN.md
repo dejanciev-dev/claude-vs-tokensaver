@@ -376,7 +376,8 @@ the prices of the model that answered (`ModelPrice.CacheSavedUsd`).
       (top 10; `SavingsReport.MonthLine`, `SolutionsText`)
 - [x] **Sessions list totals**: the footer says `12 sessions, $41.20 in total (API prices)` for the sessions shown
       (`SessionCost.TotalLine`); a **Newest first / Costliest first** entry next to the filter switches the order
-- [ ] **Usage CSV export**: one row per logged turn, for a spreadsheet
+- [x] **Usage CSV export**: Tools → Claude Code → *Export Usage as CSV…*, one row per logged turn (all solutions,
+      oldest first; UTF-8 with BOM for Excel, invariant numbers, formula-guarded text cells; `UsageCsv`)
 
 ---
 

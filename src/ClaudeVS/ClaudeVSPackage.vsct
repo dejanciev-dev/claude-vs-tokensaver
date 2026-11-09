@@ -70,6 +70,12 @@
           <ButtonText>Show Savings Report</ButtonText>
         </Strings>
       </Button>
+      <Button guid="guidClaudeVSCmdSet" id="cmdidExportUsageCsv" priority="0x0175" type="Button">
+        <Parent guid="guidClaudeVSCmdSet" id="ClaudeSubMenuGroup" />
+        <Strings>
+          <ButtonText>Export Usage as CSV...</ButtonText>
+        </Strings>
+      </Button>
       <Button guid="guidClaudeVSCmdSet" id="cmdidGenerateClaudeMd" priority="0x0200" type="Button">
         <Parent guid="guidClaudeVSCmdSet" id="ClaudeSubMenuGroup" />
         <Strings>
@@ -122,6 +128,7 @@
       <IDSymbol name="cmdidShowSavingsReport" value="0x0106" />
       <IDSymbol name="cmdidNewChatWindow" value="0x0107" />
       <IDSymbol name="cmdidFocusLastMessage" value="0x0108" />
+      <IDSymbol name="cmdidExportUsageCsv" value="0x0109" />
     </GuidSymbol>
   </Symbols>
 </CommandTable>

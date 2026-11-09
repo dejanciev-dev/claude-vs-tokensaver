@@ -20,5 +20,6 @@ namespace ClaudeVS
         public const int ShowSavingsReport = 0x0106;
         public const int NewChatWindow = 0x0107;
         public const int FocusLastMessage = 0x0108;
+        public const int ExportUsageCsv = 0x0109;
     }
 }

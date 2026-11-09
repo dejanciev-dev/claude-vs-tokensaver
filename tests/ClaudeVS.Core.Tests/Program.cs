@@ -1864,6 +1864,30 @@ namespace ClaudeVS.Core.Tests
             Eq(null, SavingsReport.Build(recs, new PriceTable(), nowUtc: At(12, 5)).MonthLine(), "nothing in December yet");
         }
 
+        private static void Test_UsageCsv()
+        {
+            var t = new DateTime(2026, 11, 9, 9, 30, 0, DateTimeKind.Local).ToUniversalTime();
+            var recs = new[]
+            {
+                new UsageRecord { Timestamp = t.AddMinutes(5), Solution = @"C:\src\b", ModelUsed = "claude-haiku-5-5", CostUsd = 0.0012345, PromptPreview = "=SUM(A1) say \"hi\", ok" },
+                new UsageRecord { Timestamp = t, Solution = @"C:\src\a\", ModelUsed = "claude-opus-5-5", Routed = true, InputTokens = 5, OutputTokens = 1200, ThinkingTokens = 300,
+                    CacheReadTokens = 9000, CacheWriteTokens = 100, CacheWrite1hTokens = 100, CostUsd = 0.25, RouterCostUsd = 0.0001, DurationMs = 4200, CharsAvoided = 400, RouteReason = "multi-file" },
+            };
+            var sw = new StringWriter();
+            Eq(2, UsageCsv.Write(recs, sw), "rows");
+            var lines = sw.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None);
+            Eq(string.Join(",", UsageCsv.Columns), lines[0], "header");
+            Eq(t.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") + @",C:\src\a\,claude-opus-5-5,1,,,,5,1200,300,9000,100,100,0.25,0.0001,4200,0,100,multi-file,", lines[1], "oldest first, invariant numbers");
+            True(lines[2].EndsWith(",0.001235,0,0,0,0,,\"'=SUM(A1) say \"\"hi\"\", ok\""), "quoted, formula-guarded prompt: " + lines[2]);
+            Eq("", lines[3], "ends with a line break");
+
+            var one = new StringWriter();
+            Eq(1, UsageCsv.Write(recs, one, solution: @"c:\SRC\a"), "one solution, any case or trailing slash");
+            Eq("plain", UsageCsv.Text("plain"), "no quotes needed");
+            Eq("\" padded\"", UsageCsv.Text(" padded"), "leading space kept by quoting");
+            Eq("'-1", UsageCsv.Text("-1"), "minus guarded");
+        }
+
         private static void Test_SavingsReport_ByDay()
         {
             var d1 = new DateTime(2026, 11, 7, 12, 0, 0, DateTimeKind.Local).ToUniversalTime();

@@ -312,6 +312,9 @@ All notable changes to this project are listed here. The format follows
   turns and cost of each solution folder, dearest first.
 - **Sessions list totals**: the list's footer says what the sessions shown cost together, `12 sessions, $41.20 in
   total (API prices)`, and a **Newest first / Costliest first** entry next to the filter sorts them by cost.
+- **Export Usage as CSV…** (Tools → Claude Code): saves the usage log as a CSV file, one row per turn with time,
+  solution, model, routing, tokens (input, output, thinking, cache read and write), cost, duration and, when
+  logged, the prompt preview. UTF-8 for Excel; text that starts like a formula is kept as text.
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.
