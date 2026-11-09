@@ -149,6 +149,21 @@ namespace ClaudeVS.ToolWindow
             Announce(warning);
         }
 
+        // ---------------- Cache breaks ----------------
+
+        private bool _gaveCacheBreakTip;
+
+        /// <summary>After each turn: a warm prompt cache written again, in the chat once per conversation, later ones in the Output pane.</summary>
+        private void CacheBreakTip()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (!(_meterModel?.TakeCacheBreak() is Core.Tokens.CacheBreak b)) return;
+            string note = b.Note();
+            if (_gaveCacheBreakTip) { ClaudeOutputPane.WriteLine(note); return; }
+            _gaveCacheBreakTip = true;
+            Tip(note);
+        }
+
         // ---------------- Prompt cache ----------------
 
         private readonly System.Windows.Controls.TextBlock _cacheNote = new System.Windows.Controls.TextBlock
@@ -183,6 +198,7 @@ namespace ClaudeVS.ToolWindow
             _shellCalls.Clear();
             _costWatch.Reset();
             _gaveBaseContextTip = false;
+            _gaveCacheBreakTip = false;
             _reads.Reset();
         }
     }

@@ -57,6 +57,12 @@ namespace ClaudeVS.Core.Tokens
         /// <summary>How long the conversation stays in the prompt cache (from the main agent's requests).</summary>
         public CacheWindow Cache { get; } = new CacheWindow();
 
+        private readonly CacheBreakWatch _breaks = new CacheBreakWatch();
+        private CacheBreak _pendingBreak;
+
+        /// <summary>The cache break seen since the last call (a warm cache written again), then null; see <see cref="CacheBreakWatch"/>.</summary>
+        public CacheBreak TakeCacheBreak() { var b = _pendingBreak; _pendingBreak = null; return b; }
+
         private readonly Dictionary<string, long> _resultCharsByTool = new Dictionary<string, long>(StringComparer.Ordinal);
 
         /// <summary>
@@ -114,6 +120,7 @@ namespace ClaudeVS.Core.Tokens
             _toolNames.Clear();
             _resultCharsByTool.Clear();
             Cache.Reset();
+            _breaks.Reset(); _pendingBreak = null;
             LastTurnCacheSavedUsd = 0; SessionCacheSavedUsd = 0; _turnModel = null;
             Changed?.Invoke(this, EventArgs.Empty);
         }
@@ -123,6 +130,7 @@ namespace ClaudeVS.Core.Tokens
             switch (ev.Kind)
             {
                 case ClaudeEventKind.AssistantUsage when !ev.IsSubagent:
+                    _pendingBreak = _breaks.Observe(ev.Usage, ev.Model, ev.MessageId, DateTime.UtcNow, Prices ?? DefaultPrices) ?? _pendingBreak;
                     Cache.Use(ev.Usage, DateTime.UtcNow);
                     if (!string.IsNullOrEmpty(ev.Model)) _turnModel = ev.Model;
                     ContextTokens = ev.Usage.ContextTokens; // live update while a long turn runs
@@ -144,6 +152,7 @@ namespace ClaudeVS.Core.Tokens
                     return;
                 case ClaudeEventKind.Compacted:
                     CompactionsSaved++;
+                    _breaks.Compacted();
                     ContextTokens = 0;
                     break;
                 case ClaudeEventKind.SessionStarted:
