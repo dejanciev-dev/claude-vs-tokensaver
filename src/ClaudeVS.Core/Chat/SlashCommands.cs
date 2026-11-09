@@ -12,6 +12,15 @@ namespace ClaudeVS.Core.Chat
         /// <summary>"built-in", "project" or "user".</summary>
         public string Source { get; set; }
         public override string ToString() => "/" + Name;
+
+        /// <summary>"anthropic-skills:" for "anthropic-skills:docs" (a plugin or folder), else "".</summary>
+        public string Prefix => Name != null && Name.LastIndexOf(':') is int i && i > 0 ? Name.Substring(0, i + 1) : "";
+        /// <summary>"docs" for "anthropic-skills:docs", else the name.</summary>
+        public string ShortName => Name == null ? "" : Name.Substring(Prefix.Length);
+
+        /// <summary>"Skill", "Project", "User" or "Built-in", for the picker.</summary>
+        public string SourceLabel =>
+            string.IsNullOrEmpty(Source) ? "" : char.ToUpperInvariant(Source[0]) + Source.Substring(1);
     }
 
     /// <summary>
@@ -54,16 +63,32 @@ namespace ClaudeVS.Core.Chat
             return list;
         }
 
-        /// <summary>Commands whose name starts with what follows the '/' in <paramref name="typed"/>.</summary>
+        /// <summary>
+        /// Commands for what follows the '/' in <paramref name="typed"/>: names that start with it first, then names
+        /// whose part after the plugin or folder starts with it ("/docs" finds "anthropic-skills:docs"); A–Z in each.
+        /// </summary>
         public static List<SlashCommand> Match(IEnumerable<SlashCommand> commands, string typed)
         {
             string t = (typed ?? "").TrimStart();
             if (!t.StartsWith("/")) return new List<SlashCommand>();
-            string prefix = t.Substring(1).Split(' ')[0];
-            return (commands ?? Enumerable.Empty<SlashCommand>())
-                .Where(c => c.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-                .OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
-                .ToList();
+            string prefix = t.Substring(1).Split(' ', '\n', '\r', '\t')[0];
+            var all = (commands ?? Enumerable.Empty<SlashCommand>()).Where(c => !string.IsNullOrEmpty(c?.Name)).ToList();
+            var whole = all.Where(c => c.Name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)).OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase).ToList();
+            var part = all.Where(c => !whole.Contains(c) && c.Prefix.Length > 0 && c.ShortName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(c => c.ShortName, StringComparer.OrdinalIgnoreCase);
+            return whole.Concat(part).ToList();
+        }
+
+        /// <summary>
+        /// The command name being typed: <paramref name="text"/> starts with '/' (after spaces) and has no space or line
+        /// break after the name yet; else null (no picker).
+        /// </summary>
+        public static string TypedName(string text)
+        {
+            string t = (text ?? "").TrimStart();
+            if (!t.StartsWith("/")) return null;
+            string rest = t.Substring(1);
+            return rest.IndexOfAny(new[] { ' ', '\t', '\r', '\n' }) >= 0 ? null : rest;
         }
 
         private static IEnumerable<SlashCommand> FromFolder(string root, string source)
