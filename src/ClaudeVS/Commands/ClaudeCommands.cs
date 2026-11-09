@@ -64,6 +64,7 @@ namespace ClaudeVS.Commands
             }));
 
             Add(mcs, PackageIds.ShowSavingsReport, (s, e) => Run(ShowSavingsReportAsync));
+            Add(mcs, PackageIds.ExportUsageCsv, (s, e) => Run(ExportUsageCsvAsync));
             Add(mcs, PackageIds.NewChatWindow, (s, e) => Run(async () => await _package.NewChatWindowAsync()));
             Add(mcs, PackageIds.FocusLastMessage, (s, e) => Run(async () =>
             {
@@ -176,6 +177,45 @@ namespace ClaudeVS.Commands
 
             ClaudeOutputPane.WriteBlock(text);
             ClaudeOutputPane.Activate();
+        }
+
+        /// <summary>Saves the usage log (all solutions) as CSV, one row per turn, for a spreadsheet.</summary>
+        private static async Task ExportUsageCsvAsync()
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            var log = ToolWindow.ClaudeChatControl.Usage;
+            if (!System.IO.File.Exists(log.Path) && !System.IO.File.Exists(log.ArchivePath))
+            {
+                Message("Claude Code", "No usage logged yet. Turn on Options > Diagnostics > Keep local usage log.", OLEMSGICON.OLEMSGICON_INFO);
+                return;
+            }
+            var dlg = new Microsoft.Win32.SaveFileDialog
+            {
+                Title = "Export usage as CSV",
+                FileName = "claude-usage-" + DateTime.Now.ToString("yyyyMMdd") + ".csv",
+                DefaultExt = ".csv",
+                Filter = "CSV (*.csv)|*.csv|All files (*.*)|*.*",
+                InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+            };
+            if (dlg.ShowDialog() != true) return;
+            string target = dlg.FileName;
+            try
+            {
+                // UTF-8 with a BOM, so Excel reads non-ASCII prompts and paths correctly.
+                int rows = await Task.Run(() =>
+                {
+                    using (var w = new System.IO.StreamWriter(target, false, new System.Text.UTF8Encoding(true)))
+                        return UsageCsv.Write(log.ReadAll(), w);
+                });
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                ClaudeOutputPane.WriteLine($"Exported {rows} turns to {target}");
+                Message("Claude Code", $"Exported {rows} turns to\n{target}", OLEMSGICON.OLEMSGICON_INFO);
+            }
+            catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException)
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                Message("Claude Code", "Could not export usage: " + ex.Message, OLEMSGICON.OLEMSGICON_WARNING);
+            }
         }
 
         private static string Shorten(string s, int max)
