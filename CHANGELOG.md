@@ -300,6 +300,9 @@ All notable changes to this project are listed here. The format follows
   each time today's spend in Visual Studio, all conversations and chat windows together, passes another multiple
   (`Today's Claude Code spend in Visual Studio has passed $20.00 ($21.37 so far …)`). Today's turns from before
   Visual Studio started are read from the usage log and do not warn again. 0 turns it off.
+- **Spend by day in the savings report**: `By day:` lists the last 14 days with turns, each with turns, tokens,
+  cost, cache hits and what the cache saved, and a bar for the cost (the dearest day full). It replaces
+  *Cache hit rate by day*.
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.

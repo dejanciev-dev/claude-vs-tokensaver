@@ -1794,6 +1794,36 @@ namespace ClaudeVS.Core.Tests
         }
 
         // ---------- Conversation cost warning ----------
+        private static void Test_SavingsReport_ByDay()
+        {
+            var d1 = new DateTime(2026, 11, 7, 12, 0, 0, DateTimeKind.Local).ToUniversalTime();
+            var d2 = d1.AddDays(1);
+            var recs = new[]
+            {
+                new UsageRecord { Timestamp = d1, ModelUsed = "claude-sonnet-5-5", CostUsd = 1, InputTokens = 100, CacheReadTokens = 900 },
+                new UsageRecord { Timestamp = d1.AddHours(1), ModelUsed = "claude-sonnet-5-5", CostUsd = 1, RouterCostUsd = 0.5, OutputTokens = 1000 },
+                new UsageRecord { Timestamp = d2, ModelUsed = "claude-sonnet-5-5", CostUsd = 5, CacheReadTokens = 1_000_000 },
+            };
+            var rep = SavingsReport.Build(recs, new PriceTable());
+            Eq(2, rep.ByDay.Count, "two days");
+            Eq(2, rep.ByDay[0].Turns, "turns on day 1");
+            Eq(2000L, rep.ByDay[0].Tokens, "tokens on day 1");
+            True(Math.Abs(rep.ByDay[0].CostUsd - 2.5) < 1e-9, "router cost included: " + rep.ByDay[0].CostUsd);
+            Eq(90.0, rep.ByDay[0].CacheHitPercent, "900 of 1000 input from the cache");
+            True(Math.Abs(rep.ByDay[1].CacheSavedUsd - 1.8) < 1e-9, "1M read on Sonnet saves $1.80: " + rep.ByDay[1].CacheSavedUsd);
+
+            string text = rep.ToText();
+            var lines = text.Replace("\r", "").Split('\n');
+            True(lines.Contains("By day:"), text);
+            string day2 = lines.Single(l => l.StartsWith("  " + d2.ToLocalTime().ToString("yyyy-MM-dd")) && l.Contains(" turns "));
+            True(day2.EndsWith(new string('█', 20)), "the dearest day has the full bar: " + day2);
+            True(day2.Contains("1 turns") && day2.Contains("cache 100%"), day2);
+            string day1 = lines.Single(l => l.StartsWith("  " + d1.ToLocalTime().ToString("yyyy-MM-dd")) && l.Contains(" turns "));
+            True(day1.EndsWith(" " + new string('█', 10)), "half the cost, half the bar: " + day1);
+            Eq(1, SavingsReport.Build(recs.Take(1), new PriceTable()).ByDay.Count, "one day");
+            True(!SavingsReport.Build(recs.Take(1), new PriceTable()).ToText().Contains("By day"), "no table for a single day");
+        }
+
         private static void Test_DailyCostWatch()
         {
             // Local noon, so "today" is the same day in any time zone's local view of these instants.
