@@ -151,7 +151,13 @@ namespace ClaudeVS.Commands
                 if (solution != null)
                 {
                     var all = SavingsReport.Build(records, prices);
-                    if (all.Turns > 0) sb.AppendLine().AppendLine($"All solutions: {all.Turns} turns, ${all.ActualCostUsd:0.00} actual, ~${all.RoutingSavedUsd:0.00} saved by routing.");
+                    if (all.Turns > 0)
+                    {
+                        sb.AppendLine().AppendLine($"All solutions: {all.Turns} turns, ${all.ActualCostUsd:0.00} actual, ~${all.RoutingSavedUsd:0.00} saved by routing.");
+                        if (all.MonthLine() is string month) sb.AppendLine(month);
+                        string solutions = all.SolutionsText();
+                        if (solutions.Length > 0) sb.Append(solutions);
+                    }
                 }
 
                 var diffs = RouterReplay.Compare(records, new ModelRouter(), out int replayed);

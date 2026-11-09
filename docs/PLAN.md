@@ -371,7 +371,9 @@ the prices of the model that answered (`ModelPrice.CacheSavedUsd`).
       (which has no cache for it). The least the prompt costs: its first request's input (context at the cache-read
       price when warm, else written again; the prompt written to the cache), not the output or later tool calls
       (`NextPromptPrice`)
-- [ ] **Month and solutions in the savings report**: this month's total with a month-end projection; cost per solution
+- [x] **Month and solutions in the savings report**: `This month: $12.30 so far, ~$41.00 at this pace by Nov 30`
+      (the projection from day 3); for all solutions, `By solution:` with turns and cost per folder, dearest first
+      (top 10; `SavingsReport.MonthLine`, `SolutionsText`)
 - [ ] **Sessions list totals**: the folder's total cost in the footer; costliest sessions first as a filter option
 - [ ] **Usage CSV export**: one row per logged turn, for a spreadsheet
 
