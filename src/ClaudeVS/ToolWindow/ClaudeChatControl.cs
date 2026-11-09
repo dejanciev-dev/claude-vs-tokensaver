@@ -1440,6 +1440,7 @@ namespace ClaudeVS.ToolWindow
 
         private enum SessionFilter { All, Open, Closed }
         private SessionFilter _sessionFilter;
+        private bool _sessionsByCost;
 
         private void ShowHistoryMenu(bool refresh)
         {
@@ -1459,6 +1460,8 @@ namespace ClaudeVS.ToolWindow
             var visible = all.Where(s => _showArchived || !s.Archived)
                 .Where(s => _sessionFilter == SessionFilter.All || (_sessionFilter == SessionFilter.Open) == (open.ContainsKey(s.Id) || s.Id == currentId))
                 .ToList();
+            // Costliest first: sessions not read yet go last until they are (the list refreshes then).
+            if (_sessionsByCost) visible = visible.OrderByDescending(s => SessionCost.Cached(s)?.CostUsd ?? -1).ToList();
             var entries = visible.Select(s =>
             {
                 open.TryGetValue(s.Id, out var elsewhere);
@@ -1524,6 +1527,14 @@ namespace ClaudeVS.ToolWindow
                 Description = "Click to switch: all, open (here or elsewhere), closed",
                 Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); _sessionFilter = (SessionFilter)(((int)_sessionFilter + 1) % 3); ShowHistoryMenu(refresh: true); },
             });
+            entries.Add(new ChatPopup.Entry
+            {
+                Group = More,
+                Glyph = ChatTheme.IconSort,
+                Label = _sessionsByCost ? "Costliest first" : "Newest first",
+                Description = "Click to switch: newest first, costliest first",
+                Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); _sessionsByCost = !_sessionsByCost; ShowHistoryMenu(refresh: true); },
+            });
             int archived = all.Count(s => s.Archived);
             if (archived > 0)
                 entries.Add(new ChatPopup.Entry
@@ -1546,7 +1557,8 @@ namespace ClaudeVS.ToolWindow
                         ShowHistoryMenu(refresh: true);
                     },
                 });
-            _sessions.Footer = "Hover a session to rename, fork, group or archive it";
+            const string hint = "Hover a session to rename, fork, group or archive it";
+            _sessions.Footer = SessionCost.TotalLine(visible) is string total ? total + "\n" + hint : hint;
             _sessions.Show(entries, _historyBtn, keepFilter: refresh);
             LoadSessionCosts(visible);
         }

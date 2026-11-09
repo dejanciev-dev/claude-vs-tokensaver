@@ -1661,6 +1661,12 @@ namespace ClaudeVS.Core.Tests
                 var got = SessionCost.Get(file, new PriceTable());
                 True(ReferenceEquals(got, SessionCost.Cached(file, f.LastWriteTimeUtc, f.Length)), "kept until the file changes");
                 Eq(null, SessionCost.Cached(file, f.LastWriteTimeUtc, f.Length + 1), "a changed file is read again");
+
+                var listed = new SessionInfo { FilePath = file, LastWriteUtc = f.LastWriteTimeUtc, SizeBytes = f.Length };
+                var unread = new SessionInfo { FilePath = Path.Combine(root, "s2.jsonl"), LastWriteUtc = f.LastWriteTimeUtc, SizeBytes = 1 };
+                Eq("1 session, $28.30 in total (API prices)", SessionCost.TotalLine(new[] { listed }), "footer");
+                Eq("Reading what the sessions cost…", SessionCost.TotalLine(new[] { listed, unread }), "one not read yet");
+                Eq(null, SessionCost.TotalLine(new SessionInfo[0]), "no sessions");
             }
             finally { Directory.Delete(root, true); }
         }

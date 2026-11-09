@@ -374,7 +374,8 @@ the prices of the model that answered (`ModelPrice.CacheSavedUsd`).
 - [x] **Month and solutions in the savings report**: `This month: $12.30 so far, ~$41.00 at this pace by Nov 30`
       (the projection from day 3); for all solutions, `By solution:` with turns and cost per folder, dearest first
       (top 10; `SavingsReport.MonthLine`, `SolutionsText`)
-- [ ] **Sessions list totals**: the folder's total cost in the footer; costliest sessions first as a filter option
+- [x] **Sessions list totals**: the footer says `12 sessions, $41.20 in total (API prices)` for the sessions shown
+      (`SessionCost.TotalLine`); a **Newest first / Costliest first** entry next to the filter switches the order
 - [ ] **Usage CSV export**: one row per logged turn, for a spreadsheet
 
 ---

@@ -34,6 +34,27 @@ namespace ClaudeVS.Core.Chat
         public static SessionCostInfo Cached(string file, DateTime lastWriteUtc, long size) =>
             file != null && Cache.TryGetValue(file, out var e) && e.LastWriteUtc == lastWriteUtc && e.Size == size ? e.Info : null;
 
+        /// <summary>The cost read earlier for this session, when its file has not changed since; else null.</summary>
+        public static SessionCostInfo Cached(SessionInfo s) => s == null ? null : Cached(s.FilePath, s.LastWriteUtc, s.SizeBytes);
+
+        /// <summary>
+        /// "12 sessions, $41.20 in total (API prices)" for the sessions list's footer, "Reading what the sessions
+        /// cost…" while some are not read yet, or null for no sessions.
+        /// </summary>
+        public static string TotalLine(System.Collections.Generic.IReadOnlyCollection<SessionInfo> sessions)
+        {
+            if (sessions == null || sessions.Count == 0) return null;
+            double sum = 0;
+            foreach (var s in sessions)
+            {
+                var c = Cached(s);
+                if (c == null) return "Reading what the sessions cost…";
+                sum += c.CostUsd;
+            }
+            string n = sessions.Count == 1 ? "1 session" : sessions.Count + " sessions";
+            return $"{n}, ${sum.ToString("0.00", CultureInfo.InvariantCulture)} in total (API prices)";
+        }
+
         /// <summary>Reads the cost (or takes it from the cache when the file has not changed). Never throws.</summary>
         public static SessionCostInfo Get(string file, PriceTable prices)
         {
