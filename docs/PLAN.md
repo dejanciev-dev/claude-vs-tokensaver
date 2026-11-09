@@ -354,7 +354,9 @@ the prices of the model that answered (`ModelPrice.CacheSavedUsd`).
       (at the write price: 2x input for a 1-hour write), and the likely cause: the model changed (each model has its
       own cache), else something at the start of the conversation (CLAUDE.md, MCP tools, settings) (`CacheBreakWatch`;
       later ones go to the Output pane)
-- [ ] **Cost in the sessions list**: each past conversation shows what it cost, from its session file
+- [x] **Cost in the sessions list**: each past conversation shows what it cost, `$0.42 · 3h` (`SessionCost`: its session
+      file and its subagents' files, each API message once, per model at Options → Pricing; read in the background and
+      kept until the file changes)
 - [ ] **Daily cost warning**: an option to be told once when today's spend across all conversations passes an amount
 - [ ] **Spend by day in the savings report**: turns, tokens, cost and cache savings per day
 

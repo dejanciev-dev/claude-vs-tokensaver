@@ -292,6 +292,10 @@ All notable changes to this project are listed here. The format follows
   to Sonnet, and each model has its own cache: …`, or, with the same model, that something at the start of the
   conversation changed (CLAUDE.md, MCP servers or tools, settings). Not after /compact or once the cache has
   expired (the cold-cache note covers that). A token tip; later breaks go to the Output pane.
+- **Cost in the sessions list**: each past conversation shows what it cost next to its age, `$0.42 · 3h`, read
+  from its session file and its subagents' files (each API message once, priced per model at Options → Pricing,
+  1-hour cache writes at 2x input). Read in the background the first time the list opens, then kept until the
+  file changes.
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.

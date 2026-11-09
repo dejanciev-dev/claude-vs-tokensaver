@@ -1628,6 +1628,43 @@ namespace ClaudeVS.Core.Tests
             True(meter.TakeCacheBreak() == null, "taken once");
         }
 
+        private static void Test_SessionCost_FromSessionFile()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "claudevs-test-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(Path.Combine(root, "s1", "subagents"));
+            string file = Path.Combine(root, "s1.jsonl");
+            string Asst(string id, string model, string usage) =>
+                "{\"type\":\"assistant\",\"message\":{\"id\":\"" + id + "\",\"model\":\"" + model + "\",\"content\":[{\"type\":\"text\",\"text\":\"x\"}],\"usage\":" + usage + "}}";
+            // Opus: 1M read + 1M 1-hour write + 1M output; repeated for its second content block.
+            string big = "{\"input_tokens\":0,\"cache_read_input_tokens\":1000000,\"cache_creation_input_tokens\":1000000,\"cache_creation\":{\"ephemeral_1h_input_tokens\":1000000,\"ephemeral_5m_input_tokens\":0},\"output_tokens\":1000000}";
+            File.WriteAllLines(file, new[]
+            {
+                "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":\"hi\"}}",
+                Asst("m1", "claude-opus-5-5", big),
+                Asst("m1", "claude-opus-5-5", big),
+                Asst("m2", "<synthetic>", "{\"input_tokens\":0,\"output_tokens\":0}"),
+                "not json",
+            });
+            // A subagent on Haiku: 1M input.
+            File.WriteAllLines(Path.Combine(root, "s1", "subagents", "agent-a.jsonl"), new[] { Asst("m3", "claude-haiku-5-5", "{\"input_tokens\":1000000,\"output_tokens\":0}") });
+            try
+            {
+                var info = SessionCost.Read(file, new PriceTable());
+                Eq(2, info.Requests, "each message once; synthetic skipped; subagent counted");
+                True(Math.Abs(info.CostUsd - (0.2 + 8 + 20 + 0.1)) < 1e-9, "opus read 0.2 + 1h write 2x4 + output 20, haiku input 0.1: " + info.CostUsd);
+                Eq("$28.30", info.Short(), "short");
+                Eq(null, new SessionCostInfo { CostUsd = 0.004 }.Short(), "under half a cent");
+                Eq("$123", new SessionCostInfo { CostUsd = 123.4 }.Short(), "no cents from $100");
+
+                var f = new FileInfo(file);
+                Eq(null, SessionCost.Cached(file, f.LastWriteTimeUtc, f.Length), "not read through Get yet");
+                var got = SessionCost.Get(file, new PriceTable());
+                True(ReferenceEquals(got, SessionCost.Cached(file, f.LastWriteTimeUtc, f.Length)), "kept until the file changes");
+                Eq(null, SessionCost.Cached(file, f.LastWriteTimeUtc, f.Length + 1), "a changed file is read again");
+            }
+            finally { Directory.Delete(root, true); }
+        }
+
         private static void Test_CacheSavedLine()
         {
             var m = new TokenMeter();
