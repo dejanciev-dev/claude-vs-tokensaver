@@ -359,7 +359,8 @@ the prices of the model that answered (`ModelPrice.CacheSavedUsd`).
       kept until the file changes)
 - [x] **Daily cost warning**: *Warn at daily cost (USD)*, default 20: once per multiple, today's spend in all chat windows
       (`DailyCostWatch`: today's earlier turns from the usage log set the starting step, then each turn's cost)
-- [ ] **Spend by day in the savings report**: turns, tokens, cost and cache savings per day
+- [x] **Spend by day in the savings report**: turns, tokens, cost, cache hits and cache savings per day, with a bar for
+      the cost (the dearest day full), the last 14 days with turns (`SavingsReport.ByDay`; replaces *Cache hit rate by day*)
 
 ---
 

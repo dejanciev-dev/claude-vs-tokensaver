@@ -99,6 +99,18 @@ namespace ClaudeVS.Core.Tokens
         }
     }
 
+    /// <summary>One local day of the savings report.</summary>
+    public sealed class DayBreakdown
+    {
+        public DateTime Day { get; set; }
+        public int Turns { get; set; }
+        public long Tokens { get; set; }
+        /// <summary>Including what asking the Haiku router cost.</summary>
+        public double CostUsd { get; set; }
+        public double CacheSavedUsd { get; set; }
+        public double CacheHitPercent { get; set; }
+    }
+
     public sealed class ModelBreakdown
     {
         public string Family { get; set; }
@@ -146,8 +158,10 @@ namespace ClaudeVS.Core.Tokens
         public List<UsageRecord> Costliest { get; } = new List<UsageRecord>();
         public const int CostliestCount = 5;
 
-        /// <summary>Cache hit % per day, oldest first.</summary>
-        public List<KeyValuePair<DateTime, double>> CacheTrend { get; } = new List<KeyValuePair<DateTime, double>>();
+        /// <summary>Turns, tokens, cost and cache per local day, oldest first.</summary>
+        public List<DayBreakdown> ByDay { get; } = new List<DayBreakdown>();
+        /// <summary>How many days the text shows (the latest).</summary>
+        public const int DaysShown = 14;
 
         public static SavingsReport Build(IEnumerable<UsageRecord> records, PriceTable prices, string solution = null, DateTime? sinceUtc = null)
         {
@@ -197,7 +211,15 @@ namespace ClaudeVS.Core.Tokens
             {
                 long dIn = day.Sum(r => r.InputTokens + r.CacheReadTokens + r.CacheWriteTokens);
                 long dRead = day.Sum(r => r.CacheReadTokens);
-                rep.CacheTrend.Add(new KeyValuePair<DateTime, double>(day.Key, dIn > 0 ? 100.0 * dRead / dIn : 0));
+                rep.ByDay.Add(new DayBreakdown
+                {
+                    Day = day.Key,
+                    Turns = day.Count(),
+                    Tokens = day.Sum(r => r.TotalTokens),
+                    CostUsd = day.Sum(r => r.CostUsd + r.RouterCostUsd),
+                    CacheSavedUsd = day.Sum(r => (prices.For(r.ModelUsed) ?? prices.Sonnet).CacheSavedUsd(r.CacheReadTokens, r.CacheWriteTokens, r.CacheWrite1hTokens)),
+                    CacheHitPercent = dIn > 0 ? 100.0 * dRead / dIn : 0,
+                });
             }
             return rep;
         }
@@ -245,12 +267,19 @@ namespace ClaudeVS.Core.Tokens
                     sb.AppendLine($"  {r.Timestamp.ToLocalTime():yyyy-MM-dd HH:mm}  ${r.CostUsd,6:0.00}  {PriceTable.Family(r.ModelUsed) ?? "other",-6} {TokenMeter.Format(r.TotalTokens),7} tok  {what}".TrimEnd());
                 }
             }
-            if (CacheTrend.Count > 1)
+            if (ByDay.Count > 1)
             {
+                // Where the money went over time: the bar is the day's cost against the dearest day shown.
+                var days = ByDay.Skip(Math.Max(0, ByDay.Count - DaysShown)).ToList();
+                double max = days.Max(d => d.CostUsd);
                 sb.AppendLine();
-                sb.AppendLine("Cache hit rate by day:");
-                foreach (var d in CacheTrend.Skip(Math.Max(0, CacheTrend.Count - 14)))
-                    sb.AppendLine($"  {d.Key:yyyy-MM-dd}  {d.Value,3:0}%  {new string('█', (int)Math.Round(d.Value / 5))}");
+                sb.AppendLine(ByDay.Count > DaysShown ? $"By day (last {DaysShown} days with turns):" : "By day:");
+                foreach (var d in days)
+                {
+                    string bar = max > 0 ? new string('█', (int)Math.Round(20 * d.CostUsd / max)) : "";
+                    string saved = d.CacheSavedUsd >= 0.005 ? $" (saved ${d.CacheSavedUsd:0.00})" : "";
+                    sb.AppendLine($"  {d.Day:yyyy-MM-dd} {d.Turns,5} turns {TokenMeter.Format(d.Tokens),7} tok  ${d.CostUsd,7:0.00}  cache {d.CacheHitPercent,3:0}%{saved,-16}  {bar}".TrimEnd());
+                }
             }
             return sb.ToString();
         }
