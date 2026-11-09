@@ -111,6 +111,18 @@ namespace ClaudeVS.Core.Tokens
         public double CacheHitPercent { get; set; }
     }
 
+    /// <summary>One solution folder of the savings report.</summary>
+    public sealed class SolutionBreakdown
+    {
+        /// <summary>The folder; null for turns logged without one.</summary>
+        public string Solution { get; set; }
+        public int Turns { get; set; }
+        /// <summary>Including what asking the Haiku router cost.</summary>
+        public double CostUsd { get; set; }
+        /// <summary>The folder's name ("linq-samples"), or "(no folder)".</summary>
+        public string Name => string.IsNullOrEmpty(Solution) ? "(no folder)" : System.IO.Path.GetFileName(Solution.TrimEnd('\\', '/')) is string n && n.Length > 0 ? n : Solution;
+    }
+
     public sealed class ModelBreakdown
     {
         public string Family { get; set; }
@@ -163,7 +175,17 @@ namespace ClaudeVS.Core.Tokens
         /// <summary>How many days the text shows (the latest).</summary>
         public const int DaysShown = 14;
 
-        public static SavingsReport Build(IEnumerable<UsageRecord> records, PriceTable prices, string solution = null, DateTime? sinceUtc = null)
+        /// <summary>Spent this calendar month (local time) up to the report, and when there are 3 days or more of it, the month's total at that pace.</summary>
+        public DateTime Month { get; set; }
+        public double MonthToDateUsd { get; set; }
+        public double? MonthProjectedUsd { get; set; }
+        public const int ProjectFromDay = 3;
+
+        /// <summary>Turns and cost per solution folder, dearest first (only in a report for all solutions).</summary>
+        public List<SolutionBreakdown> BySolution { get; } = new List<SolutionBreakdown>();
+        public const int SolutionsShown = 10;
+
+        public static SavingsReport Build(IEnumerable<UsageRecord> records, PriceTable prices, string solution = null, DateTime? sinceUtc = null, DateTime? nowUtc = null)
         {
             prices = prices ?? new PriceTable();
             var list = (records ?? Enumerable.Empty<UsageRecord>())
@@ -221,7 +243,42 @@ namespace ClaudeVS.Core.Tokens
                     CacheHitPercent = dIn > 0 ? 100.0 * dRead / dIn : 0,
                 });
             }
+            var today = (nowUtc ?? DateTime.UtcNow).ToLocalTime().Date;
+            rep.Month = new DateTime(today.Year, today.Month, 1);
+            rep.MonthToDateUsd = list.Where(r => r.Timestamp.ToLocalTime().Date >= rep.Month && r.Timestamp.ToLocalTime().Date <= today).Sum(r => r.CostUsd + r.RouterCostUsd);
+            if (today.Day >= ProjectFromDay && rep.MonthToDateUsd > 0)
+                rep.MonthProjectedUsd = rep.MonthToDateUsd / today.Day * DateTime.DaysInMonth(today.Year, today.Month);
+
+            if (solution == null)
+                rep.BySolution.AddRange(list
+                    .GroupBy(r => (r.Solution ?? "").TrimEnd('\\', '/'), StringComparer.OrdinalIgnoreCase)
+                    .Select(g => new SolutionBreakdown { Solution = g.Key.Length == 0 ? null : g.First().Solution, Turns = g.Count(), CostUsd = g.Sum(r => r.CostUsd + r.RouterCostUsd) })
+                    .OrderByDescending(b => b.CostUsd).ThenByDescending(b => b.Turns));
             return rep;
+        }
+
+        /// <summary>"This month: $12.30 so far, ~$41.00 at this pace by Nov 30"; null with nothing spent this month.</summary>
+        public string MonthLine()
+        {
+            if (MonthToDateUsd <= 0) return null;
+            var monthEnd = Month.AddDays(DateTime.DaysInMonth(Month.Year, Month.Month) - 1);
+            string line = $"This month:                 ${MonthToDateUsd:0.00} so far";
+            return MonthProjectedUsd is double p
+                ? line + $", ~${p:0.00} at this pace by {monthEnd:MMM d}"
+                : line;
+        }
+
+        /// <summary>"By solution:" lines for a report over all solutions; empty with fewer than two solutions.</summary>
+        public string SolutionsText()
+        {
+            if (BySolution.Count < 2) return "";
+            var sb = new StringBuilder();
+            sb.AppendLine("By solution:");
+            foreach (var b in BySolution.Take(SolutionsShown))
+                sb.AppendLine($"  {OneLine(b.Name, 30),-30} {b.Turns,5} turns  ${b.CostUsd,8:0.00}");
+            if (BySolution.Count > SolutionsShown)
+                sb.AppendLine($"  … {BySolution.Count - SolutionsShown} more, ${BySolution.Skip(SolutionsShown).Sum(b => b.CostUsd):0.00}");
+            return sb.ToString();
         }
 
         private static string OneLine(string s, int max)
@@ -239,6 +296,7 @@ namespace ClaudeVS.Core.Tokens
             sb.AppendLine($"Period: {Since.Value.ToLocalTime():yyyy-MM-dd} to today · {Turns} turns ({RoutedTurns} auto-routed)");
             sb.AppendLine();
             sb.AppendLine($"Actual cost:                ${ActualCostUsd:0.00}");
+            if (MonthLine() is string month) sb.AppendLine(month);
             sb.AppendLine($"Same tokens at Opus prices: ${OpusEquivalentUsd:0.00}  (estimate)");
             sb.AppendLine($"Saved by model routing:     ${RoutingSavedUsd:0.00}  ({RoutingSavedPercent:0}%)");
             sb.AppendLine($"Saved by file references:   ~{TokenMeter.Format(TokensAvoided)} tokens ≈ ${ReferencesSavedUsd:0.00}");
@@ -255,6 +313,7 @@ namespace ClaudeVS.Core.Tokens
             sb.AppendLine("By model:");
             foreach (var b in ByModel)
                 sb.AppendLine($"  {b.Family,-7} {b.Turns,5} turns  ${b.CostUsd,8:0.00}  ({100.0 * b.Turns / Turns:0}% of turns)");
+            if (Solution == null && SolutionsText() is string solutions && solutions.Length > 0) sb.AppendLine().Append(solutions);
             if (Costliest.Count > 1)
             {
                 // Where the money went: the turns worth looking at (and the prompt, when previews are logged).

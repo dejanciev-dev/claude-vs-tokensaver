@@ -1829,6 +1829,35 @@ namespace ClaudeVS.Core.Tests
             Eq(null, meter.LastModel, "reset");
         }
 
+        private static void Test_SavingsReport_Month_And_Solutions()
+        {
+            DateTime At(int month, int day) => new DateTime(2026, month, day, 12, 0, 0, DateTimeKind.Local).ToUniversalTime();
+            var recs = new[]
+            {
+                new UsageRecord { Timestamp = At(10, 30), Solution = @"C:\src\old", CostUsd = 50 },              // last month
+                new UsageRecord { Timestamp = At(11, 2), Solution = @"C:\src\shop\", CostUsd = 6, RouterCostUsd = 0.5 },
+                new UsageRecord { Timestamp = At(11, 9), Solution = @"c:\src\SHOP", CostUsd = 2.5 },
+                new UsageRecord { Timestamp = At(11, 9), Solution = null, CostUsd = 1 },
+            };
+            var rep = SavingsReport.Build(recs, new PriceTable(), nowUtc: At(11, 10));
+            True(Math.Abs(rep.MonthToDateUsd - 10) < 1e-9, "November so far, router included: " + rep.MonthToDateUsd);
+            True(rep.MonthProjectedUsd.HasValue && Math.Abs(rep.MonthProjectedUsd.Value - 30) < 1e-9, "$10 in 10 days → $30 in 30: " + rep.MonthProjectedUsd);
+            True(rep.MonthLine().Contains("so far") && rep.MonthLine().Contains("at this pace by"), rep.MonthLine());
+
+            Eq(3, rep.BySolution.Count, "one folder whatever its case or trailing slash, plus none");
+            Eq("old", rep.BySolution[0].Name, "dearest first");
+            Eq("shop", rep.BySolution[1].Name, "folder name");
+            Eq(3, rep.BySolution.Sum(b => b.Turns) - 1, "all turns: 4");
+            Eq("(no folder)", rep.BySolution[2].Name, "no folder");
+            True(rep.ToText().Contains("By solution:"), "in the all-solutions report");
+            True(!SavingsReport.Build(recs, new PriceTable(), solution: @"C:\src\old", nowUtc: At(11, 10)).ToText().Contains("By solution:"), "not in one solution's report");
+
+            var early = SavingsReport.Build(recs, new PriceTable(), nowUtc: At(11, 2));
+            True(early.MonthToDateUsd > 0 && early.MonthProjectedUsd == null, "no projection on day 2");
+            True(!early.MonthLine().Contains("pace"), early.MonthLine());
+            Eq(null, SavingsReport.Build(recs, new PriceTable(), nowUtc: At(12, 5)).MonthLine(), "nothing in December yet");
+        }
+
         private static void Test_SavingsReport_ByDay()
         {
             var d1 = new DateTime(2026, 11, 7, 12, 0, 0, DateTimeKind.Local).ToUniversalTime();

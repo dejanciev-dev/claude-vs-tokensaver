@@ -307,6 +307,9 @@ All notable changes to this project are listed here. The format follows
   sending costs in input, `~$0.02 to send (context cached)`, and why it costs more when it does: `cache expired:
   ~100.0k tokens of context at the full price`, or `another model: … cached again` when the prompt would go to
   another model (picked, or routed). Priced at the model it goes to; the answer and tool calls come on top.
+- **This month and each solution in the savings report**: `This month: $12.30 so far, ~$41.00 at this pace by
+  Nov 30` (the projection from the 3rd of the month), and under the all-solutions summary `By solution:`, the
+  turns and cost of each solution folder, dearest first.
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.
