@@ -170,7 +170,7 @@ namespace ClaudeVS.Core.Cli
             if (!usage.IsEmpty)
             {
                 if (!isSub) _lastMainUsage = usage;
-                events.Add(new ClaudeEvent { Kind = ClaudeEventKind.AssistantUsage, Usage = usage, IsSubagent = isSub, Model = (string)msg["model"] });
+                events.Add(new ClaudeEvent { Kind = ClaudeEventKind.AssistantUsage, Usage = usage, IsSubagent = isSub, Model = (string)msg["model"], MessageId = (string)msg["id"] });
             }
             return events;
         }

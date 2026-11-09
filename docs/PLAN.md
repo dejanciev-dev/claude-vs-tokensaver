@@ -346,6 +346,20 @@ the prices of the model that answered (`ModelPrice.CacheSavedUsd`).
 
 ---
 
+## Phase 16 — Where the money goes, across conversations
+
+- [x] **Cache-break note**: a main-agent request that reads less than half of the previous request's context from
+      the cache while it is still warm (no compaction in between, ≥ 10k tokens missed) wrote the conversation to the
+      cache again. Once per conversation the chat says how many tokens and what that cost more than reading them
+      (at the write price: 2x input for a 1-hour write), and the likely cause: the model changed (each model has its
+      own cache), else something at the start of the conversation (CLAUDE.md, MCP tools, settings) (`CacheBreakWatch`;
+      later ones go to the Output pane)
+- [ ] **Cost in the sessions list**: each past conversation shows what it cost, from its session file
+- [ ] **Daily cost warning**: an option to be told once when today's spend across all conversations passes an amount
+- [ ] **Spend by day in the savings report**: turns, tokens, cost and cache savings per day
+
+---
+
 ## Working in Visual Studio — daily loop
 
 1. Core logic change → edit in `ClaudeVS.Core` → run tests (`ClaudeVS.Core.Tests` → Set as Startup → Ctrl+F5, or `dotnet run` in its folder).

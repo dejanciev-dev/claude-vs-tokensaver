@@ -1588,6 +1588,46 @@ namespace ClaudeVS.Core.Tests
             Eq(0.0, meter.SessionCacheSavedUsd, "reset");
         }
 
+        private static void Test_CacheBreak_ModelChange_And_Prefix()
+        {
+            var w = new CacheBreakWatch();
+            var t0 = new DateTime(2026, 11, 9, 10, 0, 0, DateTimeKind.Utc);
+            var prices = new PriceTable();
+            TokenUsage U(long input, long read, long write, long write1h = 0) => new TokenUsage { Input = input, CacheRead = read, CacheCreation = write, CacheCreation1h = write1h, Output = 100 };
+
+            True(w.Observe(U(5, 0, 40_000), "claude-opus-5-5", "m1", t0, prices) == null, "first request writes the cache");
+            True(w.Observe(U(5, 0, 40_000), "claude-opus-5-5", "m1", t0.AddSeconds(1), prices) == null, "the same message again (another content block)");
+            True(w.Observe(U(5, 40_005, 2_000), "claude-opus-5-5", "m2", t0.AddMinutes(1), prices) == null, "normal: reads what the last request sent");
+
+            var b = w.Observe(U(5, 0, 42_100), "claude-sonnet-5-5", "m3", t0.AddMinutes(2), prices);
+            True(b != null && b.ModelChanged, "model changed while warm");
+            Eq(42_010L, b.Tokens, "the previous context, written again");
+            True(Math.Abs(b.ExtraUsd - 42_010 * (2.5 - 0.2) / 1e6) < 1e-9, "Sonnet 5-minute write minus cache read: " + b.ExtraUsd);
+            True(b.Note().Contains("from Opus to Sonnet") && b.Note().Contains("~42.0k tokens") && b.Note().Contains("(~$0.10 more"), b.Note());
+
+            var p = w.Observe(U(5, 0, 44_000, 44_000), "claude-sonnet-5-5", "m4", t0.AddMinutes(3), prices);
+            True(p != null && !p.ModelChanged && p.Note().Contains("CLAUDE.md"), "same model: the prefix changed");
+            True(Math.Abs(p.ExtraUsd - 42_105 * (4.0 - 0.2) / 1e6) < 1e-9, "1-hour write at 2x input: " + p.ExtraUsd);
+
+            // After an hour-long cache's lifetime it is a cold cache, not a break; within it, still a break.
+            True(w.Observe(U(5, 0, 44_100), "claude-sonnet-5-5", "m5", t0.AddMinutes(50), prices) != null, "1-hour cache still warm after 47 min");
+            True(w.Observe(U(5, 0, 44_200), "claude-sonnet-5-5", "m6", t0.AddMinutes(115), prices) == null, "expired: the cold-cache note covers it");
+
+            w.Compacted();
+            True(w.Observe(U(5, 0, 8_000), "claude-sonnet-5-5", "m7", t0.AddMinutes(116), prices) == null, "after /compact a new cache is expected");
+            True(w.Observe(U(5, 0, 9_000), "claude-sonnet-5-5", "m8", t0.AddMinutes(117), prices) == null, "small context: not worth a note");
+
+            // Through the meter: AssistantUsage events of the main agent only.
+            var meter = new TokenMeter();
+            meter.Observe(new ClaudeEvent { Kind = ClaudeEventKind.AssistantUsage, Usage = U(5, 0, 30_000), Model = "claude-opus-5-5", MessageId = "a" });
+            meter.Observe(new ClaudeEvent { Kind = ClaudeEventKind.AssistantUsage, Usage = U(5, 0, 31_000), Model = "claude-haiku-5-5", MessageId = "s", IsSubagent = true });
+            True(meter.TakeCacheBreak() == null, "a subagent has its own cache");
+            meter.Observe(new ClaudeEvent { Kind = ClaudeEventKind.AssistantUsage, Usage = U(5, 0, 31_000), Model = "claude-sonnet-5-5", MessageId = "b" });
+            var mb = meter.TakeCacheBreak();
+            True(mb != null && mb.FromFamily == "opus", "meter reports the break");
+            True(meter.TakeCacheBreak() == null, "taken once");
+        }
+
         private static void Test_CacheSavedLine()
         {
             var m = new TokenMeter();

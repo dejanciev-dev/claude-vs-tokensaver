@@ -102,6 +102,8 @@ namespace ClaudeVS.Core.Cli
         public string Text { get; set; }
         public string SessionId { get; set; }
         public string Model { get; set; }
+        /// <summary>AssistantUsage: the API message id (`message.id`); the CLI repeats a message per content block.</summary>
+        public string MessageId { get; set; }
 
         // ToolUse / ToolResult / PermissionRequest
         public string ToolName { get; set; }

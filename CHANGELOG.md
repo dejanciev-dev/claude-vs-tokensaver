@@ -286,6 +286,12 @@ All notable changes to this project are listed here. The format follows
   1-hour cache writes (`cacheWrite1h`); older lines count as 5-minute writes.
 - **What the prompt cache saved, in the session summary**: `Cache hits: 75% (saved $0.49)` in / → Copy session
   summary (from $0.01).
+- **Cache-break note**: when the prompt cache is written again while it is still warm, the chat says so once per
+  conversation, with what it cost and the likely cause: `The prompt cache was rebuilt while still warm: ~42.0k
+  tokens of context were written again instead of read (~$0.10 more than reading them). The model changed from Opus
+  to Sonnet, and each model has its own cache: …`, or, with the same model, that something at the start of the
+  conversation changed (CLAUDE.md, MCP servers or tools, settings). Not after /compact or once the cache has
+  expired (the cold-cache note covers that). A token tip; later breaks go to the Output pane.
 
 ### Changed
 - Tool rows open and close by clicking the row itself; the round expand buttons are gone.
