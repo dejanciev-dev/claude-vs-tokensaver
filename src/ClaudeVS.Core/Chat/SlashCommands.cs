@@ -80,6 +80,13 @@ namespace ClaudeVS.Core.Chat
         }
 
         /// <summary>
+        /// The commands the list shows while typing "/": built-in and your own (.claude/commands), not skills, which
+        /// are many and stay in the / button's menu under Skills.
+        /// </summary>
+        public static List<SlashCommand> ForPicker(IEnumerable<SlashCommand> commands) =>
+            (commands ?? Enumerable.Empty<SlashCommand>()).Where(c => c != null && c.Source != "skill").ToList();
+
+        /// <summary>
         /// The command name being typed: <paramref name="text"/> starts with '/' (after spaces) and has no space or line
         /// break after the name yet; else null (no picker).
         /// </summary>

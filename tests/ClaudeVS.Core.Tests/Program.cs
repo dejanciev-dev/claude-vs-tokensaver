@@ -1878,6 +1878,7 @@ namespace ClaudeVS.Core.Tests
             Eq("/docs-review,/anthropic-skills:docs", string.Join(",", SlashCommands.Match(cmds, "/docs")), "whole-name matches first, then the part after the plugin");
             Eq("/anthropic-skills:docs,/anthropic-skills:docx", string.Join(",", SlashCommands.Match(cmds, "/anthropic-skills:doc")), "full name typed");
             Eq(4, SlashCommands.Match(cmds, "/").Count, "all for a bare slash");
+            Eq("/compact,/docs-review", string.Join(",", SlashCommands.Match(SlashCommands.ForPicker(cmds), "/")), "the list while typing leaves skills out");
 
             Eq("anthropic-skills:", cmds[1].Prefix, "prefix");
             Eq("docs", cmds[1].ShortName, "short name");
