@@ -357,7 +357,8 @@ the prices of the model that answered (`ModelPrice.CacheSavedUsd`).
 - [x] **Cost in the sessions list**: each past conversation shows what it cost, `$0.42 · 3h` (`SessionCost`: its session
       file and its subagents' files, each API message once, per model at Options → Pricing; read in the background and
       kept until the file changes)
-- [ ] **Daily cost warning**: an option to be told once when today's spend across all conversations passes an amount
+- [x] **Daily cost warning**: *Warn at daily cost (USD)*, default 20: once per multiple, today's spend in all chat windows
+      (`DailyCostWatch`: today's earlier turns from the usage log set the starting step, then each turn's cost)
 - [ ] **Spend by day in the savings report**: turns, tokens, cost and cache savings per day
 
 ---

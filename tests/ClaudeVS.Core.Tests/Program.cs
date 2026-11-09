@@ -1794,6 +1794,32 @@ namespace ClaudeVS.Core.Tests
         }
 
         // ---------- Conversation cost warning ----------
+        private static void Test_DailyCostWatch()
+        {
+            // Local noon, so "today" is the same day in any time zone's local view of these instants.
+            var start = new DateTime(2026, 11, 9, 12, 0, 0, DateTimeKind.Local).ToUniversalTime();
+            var w = new DailyCostWatch(20, start);
+            w.Load(new[]
+            {
+                new UsageRecord { Timestamp = start.AddHours(-1), CostUsd = 21, RouterCostUsd = 0.5 },
+                new UsageRecord { Timestamp = start.AddDays(-1), CostUsd = 100 },          // yesterday
+                new UsageRecord { Timestamp = start.AddMinutes(1), CostUsd = 3 },           // added by Add already
+            });
+            True(Math.Abs(w.SpentToday - 21.5) < 1e-9, "today's turns before the watch, with router cost: " + w.SpentToday);
+            Eq(null, w.Add(1, start.AddMinutes(1)), "$20 was passed before loading: no warning again");
+            string warn = w.Add(18, start.AddMinutes(2));
+            True(warn != null && warn.Contains("passed $40.00") && warn.Contains("($40.50 so far"), warn);
+            Eq(null, w.Add(1, start.AddMinutes(3)), "once per step");
+            Eq(null, w.Add(double.NaN, start.AddMinutes(4)), "NaN adds nothing");
+
+            Eq(null, w.Add(5, start.AddDays(1)), "a new day starts from 0");
+            True(Math.Abs(w.SpentToday - 5) < 1e-9, "new day: " + w.SpentToday);
+            True(w.Add(15, start.AddDays(1).AddMinutes(1))?.Contains("passed $20.00") == true, "first step of the new day");
+
+            var off = new DailyCostWatch(0, start);
+            Eq(null, off.Add(1000, start), "0 turns it off");
+        }
+
         private static void Test_CostWatch()
         {
             var w = new CostWatch(5);
