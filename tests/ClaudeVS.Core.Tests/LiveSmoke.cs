@@ -306,7 +306,11 @@ namespace ClaudeVS.Core.Tests
         /// `-- --live-mcp`: starts the CLI with our in-process Error List server and checks that the CLI connects to it
         /// and lists its tool (mcp_status). Sends no prompt, so it makes no model call and costs nothing.
         /// </summary>
-        public static int RunMcp()
+        /// <summary>
+        /// `--live-mcp [rawPath]`: the in-process Error List server connects, and the context breakdown
+        /// (<c>get_context_usage</c>, no model call) shows how its tool is counted. No prompt, no cost.
+        /// </summary>
+        public static int RunMcp(string rawLogPath = null)
         {
             string exe = ClaudeCliLocator.Resolve("");
             if (exe == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }
@@ -315,8 +319,10 @@ namespace ClaudeVS.Core.Tests
             var options = new ClaudeLaunchOptions { WorkingDirectory = dir, PermissionMode = PermissionModeChoice.Plan, EditNotesHook = true }; // as the extension starts it
             options.SdkMcpServers.Add(Context.IdeMcpServer.Create(
                 () => System.Threading.Tasks.Task.FromResult<IReadOnlyList<Context.BuildError>>(new Context.BuildError[0]), () => dir));
+            var raw = new StringBuilder();
             using (var session = new ClaudeSession(options))
             {
+                session.RawLine += (s, e) => { lock (raw) raw.Append(e.Direction).Append('\t').Append(e.Line).Append('\n'); };
                 try
                 {
                     McpServerRow row = null;
@@ -327,10 +333,24 @@ namespace ClaudeVS.Core.Tests
                     }
                     Console.WriteLine($"visualstudio: {row?.Status ?? "missing"}, tools {row?.ToolCount}, transport {row?.Transport}");
                     bool ok = row?.Status == "connected" && row.ToolCount == 1;
+
+                    var usage = session.GetContextUsageAsync().Result;
+                    if (usage == null) { Console.WriteLine("  FAIL no context usage"); ok = false; }
+                    else
+                    {
+                        Console.WriteLine($"  context: {usage.TotalTokens:N0} of {usage.MaxTokens:N0} ({usage.Percentage}%), model {usage.Model}");
+                        foreach (var c in usage.Categories) Console.WriteLine($"    {c.Kind,-8} {c.Name,-28} {c.Tokens,9:N0}");
+                        Console.WriteLine($"  MCP tools: {usage.McpToolCount} counted, {usage.McpToolTokens:N0} tokens");
+                        Console.WriteLine($"  base context tip: {SessionNotices.BaseContext(usage) ?? "(none)"}");
+                    }
                     Console.WriteLine(ok ? "PASS live MCP" : "FAIL live MCP");
                     return ok ? 0 : 1;
                 }
-                finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
+                finally
+                {
+                    if (!string.IsNullOrEmpty(rawLogPath)) File.WriteAllText(rawLogPath, raw.ToString());
+                    try { Directory.Delete(dir, true); } catch (IOException) { }
+                }
             }
         }
 

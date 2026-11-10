@@ -2424,7 +2424,9 @@ namespace ClaudeVS.ToolWindow
                 }).ToList();
                 if (entries.Count == 0) entries.Add(new ChatPopup.Entry { Label = "No MCP servers for this folder", Description = "Add them with claude mcp add, or in .mcp.json", Enabled = false });
                 var u = _contextUsage;
-                _manage.Footer = (u != null && u.McpToolTokens > 0 ? $"MCP tools take ~{TokenMeter.Format(u.McpToolTokens)} tokens of context · " : "") + "click to turn a server on or off";
+                string inWindow = u != null && u.McpToolTokens > 0 ? $"MCP tools take ~{TokenMeter.Format(u.McpToolTokens)} tokens of context · " : "";
+                string onDemand = u != null && u.McpDeferredToolCount > 0 ? $"{u.McpDeferredToolCount} load only when used · " : "";
+                _manage.Footer = inWindow + onDemand + "click to turn a server on or off";
                 _manage.Show(entries, _inputBox, keepFilter: true);
             }).FileAndForget("ClaudeVS/ChatControl/Mcp");
         }

@@ -39,8 +39,16 @@ namespace ClaudeVS.Core.Tokens
 
         public long MemoryFileTokens { get; set; }
         public int MemoryFileCount { get; set; }
+        /// <summary>MCP tools whose definitions are in the window, sent with every request.</summary>
         public long McpToolTokens { get; set; }
         public int McpToolCount { get; set; }
+        /// <summary>
+        /// MCP tools that load on demand (<c>isLoaded: false</c>, Claude Code 2.1.319+; the "MCP tools (deferred)"
+        /// category): their full definitions are not in the window until Claude calls one, so they do not weigh on
+        /// every request. <see cref="McpDeferredToolTokens"/> is what they would take once loaded.
+        /// </summary>
+        public long McpDeferredToolTokens { get; set; }
+        public int McpDeferredToolCount { get; set; }
 
         public static ContextUsage Parse(JObject r)
         {
@@ -71,8 +79,13 @@ namespace ClaudeVS.Core.Tokens
             u.MemoryFileCount = memory.Count;
             u.MemoryFileTokens = memory.Sum(f => Long(f["tokens"]));
             var mcp = (r["mcpTools"] as JArray)?.OfType<JObject>().ToList() ?? new List<JObject>();
-            u.McpToolCount = mcp.Count;
-            u.McpToolTokens = mcp.Sum(t => Long(t["tokens"]));
+            bool Deferred(JObject t) => t["isLoaded"]?.Type == JTokenType.Boolean && !(bool)t["isLoaded"]; // missing (2.1.317): loaded
+            var loaded = mcp.Where(t => !Deferred(t)).ToList();
+            var deferred = mcp.Where(Deferred).ToList();
+            u.McpToolCount = loaded.Count;
+            u.McpToolTokens = loaded.Sum(t => Long(t["tokens"]));
+            u.McpDeferredToolCount = deferred.Count;
+            u.McpDeferredToolTokens = deferred.Sum(t => Long(t["tokens"]));
             return u;
         }
 

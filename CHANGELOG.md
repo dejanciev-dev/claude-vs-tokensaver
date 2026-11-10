@@ -342,6 +342,9 @@ All notable changes to this project are listed here. The format follows
 - `dotnet test` runs the Core test runner instead of silently reporting zero tests.
 
 ### Fixed
+- MCP tools that load only when Claude uses them (Claude Code 2.1.319+, `isLoaded: false`) no longer count as
+  "tokens of every request": the base context tip and the MCP servers list count loaded tools only, and the list
+  says how many load on demand.
 - Turns answered by Claude Fable (`claude-fable-5-2`, Claude Code 2.1.321) are priced as Fable, $8 / $40 per
   million tokens, instead of at Sonnet's prices, a quarter of the real cost. This covers the footer, meter,
   sessions list, next-prompt line, cache savings and savings report. Options → Pricing has a new *Fable price* row.

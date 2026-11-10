@@ -18,7 +18,7 @@ namespace ClaudeVS.Core.Tests
         {
             if (args.Length >= 4 && args[0] == "--live-ask")
                 return LiveSmoke.RunInteractive(args[1], (PermissionModeChoice)Enum.Parse(typeof(PermissionModeChoice), args[2], true), args[3]);
-            if (args.Length > 0 && args[0] == "--live-mcp") return LiveSmoke.RunMcp();
+            if (args.Length > 0 && args[0] == "--live-mcp") return LiveSmoke.RunMcp(args.Length > 1 ? args[1] : null);
             if (args.Length > 0 && args[0] == "--live-haiku-router") return LiveSmoke.RunHaikuRouter();
             if (args.Length > 0 && args[0] == "--live-session") return LiveSmoke.RunSession();
             if (args.Length > 0 && args[0] == "--live-setup") return LiveSmoke.RunSetup(args.Length > 1 ? args[1] : null);
@@ -2735,6 +2735,34 @@ namespace ClaudeVS.Core.Tests
             Eq(1, u.MemoryFileCount);
             Eq(57L, u.MemoryFileTokens);
             Eq(0, u.Tips().Count(), "a fresh session needs no tips");
+        }
+
+        private static void Test_ContextUsage_DeferredMcpTools_2_1_322()
+        {
+            // Real 2.1.322 answer with the extension's Error List server: its tool loads on demand ("isLoaded": false)
+            string line = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.322-context-usage-mcp.jsonl")).Trim();
+            var u = ContextUsage.Parse(new ClaudeStreamParser().Parse(line).Single().Payload);
+            Eq(17640L, u.TotalTokens);
+            Eq(2.0, u.Percentage, "the CLI rounds its percentage (1.764% → 2)");
+            Eq(17640L, u.Categories.Where(c => c.IsUsed).Sum(c => c.Tokens), "used categories add up to the total");
+            Eq("deferred", u.Categories.Single(c => c.Id == "mcp_tools_deferred").Kind, "MCP tools (deferred) is a category of its own");
+            Eq(0, u.McpToolCount, "nothing loaded");
+            Eq(0L, u.McpToolTokens, "so nothing on every request");
+            Eq(1, u.McpDeferredToolCount, "one on demand");
+            Eq(53L, u.McpDeferredToolTokens);
+
+            // Many deferred tools: no tip (they are not in every request); loaded ones still earn it
+            string Tools(bool loaded) => "[" + string.Join(",", Enumerable.Range(0, 40).Select(i => $"{{\"name\":\"t{i}\",\"tokens\":300,\"isLoaded\":{(loaded ? "true" : "false")}}}")) + "]";
+            var deferredOnly = ContextUsage.Parse(JObject.Parse("{\"mcpTools\":" + Tools(false) + "}"));
+            Eq(12000L, deferredOnly.McpDeferredToolTokens);
+            Eq(null, SessionNotices.BaseContext(deferredOnly), "deferred tools earn no tip");
+            True(!deferredOnly.Tips().Any(t => t.Contains("MCP")), "nor a meter tip");
+            var loadedAll = ContextUsage.Parse(JObject.Parse("{\"mcpTools\":" + Tools(true) + "}"));
+            True(SessionNotices.BaseContext(loadedAll)?.Contains("MCP tools (40)") == true, "loaded tools do");
+
+            // Before 2.1.319 there was no isLoaded: every listed tool counts as loaded, as before
+            var old = ContextUsage.Parse(JObject.Parse("{\"mcpTools\":[{\"name\":\"a\",\"tokens\":6000}]}"));
+            Eq(6000L, old.McpToolTokens, "missing isLoaded = loaded");
         }
 
         private static void Test_ContextUsage_TipsAndDefaults()
