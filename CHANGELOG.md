@@ -346,6 +346,8 @@ All notable changes to this project are listed here. The format follows
 - `dotnet test` runs the Core test runner instead of silently reporting zero tests.
 
 ### Fixed
+- A slash command with an invisible character in front (a zero-width space from autocomplete or a paste) runs as
+  a command instead of going to Claude as text, as with leading spaces, tabs or line breaks (Claude Code 2.1.319).
 - Stop right after applying part of a reviewed edit no longer leaves Claude in the dark. Claude Code then reports
   the edit as stopped and maybe not written, and skips the hook that tells Claude which changes you rejected,
   although the edit was written. If the file holds what you approved, Claude is told with your next prompt
