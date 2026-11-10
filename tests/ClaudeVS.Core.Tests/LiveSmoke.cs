@@ -303,9 +303,94 @@ namespace ClaudeVS.Core.Tests
         }
 
         /// <summary>
-        /// `-- --live-mcp`: starts the CLI with our in-process Error List server and checks that the CLI connects to it
-        /// and lists its tool (mcp_status). Sends no prompt, so it makes no model call and costs nothing.
+        /// `--live-edit-review-interrupt [rawPath]`: as <see cref="RunEditReview"/>, but Stop and a new prompt follow the
+        /// reviewed approval at once. Since Claude Code 2.1.319 PostToolUse hooks also run on tool calls that finish
+        /// after a new message interrupts the turn, so the edit-review hook_callback can arrive late. Checks that it is
+        /// answered (its note for its own tool_use_id) and that Claude knows which change was rejected. About $0.01.
         /// </summary>
+        public static int RunEditReviewInterrupted(string rawLogPath)
+        {
+            string exe = ClaudeCliLocator.Resolve("");
+            if (exe == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-live-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            string file = Path.Combine(dir, "notes.txt");
+            File.WriteAllText(file, "alpha\nbeta\ngamma\ndelta\n");
+            var options = new ClaudeLaunchOptions { WorkingDirectory = dir, Model = ModelChoice.Haiku, Effort = EffortChoice.Low, PermissionMode = PermissionModeChoice.Default, EditNotesHook = true };
+            var raw = new StringBuilder();
+            var turns = new BlockingCollection<ClaudeEvent>();
+            var replies = new List<StringBuilder> { new StringBuilder() };
+            string editId = null;
+            int ended = 0;
+            using (var session = new ClaudeSession(options))
+            {
+                session.RawLine += (s, e) => { lock (raw) raw.Append(e.Direction).Append('\t').Append(e.Line).Append('\n'); };
+                session.EventReceived += (s, ev) =>
+                {
+                    if (ev.Kind == ClaudeEventKind.PermissionRequest)
+                    {
+                        var review = ev.ToolName == "Edit" && editId == null ? Context.EditReview.Create(ev.ToolName, ev.ToolInput, File.ReadAllText(file)) : null;
+                        if (review != null && review.Hunks.Count >= 2)
+                        {
+                            review.Hunks.Last().Accepted = false;
+                            editId = ev.ToolUseId;
+                            Console.WriteLine($"  reviewing {review.Hunks.Count} changes, rejecting: {review.Hunks.Last().Label}; then Stop at once");
+                            string before = File.ReadAllText(file);
+                            string expected = Context.EditReview.ProposedFile(ev.ToolName, review.BuildInput(), before);
+                            session.SetToolResultNote(ev.ToolUseId, review.NoteForClaude(), "notes.txt", () => File.ReadAllText(file) == expected);
+                            session.RespondToPermissionAsync(ev.RequestId, review.BuildInput(), true).Wait();
+                            session.InterruptAsync().Wait();
+                        }
+                        else session.RespondToPermissionAsync(ev.RequestId, ev.ToolInput, false).Wait();
+                    }
+                    if (ev.Kind == ClaudeEventKind.TextDelta || ev.Kind == ClaudeEventKind.AssistantText) lock (replies) replies[replies.Count - 1].Append(ev.Text);
+                    if (ev.Kind == ClaudeEventKind.TurnCompleted)
+                    {
+                        lock (replies) replies.Add(new StringBuilder());
+                        turns.Add(ev);
+                        // As a person would: after the stopped turn ends, ask about it (the stranded note goes along)
+                        if (Interlocked.Increment(ref ended) == 1 && editId != null)
+                            System.Threading.Tasks.Task.Run(() => session.SendPromptAsync("Without using any tool: did your Edit to notes.txt keep every change you asked for? One sentence, naming any line that stayed as it was."));
+                    }
+                };
+                try
+                {
+                    session.SendPromptAsync("In notes.txt, change \"beta\" to \"BETA\" and \"delta\" to \"DELTA\" with one Edit call whose old_string spans lines 2-4.").Wait();
+                    var deadline = DateTime.UtcNow.AddSeconds(150);
+                    int completed = 0;
+                    while (completed < 2 && DateTime.UtcNow < deadline)
+                        if (turns.TryTake(out var t, TimeSpan.FromMilliseconds(500)))
+                        {
+                            completed++;
+                            Console.WriteLine($"  turn {completed} ended: error={t.IsError}, reason={t.TerminalReason ?? "-"}, cost=${t.TotalCostUsd:0.0000}");
+                        }
+                    Thread.Sleep(1000); // a straggling hook_callback would come now
+                    string content = File.ReadAllText(file);
+                    string log; lock (raw) log = raw.ToString();
+                    var lines = log.Split('\n');
+                    int hookIn = Array.FindIndex(lines, l => l.Contains("\"hook_callback\"") && editId != null && l.Contains(editId));
+                    int hookOut = hookIn < 0 ? -1 : Array.FindIndex(lines, hookIn, l => l.Contains("additionalContext"));
+                    int interrupt = Array.FindIndex(lines, l => l.Contains("\"subtype\":\"interrupt\""));
+                    string last; lock (replies) last = replies.Where(r => r.Length > 0).LastOrDefault()?.ToString().Trim() ?? "";
+                    int carried = Array.FindIndex(lines, l => l.StartsWith("Stdin") && l.Contains("\"type\":\"user\"") && l.Contains(ClaudeSession.EditorNotePrefix));
+                    Console.WriteLine($"  raw: interrupt at line {interrupt}; hook_callback for the edit at {hookIn}, answered at {hookOut}; note sent with the next prompt at {carried}");
+                    Console.WriteLine("  file: " + content.Replace("\n", "\\n"));
+                    Console.WriteLine("  reply: " + last);
+                    // Claude must learn which change was rejected: from the hook (when it ran) or from the next prompt (when Stop skipped it)
+                    bool told = (hookIn >= 0 && hookOut > hookIn) || carried >= 0;
+                    bool ok = completed >= 2 && editId != null && told
+                        && content == "alpha\nBETA\ngamma\ndelta\n" && last.IndexOf("delta", StringComparison.OrdinalIgnoreCase) >= 0;
+                    Console.WriteLine(ok ? "PASS live edit review after interrupt" : "FAIL live edit review after interrupt");
+                    return ok ? 0 : 1;
+                }
+                finally
+                {
+                    if (!string.IsNullOrEmpty(rawLogPath)) File.WriteAllText(rawLogPath, raw.ToString());
+                    try { Directory.Delete(dir, true); } catch (IOException) { }
+                }
+            }
+        }
+
         /// <summary>
         /// `--live-mcp [rawPath]`: the in-process Error List server connects, and the context breakdown
         /// (<c>get_context_usage</c>, no model call) shows how its tool is counted. No prompt, no cost.

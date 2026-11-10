@@ -131,10 +131,11 @@ namespace ClaudeVS.Core.Cli
             bool started = EnsureRunning();
             if (started && !ThinkingEnabled) await SendThinkingAsync().ConfigureAwait(false); // there is no launch flag for it
             IsBusy = true;
-            await WriteLineAsync(BuildUserMessage(text, messageId, images)).ConfigureAwait(false);
+            await WriteLineAsync(BuildUserMessage(text, messageId, images, TakeStrandedNotes())).ConfigureAwait(false);
         }
 
-        public static string BuildUserMessage(string text, string messageId, IReadOnlyList<Context.PromptImage> images = null)
+        /// <param name="preface">Text for Claude ahead of the prompt, in its own block (a note about a stopped edit); null for none.</param>
+        public static string BuildUserMessage(string text, string messageId, IReadOnlyList<Context.PromptImage> images = null, string preface = null)
         {
             var o = new JObject { ["type"] = "user" };
             if (!string.IsNullOrEmpty(messageId)) o["uuid"] = messageId;
@@ -148,6 +149,7 @@ namespace ClaudeVS.Core.Cli
                     ["source"] = new JObject { ["type"] = "base64", ["media_type"] = img.MediaType, ["data"] = img.Base64 },
                 });
             }
+            if (!string.IsNullOrWhiteSpace(preface)) content.Add(new JObject { ["type"] = "text", ["text"] = preface });
             if (!string.IsNullOrWhiteSpace(text) || content.Count == 0) // an image alone needs no (empty) text block
                 content.Add(new JObject { ["type"] = "text", ["text"] = text ?? "" });
             o["message"] = new JObject { ["role"] = "user", ["content"] = content };
@@ -435,7 +437,7 @@ namespace ClaudeVS.Core.Cli
                         // Off the reader thread: a tool may wait for the UI thread, which may be waiting on us.
                         if (ev.Kind == ClaudeEventKind.McpMessage) { Task.Run(() => AnswerMcpAsync(ev)); continue; }
                         if (ev.Kind == ClaudeEventKind.HookCallback) { Task.Run(() => AnswerHookAsync(ev)); continue; }
-                        if (ev.Kind == ClaudeEventKind.TurnCompleted) IsBusy = false;
+                        if (ev.Kind == ClaudeEventKind.TurnCompleted) { IsBusy = false; MarkNotesStranded(); }
                         if (ev.Kind == ClaudeEventKind.ControlResponse) CompletePending(ev);
                         Raise(ev);
                     }
@@ -464,20 +466,65 @@ namespace ClaudeVS.Core.Cli
             },
         };
 
+        private sealed class ToolNote
+        {
+            public string Note;
+            public string FileName;
+            public Func<bool> Applied;
+            /// <summary>The turn ended before the PostToolUse hook ran for the call.</summary>
+            public volatile bool Stranded;
+        }
+
         // Notes for the tool results of specific tool calls, by tool_use_id; added by the PostToolUse hook.
-        private readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> _toolNotes =
-            new System.Collections.Concurrent.ConcurrentDictionary<string, string>();
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<string, ToolNote> _toolNotes =
+            new System.Collections.Concurrent.ConcurrentDictionary<string, ToolNote>();
 
         /// <summary>
         /// Adds <paramref name="note"/> to what Claude sees as the result of tool call <paramref name="toolUseId"/>
         /// (needs <see cref="ClaudeLaunchOptions.EditNotesHook"/>; Edit and Write only). Set it before answering the call's permission request.
+        /// <para>
+        /// Stop while the call runs: the CLI ends it as "stopped while running, may have changed the file" and runs no
+        /// PostToolUse hook (seen with 2.1.322), even when the change was written. Then, if <paramref name="applied"/>
+        /// says the file holds what was approved, the note goes to Claude with the next prompt instead
+        /// (<see cref="TakeStrandedNotes"/>); without <paramref name="applied"/> it is dropped.
+        /// </para>
         /// </summary>
-        public void SetToolResultNote(string toolUseId, string note)
+        public void SetToolResultNote(string toolUseId, string note, string fileName = null, Func<bool> applied = null)
         {
             if (string.IsNullOrEmpty(toolUseId)) return;
             if (string.IsNullOrEmpty(note)) _toolNotes.TryRemove(toolUseId, out _);
-            else _toolNotes[toolUseId] = note;
+            else _toolNotes[toolUseId] = new ToolNote { Note = note, FileName = fileName, Applied = applied };
         }
+
+        /// <summary>The turn ended: notes still waiting for their hook will not get it from this turn.</summary>
+        internal void MarkNotesStranded()
+        {
+            foreach (var n in _toolNotes.Values) n.Stranded = true;
+        }
+
+        /// <summary>
+        /// Notes whose hook never ran because the turn was stopped, for changes that were written all the same: one
+        /// text for the next prompt, or null. Each note is given once; a late hook (Claude Code 2.1.319 runs PostToolUse
+        /// hooks for calls that finish after the turn was interrupted) takes it first.
+        /// </summary>
+        public string TakeStrandedNotes()
+        {
+            var parts = new List<string>();
+            foreach (var kv in _toolNotes.ToArray())
+            {
+                if (!kv.Value.Stranded || !_toolNotes.TryRemove(kv.Key, out var n)) continue;
+                bool applied;
+                try { applied = n.Applied?.Invoke() == true; } catch (Exception) { applied = false; }
+                if (!applied) continue;
+                parts.Add($"About the stopped {(string.IsNullOrEmpty(n.FileName) ? "edit" : "edit of " + n.FileName)}: it was written before the stop, as the user reviewed it, not left undone. " + n.Note);
+            }
+            return parts.Count == 0 ? null : EditorNotePrefix + " " + string.Join("\n\n", parts);
+        }
+
+        /// <summary>Starts a text block the extension adds for Claude ahead of a prompt; history and titles leave such blocks out.</summary>
+        public const string EditorNotePrefix = "[Note from the editor]";
+
+        public static bool IsEditorNote(string text) => text != null && text.StartsWith(EditorNotePrefix, StringComparison.Ordinal);
 
         /// <summary>The hook's answer: the note as additionalContext, or nothing (the call goes on unchanged).</summary>
         public static JObject HookResponse(string note) =>
@@ -488,7 +535,7 @@ namespace ClaudeVS.Core.Cli
         {
             string toolUseId = (string)ev.Payload?["tool_use_id"] ?? (string)ev.Payload?.SelectToken("input.tool_use_id");
             string note = null;
-            if ((string)ev.Payload?["callback_id"] == EditNotesCallbackId && toolUseId != null) _toolNotes.TryRemove(toolUseId, out note);
+            if ((string)ev.Payload?["callback_id"] == EditNotesCallbackId && toolUseId != null && _toolNotes.TryRemove(toolUseId, out var n)) note = n.Note;
             var response = new JObject { ["subtype"] = "success", ["request_id"] = ev.RequestId, ["response"] = HookResponse(note) };
             try { await WriteLineAsync(new JObject { ["type"] = "control_response", ["response"] = response }.ToString(Formatting.None)).ConfigureAwait(false); }
             catch (InvalidOperationException) { }

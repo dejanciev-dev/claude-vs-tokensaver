@@ -2130,7 +2130,11 @@ namespace ClaudeVS.ToolWindow
                     {
                         ThreadHelper.ThrowIfNotOnUIThread();
                         if (review.AllAccepted) { Respond(true, null, null, "✔ applied all changes"); return; }
-                        session.SetToolResultNote(ev.ToolUseId, review.NoteForClaude());
+                        // If Stop ends the call while it runs, no hook comes; the note then goes with the next prompt,
+                        // but only when the file holds exactly what this review approved.
+                        string expected = EditReview.ProposedFile(ev.ToolName, review.BuildInput(), current);
+                        session.SetToolResultNote(ev.ToolUseId, review.NoteForClaude(), name,
+                            () => expected != null && System.IO.File.Exists(path) && System.IO.File.ReadAllText(path) == expected);
                         Respond(true, review.BuildInput(), null, $"✔ applied {review.Hunks.Count(h => h.Accepted)} of {review.Hunks.Count} changes; Claude is told which you rejected");
                     },
                     onRejectAll: () => { ThreadHelper.ThrowIfNotOnUIThread(); Respond(false, null, "The user rejected all changes in this edit.", "✖ rejected"); },

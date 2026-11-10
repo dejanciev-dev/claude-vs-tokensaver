@@ -342,6 +342,10 @@ All notable changes to this project are listed here. The format follows
 - `dotnet test` runs the Core test runner instead of silently reporting zero tests.
 
 ### Fixed
+- Stop right after applying part of a reviewed edit no longer leaves Claude in the dark. Claude Code then reports
+  the edit as stopped and maybe not written, and skips the hook that tells Claude which changes you rejected,
+  although the edit was written. If the file holds what you approved, Claude is told with your next prompt
+  (sent ahead of it, not shown in the chat or history).
 - MCP tools that load only when Claude uses them (Claude Code 2.1.319+, `isLoaded: false`) no longer count as
   "tokens of every request": the base context tip and the MCP servers list count loaded tools only, and the list
   says how many load on demand.

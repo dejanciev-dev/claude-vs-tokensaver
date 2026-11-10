@@ -178,7 +178,7 @@ namespace ClaudeVS.Core.Chat
         private static string MessageText(JToken content) =>
             content?.Type == JTokenType.String
                 ? (string)content
-                : string.Join("\n\n", (content as JArray)?.OfType<JObject>().Where(b => (string)b["type"] == "text").Select(b => (string)b["text"]) ?? Enumerable.Empty<string>());
+                : string.Join("\n\n", (content as JArray)?.OfType<JObject>().Where(b => (string)b["type"] == "text" && !Cli.ClaudeSession.IsEditorNote((string)b["text"])).Select(b => (string)b["text"]) ?? Enumerable.Empty<string>());
 
         /// <summary>
         /// The compaction summary without the CLI's wrapping: the "This session is being continued…" preamble and
@@ -232,8 +232,8 @@ namespace ClaudeVS.Core.Chat
         private static void AddPrompt(List<TranscriptItem> items, string text, string uuid, DateTime? time)
         {
             text = text?.Trim();
-            // CLI-generated wrappers and notes, not something you typed.
-            if (string.IsNullOrEmpty(text) || text.StartsWith("<") || text.StartsWith("[Request interrupted")) return;
+            // CLI-generated wrappers and notes, and the extension's own notes for Claude: not something you typed.
+            if (string.IsNullOrEmpty(text) || text.StartsWith("<") || text.StartsWith("[Request interrupted") || ClaudeSession.IsEditorNote(text)) return;
             items.Add(new TranscriptItem { Kind = TranscriptItemKind.User, Text = text, Uuid = uuid, TimestampUtc = time });
         }
     }

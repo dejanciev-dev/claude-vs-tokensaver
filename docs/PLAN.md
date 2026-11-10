@@ -430,10 +430,19 @@ and desktop entries are left out.
       demand. The meter's breakdown already listed deferred categories apart. Also found: the CLI's `percentage`
       is rounded to a whole number (25,426 / 1M = 2.54% shows as 3), which explains the meter's 2.5% vs `/context`'s
       3.0% in `--live-session`; the token counts match exactly
-- [ ] **Edit-review hook after an interrupt** (2.1.319: PostToolUse hooks now run, with up to 10 s, on tool calls
-      that finish after a new message interrupts the turn). The edit-review `hook_callback` can now arrive after
-      Stop or a new prompt; check `ClaudeSession` still answers it (late, for an old turn) and the chat does not
-      attach its note to the new turn
+- [x] **Edit-review hook after an interrupt** (2.1.319: PostToolUse hooks now run, with up to 10 s, on tool calls
+      that finish after a new message interrupts the turn). By the code: a `hook_callback` is answered whenever it
+      comes, with the note for its own `tool_use_id`, and never reaches the chat, so a late one cannot land on a new
+      turn. The extension never interrupts with a new message (Stop sends `interrupt`; prompts wait), so the
+      changelog's path does not arise here. What did: `--live-edit-review-interrupt` (new; Stop right after a
+      reviewed approval) showed that with 2.1.322 Stop ends the Edit as `aborted_tools` with "stopped while running…
+      it may have" changed the file, and **no** PostToolUse hook runs, although the reviewed edit was written. Claude
+      then did not know the edit was in, nor which change was rejected. Now a note still waiting when the turn ends
+      is kept (`ClaudeSession.TakeStrandedNotes`) and sent ahead of the next prompt as its own text block
+      (`[Note from the editor] …`), only if the file holds exactly what the review approved (a check from the UI;
+      a late hook takes the note first, so it is given once). Resume and the sessions list leave such blocks out.
+      Live: Claude then answered "Line 4 stayed as "delta" … line 2 was written". Not covered: an edit approved
+      without review (Allow), where Claude is told the same uncertain thing; the file is in its approved state
 - [ ] **Long prompts** (VS Code 2.1.319: prompts over 50,000 characters were cut off silently). Check whether
       stream-json input has a limit; if it does, keep the prompt in the box with a notice instead of sending it,
       next to the existing huge-paste suggestion

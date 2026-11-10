@@ -24,6 +24,7 @@ namespace ClaudeVS.Core.Tests
             if (args.Length > 0 && args[0] == "--live-setup") return LiveSmoke.RunSetup(args.Length > 1 ? args[1] : null);
             if (args.Length > 0 && args[0] == "--live-dialogs") return LiveSmoke.RunDialogs();
             if (args.Length > 0 && args[0] == "--live-edit-review") return LiveSmoke.RunEditReview();
+            if (args.Length > 0 && args[0] == "--live-edit-review-interrupt") return LiveSmoke.RunEditReviewInterrupted(args.Length > 1 ? args[1] : null);
             if (args.Length > 1 && args[0] == "--scan")
             {
                 // Read-only: prints the CLAUDE.md that Generate Lean CLAUDE.md would write for that folder.
@@ -67,6 +68,52 @@ namespace ClaudeVS.Core.Tests
         {
             string a = ClaudeArgsBuilder.Build(new ClaudeLaunchOptions { Model = ModelChoice.Haiku, Effort = EffortChoice.Low, ResumeSessionId = "abc", AppendSystemPrompt = "Be brief." });
             True(a.Contains("--model haiku") && a.Contains("--effort low") && a.Contains("--resume abc") && a.Contains("--append-system-prompt \"Be brief.\""), a);
+        }
+
+        private static void Test_EditNote_AfterStop_GoesWithNextPrompt()
+        {
+            var s = new ClaudeSession(new ClaudeLaunchOptions { EditNotesHook = true });
+            bool written = true;
+            s.SetToolResultNote("toolu_1", "Rejected: line 4.", "notes.txt", () => written);
+            Eq(null, s.TakeStrandedNotes(), "the turn is still running: the hook may come");
+
+            s.MarkNotesStranded(); // Stop: the turn ended, no hook ran
+            string note = s.TakeStrandedNotes();
+            True(note != null && ClaudeSession.IsEditorNote(note) && note.Contains("notes.txt") && note.Contains("Rejected: line 4."), note);
+            Eq(null, s.TakeStrandedNotes(), "given once");
+
+            written = false; // stopped before the change was written: nothing to say
+            s.SetToolResultNote("toolu_2", "Rejected: line 9.", "a.cs", () => written);
+            s.MarkNotesStranded();
+            Eq(null, s.TakeStrandedNotes(), "not written");
+
+            s.SetToolResultNote("toolu_3", "Rejected: line 2.", "b.cs", () => throw new System.IO.IOException("locked"));
+            s.MarkNotesStranded();
+            Eq(null, s.TakeStrandedNotes(), "a check that fails counts as not written");
+
+            s.SetToolResultNote("toolu_4", "Rejected.", "c.cs"); // no check: dropped, never guessed
+            s.MarkNotesStranded();
+            Eq(null, s.TakeStrandedNotes(), "without a check");
+
+            // A block of its own after any images; history and titles leave it out
+            var msg = JObject.Parse(ClaudeSession.BuildUserMessage("did it work?", null, null, ClaudeSession.EditorNotePrefix + " x"));
+            var blocks = (JArray)msg.SelectToken("message.content");
+            Eq(2, blocks.Count, "note + prompt");
+            True(ClaudeSession.IsEditorNote((string)blocks[0]["text"]) && (string)blocks[1]["text"] == "did it work?", msg.ToString());
+            Eq(1, ((JArray)JObject.Parse(ClaudeSession.BuildUserMessage("p", null)).SelectToken("message.content")).Count, "no note: unchanged");
+
+            // The session file keeps the user message as sent: resume and the sessions list show only the prompt
+            string file = Path.Combine(Path.GetTempPath(), "cvs-note-" + Guid.NewGuid().ToString("N") + ".jsonl");
+            try
+            {
+                var line = JObject.Parse(ClaudeSession.BuildUserMessage("did it work?", null, null, ClaudeSession.EditorNotePrefix + " About the stopped edit…"));
+                line["uuid"] = "u1"; line["sessionId"] = "s1"; line["timestamp"] = "2026-11-10T13:00:00Z";
+                File.WriteAllText(file, line.ToString(Newtonsoft.Json.Formatting.None) + "\n");
+                Eq("did it work?", SessionHistory.ReadTitle(file), "title");
+                var prompt = SessionTranscript.Read(file).Items.FirstOrDefault(i => i.Kind == TranscriptItemKind.User);
+                Eq("did it work?", prompt?.Text, "redrawn prompt");
+            }
+            finally { File.Delete(file); }
         }
 
         private static void Test_FastMode_PricedAtTwice()
