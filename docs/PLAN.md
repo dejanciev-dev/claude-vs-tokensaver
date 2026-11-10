@@ -443,9 +443,13 @@ and desktop entries are left out.
       a late hook takes the note first, so it is given once). Resume and the sessions list leave such blocks out.
       Live: Claude then answered "Line 4 stayed as "delta" … line 2 was written". Not covered: an edit approved
       without review (Allow), where Claude is told the same uncertain thing; the file is in its approved state
-- [ ] **Long prompts** (VS Code 2.1.319: prompts over 50,000 characters were cut off silently). Check whether
-      stream-json input has a limit; if it does, keep the prompt in the box with a notice instead of sending it,
-      next to the existing huge-paste suggestion
+- [x] **Long prompts** (VS Code 2.1.319: prompts over 50,000 characters were cut off silently). No limit found:
+      `--live-long-prompt` (new) sent 60,000 and 200,000 characters through stream-json with 2.1.322, each ending
+      in a unique code word, and both came back (input 48k and 101k tokens). The extension's prompt box has no
+      length cap and sends the text unchanged, so nothing to change; the huge-paste suggestion (from ~8k tokens)
+      stays. Side finding: this numbered filler ran ~2.7 characters per token, so `PromptSize.Estimate`'s
+      chars / 4 undercounted it by about a third; ordinary prose and code are closer to 4. First run used plan
+      mode by mistake and was answered by Sonnet ($0.47); the test now runs in Accept Edits on Haiku
 - [ ] **Billing note: Console sign-in** (2.1.319: when the claude.ai login ends, Claude Code can continue on the
       `ant auth login` sign-in, which bills a Claude Console organization). Find what `init.apiKeySource` says then,
       and name it in the billing note. Also (VS Code 2.1.322) say once when both `ANTHROPIC_AUTH_TOKEN` and

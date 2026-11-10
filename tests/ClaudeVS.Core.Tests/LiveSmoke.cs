@@ -254,6 +254,54 @@ namespace ClaudeVS.Core.Tests
         }
 
         /// <summary>
+        /// `--live-long-prompt`: does stream-json input keep a long prompt whole? (The VS Code panel cut prompts over
+        /// 50,000 characters silently before 2.1.319.) Sends prompts of 60,000 and 200,000 characters to Haiku, each
+        /// ending in a unique marker, and checks the marker comes back. About $0.02 on Haiku (2.1.322: both came back whole).
+        /// </summary>
+        public static int RunLongPrompt()
+        {
+            string exe = ClaudeCliLocator.Resolve("");
+            if (exe == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-live-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            bool ok = true;
+            try
+            {
+                foreach (int chars in new[] { 60_000, 200_000 })
+                {
+                    string marker = "END-" + Guid.NewGuid().ToString("N").Substring(0, 8).ToUpperInvariant();
+                    string head = "Reply with only the code word on the very last line of this message, nothing else.\n";
+                    var sb = new StringBuilder(head);
+                    for (int i = 0; sb.Length < chars - 40; i++) sb.Append("Line ").Append(i).Append(": filler text to make the prompt long.\n");
+                    sb.Append("Code word: ").Append(marker);
+                    string prompt = sb.ToString();
+
+                    var done = new ManualResetEventSlim();
+                    string reply = "";
+                    ClaudeEvent result = null;
+                    using (var session = new ClaudeSession(new ClaudeLaunchOptions { WorkingDirectory = dir, Model = ModelChoice.Haiku, Effort = EffortChoice.Low, PermissionMode = PermissionModeChoice.AcceptEdits })) // not Plan: plan mode answers with Sonnet
+                    {
+                        session.EventReceived += (s, ev) =>
+                        {
+                            if (ev.Kind == ClaudeEventKind.TextDelta) reply += ev.Text;
+                            if (ev.Kind == ClaudeEventKind.TurnCompleted) { result = ev; done.Set(); }
+                        };
+                        session.SendPromptAsync(prompt).Wait();
+                        bool finished = done.Wait(TimeSpan.FromSeconds(180));
+                        long input = result == null ? 0 : result.Usage.Input + result.Usage.CacheRead + result.Usage.CacheCreation;
+                        bool whole = finished && result?.IsError == false && reply.Contains(marker);
+                        Console.WriteLine($"  {prompt.Length:N0} chars (~{Tokens.PromptSize.Estimate(prompt):N0} tokens est.): {(whole ? "marker came back" : "MARKER MISSING")}, "
+                            + $"input {input:N0} tokens, cost ${result?.TotalCostUsd:0.0000}, reply \"{reply.Trim()}\"");
+                        ok &= whole;
+                    }
+                }
+            }
+            finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
+            Console.WriteLine(ok ? "PASS live long prompt" : "FAIL live long prompt");
+            return ok ? 0 : 1;
+        }
+
+        /// <summary>
         /// `-- --live-edit-review`: Haiku in Manual mode edits two lines of a temp file; the test rejects one change
         /// (EditReview), allows the rest with a PostToolUse note, and checks the file and that Claude was told.
         /// About $0.005.
