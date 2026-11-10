@@ -517,6 +517,23 @@ Things Phase 18 turned up, picked on 2026-11-10.
 
 ---
 
+## Phase 20 — Prices that match the bill, and plan mode
+
+Picked on 2026-11-10.
+
+- [ ] **Check prices against the CLI.** The API reference lists Sonnet 5.5 cache reads at $0.10 per Mtok; the
+      default is $0.20. Compare every default (Opus, Sonnet, Haiku, Fable) with Claude Code's own `costUSD` from
+      real turns, fix what differs, and keep the captures as a test
+- [ ] **Haiku price above 100k tokens.** Haiku 5.5 costs $0.50 / $2.50 for prompts over 100k tokens (5x); a 200k-
+      character turn cost $0.09 instead of ~$0.02. Price that tier, and tip when a Haiku conversation nears 100k
+- [ ] **Plan mode: say Sonnet before sending.** In plan mode Claude Code answers with Sonnet even when Auto picks
+      Haiku, but the route hint and the "to send" price under the box say Haiku. Make them say Sonnet there, and
+      keep the savings report from counting such turns as routed to Haiku
+- [ ] **Keep the learned token ratio.** The characters-per-token value learned in Phase 19 starts again at 3.0 on
+      every Visual Studio restart; save it next to the usage log and load it at start
+
+---
+
 ## Working in Visual Studio — daily loop
 
 1. Core logic change → edit in `ClaudeVS.Core` → run tests (`ClaudeVS.Core.Tests` → Set as Startup → Ctrl+F5, or `dotnet run` in its folder).
