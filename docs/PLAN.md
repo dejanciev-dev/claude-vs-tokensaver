@@ -11,7 +11,7 @@ Tick the boxes as you go. Each phase ends with something you can run.
 |---|---|
 | `ClaudeVS.Core` (CLI session, parser, router, meter, context, setup) | ✅ Written, 16/16 tests pass |
 | `ClaudeVS` VSIX (package, tool window, commands, options) | ✅ Builds clean (0 warnings); not yet run in the experimental instance |
-| Real end-to-end run against `claude` CLI | ⚠️ Core verified against CLI 2.1.316 (`--live` smoke test): sessions, streaming, usage, cost, cache OK; Haiku routing works in acceptEdits ($0.002 vs $0.042 per turn on Sonnet); in plan mode the CLI answers with Sonnet even when Haiku is requested (still so in 2.1.319, where all live smoke tests pass). VS UI not run yet |
+| Real end-to-end run against `claude` CLI | ⚠️ Core verified against CLI 2.1.316 (`--live` smoke test): sessions, streaming, usage, cost, cache OK; Haiku routing works in acceptEdits ($0.002 vs $0.042 per turn on Sonnet); in plan mode the CLI answers with Sonnet even when Haiku is requested (still so in 2.1.322, where all other live smoke tests pass). VS UI not run yet |
 | Markdown transcript, diffs, history, question cards | ❌ Not started |
 
 ---
@@ -410,9 +410,15 @@ and desktop entries are left out.
       the meter, sessions list, cache savings and savings report; the usage log records `fastTokens` (only when
       above 0); the footer says `· fast` or `· partly fast`; the cache-break note names fast mode starting or
       stopping as the cause. Not captured live: no fast turn could be run from `-p` without the opt-in
-- [ ] **Verify with 2.1.322 and raise `CliVersion.Tested`** from 2.1.318: run all live tests (`--live`,
-      `--live-session`, `--live-dialogs`, `--live-mcp`, `--live-edit-review`, `--live-haiku-router`, `--live-setup`,
-      `--live-ask`), refresh the status table, and check plan mode still answers with Sonnet when Haiku is asked for
+- [x] **Verify with 2.1.322 and raise `CliVersion.Tested`** from 2.1.318. All live tests pass with 2.1.322 (about
+      $0.17 in all): `--live` in acceptEdits (Haiku, $0.002 then $0.004, cache reused), `--live-session` (meter =
+      `/context` to the token, `set_model`, cost across `--resume`, `/compact`), `--live-dialogs`, `--live-mcp`,
+      `--live-edit-review`, `--live-haiku-router` (4 routes, $0.0007; the router and the local rules agree on the
+      model 3 of 4), `--live-setup`, and `--live-ask` (multi-select answered "Apple, Banana"). `--live` in plan mode
+      still answers with Sonnet when Haiku is asked for (both turns `claude-sonnet-5-5`), as since 2.1.316. 
+      `CliVersion` now has two numbers: `Required` (2.1.318, below it the chat warns once) and `Tested` (2.1.322,
+      shown in the Output pane). Raising one number for both would have warned users on 2.1.318–2.1.321 about
+      features that work there
 - [ ] **Base context tip after the `/context` changes** (2.1.319: MCP tools that load on demand share one row per
       server until called; 2.1.321: tool definitions no longer overcounted without exact counts). Capture
       `get_context_usage` again; check the MCP tools ≥ 5k tip and the meter's breakdown still read it right
