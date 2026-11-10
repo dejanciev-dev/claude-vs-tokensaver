@@ -450,10 +450,18 @@ and desktop entries are left out.
       stays. Side finding: this numbered filler ran ~2.7 characters per token, so `PromptSize.Estimate`'s
       chars / 4 undercounted it by about a third; ordinary prose and code are closer to 4. First run used plan
       mode by mistake and was answered by Sonnet ($0.47); the test now runs in Accept Edits on Haiku
-- [ ] **Billing note: Console sign-in** (2.1.319: when the claude.ai login ends, Claude Code can continue on the
-      `ant auth login` sign-in, which bills a Claude Console organization). Find what `init.apiKeySource` says then,
-      and name it in the billing note. Also (VS Code 2.1.322) say once when both `ANTHROPIC_AUTH_TOKEN` and
-      `ANTHROPIC_API_KEY` are set
+- [x] **Billing note: Console sign-in** (2.1.319: when the claude.ai login ends, Claude Code can continue on the
+      `ant auth login` sign-in, which bills a Claude Console organization). Also (VS Code 2.1.322) say once when both
+      `ANTHROPIC_AUTH_TOKEN` and `ANTHROPIC_API_KEY` are set. Probed with 2.1.322 and **fake** values (no model
+      call is billed: the CLI gets a 401): `init.apiKeySource` is `ANTHROPIC_API_KEY` for a key, still
+      `ANTHROPIC_API_KEY` with both, but `none` for an auth token alone, the same as a claude.ai sign-in, so the
+      existing billing note missed tokens. `init` has nothing else on it; in `-p` the CLI's only warning goes to
+      stderr and is about connectors. The /status rows (`get_status`, no model call) do tell: "Auth token:
+      ANTHROPIC_AUTH_TOKEN", "API key: ANTHROPIC_API_KEY", or "Login method" for a sign-in. Now each process's first
+      init reads /status once and `SessionNotices.Auth` says: both set (the API key pays; unset one), a token
+      alone (billed to whoever issued it), or a "Login method" naming the Console (billed to that organization).
+      Not captured: the `ant auth login` fallback itself (`ant` is not installed here), so the Console rule
+      matches on the word only
 - [ ] **Slash commands after a leading space** (2.1.319 fixed them being sent as plain text). Trim leading
       whitespace before deciding a prompt is a `/` command in the prompt box too, so both agree
 
