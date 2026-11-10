@@ -863,6 +863,21 @@ namespace ClaudeVS.Core.Tests
             Eq(null, h.Next(), "not browsing");
         }
 
+        private static void Test_SlashCommands_LeadingSpaceAndInvisible()
+        {
+            // Claude Code 2.1.319 runs a command typed after a leading space, tab or line break; so do we, and the
+            // list, the hint and sending agree. Invisible characters are never sent, so they don't hide a command.
+            foreach (var t in new[] { "/compact", "  /compact", "\t/compact", "\n/compact", "​/compact", "﻿ /compact" })
+            {
+                True(SlashCommands.IsCommand(t), "command: " + Uri.EscapeDataString(t));
+                Eq("compact", SlashCommands.TypedName(t), "typed name: " + Uri.EscapeDataString(t));
+            }
+            var cmds = new[] { new SlashCommand { Name = "compact", Source = "built-in" }, new SlashCommand { Name = "context", Source = "built-in" } };
+            Eq("compact", SlashCommands.Match(cmds, "​ /comp").FirstOrDefault()?.Name, "list after invisible + space");
+            foreach (var t in new[] { "compact /now", "a/b", "", null, "  ", "​" })
+                True(!SlashCommands.IsCommand(t), "not a command: " + (t == null ? "null" : Uri.EscapeDataString(t)));
+        }
+
         private static void Test_SlashCommands_DiscoverAndMatch()
         {
             string root = Path.Combine(Path.GetTempPath(), "cvs-cmd-" + Guid.NewGuid().ToString("N"));

@@ -69,7 +69,7 @@ namespace ClaudeVS.Core.Chat
         /// </summary>
         public static List<SlashCommand> Match(IEnumerable<SlashCommand> commands, string typed)
         {
-            string t = (typed ?? "").TrimStart();
+            string t = Normalize(typed);
             if (!t.StartsWith("/")) return new List<SlashCommand>();
             string prefix = t.Substring(1).Split(' ', '\n', '\r', '\t')[0];
             var all = (commands ?? Enumerable.Empty<SlashCommand>()).Where(c => !string.IsNullOrEmpty(c?.Name)).ToList();
@@ -92,11 +92,20 @@ namespace ClaudeVS.Core.Chat
         /// </summary>
         public static string TypedName(string text)
         {
-            string t = (text ?? "").TrimStart();
+            string t = Normalize(text);
             if (!t.StartsWith("/")) return null;
             string rest = t.Substring(1);
             return rest.IndexOfAny(new[] { ' ', '\t', '\r', '\n' }) >= 0 ? null : rest;
         }
+
+        /// <summary>
+        /// The prompt is a slash command: after invisible characters (which are never sent) and leading spaces, tabs or
+        /// line breaks, it starts with '/'. Claude Code reads it the same way since 2.1.319 (before, a command after a
+        /// leading space went to Claude as plain text). Used by sending, the hint under the box and the command list.
+        /// </summary>
+        public static bool IsCommand(string text) => Normalize(text).StartsWith("/", StringComparison.Ordinal);
+
+        private static string Normalize(string text) => Context.PromptSanitizer.RemoveInvisible(text ?? "", out _).TrimStart();
 
         private static IEnumerable<SlashCommand> FromFolder(string root, string source)
         {

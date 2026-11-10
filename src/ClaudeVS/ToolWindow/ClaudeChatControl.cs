@@ -1153,7 +1153,7 @@ namespace ClaudeVS.ToolWindow
             // Long pastes are marked only in what Claude gets; your message shows the text as you typed it.
             string forClaude = PromptSanitizer.MarkPastes(text, _pastes);
             _pastes.Clear();
-            SendText(text, routed: !text.StartsWith("/"), forClaude);
+            SendText(text, routed: !SlashCommands.IsCommand(text), forClaude);
         }
 
         // Long texts pasted into the prompt box since it was last empty (marked when sent).
@@ -1185,6 +1185,8 @@ namespace ClaudeVS.ToolWindow
             forClaude = PromptSanitizer.RemoveInvisible(forClaude ?? userText, out int hidden);
             userText = PromptSanitizer.RemoveInvisible(userText, out _);
             if (hidden > 0) ClaudeOutputPane.WriteLine($"Removed {hidden} invisible characters from the prompt");
+            // A command goes out from its '/': space left in front once invisible characters are gone is dropped
+            if (!routed) { userText = userText.TrimStart(); forClaude = forClaude.TrimStart(); }
 
             var built = routed
                 ? new PromptContextBuilder(opts?.ToContextSettings()).Build(forClaude, dir, _selection, _attachedFiles, _attachedErrors)
@@ -1334,7 +1336,7 @@ namespace ClaudeVS.ToolWindow
         private void UpdateRouteHint()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            if (_prompt.Text.TrimStart().StartsWith("/"))
+            if (SlashCommands.IsCommand(_prompt.Text))
             {
                 // The list above the box shows the commands; this line says how to use it, or what the chosen one does.
                 RefreshCommands();
@@ -1345,7 +1347,7 @@ namespace ClaudeVS.ToolWindow
                 return;
             }
             string size = PromptSize.Note(_prompt.Text); // a long prompt goes with every later request
-            if (_modelChoice != ModelChoice.Auto || string.IsNullOrWhiteSpace(_prompt.Text) || _prompt.Text.TrimStart().StartsWith("/"))
+            if (_modelChoice != ModelChoice.Auto || string.IsNullOrWhiteSpace(_prompt.Text) || SlashCommands.IsCommand(_prompt.Text))
             {
                 string send = _modelChoice != ModelChoice.Auto ? _modelChoice.ToCli() : null;
                 string dearer = send != null && !string.IsNullOrWhiteSpace(_prompt.Text) ? (Options?.ToPriceTable() ?? new PriceTable()).VersusOpus(send) : null;

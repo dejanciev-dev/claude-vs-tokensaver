@@ -462,8 +462,12 @@ and desktop entries are left out.
       alone (billed to whoever issued it), or a "Login method" naming the Console (billed to that organization).
       Not captured: the `ant auth login` fallback itself (`ant` is not installed here), so the Console rule
       matches on the word only
-- [ ] **Slash commands after a leading space** (2.1.319 fixed them being sent as plain text). Trim leading
-      whitespace before deciding a prompt is a `/` command in the prompt box too, so both agree
+- [x] **Slash commands after a leading space** (2.1.319 fixed them being sent as plain text). Leading spaces were
+      already fine here: sending trims the prompt, and the list and hint used `TrimStart`. But the send path decided
+      "command or prompt" before removing invisible characters, which happens later: `​/compact` (a zero-width
+      space from autocomplete or a paste) was routed as a prompt, wrapped with context, and so reached Claude as
+      text. Now `SlashCommands.IsCommand` (invisible characters out, then leading whitespace) decides for sending,
+      the hint and the command list alike, and a command goes out from its `/`
 
 ---
 
