@@ -118,6 +118,20 @@ namespace ClaudeVS.Core.Cli
             }
         }
 
+        /// <summary>A Haiku conversation this large (context tokens of one request) gets the long-context tip.</summary>
+        public const long HaikuLongContextTipFrom = 90_000;
+
+        /// <summary>
+        /// A token tip when a Haiku conversation nears Haiku 5.5's long-context tier: a request over 100k input tokens
+        /// costs 5× every price (measured with 2.1.322; cache reads too), so from there each turn costs about as
+        /// much as on Sonnet. Null for other models or a smaller context. The text is fixed, so it is said once.
+        /// </summary>
+        public static string HaikuLongContext(string model, long contextTokens)
+        {
+            if (Tokens.PriceTable.Family(model) != "haiku" || contextTokens < HaikuLongContextTipFrom) return null;
+            return "This Haiku conversation is near 100k tokens of context. Above that, Haiku bills every request at 5x its prices ($0.50 / $2.50 per million tokens, cache reads too), so /compact or a New chat keeps it cheap.";
+        }
+
         /// <summary>A whole-file read this large (in tokens, from the result size) earns the tip.</summary>
         public const int LargeReadTokens = 8000;
 

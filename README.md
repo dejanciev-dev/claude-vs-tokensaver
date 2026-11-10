@@ -82,7 +82,7 @@ This extension attacks all three, and shows the numbers so you can see the effec
 | **Agents panel** | Claude's subagents and background commands above the input box, as a tree: what each is doing, its tokens, tool calls and time, and its result. **Background** lets Claude carry on while an agent works; **Stop** ends one agent (and what it started) without stopping Claude. A subagent's own tool calls are marked `↳` in the conversation. Forks (subagents that start with a copy of the conversation) show as `● Fork(…)`. |
 | **Tool rows with sizes** | Tool calls read like the terminal: `● Update(src/a.cs)` with a `⎿ Added 13 lines` line, `● Read(big.txt)` with `⎿ Read 20 of 301 lines (from line 10)`, `● Bash(dotnet test)` with the first lines of its output. Each row shows the size of its result in tokens; results of 5k+ tokens are in bold, because those fill the context. A command or edit your settings let through without asking says so (`· allowed by a rule`), and one they block says `· denied by a rule`. Click a row for its input and whole output. |
 | **Savings report** | Actual cost vs the same tokens at Opus prices, tokens saved by references, what the prompt cache saved, what Fable and fast mode cost extra, cost per model and per solution, this month so far with a month-end projection, and per day: turns, tokens, cost, cache hits and what the cache saved. |
-| **Usage CSV export** | Tools → Claude Code → *Export Usage as CSV…* saves the usage log as a spreadsheet: one row per turn with time, solution, model, routing, tokens (input, output, thinking, cache, fast mode), cost and duration. |
+| **Usage CSV export** | Tools → Claude Code → *Export Usage as CSV…* saves the usage log as a spreadsheet: one row per turn with time, solution, model, routing, tokens (input, output, thinking, cache, fast mode, over 100k), cost and duration. |
 | **Router replay** | With the opt-in prompt preview, the report re-runs your real prompts through the current router rules and lists those that would now route differently. |
 
 ### Chat
@@ -293,7 +293,7 @@ Editor commands go to the chat window you used last.
 | Token saving | Inline selection up to (lines) | 60 | Larger selections become references. |
 | Token saving | Keep model above context (tokens) | 30000 | Cache-aware routing threshold. |
 | Token saving | Suggest / Urge /compact at (%) | 60 / 85 | Meter advice. |
-| Token saving | Token tips | On | One-time tips when something costs more than it needs to (large or repeated reads, output floods, heavy MCP tools, cold or rebuilt cache). Off: Output pane only. |
+| Token saving | Token tips | On | One-time tips when something costs more than it needs to (large or repeated reads, output floods, heavy MCP tools, cold or rebuilt cache, Haiku near 100k). Off: Output pane only. |
 | Token saving | Warn at conversation cost (USD) | 5 | Said once each time a conversation passes another multiple ($5, $10…). 0 = off. |
 | Token saving | Warn at daily cost (USD) | 20 | Said once each time today's spend in Visual Studio, all conversations together, passes another multiple ($20, $40…). Earlier turns today come from the usage log. 0 = off. |
 | Token saving | Auto-approve quiet rewrites | Off | Hook installer: run rewritten build/test commands without asking. |

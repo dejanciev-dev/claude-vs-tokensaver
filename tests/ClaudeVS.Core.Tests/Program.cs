@@ -1875,14 +1875,14 @@ namespace ClaudeVS.Core.Tests
                 Asst("m2", "<synthetic>", "{\"input_tokens\":0,\"output_tokens\":0}"),
                 "not json",
             });
-            // A subagent on Haiku: 1M input.
+            // A subagent on Haiku: one request with 1M input, over the 100k tier: 5x (-e.50 per Mtok).
             File.WriteAllLines(Path.Combine(root, "s1", "subagents", "agent-a.jsonl"), new[] { Asst("m3", "claude-haiku-5-5", "{\"input_tokens\":1000000,\"output_tokens\":0}") });
             try
             {
                 var info = SessionCost.Read(file, new PriceTable());
                 Eq(2, info.Requests, "each message once; synthetic skipped; subagent counted");
-                True(Math.Abs(info.CostUsd - (0.2 + 8 + 20 + 0.1)) < 1e-9, "opus read 0.2 + 1h write 2x4 + output 20, haiku input 0.1: " + info.CostUsd);
-                Eq("$28.30", info.Short(), "short");
+                True(Math.Abs(info.CostUsd - (0.2 + 8 + 20 + 0.5)) < 1e-9, "opus read 0.2 + 1h write 2x4 + output 20, haiku input 0.5 (over 100k): " + info.CostUsd);
+                Eq("$28.70", info.Short(), "short");
                 Eq(null, new SessionCostInfo { CostUsd = 0.004 }.Short(), "under half a cent");
                 Eq("$123", new SessionCostInfo { CostUsd = 123.4 }.Short(), "no cents from $100");
 
@@ -1894,7 +1894,7 @@ namespace ClaudeVS.Core.Tests
 
                 var listed = new SessionInfo { FilePath = file, LastWriteUtc = f.LastWriteTimeUtc, SizeBytes = f.Length };
                 var unread = new SessionInfo { FilePath = Path.Combine(root, "s2.jsonl"), LastWriteUtc = f.LastWriteTimeUtc, SizeBytes = 1 };
-                Eq("1 session, $28.30 in total (API prices)", SessionCost.TotalLine(new[] { listed }), "footer");
+                Eq("1 session, $28.70 in total (API prices)", SessionCost.TotalLine(new[] { listed }), "footer");
                 Eq("Reading what the sessions cost…", SessionCost.TotalLine(new[] { listed, unread }), "one not read yet");
                 Eq(null, SessionCost.TotalLine(new SessionInfo[0]), "no sessions");
             }
@@ -2194,6 +2194,52 @@ namespace ClaudeVS.Core.Tests
             Eq("junk", PriceTable.UpgradeStored("junk"), "unreadable: left alone");
         }
 
+        private static void Test_Prices_HaikuOver100k()
+        {
+            // Real turns with 2.1.322: a 74k-token prompt then a short one (under the tier), and the same with 111k
+            // (over it). Each turn is one request; the CLI's total grows by exactly what our price gives for it.
+            var haiku = new PriceTable().Haiku;
+            var lines = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.322-haiku-over-100k.jsonl")).Where(l => l.Trim().Length > 0).Select(JObject.Parse).ToList();
+            Eq(4, lines.Count);
+            for (int i = 0; i < 4; i += 2)
+            {
+                double before = 0;
+                for (int k = i; k < i + 2; k++)
+                {
+                    var u = TokenUsage.From(lines[k]["usage"]).AsRequest();
+                    double cli = (double)lines[k]["total_cost_usd"] - before, ours = haiku.Cost(u);
+                    True(Math.Abs(ours - cli) < 1e-9, $"turn with {u.ContextTokens:N0} input tokens: ours ${ours:0.0000000}, the CLI's ${cli:0.0000000}");
+                    Eq(u.ContextTokens > 100_000, u.LargeContextTokens > 0, "over 100k: " + u.ContextTokens);
+                    before = (double)lines[k]["total_cost_usd"];
+                }
+            }
+
+            // Only Haiku has the tier; 100,000 exactly is still the normal price
+            var big = new TokenUsage { CacheRead = 150_000, Output = 10 }.AsRequest();
+            Eq(new PriceTable().Sonnet.Cost(new TokenUsage { CacheRead = 150_000, Output = 10 }), new PriceTable().Sonnet.Cost(big), "Sonnet: no tier");
+            Eq(1.0, haiku.RequestMultiplier(100_000), "100k exactly: normal");
+            Eq(5.0, haiku.RequestMultiplier(100_001), "above: 5x");
+
+            // A turn's sum: only the requests over 100k count (two requests: 60k and 120k of context)
+            var m = new TokenMeter();
+            m.Observe(new ClaudeEvent { Kind = ClaudeEventKind.AssistantUsage, Model = "claude-haiku-5-5", MessageId = "a", Usage = new TokenUsage { CacheRead = 60_000, Output = 10 } });
+            m.Observe(new ClaudeEvent { Kind = ClaudeEventKind.AssistantUsage, Model = "claude-haiku-5-5", MessageId = "b", Usage = new TokenUsage { CacheRead = 120_000, Output = 10 } });
+            m.Observe(new ClaudeEvent { Kind = ClaudeEventKind.AssistantUsage, Model = "claude-haiku-5-5", MessageId = "b", Usage = new TokenUsage { CacheRead = 120_000, Output = 20 } }); // same message again
+            m.Observe(new ClaudeEvent { Kind = ClaudeEventKind.TurnCompleted, Usage = new TokenUsage { CacheRead = 180_000, Output = 30 } });
+            Eq(120_020L, m.LastTurn.LargeContextTokens, "the 120k request, its last copy");
+            double turnCost = haiku.Cost(m.LastTurn);
+            True(Math.Abs(turnCost - (60_000 * 0.01 + 10 * 0.5 + (120_000 * 0.01 + 20 * 0.5) * 5) / 1e6) < 1e-6, "priced near per request: " + turnCost);
+
+            // The next prompt's price and the tip
+            var cache = new CacheWindow();
+            cache.Use(new TokenUsage { CacheRead = 95_000, CacheCreation = 1000, CacheCreation1h = 1000 }, DateTime.UtcNow);
+            var over = NextPromptPrice.Estimate(cache, "claude-haiku-5-5", "claude-haiku-5-5", 10_000, new PriceTable(), DateTime.UtcNow);
+            True(Math.Abs(over.InputUsd - (96_000 * 0.01 + 10_000 * 0.2) * 5 / 1e6) < 1e-9, "96k cached + 10k prompt passes 100k: 5x: " + over.InputUsd);
+            Eq(null, SessionNotices.HaikuLongContext("claude-haiku-5-5", 89_999), "below 90k: no tip");
+            True(SessionNotices.HaikuLongContext("claude-haiku-5-5", 92_000)?.Contains("5x its prices") == true, "near 100k: tip");
+            Eq(null, SessionNotices.HaikuLongContext("claude-sonnet-5-5", 150_000), "not Haiku: no tip");
+        }
+
         private static void Test_SavingsReport_FableAndFastExtra()
         {
             var prices = new PriceTable(); // Opus 4 / 20, Fable 8 / 40; fast mode 2x
@@ -2230,7 +2276,7 @@ namespace ClaudeVS.Core.Tests
             Eq(2, UsageCsv.Write(recs, sw), "rows");
             var lines = sw.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None);
             Eq(string.Join(",", UsageCsv.Columns), lines[0], "header");
-            Eq(t.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") + @",C:\src\a\,claude-opus-5-5,1,,,,5,1200,300,9000,100,100,10405,0.25,0.0001,4200,0,134,multi-file,", lines[1], "oldest first, invariant numbers; fast_tokens after the cache columns");
+            Eq(t.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") + @",C:\src\a\,claude-opus-5-5,1,,,,5,1200,300,9000,100,100,10405,0,0.25,0.0001,4200,0,134,multi-file,", lines[1], "oldest first, invariant numbers; fast_tokens and large_context_tokens after the cache columns");
             True(lines[2].EndsWith(",0,0.001235,0,0,0,0,,\"'=SUM(A1) say \"\"hi\"\", ok\""), "quoted, formula-guarded prompt: " + lines[2]);
             Eq("", lines[3], "ends with a line break");
 

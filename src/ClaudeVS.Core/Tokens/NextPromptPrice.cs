@@ -52,7 +52,8 @@ namespace ClaudeVS.Core.Tokens
             bool cached = context > 0 && !expired && !otherModel;
             // Claude Code writes with the lifetime it has used in this conversation (1 hour: twice the input price).
             double write = cache != null && cache.Lifetime == CacheWindow.Long ? 2 * p.Input : p.CacheWrite;
-            double usd = ((cached ? context * p.CacheRead : context * write) + Math.Max(0, promptTokens) * write) / 1_000_000.0;
+            double usd = ((cached ? context * p.CacheRead : context * write) + Math.Max(0, promptTokens) * write) / 1_000_000.0
+                * p.RequestMultiplier(context + Math.Max(0, promptTokens)); // Haiku over 100k: 5x
             return new NextPromptEstimate
             {
                 InputUsd = usd, ContextTokens = context, PromptTokens = Math.Max(0, promptTokens),
