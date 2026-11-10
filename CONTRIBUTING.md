@@ -26,7 +26,8 @@ requests (questions, plan approval), use `--live-ask <rawPath> <PermissionMode> 
 $0.005). `--live-setup` installs the token-saving settings into a temp .NET project and checks the quiet `dotnet build`, the
 `bin/` block and the output cap (about $0.005; needs the .NET SDK). `--live-session` checks the meter against
 `/context`, a mid-session model switch, cost across a relaunch and `/compact` (about $0.05). `--live-haiku-router` warms up the trimmed Haiku router and routes four prompts next to the local rules (about $0.001). `--live-dialogs` reads every dialog and sets an output style in a temp folder (no prompt, no cost). `--live-mcp` starts the CLI
-with the in-process Error List MCP server and checks that it connects (no prompt, no cost). Note that in plan
+with the in-process Error List MCP server, checks that it connects and prints the context breakdown
+(`get_context_usage`); `--live-mcp <rawPath>` also saves the raw lines (no prompt, no cost). Note that in plan
 mode the CLI also saves the plan under `~/.claude/plans`. If a new CLI version changes the
 event format, add a **sanitized** capture under `tests/ClaudeVS.Core.Tests/Fixtures`, with personal data removed
 (init details, rate-limit info, IDs). See `cli-2.1.316-turn.jsonl` for an example.

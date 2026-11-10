@@ -419,9 +419,17 @@ and desktop entries are left out.
       `CliVersion` now has two numbers: `Required` (2.1.318, below it the chat warns once) and `Tested` (2.1.322,
       shown in the Output pane). Raising one number for both would have warned users on 2.1.318–2.1.321 about
       features that work there
-- [ ] **Base context tip after the `/context` changes** (2.1.319: MCP tools that load on demand share one row per
-      server until called; 2.1.321: tool definitions no longer overcounted without exact counts). Capture
-      `get_context_usage` again; check the MCP tools ≥ 5k tip and the meter's breakdown still read it right
+- [x] **Base context tip after the `/context` changes** (2.1.319: MCP tools that load on demand share one row per
+      server until called; 2.1.321: tool definitions no longer overcounted without exact counts). Captured with
+      2.1.322 (`--live-mcp` now prints the breakdown; sanitized in `Fixtures/cli-2.1.322-context-usage-mcp.jsonl`):
+      a new `MCP tools (deferred)` category (`kind: "deferred"`), and each `mcpTools[]` entry has `isLoaded`. The
+      extension's own Error List tool is deferred (53 tokens, `isLoaded: false`). `ContextUsage` counted every listed
+      tool as in the window, so the "MCP tools take ~N tokens of every request" tip and the MCP servers footer
+      overstated deferred servers. Now `McpToolTokens` counts loaded tools only (a missing `isLoaded`, as in
+      2.1.317, counts as loaded) and `McpDeferredTool*` the rest; the MCP servers footer says how many load on
+      demand. The meter's breakdown already listed deferred categories apart. Also found: the CLI's `percentage`
+      is rounded to a whole number (25,426 / 1M = 2.54% shows as 3), which explains the meter's 2.5% vs `/context`'s
+      3.0% in `--live-session`; the token counts match exactly
 - [ ] **Edit-review hook after an interrupt** (2.1.319: PostToolUse hooks now run, with up to 10 s, on tool calls
       that finish after a new message interrupts the turn). The edit-review `hook_callback` can now arrive after
       Stop or a new prompt; check `ClaudeSession` still answers it (late, for an old turn) and the chat does not
