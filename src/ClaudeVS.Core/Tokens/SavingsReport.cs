@@ -56,8 +56,8 @@ namespace ClaudeVS.Core.Tokens
     }
 
     /// <summary>
-    /// Prices for the model families behind Claude Code's haiku / sonnet / opus aliases.
-    /// Defaults are Anthropic API list prices as of 2026-10 (Opus 5.5, Sonnet 5.5, Haiku 5.5);
+    /// Prices for the model families behind Claude Code's haiku / sonnet / opus / fable aliases.
+    /// Defaults are Anthropic API list prices as of 2026-11 (Opus 5.5, Sonnet 5.5, Haiku 5.5, Fable 5.2);
     /// cache write = 1.25x input. Users can override them in Options when prices change.
     /// </summary>
     public sealed class PriceTable
@@ -65,25 +65,30 @@ namespace ClaudeVS.Core.Tokens
         public const string DefaultOpus = "4, 20, 5, 0.2";
         public const string DefaultSonnet = "2, 10, 2.5, 0.2";
         public const string DefaultHaiku = "0.1, 0.5, 0.125, 0.01";
+        /// <summary>Fable 5.2 (Claude Code 2.1.321): $8 / $40 per Mtok, cache read $0.20.</summary>
+        public const string DefaultFable = "8, 40, 10, 0.2";
 
         public ModelPrice Opus { get; set; } = ModelPrice.Parse(DefaultOpus);
         public ModelPrice Sonnet { get; set; } = ModelPrice.Parse(DefaultSonnet);
         public ModelPrice Haiku { get; set; } = ModelPrice.Parse(DefaultHaiku);
+        public ModelPrice Fable { get; set; } = ModelPrice.Parse(DefaultFable);
 
-        public static PriceTable FromStrings(string opus, string sonnet, string haiku) => new PriceTable
+        public static PriceTable FromStrings(string opus, string sonnet, string haiku, string fable = null) => new PriceTable
         {
             Opus = ModelPrice.Parse(opus) ?? ModelPrice.Parse(DefaultOpus),
             Sonnet = ModelPrice.Parse(sonnet) ?? ModelPrice.Parse(DefaultSonnet),
             Haiku = ModelPrice.Parse(haiku) ?? ModelPrice.Parse(DefaultHaiku),
+            Fable = ModelPrice.Parse(fable) ?? ModelPrice.Parse(DefaultFable),
         };
 
-        /// <summary>"opus", "sonnet", "haiku" or null, from a model id such as "claude-sonnet-5-5" or an alias.</summary>
+        /// <summary>"opus", "sonnet", "haiku", "fable" or null, from a model id such as "claude-sonnet-5-5" or an alias.</summary>
         public static string Family(string model)
         {
             string m = (model ?? "").ToLowerInvariant();
             if (m.Contains("opus")) return "opus";
             if (m.Contains("sonnet")) return "sonnet";
             if (m.Contains("haiku")) return "haiku";
+            if (m.Contains("fable")) return "fable";
             return null;
         }
 
@@ -94,6 +99,7 @@ namespace ClaudeVS.Core.Tokens
                 case "opus": return Opus;
                 case "sonnet": return Sonnet;
                 case "haiku": return Haiku;
+                case "fable": return Fable;
                 default: return null;
             }
         }

@@ -299,7 +299,7 @@ Editor commands go to the chat window you used last.
 | Token saving | Auto-approve quiet rewrites | Off | Hook installer: run rewritten build/test commands without asking. |
 | Token saving | Claude can read the Error List | On | The `get_error_list` tool, for new sessions. |
 | Token saving | Max attached errors | 20 | For Attach Error List. |
-| Pricing | Opus / Sonnet / Haiku price | 2026-10 list prices | `input, output, cache write, cache read` in USD per million tokens. Used only for the savings estimate. |
+| Pricing | Opus / Sonnet / Haiku / Fable price | 2026-11 list prices | `input, output, cache write, cache read` in USD per million tokens. Used only for the savings estimate. |
 | Diagnostics | Keep local usage log | On | See Privacy. |
 | Diagnostics | Log prompt preview (for router tuning) | Off | Stores the first 200 characters of each prompt locally. |
 | Diagnostics | Log raw CLI traffic | Off | Every JSON line in Output → Claude Code. Large; for debugging. |

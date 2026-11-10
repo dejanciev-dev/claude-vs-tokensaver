@@ -387,10 +387,12 @@ The changelog now covers 2.1.319 (Phase 9 had to check it by running it) up to 2
 here. Entries that change what the extension sees, prices or sends. Terminal-only, cloud, gateway, Remote Control
 and desktop entries are left out.
 
-- [ ] **Fable prices** (2.1.321: Claude Fable 5.2, `claude-fable-5-2`, $8 / $40 per Mtok, cache read $0.20).
-      `PriceTable.Family` knows only opus / sonnet / haiku, so a turn answered by Fable has no price: no cost in
-      the footer, meter, sessions list, next-prompt line, cache savings or savings report. Add a `fable` family
-      (default `8, 40, 10, 0.2`, cache write 1.25x input) and an Options → Pricing row; tests with a Fable usage line
+- [x] **Fable prices** (2.1.321: Claude Fable 5.2, `claude-fable-5-2`, $8 / $40 per Mtok, cache read $0.20).
+      `PriceTable.Family` knew only opus / sonnet / haiku, and unknown models fall back to Sonnet's prices, so a
+      Fable turn showed a quarter of its cost in the footer, meter, sessions list, next-prompt line, cache savings
+      and savings report. Now a `fable` family (default `8, 40, 10, 0.2`, cache write 1.25x input) with an
+      Options → Pricing row. The savings report's "Opus equivalent" stays at Opus prices, so Fable turns lower
+      the routing savings, which is right: Fable costs twice as much as Opus
 - [ ] **Fable in the model picker** (2.1.321: Fable 5.2 is the default `fable` alias; saved Fable 5.1 picks move to
       it). Offer *Fable* as a manual choice (`--model fable`), never picked by Auto. The route hint says what it
       costs next to Opus. The family colour in the activity strip and the cache-break note ("model changed") need it too
