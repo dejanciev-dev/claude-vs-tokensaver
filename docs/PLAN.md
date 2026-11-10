@@ -381,6 +381,44 @@ the prices of the model that answered (`ModelPrice.CacheSavedUsd`).
 
 ---
 
+## Phase 18 — Keep up with the CLI (from the Claude Code CHANGELOG 2.1.319–2.1.322)
+
+The changelog now covers 2.1.319 (Phase 9 had to check it by running it) up to 2.1.322, the version installed
+here. Entries that change what the extension sees, prices or sends. Terminal-only, cloud, gateway, Remote Control
+and desktop entries are left out.
+
+- [ ] **Fable prices** (2.1.321: Claude Fable 5.2, `claude-fable-5-2`, $8 / $40 per Mtok, cache read $0.20).
+      `PriceTable.Family` knows only opus / sonnet / haiku, so a turn answered by Fable has no price: no cost in
+      the footer, meter, sessions list, next-prompt line, cache savings or savings report. Add a `fable` family
+      (default `8, 40, 10, 0.2`, cache write 1.25x input) and an Options → Pricing row; tests with a Fable usage line
+- [ ] **Fable in the model picker** (2.1.321: Fable 5.2 is the default `fable` alias; saved Fable 5.1 picks move to
+      it). Offer *Fable* as a manual choice (`--model fable`), never picked by Auto. The route hint says what it
+      costs next to Opus. The family colour in the activity strip and the cache-break note ("model changed") need it too
+- [ ] **Fast mode** (2.1.321: when fast serving fails it now drops to standard speed on the same model first).
+      Capture a fast-mode turn: if usage or the result says which speed answered, price fast turns at the fast
+      price (or at least say "fast" in the footer); if not, note it under Known limitations
+- [ ] **Verify with 2.1.322 and raise `CliVersion.Tested`** from 2.1.318: run all live tests (`--live`,
+      `--live-session`, `--live-dialogs`, `--live-mcp`, `--live-edit-review`, `--live-haiku-router`, `--live-setup`,
+      `--live-ask`), refresh the status table, and check plan mode still answers with Sonnet when Haiku is asked for
+- [ ] **Base context tip after the `/context` changes** (2.1.319: MCP tools that load on demand share one row per
+      server until called; 2.1.321: tool definitions no longer overcounted without exact counts). Capture
+      `get_context_usage` again; check the MCP tools ≥ 5k tip and the meter's breakdown still read it right
+- [ ] **Edit-review hook after an interrupt** (2.1.319: PostToolUse hooks now run, with up to 10 s, on tool calls
+      that finish after a new message interrupts the turn). The edit-review `hook_callback` can now arrive after
+      Stop or a new prompt; check `ClaudeSession` still answers it (late, for an old turn) and the chat does not
+      attach its note to the new turn
+- [ ] **Long prompts** (VS Code 2.1.319: prompts over 50,000 characters were cut off silently). Check whether
+      stream-json input has a limit; if it does, keep the prompt in the box with a notice instead of sending it,
+      next to the existing huge-paste suggestion
+- [ ] **Billing note: Console sign-in** (2.1.319: when the claude.ai login ends, Claude Code can continue on the
+      `ant auth login` sign-in, which bills a Claude Console organization). Find what `init.apiKeySource` says then,
+      and name it in the billing note. Also (VS Code 2.1.322) say once when both `ANTHROPIC_AUTH_TOKEN` and
+      `ANTHROPIC_API_KEY` are set
+- [ ] **Slash commands after a leading space** (2.1.319 fixed them being sent as plain text). Trim leading
+      whitespace before deciding a prompt is a `/` command in the prompt box too, so both agree
+
+---
+
 ## Working in Visual Studio — daily loop
 
 1. Core logic change → edit in `ClaudeVS.Core` → run tests (`ClaudeVS.Core.Tests` → Set as Startup → Ctrl+F5, or `dotnet run` in its folder).
