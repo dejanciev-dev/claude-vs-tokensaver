@@ -1914,7 +1914,7 @@ namespace ClaudeVS.ToolWindow
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             if (string.IsNullOrEmpty(version) || !_seenCliVersions.Add(version)) return;
-            ClaudeOutputPane.WriteLine($"Claude Code {version} (tested with {CliVersion.Tested})");
+            ClaudeOutputPane.WriteLine($"Claude Code {version} (needs {CliVersion.Required}, tested with {CliVersion.Tested})");
             string notice = CliVersion.Notice(version);
             if (notice == null) return;
             Append("\n  ⚠ " + notice + "\n");

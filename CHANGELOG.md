@@ -320,6 +320,9 @@ All notable changes to this project are listed here. The format follows
   logged, the prompt preview. UTF-8 for Excel; text that starts like a formula is kept as text.
 
 ### Changed
+- Verified with Claude Code 2.1.322 (all live tests). The extension still needs 2.1.318 or newer and only warns
+  below that; the Output pane names both: `Claude Code 2.1.320 (needs 2.1.318, tested with 2.1.322)`. Plan mode
+  still answers with Sonnet when Haiku is asked for.
 - Typing `/` opens a list of commands above the input box instead of one long line of text under it: `/compact`
   and your own `.claude/commands`, one row each with what it does underneath and where it comes from on the right
   (skills are no longer in it: they stay in the `/` button menu under Skills). ↑ ↓ (and Page Up / Down)

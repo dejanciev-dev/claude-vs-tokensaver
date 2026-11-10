@@ -1381,8 +1381,8 @@ namespace ClaudeVS.Core.Tests
             var init = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.316-turn.jsonl"))
                 .SelectMany(l => parser.Parse(l)).First(e => e.Kind == ClaudeEventKind.SessionStarted);
             Eq("2.1.316", init.CliVersion, "claude_code_version from init");
-            True(CliVersion.IsOlderThanTested(init.CliVersion), "2.1.316 is older than tested");
-            True(CliVersion.Notice(init.CliVersion).StartsWith("Claude Code 2.1.316 is older than " + CliVersion.Tested), "notice");
+            True(CliVersion.IsOlderThanRequired(init.CliVersion), "2.1.316 is older than required");
+            True(CliVersion.Notice(init.CliVersion).StartsWith("Claude Code 2.1.316 is older than " + CliVersion.Required + ", which this extension needs"), "notice");
             True(CliVersion.Notice(init.CliVersion).Contains("claude update"), "says how to fix it");
         }
 
@@ -1391,11 +1391,13 @@ namespace ClaudeVS.Core.Tests
             Eq(new Version(2, 1, 319), CliVersion.Parse("2.1.319 (Claude Code)"), "claude --version output");
             Eq(null, CliVersion.Parse("dev"), "not a version");
             Eq(null, CliVersion.Parse(null), "missing");
-            True(!CliVersion.IsOlderThanTested(CliVersion.Tested), "the tested version itself");
-            True(!CliVersion.IsOlderThanTested("2.1.319"), "newer");
-            True(!CliVersion.IsOlderThanTested("2.2.0"), "newer minor");
-            True(CliVersion.IsOlderThanTested("2.1.99"), "numeric, not string, comparison");
-            True(CliVersion.IsOlderThanTested("1.0.128"), "old major");
+            True(!CliVersion.IsOlderThanRequired(CliVersion.Required), "the required version itself");
+            True(!CliVersion.IsOlderThanRequired("2.1.319"), "newer");
+            True(!CliVersion.IsOlderThanRequired("2.1.321"), "between required and tested: no notice");
+            True(CliVersion.Parse(CliVersion.Tested) >= CliVersion.Parse(CliVersion.Required), "tested is at least required");
+            True(!CliVersion.IsOlderThanRequired("2.2.0"), "newer minor");
+            True(CliVersion.IsOlderThanRequired("2.1.99"), "numeric, not string, comparison");
+            True(CliVersion.IsOlderThanRequired("1.0.128"), "old major");
             Eq(null, CliVersion.Notice("dev"), "unknown versions are not flagged");
             Eq(null, CliVersion.Notice(""), "empty");
         }
