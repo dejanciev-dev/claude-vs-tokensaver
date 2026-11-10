@@ -353,6 +353,10 @@ All notable changes to this project are listed here. The format follows
 - `dotnet test` runs the Core test runner instead of silently reporting zero tests.
 
 ### Fixed
+- Sonnet's cache reads are priced at $0.10 per million tokens, as Claude Code bills them, not $0.20. Costs and cache
+  savings for Sonnet conversations come out right (a long Sonnet conversation is mostly cache reads). If Options
+  had the old default saved, it is updated; a price you entered yourself is kept. All four default prices are now
+  checked against Claude Code's own costs in a test.
 - Stop while Claude is editing or writing a file no longer leaves Claude unsure whether the change was made. Claude
   Code then tells Claude the change "may have been written"; the extension reads the file and, when it can tell,
   says with your next prompt whether the change is in (quoting what the file holds), for edits approved with Allow
