@@ -26,6 +26,7 @@ namespace ClaudeVS.Core.Tests
             if (args.Length > 0 && args[0] == "--live-edit-review") return LiveSmoke.RunEditReview();
             if (args.Length > 0 && args[0] == "--live-long-prompt") return LiveSmoke.RunLongPrompt();
             if (args.Length > 0 && args[0] == "--live-edit-review-interrupt") return LiveSmoke.RunEditReviewInterrupted(args.Length > 1 ? args[1] : null);
+            if (args.Length > 0 && args[0] == "--live-edit-stop-allow") return LiveSmoke.RunEditReviewInterrupted(args.Length > 1 ? args[1] : null, allowPlain: true);
             if (args.Length > 1 && args[0] == "--scan")
             {
                 // Read-only: prints the CLAUDE.md that Generate Lean CLAUDE.md would write for that folder.
@@ -69,6 +70,52 @@ namespace ClaudeVS.Core.Tests
         {
             string a = ClaudeArgsBuilder.Build(new ClaudeLaunchOptions { Model = ModelChoice.Haiku, Effort = EffortChoice.Low, ResumeSessionId = "abc", AppendSystemPrompt = "Be brief." });
             True(a.Contains("--model haiku") && a.Contains("--effort low") && a.Contains("--resume abc") && a.Contains("--append-system-prompt \"Be brief.\""), a);
+        }
+
+        private static void Test_StoppedEdit_FileSaysWhetherWritten()
+        {
+            // The result text Claude Code 2.1.322 sends for an Edit that Stop ended while it ran
+            const string stopped = "The user doesn't want to proceed with this tool use. The tool use was rejected (eg. if it was a file edit, the new_string was NOT written to the file). STOP what you are doing and wait for the user to tell you how to proceed. Correction to the text above: this call was stopped while running, not refused before it ran. It may have run in part or in full, and its changes may have been written.";
+            True(StoppedEdit.IsStopped(true, stopped), "stopped");
+            True(!StoppedEdit.IsStopped(false, stopped), "not an error: not stopped");
+            True(!StoppedEdit.IsStopped(true, "The user doesn't want to proceed with this tool use. The tool use was rejected"), "a plain Deny is not a stop");
+
+            var edit = JObject.Parse("{\"old_string\":\"beta\\ngamma\\ndelta\",\"new_string\":\"BETA\\ngamma\\nDELTA\"}");
+            const string before = "alpha\nbeta\ngamma\ndelta\n", after = "alpha\nBETA\ngamma\nDELTA\n";
+            Eq(StoppedEdit.State.Written, StoppedEdit.Check("Edit", edit, before, after), "written");
+            Eq(StoppedEdit.State.NotWritten, StoppedEdit.Check("Edit", edit, before, before), "not written");
+            Eq(StoppedEdit.State.Written, StoppedEdit.Check("Edit", edit, after, after), "our copy was taken after the write: still written");
+            Eq(StoppedEdit.State.Unknown, StoppedEdit.Check("Edit", edit, before, "something else\n"), "changed by something else: unknown");
+            Eq(StoppedEdit.State.Unknown, StoppedEdit.Check("Edit", edit, before, null), "file gone");
+            var grow = JObject.Parse("{\"old_string\":\"x = 1;\",\"new_string\":\"x = 1;\\ny = 2;\"}"); // new text holds the old
+            Eq(StoppedEdit.State.Written, StoppedEdit.Check("Edit", grow, "a\nx = 1;\nb\n", "a\nx = 1;\ny = 2;\nb\n"), "insertion written");
+            Eq(StoppedEdit.State.NotWritten, StoppedEdit.Check("Edit", grow, "a\nx = 1;\nb\n", "a\nx = 1;\nb\n"), "insertion not written");
+            var del = JObject.Parse("{\"old_string\":\"// old\\n\",\"new_string\":\"\"}");
+            Eq(StoppedEdit.State.Written, StoppedEdit.Check("Edit", del, "a\n// old\nb\n", "a\nb\n"), "deletion written");
+            Eq(StoppedEdit.State.NotWritten, StoppedEdit.Check("Edit", del, "a\n// old\nb\n", "a\n// old\nb\n"), "deletion not written");
+
+            var write = JObject.Parse("{\"content\":\"new file\\n\"}");
+            Eq(StoppedEdit.State.Written, StoppedEdit.Check("Write", write, null, "new file\n"), "write written");
+            Eq(StoppedEdit.State.NotWritten, StoppedEdit.Check("Write", write, null, null), "new file never created");
+            Eq(StoppedEdit.State.NotWritten, StoppedEdit.Check("Write", write, "old\n", "old\n"), "overwrite not written");
+
+            Eq(null, StoppedEdit.Note("Edit", "a.cs", StoppedEdit.State.Unknown), "unknown: say nothing");
+            string wn = StoppedEdit.Note("Edit", "notes.txt", StoppedEdit.State.Written, edit);
+            True(wn.Contains("Visual Studio read notes.txt after the stop") && wn.Contains("applied in full") && wn.Contains(@"""BETA\ngamma\nDELTA"" where ""beta\ngamma\ndelta"" was"), wn);
+            True(StoppedEdit.Note("Write", "b.txt", StoppedEdit.State.NotWritten).Contains("was not written; b.txt is unchanged"), "not-written note");
+            True(StoppedEdit.Note("Edit", "notes.txt", StoppedEdit.State.NotWritten, edit).Contains(@"still has ""beta\ngamma\ndelta"""), "edit not applied");
+
+            // The session queues it for the next prompt; a reviewed-edit note for the same call wins
+            var s = new ClaudeSession(new ClaudeLaunchOptions());
+            s.AddNextPromptNote("toolu_1", "About the stopped Edit of a.cs: its change is in the file; it was written before the stop.");
+            string next = s.TakeStrandedNotes();
+            True(ClaudeSession.IsEditorNote(next) && next.Contains("a.cs"), next);
+            Eq(null, s.TakeStrandedNotes(), "given once");
+            s.SetToolResultNote("toolu_2", "Rejected: line 4.", "b.cs", () => true);
+            s.AddNextPromptNote("toolu_2", "About the stopped Edit of b.cs: its change is in the file.");
+            s.MarkNotesStranded();
+            string reviewed = s.TakeStrandedNotes();
+            True(reviewed.Contains("Rejected: line 4.") && !reviewed.Contains("its change is in the file"), reviewed);
         }
 
         private static void Test_EditNote_AfterStop_GoesWithNextPrompt()

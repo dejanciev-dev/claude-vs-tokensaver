@@ -355,9 +355,16 @@ namespace ClaudeVS.Core.Tests
         /// reviewed approval at once. Since Claude Code 2.1.319 PostToolUse hooks also run on tool calls that finish
         /// after a new message interrupts the turn, so the edit-review hook_callback can arrive late. Checks that it is
         /// answered (its note for its own tool_use_id) and that Claude knows which change was rejected. About $0.01.
+        /// <paramref name="allowPlain"/> (`--live-edit-stop-allow`): the edit is allowed as proposed, no review; when
+        /// its result says it was stopped while running, the file is checked as the chat does (<see cref="Context.StoppedEdit"/>)
+        /// and Claude is told with the next prompt whether the change is in.
         /// </summary>
-        public static int RunEditReviewInterrupted(string rawLogPath)
+        public static int RunEditReviewInterrupted(string rawLogPath, bool allowPlain = false)
         {
+            Context.StoppedEdit.State stopState = Context.StoppedEdit.State.Unknown;
+            bool sawStopped = false;
+            string snapshot = null;
+            Newtonsoft.Json.Linq.JObject editInput = null;
             string exe = ClaudeCliLocator.Resolve("");
             if (exe == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }
             string dir = Path.Combine(Path.GetTempPath(), "cvs-live-" + Guid.NewGuid().ToString("N"));
@@ -375,7 +382,16 @@ namespace ClaudeVS.Core.Tests
                 session.RawLine += (s, e) => { lock (raw) raw.Append(e.Direction).Append('\t').Append(e.Line).Append('\n'); };
                 session.EventReceived += (s, ev) =>
                 {
-                    if (ev.Kind == ClaudeEventKind.PermissionRequest)
+                    if (ev.Kind == ClaudeEventKind.PermissionRequest && allowPlain && ev.ToolName == "Edit" && editId == null)
+                    {
+                        editId = ev.ToolUseId;
+                        snapshot = File.ReadAllText(file);
+                        editInput = ev.ToolInput;
+                        Console.WriteLine("  allowing the edit as proposed; then Stop at once");
+                        session.RespondToPermissionAsync(ev.RequestId, ev.ToolInput, true).Wait();
+                        session.InterruptAsync().Wait();
+                    }
+                    else if (ev.Kind == ClaudeEventKind.PermissionRequest)
                     {
                         var review = ev.ToolName == "Edit" && editId == null ? Context.EditReview.Create(ev.ToolName, ev.ToolInput, File.ReadAllText(file)) : null;
                         if (review != null && review.Hunks.Count >= 2)
@@ -390,6 +406,14 @@ namespace ClaudeVS.Core.Tests
                             session.InterruptAsync().Wait();
                         }
                         else session.RespondToPermissionAsync(ev.RequestId, ev.ToolInput, false).Wait();
+                    }
+                    if (ev.Kind == ClaudeEventKind.ToolResult && allowPlain && ev.ToolUseId == editId && Context.StoppedEdit.IsStopped(ev.IsError, ev.ResultText))
+                    {
+                        // What the chat does (ClaudeChatControl.TellIfStoppedEditWritten)
+                        sawStopped = true;
+                        stopState = Context.StoppedEdit.Check("Edit", editInput, snapshot, File.ReadAllText(file));
+                        Console.WriteLine($"  result: stopped while running; the file says: {stopState}");
+                        session.AddNextPromptNote(ev.ToolUseId, Context.StoppedEdit.Note("Edit", "notes.txt", stopState, editInput));
                     }
                     if (ev.Kind == ClaudeEventKind.TextDelta || ev.Kind == ClaudeEventKind.AssistantText) lock (replies) replies[replies.Count - 1].Append(ev.Text);
                     if (ev.Kind == ClaudeEventKind.TurnCompleted)
@@ -426,6 +450,18 @@ namespace ClaudeVS.Core.Tests
                     Console.WriteLine("  reply: " + last);
                     // Claude must learn which change was rejected: from the hook (when it ran) or from the next prompt (when Stop skipped it)
                     bool told = (hookIn >= 0 && hookOut > hookIn) || carried >= 0;
+                    if (allowPlain)
+                    {
+                        // The call may or may not have been written before Stop; the file must say which, and Claude be told
+                        bool known = stopState != Context.StoppedEdit.State.Unknown;
+                        bool fileMatches = stopState == Context.StoppedEdit.State.Written ? content == "alpha\nBETA\ngamma\nDELTA\n" : content == "alpha\nbeta\ngamma\ndelta\n";
+                        // and Claude must take it: a bare claim was not believed in an earlier run ("I can't confirm …")
+                        bool believed = last.IndexOf("confirm", StringComparison.OrdinalIgnoreCase) < 0;
+                        bool okAllow = completed >= 2 && (!sawStopped || (known && fileMatches && carried >= 0 && believed));
+                        if (!sawStopped) Console.WriteLine("  (the edit finished before Stop took effect: nothing to tell; run again to hit the race)");
+                        Console.WriteLine(okAllow ? "PASS live edit stop after Allow" : "FAIL live edit stop after Allow");
+                        return okAllow ? 0 : 1;
+                    }
                     bool ok = completed >= 2 && editId != null && told
                         && content == "alpha\nBETA\ngamma\ndelta\n" && last.IndexOf("delta", StringComparison.OrdinalIgnoreCase) >= 0;
                     Console.WriteLine(ok ? "PASS live edit review after interrupt" : "FAIL live edit review after interrupt");

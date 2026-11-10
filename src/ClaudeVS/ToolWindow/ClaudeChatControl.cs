@@ -2291,11 +2291,27 @@ namespace ClaudeVS.ToolWindow
             ThreadHelper.ThrowIfNotOnUIThread();
             if (string.IsNullOrEmpty(ev.ToolUseId) || !_fileCalls.TryGetValue(ev.ToolUseId, out var call)) return null;
             _fileCalls.Remove(ev.ToolUseId);
+            if (StoppedEdit.IsStopped(ev.IsError, ev.ResultText)) TellIfStoppedEditWritten(ev.ToolUseId, call);
             if (ev.IsError || ev.OriginalFile == null || ev.OriginalFile == call.Snapshot) return null; // ours was right
             ClaudeOutputPane.WriteLine($"{call.ToolName} {call.Path}: diff corrected from the CLI's copy of the file");
             call.Snapshot = ev.OriginalFile;
             if (call.FirstInTurn) _turnChanges.Confirm(call.Path, ev.OriginalFile);
             return InlineDiff.FromToolUse(call.ToolName, call.Input, ev.OriginalFile == "" ? null : ev.OriginalFile);
+        }
+
+        /// <summary>
+        /// Stop ended an Edit / Write while it ran, and Claude was told it "may have" changed the file: read the file and,
+        /// when it says whether the change is in, tell Claude with the next prompt (and the Output pane now).
+        /// </summary>
+        private void TellIfStoppedEditWritten(string toolUseId, FileCall call)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            string now = ReadForReview(call.Path);
+            if (now == ReviewUnreadable) return;
+            var state = StoppedEdit.Check(call.ToolName, call.Input, call.Snapshot, now);
+            string note = StoppedEdit.Note(call.ToolName, System.IO.Path.GetFileName(call.Path ?? ""), state, call.Input);
+            ClaudeOutputPane.WriteLine($"{call.ToolName} {call.Path} was stopped while running: {state}" + (note != null ? "; Claude is told with the next prompt" : ""));
+            _session?.AddNextPromptNote(toolUseId, note);
         }
 
         private void ClearTurns()

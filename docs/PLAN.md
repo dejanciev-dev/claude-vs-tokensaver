@@ -475,9 +475,16 @@ and desktop entries are left out.
 
 Things Phase 18 turned up, picked on 2026-11-10.
 
-- [ ] **Stop after a plain Allow edit.** Phase 18 fixed Stop during a reviewed edit. An edit approved with Allow, or
+- [x] **Stop after a plain Allow edit.** Phase 18 fixed Stop during a reviewed edit. An edit approved with Allow, or
       run without asking in Accept Edits, gets the same "stopped while running … may have been written" result with
-      no hook. Check the file and tell Claude with the next prompt whether the change is in
+      no hook. Now any Edit / Write result with that text (`StoppedEdit.IsStopped`, an error result) makes the chat
+      read the file: `StoppedEdit.Check` says Written, NotWritten or Unknown, from whether the old and new text are
+      in the file (our "before" copy can be taken after a fast write, so an exact match only confirms). When it
+      knows, Claude is told with the next prompt (`ClaudeSession.AddNextPromptNote`, the same `[Note from the
+      editor]` block; a reviewed-edit note for the same call takes precedence). Live (`--live-edit-stop-allow`,
+      new): a bare "its change is in the file" was **not** believed ("I never got a result back, so I can't
+      confirm"); the note now says Visual Studio read the file after the stop and quotes what it has where the old
+      text was, and Claude answered "Yes, every change you asked for is in place: line 2 now reads BETA …"
 - [ ] **Better prompt-size estimate.** `PromptSize.Estimate` counts chars / 4; dense text ran at ~2.7 characters
       per token in `--live-long-prompt`. Learn the ratio from real turns, so the size and "to send" lines under the
       input box come closer
