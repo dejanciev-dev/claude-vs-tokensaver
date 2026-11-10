@@ -139,7 +139,7 @@ namespace ClaudeVS.Core.Chat
         {
             string text = content?.Type == JTokenType.String
                 ? (string)content
-                : (content as JArray)?.OfType<JObject>().Where(b => (string)b["type"] == "text").Select(b => (string)b["text"]).FirstOrDefault();
+                : (content as JArray)?.OfType<JObject>().Where(b => (string)b["type"] == "text" && !Cli.ClaudeSession.IsEditorNote((string)b["text"])).Select(b => (string)b["text"]).FirstOrDefault();
             if (string.IsNullOrWhiteSpace(text)) return null;
             text = text.Trim();
             // Skip CLI-generated wrappers (command output, caveats, hook messages) and tool results.

@@ -16,4 +16,9 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Lets the tests drive a few session steps that only the CLI's output triggers (e.g. a turn ending). -->
+    <InternalsVisibleTo Include="ClaudeVS.Core.Tests" />
+  </ItemGroup>
+
 </Project>
