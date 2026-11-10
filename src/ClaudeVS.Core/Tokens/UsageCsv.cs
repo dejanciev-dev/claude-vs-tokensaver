@@ -15,7 +15,7 @@ namespace ClaudeVS.Core.Tokens
         public static readonly string[] Columns =
         {
             "time", "solution", "model", "routed", "route_model", "route_effort", "router",
-            "input", "output", "thinking", "cache_read", "cache_write", "cache_write_1h",
+            "input", "output", "thinking", "cache_read", "cache_write", "cache_write_1h", "fast_tokens",
             "cost_usd", "router_cost_usd", "duration_ms", "error", "tokens_avoided", "route_reason", "prompt",
         };
 
@@ -35,7 +35,7 @@ namespace ClaudeVS.Core.Tokens
                     r.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss", c),
                     Text(r.Solution), Text(r.ModelUsed), r.Routed ? "1" : "0", Text(r.RouteModel), Text(r.RouteEffort), Text(r.Router),
                     r.InputTokens.ToString(c), r.OutputTokens.ToString(c), r.ThinkingTokens.ToString(c),
-                    r.CacheReadTokens.ToString(c), r.CacheWriteTokens.ToString(c), r.CacheWrite1hTokens.ToString(c),
+                    r.CacheReadTokens.ToString(c), r.CacheWriteTokens.ToString(c), r.CacheWrite1hTokens.ToString(c), r.FastTokens.ToString(c),
                     r.CostUsd.ToString("0.######", c), r.RouterCostUsd.ToString("0.######", c), r.DurationMs.ToString(c),
                     r.IsError ? "1" : "0", TokenEstimate.FromChars(r.CharsAvoided).ToString(c), Text(r.RouteReason), Text(r.PromptPreview),
                 };

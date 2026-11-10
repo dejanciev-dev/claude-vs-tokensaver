@@ -497,8 +497,11 @@ Things Phase 18 turned up, picked on 2026-11-10.
       start a turn, from the third turn of a process, not across a compaction, 1.5-6 characters per token, weighted
       (the start counts as 6,000 tokens of evidence). Live, on the same events: learned 2.97, 2.77, 2.73 → 2.89; the
       estimates came within 2-7% of the real count (before: 27-32% low). Not kept across Visual Studio restarts
-- [ ] **Fable and fast mode in reports.** The savings report and the CSV don't show what Fable or fast mode added.
-      Add what they cost above Opus / standard speed to the report, and a `fast_tokens` column to the CSV
+- [x] **Fable and fast mode in reports.** The savings report and the CSV don't show what Fable or fast mode added.
+      Add what they cost above Opus / standard speed to the report, and a `fast_tokens` column to the CSV. Now the
+      report has `Paid extra for Fable: $… (N turns, above the same tokens on Opus)` and `Paid extra for fast mode:
+      $… (N turns, above standard speed)`, each only when there were such turns, at Options → Pricing
+      (`SavingsReport.FableExtraUsd`, `FastExtraUsd`); the CSV has `fast_tokens` after `cache_write_1h`
 - [ ] **One command for all live tests.** `--live-all`: every live test in order, never in plan mode by mistake,
       with the total cost at the end (replaces the shell script used in Phase 18)
 

@@ -196,6 +196,12 @@ namespace ClaudeVS.Core.Tokens
         /// <summary>Of <see cref="OutputTokens"/>: thinking, and what it cost at each turn's output price.</summary>
         public long ThinkingTokens { get; set; }
         public double ThinkingCostUsd { get; set; }
+        /// <summary>Turns answered by Fable, and what they cost more than the same tokens at Opus prices.</summary>
+        public int FableTurns { get; set; }
+        public double FableExtraUsd { get; set; }
+        /// <summary>Turns with requests in fast mode, and what that cost more than standard speed (fast tokens at <see cref="ModelPrice.FastMultiplier"/>×).</summary>
+        public int FastTurns { get; set; }
+        public double FastExtraUsd { get; set; }
         public List<ModelBreakdown> ByModel { get; } = new List<ModelBreakdown>();
         /// <summary>Turns routed by the Haiku router, how many picked the same model as the local rules, its cost and time.</summary>
         public int HaikuRouted { get; set; }
@@ -253,6 +259,19 @@ namespace ClaudeVS.Core.Tokens
                 rep.OutputTokens += r.OutputTokens;
                 rep.ThinkingTokens += r.ThinkingTokens;
                 rep.ThinkingCostUsd += r.ThinkingTokens * (prices.For(r.ModelUsed) ?? prices.Sonnet).Output / 1_000_000.0 * r.SpeedMultiplier;
+
+                // What Fable and fast mode added: the same tokens at Opus prices / at standard speed, both at Options → Pricing
+                var own = prices.For(r.ModelUsed) ?? prices.Sonnet;
+                if (PriceTable.Family(r.ModelUsed) == "fable")
+                {
+                    rep.FableTurns++;
+                    rep.FableExtraUsd += own.Cost(r) - prices.Opus.Cost(r);
+                }
+                if (r.FastTokens > 0)
+                {
+                    rep.FastTurns++;
+                    rep.FastExtraUsd += own.Cost(r) - own.Cost(r) / r.SpeedMultiplier;
+                }
             }
             rep.CacheHitPercent = input > 0 ? 100.0 * cacheRead / input : 0;
             var timed = list.Where(r => r.RouterMs > 0).ToList();
@@ -340,6 +359,10 @@ namespace ClaudeVS.Core.Tokens
             sb.AppendLine($"Cache hit rate:             {CacheHitPercent:0}%");
             if (ThinkingTokens > 0)
                 sb.AppendLine($"Thinking:                   {TokenMeter.Format(ThinkingTokens)} tokens ≈ ${ThinkingCostUsd:0.00}  ({(OutputTokens > 0 ? 100.0 * ThinkingTokens / OutputTokens : 0):0}% of output tokens; Thinking off or lower effort cuts it)");
+            if (FableTurns > 0)
+                sb.AppendLine($"Paid extra for Fable:       ${FableExtraUsd:0.00}  ({FableTurns} {(FableTurns == 1 ? "turn" : "turns")}, above the same tokens on Opus)");
+            if (FastTurns > 0)
+                sb.AppendLine($"Paid extra for fast mode:   ${FastExtraUsd:0.00}  ({FastTurns} {(FastTurns == 1 ? "turn" : "turns")}, above standard speed)");
             if (HaikuRouted > 0 || RouterCostUsd > 0)
             {
                 sb.AppendLine($"Haiku router:               {HaikuRouted} prompts, same model as the local rules {(HaikuRouted > 0 ? 100.0 * HaikuAgreed / HaikuRouted : 0):0}% of the time");
