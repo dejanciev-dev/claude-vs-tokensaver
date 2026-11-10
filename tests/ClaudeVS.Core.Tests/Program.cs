@@ -2145,6 +2145,29 @@ namespace ClaudeVS.Core.Tests
             Eq(null, SlashCommands.TypedName("fix /this"), "not a command");
         }
 
+        private static void Test_SavingsReport_FableAndFastExtra()
+        {
+            var prices = new PriceTable(); // Opus 4 / 20, Fable 8 / 40; fast mode 2x
+            var t = DateTime.UtcNow.AddHours(-1);
+            var recs = new[]
+            {
+                new UsageRecord { Timestamp = t, ModelUsed = "claude-fable-5-2", InputTokens = 1000, OutputTokens = 1000, CostUsd = 0.048 },
+                new UsageRecord { Timestamp = t, ModelUsed = "claude-opus-5-5", InputTokens = 1000, OutputTokens = 1000, FastTokens = 2000, CostUsd = 0.048 },
+                new UsageRecord { Timestamp = t, ModelUsed = "claude-sonnet-5-5", InputTokens = 1000, OutputTokens = 1000, CostUsd = 0.012 },
+            };
+            var r = SavingsReport.Build(recs, prices);
+            Eq(1, r.FableTurns);
+            True(Math.Abs(r.FableExtraUsd - 0.024) < 1e-9, "Fable: $0.048 vs $0.024 on Opus: " + r.FableExtraUsd);
+            Eq(1, r.FastTurns);
+            True(Math.Abs(r.FastExtraUsd - 0.024) < 1e-9, "fast: $0.048 vs $0.024 at standard speed: " + r.FastExtraUsd);
+            string text = r.ToText();
+            True(text.Contains("Paid extra for Fable:       $0.02  (1 turn, above the same tokens on Opus)"), text);
+            True(text.Contains("Paid extra for fast mode:   $0.02  (1 turn, above standard speed)"), text);
+
+            var plain = SavingsReport.Build(recs.Skip(2), prices).ToText();
+            True(!plain.Contains("Paid extra"), "no Fable or fast turns: no lines");
+        }
+
         private static void Test_UsageCsv()
         {
             var t = new DateTime(2026, 11, 9, 9, 30, 0, DateTimeKind.Local).ToUniversalTime();
@@ -2152,14 +2175,14 @@ namespace ClaudeVS.Core.Tests
             {
                 new UsageRecord { Timestamp = t.AddMinutes(5), Solution = @"C:\src\b", ModelUsed = "claude-haiku-5-5", CostUsd = 0.0012345, PromptPreview = "=SUM(A1) say \"hi\", ok" },
                 new UsageRecord { Timestamp = t, Solution = @"C:\src\a\", ModelUsed = "claude-opus-5-5", Routed = true, InputTokens = 5, OutputTokens = 1200, ThinkingTokens = 300,
-                    CacheReadTokens = 9000, CacheWriteTokens = 100, CacheWrite1hTokens = 100, CostUsd = 0.25, RouterCostUsd = 0.0001, DurationMs = 4200, CharsAvoided = 400, RouteReason = "multi-file" },
+                    CacheReadTokens = 9000, CacheWriteTokens = 100, CacheWrite1hTokens = 100, FastTokens = 10405, CostUsd = 0.25, RouterCostUsd = 0.0001, DurationMs = 4200, CharsAvoided = 400, RouteReason = "multi-file" },
             };
             var sw = new StringWriter();
             Eq(2, UsageCsv.Write(recs, sw), "rows");
             var lines = sw.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None);
             Eq(string.Join(",", UsageCsv.Columns), lines[0], "header");
-            Eq(t.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") + @",C:\src\a\,claude-opus-5-5,1,,,,5,1200,300,9000,100,100,0.25,0.0001,4200,0,134,multi-file,", lines[1], "oldest first, invariant numbers");
-            True(lines[2].EndsWith(",0.001235,0,0,0,0,,\"'=SUM(A1) say \"\"hi\"\", ok\""), "quoted, formula-guarded prompt: " + lines[2]);
+            Eq(t.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") + @",C:\src\a\,claude-opus-5-5,1,,,,5,1200,300,9000,100,100,10405,0.25,0.0001,4200,0,134,multi-file,", lines[1], "oldest first, invariant numbers; fast_tokens after the cache columns");
+            True(lines[2].EndsWith(",0,0.001235,0,0,0,0,,\"'=SUM(A1) say \"\"hi\"\", ok\""), "quoted, formula-guarded prompt: " + lines[2]);
             Eq("", lines[3], "ends with a line break");
 
             var one = new StringWriter();
