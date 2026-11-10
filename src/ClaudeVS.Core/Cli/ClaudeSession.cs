@@ -510,6 +510,7 @@ namespace ClaudeVS.Core.Cli
         public string TakeStrandedNotes()
         {
             var parts = new List<string>();
+            while (_nextPromptNotes.TryDequeue(out var extra)) parts.Add(extra);
             foreach (var kv in _toolNotes.ToArray())
             {
                 if (!kv.Value.Stranded || !_toolNotes.TryRemove(kv.Key, out var n)) continue;
@@ -519,6 +520,20 @@ namespace ClaudeVS.Core.Cli
                 parts.Add($"About the stopped {(string.IsNullOrEmpty(n.FileName) ? "edit" : "edit of " + n.FileName)}: it was written before the stop, as the user reviewed it, not left undone. " + n.Note);
             }
             return parts.Count == 0 ? null : EditorNotePrefix + " " + string.Join("\n\n", parts);
+        }
+
+        private readonly System.Collections.Concurrent.ConcurrentQueue<string> _nextPromptNotes = new System.Collections.Concurrent.ConcurrentQueue<string>();
+
+        /// <summary>
+        /// A note for Claude that goes ahead of the next prompt, with <see cref="TakeStrandedNotes"/> (e.g. whether an
+        /// edit that Stop ended was written, <see cref="Context.StoppedEdit"/>). Skipped for a call that already has a
+        /// reviewed-edit note: that one says more.
+        /// </summary>
+        public void AddNextPromptNote(string toolUseId, string note)
+        {
+            if (string.IsNullOrWhiteSpace(note)) return;
+            if (!string.IsNullOrEmpty(toolUseId) && _toolNotes.ContainsKey(toolUseId)) return;
+            _nextPromptNotes.Enqueue(note);
         }
 
         /// <summary>Starts a text block the extension adds for Claude ahead of a prompt; history and titles leave such blocks out.</summary>
