@@ -38,7 +38,7 @@ namespace ClaudeVS.Core.Context
         public long? Bytes { get; set; }
 
         /// <summary>"~3.2k tok" (about 4 bytes per token for text), "" when unknown or empty.</summary>
-        public string SizeLabel => Bytes is long b && b > 0 ? "~" + Tokens.TokenMeter.Format((b + 3) / 4) + " tok" : "";
+        public string SizeLabel => Bytes is long b && b > 0 ? "~" + Tokens.TokenMeter.Format(Tokens.TokenEstimate.FromChars(b)) + " tok" : "";
 
         /// <summary>What the list shows: "src/Big.cs   ~3.2k tok".</summary>
         public override string ToString() => SizeLabel.Length == 0 ? Path : Path + "   " + SizeLabel;

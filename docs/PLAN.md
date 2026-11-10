@@ -448,7 +448,7 @@ and desktop entries are left out.
       in a unique code word, and both came back (input 48k and 101k tokens). The extension's prompt box has no
       length cap and sends the text unchanged, so nothing to change; the huge-paste suggestion (from ~8k tokens)
       stays. Side finding: this numbered filler ran ~2.7 characters per token, so `PromptSize.Estimate`'s
-      chars / 4 undercounted it by about a third; ordinary prose and code are closer to 4. First run used plan
+      chars / 4 undercounted it by about a third (prose and code too, as Phase 19 measured: 2.97 and 2.75). First run used plan
       mode by mistake and was answered by Sonnet ($0.47); the test now runs in Accept Edits on Haiku
 - [x] **Billing note: Console sign-in** (2.1.319: when the claude.ai login ends, Claude Code can continue on the
       `ant auth login` sign-in, which bills a Claude Console organization). Also (VS Code 2.1.322) say once when both
@@ -485,9 +485,18 @@ Things Phase 18 turned up, picked on 2026-11-10.
       new): a bare "its change is in the file" was **not** believed ("I never got a result back, so I can't
       confirm"); the note now says Visual Studio read the file after the stop and quotes what it has where the old
       text was, and Claude answered "Yes, every change you asked for is in place: line 2 now reads BETA …"
-- [ ] **Better prompt-size estimate.** `PromptSize.Estimate` counts chars / 4; dense text ran at ~2.7 characters
+- [x] **Better prompt-size estimate.** `PromptSize.Estimate` counts chars / 4; dense text ran at ~2.7 characters
       per token in `--live-long-prompt`. Learn the ratio from real turns, so the size and "to send" lines under the
-      input box come closer
+      input box come closer. Measured first (`--live-prompt-tokens`, new; 2.1.322, Haiku 5.5): 8,000 characters of
+      prose took 2,711 tokens (2.97 per token), code 2,903 (2.75), numbered lines 2,944 (2.71), so chars / 4 was
+      ~30% low for all text, not only dense text. The CLI's own `userMessageTokens` is no help: it grew by ~2,000
+      for each, i.e. it is chars / 4 too. A turn adds ~30 tokens of framing besides the prompt; the second turn of a
+      process added ~2,000 once. Now `TokenEstimate` (3.0 to start) replaces every chars / 4 in the extension
+      (prompt size, next-prompt price, tool-result sizes, `@` picker, tips, activity strip, savings report, CSV), and
+      `PromptTokenLearner` in `TokenMeter` refines it from real turns: text-only prompts of 2,000+ characters that
+      start a turn, from the third turn of a process, not across a compaction, 1.5-6 characters per token, weighted
+      (the start counts as 6,000 tokens of evidence). Live, on the same events: learned 2.97, 2.77, 2.73 → 2.89; the
+      estimates came within 2-7% of the real count (before: 27-32% low). Not kept across Visual Studio restarts
 - [ ] **Fable and fast mode in reports.** The savings report and the CSV don't show what Fable or fast mode added.
       Add what they cost above Opus / standard speed to the report, and a `fast_tokens` column to the CSV
 - [ ] **One command for all live tests.** `--live-all`: every live test in order, never in plan mode by mistake,

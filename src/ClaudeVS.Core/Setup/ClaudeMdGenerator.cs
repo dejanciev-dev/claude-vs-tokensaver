@@ -93,6 +93,6 @@ namespace ClaudeVS.Core.Setup
         private static string DirOrDot(string relativePath) { string d = Dir(relativePath); return d.Length == 0 ? "." : d; }
 
         /// <summary>Rough token estimate (~4 chars/token) to show the user what CLAUDE.md costs per request.</summary>
-        public static int EstimateTokens(string text) => string.IsNullOrEmpty(text) ? 0 : (text.Length + 3) / 4;
+        public static int EstimateTokens(string text) => Tokens.TokenEstimate.FromText(text);
     }
 }

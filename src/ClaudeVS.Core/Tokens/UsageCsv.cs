@@ -37,7 +37,7 @@ namespace ClaudeVS.Core.Tokens
                     r.InputTokens.ToString(c), r.OutputTokens.ToString(c), r.ThinkingTokens.ToString(c),
                     r.CacheReadTokens.ToString(c), r.CacheWriteTokens.ToString(c), r.CacheWrite1hTokens.ToString(c),
                     r.CostUsd.ToString("0.######", c), r.RouterCostUsd.ToString("0.######", c), r.DurationMs.ToString(c),
-                    r.IsError ? "1" : "0", (r.CharsAvoided / 4).ToString(c), Text(r.RouteReason), Text(r.PromptPreview),
+                    r.IsError ? "1" : "0", TokenEstimate.FromChars(r.CharsAvoided).ToString(c), Text(r.RouteReason), Text(r.PromptPreview),
                 };
                 w.Write(string.Join(",", cells));
                 w.Write("\r\n");

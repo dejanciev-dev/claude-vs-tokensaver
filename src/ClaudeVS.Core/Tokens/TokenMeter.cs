@@ -72,7 +72,7 @@ namespace ClaudeVS.Core.Tokens
         /// grouped, MCP tools as "MCP"), largest first.
         /// </summary>
         public IReadOnlyList<KeyValuePair<string, long>> ResultTokensByTool() =>
-            _resultCharsByTool.OrderByDescending(kv => kv.Value).Select(kv => new KeyValuePair<string, long>(kv.Key, kv.Value / 4)).ToList();
+            _resultCharsByTool.OrderByDescending(kv => kv.Value).Select(kv => new KeyValuePair<string, long>(kv.Key, TokenEstimate.FromChars(kv.Value))).ToList();
 
         /// <summary>
         /// "Prompt cache: 94% of input read from the cache, saved $0.42 in this conversation (API prices)." for the
@@ -123,12 +123,17 @@ namespace ClaudeVS.Core.Tokens
             _resultCharsByTool.Clear();
             Cache.Reset();
             _breaks.Reset(); _pendingBreak = null;
+            Learner.Reset();
             LastTurnCacheSavedUsd = 0; SessionCacheSavedUsd = 0; _turnModel = null; LastModel = null;
             Changed?.Invoke(this, EventArgs.Empty);
         }
 
+        /// <summary>Learns the characters-per-token estimate from this conversation's turns (<see cref="TokenEstimate"/>).</summary>
+        public PromptTokenLearner Learner { get; } = new PromptTokenLearner();
+
         public void Observe(ClaudeEvent ev)
         {
+            Learner.Observe(ev);
             switch (ev.Kind)
             {
                 case ClaudeEventKind.AssistantUsage when !ev.IsSubagent:
@@ -208,7 +213,7 @@ namespace ClaudeVS.Core.Tokens
                 list.Add(new TokenAdvice { Level = AdviceLevel.Warning, Message = $"Context {pct:0}% full. /compact keeps the summary and drops the rest.", SuggestedCommand = "/compact" });
 
             if (LargestToolResultChars >= _s.LargeToolResultChars)
-                list.Add(new TokenAdvice { Level = AdviceLevel.Warning, Message = $"A {LargestToolResultTool} result was ~{LargestToolResultChars / 4:N0} tokens. Install the output-trimming hooks or ask for narrower reads (line ranges, grep)." });
+                list.Add(new TokenAdvice { Level = AdviceLevel.Warning, Message = $"A {LargestToolResultTool} result was ~{TokenEstimate.FromChars(LargestToolResultChars):N0} tokens. Install the output-trimming hooks or ask for narrower reads (line ranges, grep)." });
 
             if (Turns >= 4 && CacheHitPercent < 50)
                 list.Add(new TokenAdvice { Level = AdviceLevel.Info, Message = $"Cache hit rate only {CacheHitPercent:0}%. Switching model or editing CLAUDE.md mid-chat resets the cache." });

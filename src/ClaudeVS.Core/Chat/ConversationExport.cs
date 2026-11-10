@@ -41,7 +41,7 @@ namespace ClaudeVS.Core.Chat
                         if (!claudeOpen) { sb.Append("\n## Claude\n"); claudeOpen = true; }
                         if (!inToolList) { sb.Append('\n'); inToolList = true; }
                         sb.Append("- 🔧 `").Append(OneLine(item.Text).Replace("`", "'")).Append('`');
-                        if (item.ResultChars > 0) sb.Append(" · ~").Append(TokenMeter.Format(item.ResultChars / 4)).Append(" tok");
+                        if (item.ResultChars > 0) sb.Append(" · ~").Append(TokenMeter.Format(TokenEstimate.FromChars(item.ResultChars))).Append(" tok");
                         if (item.IsError) sb.Append(" · failed");
                         sb.Append('\n');
                         break;

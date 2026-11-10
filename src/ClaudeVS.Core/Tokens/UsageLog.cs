@@ -58,7 +58,7 @@ namespace ClaudeVS.Core.Tokens
         [JsonProperty("ms")] public long DurationMs { get; set; }
         [JsonProperty("error")] public bool IsError { get; set; }
 
-        /// <summary>Characters of file content not sent thanks to references (≈ chars/4 tokens).</summary>
+        /// <summary>Characters of file content not sent thanks to references (≈ chars / TokenEstimate.CharsPerToken tokens).</summary>
         [JsonProperty("charsAvoided")] public long CharsAvoided { get; set; }
 
         [JsonIgnore] public long TotalTokens => InputTokens + OutputTokens + CacheReadTokens + CacheWriteTokens;
@@ -95,7 +95,7 @@ namespace ClaudeVS.Core.Tokens
                 s.Turns++;
                 s.CostUsd += r.CostUsd;
                 s.TotalTokens += r.TotalTokens;
-                s.TokensAvoided += r.CharsAvoided / 4;
+                s.TokensAvoided += TokenEstimate.FromChars(r.CharsAvoided);
                 input += r.InputTokens + r.CacheReadTokens + r.CacheWriteTokens;
                 cacheRead += r.CacheReadTokens;
                 if (!string.IsNullOrEmpty(r.ModelUsed))

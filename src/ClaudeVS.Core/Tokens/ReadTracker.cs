@@ -45,7 +45,7 @@ namespace ClaudeVS.Core.Tokens
                     bool repeat = _contentOf.TryGetValue(path, out var before) && before == hash;
                     _contentOf[path] = hash;
                     if (!repeat) return null;
-                    int tokens = ev.ResultChars / 4;
+                    int tokens = TokenEstimate.FromChars(ev.ResultChars);
                     RepeatedTokens += tokens;
                     return (path, tokens);
                 }

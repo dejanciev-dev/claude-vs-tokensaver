@@ -219,7 +219,7 @@ namespace ClaudeVS.ToolWindow
 
             int secs = (int)(DateTime.UtcNow - _turnStartedUtc).TotalSeconds;
             string detail = secs < 60 ? secs + "s" : $"{secs / 60}m {secs % 60:00}s";
-            long tokens = _turnThinkingTokens + _turnOutputChars / 4;
+            long tokens = _turnThinkingTokens + TokenEstimate.FromChars(_turnOutputChars);
             if (tokens > 0) detail += " · ↓ " + TokenMeter.Format(tokens) + " tokens";
             if (what != null) detail += " · " + what;
             // Like the terminal: once Claude has stopped thinking, how long it thought (explains a long pause).

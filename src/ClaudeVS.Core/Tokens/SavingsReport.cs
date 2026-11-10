@@ -243,7 +243,7 @@ namespace ClaudeVS.Core.Tokens
                     if (r.LocalModel != null && string.Equals(r.LocalModel, r.RouteModel, StringComparison.OrdinalIgnoreCase)) rep.HaikuAgreed++;
                 }
                 rep.OpusEquivalentUsd += PriceTable.Family(r.ModelUsed) == "opus" ? r.CostUsd : prices.Opus.Cost(r);
-                long avoided = r.CharsAvoided / 4;
+                long avoided = TokenEstimate.FromChars(r.CharsAvoided);
                 rep.TokensAvoided += avoided;
                 rep.ReferencesSavedUsd += avoided * (prices.For(r.ModelUsed) ?? prices.Sonnet).Input / 1_000_000.0 * r.SpeedMultiplier;
                 input += r.InputTokens + r.CacheReadTokens + r.CacheWriteTokens;

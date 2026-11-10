@@ -254,6 +254,79 @@ namespace ClaudeVS.Core.Tests
         }
 
         /// <summary>
+        /// `--live-prompt-tokens`: how many tokens prompts of known size really take, next to the chars / 4 estimate.
+        /// One session (Haiku, Accept Edits); per prompt: the growth of the first request's context over the last
+        /// request of the previous turn, less that request's output, and the growth of the CLI's userMessageTokens
+        /// (get_context_usage). About $0.01.
+        /// </summary>
+        public static int RunPromptTokens()
+        {
+            string exe = ClaudeCliLocator.Resolve("");
+            if (exe == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-live-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            var prose = new StringBuilder();
+            while (prose.Length < 8000) prose.Append("The quick brown fox jumps over the lazy dog, and then it walks back home to rest for the evening. ");
+            var code = new StringBuilder();
+            for (int i = 0; code.Length < 8000; i++) code.Append($"    public int Compute{i}(int value) {{ return value * {i} + _offset; }}\n");
+            var dense = new StringBuilder();
+            for (int i = 0; dense.Length < 8000; i++) dense.Append("Line ").Append(i).Append(": filler text to make the prompt long.\n");
+            // "tiny" turns measure what a turn adds besides the prompt (reminders, the previous answer's framing)
+            var prompts = new[] { ("warm-up", "Reply with OK."), ("tiny", "Reply with OK."), ("prose", prose + "\nReply with OK."), ("tiny", "Reply with OK."),
+                ("code", code + "\nReply with OK."), ("tiny", "Reply with OK."), ("dense", dense + "\nReply with OK."), ("tiny", "Reply with OK.") };
+
+            var usages = new BlockingCollection<ClaudeEvent>();
+            using (var session = new ClaudeSession(new ClaudeLaunchOptions { WorkingDirectory = dir, Model = ModelChoice.Haiku, Effort = EffortChoice.Low, PermissionMode = PermissionModeChoice.AcceptEdits }))
+            {
+                // The extension's learner on the same events, as TokenMeter feeds it
+                var learner = new Tokens.PromptTokenLearner();
+                var learned = new List<string>();
+                session.EventReceived += (s, ev) =>
+                {
+                    double was = learner.LastMeasured;
+                    learner.Observe(ev);
+                    if (learner.LastMeasured != was) lock (learned) learned.Add(learner.LastMeasured.ToString("0.00"));
+                    if ((ev.Kind == ClaudeEventKind.AssistantUsage && !ev.IsSubagent) || ev.Kind == ClaudeEventKind.TurnCompleted) usages.Add(ev);
+                };
+                try
+                {
+                    long lastCtx = 0, lastOut = 0, lastUser = 0;
+                    foreach (var (name, text) in prompts)
+                    {
+                        learner.PromptSent(text.Length);
+                        session.SendPromptAsync(text).Wait();
+                        TokenUsage first = default, last = default;
+                        string firstId = null, lastId = null;
+                        var deadline = DateTime.UtcNow.AddSeconds(120);
+                        while (DateTime.UtcNow < deadline && usages.TryTake(out var ev, TimeSpan.FromSeconds(120)))
+                        {
+                            if (ev.Kind == ClaudeEventKind.TurnCompleted) break;
+                            if (firstId == null) { firstId = ev.MessageId; first = ev.Usage; }
+                            if (ev.MessageId != lastId) { lastId = ev.MessageId; }
+                            last = ev.Usage; // the CLI repeats a message's usage per block; the last copy is final
+                        }
+                        var cu = session.GetContextUsageAsync().Result;
+                        long user = cu?.UserMessageTokens ?? 0;
+                        if (name != "warm-up")
+                        {
+                            long api = first.ContextTokens - lastCtx - lastOut;
+                            Console.WriteLine($"  {name,-6} {text.Length,6:N0} chars · est {Tokens.PromptSize.Estimate(text),5:N0} · API {api,5:N0} ({(api > 0 ? (double)text.Length / api : 0):0.00} ch/tok) · userMessageTokens +{user - lastUser,5:N0}");
+                        }
+                        lastCtx = last.ContextTokens; lastOut = last.Output; lastUser = user;
+                    }
+                    double now = Tokens.TokenEstimate.CharsPerToken;
+                    string list; lock (learned) list = string.Join(", ", learned);
+                    Console.WriteLine($"  learner measured: {(list.Length == 0 ? "nothing" : list)} → estimate now {now:0.00} characters per token");
+                    // The long prompts are measured (not the warm-up, the process's second turn or the tiny ones), and land near 2.7-3.0
+                    bool ok = learned.Count >= 2 && now > 2.5 && now < 3.2;
+                    Console.WriteLine(ok ? "PASS live prompt tokens" : "FAIL live prompt tokens");
+                    return ok ? 0 : 1;
+                }
+                finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
+            }
+        }
+
+        /// <summary>
         /// `--live-long-prompt`: does stream-json input keep a long prompt whole? (The VS Code panel cut prompts over
         /// 50,000 characters silently before 2.1.319.) Sends prompts of 60,000 and 200,000 characters to Haiku, each
         /// ending in a unique marker, and checks the marker comes back. About $0.02 on Haiku (2.1.322: both came back whole).
