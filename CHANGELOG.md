@@ -7,6 +7,10 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **More billing notes**, from Claude Code's /status at the start of each session (no model call): when an
+  `ANTHROPIC_AUTH_TOKEN` signs Claude Code in instead of your claude.ai login (Claude Code's own session data
+  does not show this), when both it and `ANTHROPIC_API_KEY` are set, and when a Claude Console organization pays
+  (Claude Code 2.1.319 can switch to one when the claude.ai login ends).
 - **Fable in the model picker** (Claude Code 2.1.321): pick *Fable* to run `--model fable` (Fable 5.2). Auto and
   the Haiku router never pick it. The picker and the line under the input box say "Fable: 2× the Opus price",
   from Options → Pricing, and the meter shows the model in amber.

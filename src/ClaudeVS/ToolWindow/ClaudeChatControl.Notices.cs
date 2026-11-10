@@ -24,7 +24,27 @@ namespace ClaudeVS.ToolWindow
             Notice(SessionNotices.ApiKey(init), important: true);
             Notice(SessionNotices.McpServers(init));
             Tip(SessionNotices.OutputStyle(init));
-            if (ev.IsFirstInit) SyncPermissionMode(init);
+            if (ev.IsFirstInit) { SyncPermissionMode(init); CheckAuth(); }
+        }
+
+        /// <summary>
+        /// Once per Claude Code process: what /status says signs it in (an auth token, both a token and an API key, a
+        /// Console organization), which init does not show. Reading /status makes no model call.
+        /// </summary>
+        private void CheckAuth()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var session = _session;
+            if (session == null) return;
+            Jtf.RunAsync(async () =>
+            {
+                System.Collections.Generic.List<StatusRow> rows = null;
+                try { rows = await session.GetStatusAsync(); }
+                catch (InvalidOperationException) { return; } // an older CLI without /status: nothing to add
+                await Jtf.SwitchToMainThreadAsync();
+                if (session != _session) return;
+                Notice(SessionNotices.Auth(rows), important: true);
+            }).FileAndForget("ClaudeVS/ChatControl/Auth");
         }
 
         /// <summary>

@@ -35,6 +35,29 @@ namespace ClaudeVS.Core.Cli
         }
 
         /// <summary>
+        /// Billing that <c>init</c> does not show, from the /status rows (<c>get_status</c>, no model call), read once per
+        /// Claude Code process. Seen with 2.1.322: an <c>ANTHROPIC_AUTH_TOKEN</c> alone leaves <c>apiKeySource</c> at
+        /// "none", as a claude.ai sign-in does, while /status lists "Auth token: ANTHROPIC_AUTH_TOKEN"; with an
+        /// <c>ANTHROPIC_API_KEY</c> as well, both rows appear and <c>apiKeySource</c> names the API key. Since 2.1.319
+        /// Claude Code can also go on with an <c>ant auth login</c> sign-in, billed to a Claude Console organization, when
+        /// the claude.ai login ends: a "Login method" that names the Console says so (that case not captured).
+        /// </summary>
+        public static string Auth(System.Collections.Generic.IEnumerable<StatusRow> rows)
+        {
+            var list = rows?.ToList() ?? new System.Collections.Generic.List<StatusRow>();
+            string Value(string label) => list.FirstOrDefault(r => string.Equals(r.Label, label, System.StringComparison.OrdinalIgnoreCase))?.Value;
+            string token = Value("Auth token"), key = Value("API key"), login = Value("Login method"), org = Value("Organization");
+            if (!string.IsNullOrEmpty(token) && !string.IsNullOrEmpty(key))
+                return $"Both {token} and {key} are set for Claude Code; it bills the API key. Unset the one you don't mean to pay with, so it is clear which pays.";
+            if (!string.IsNullOrEmpty(token))
+                return $"Claude Code is signing in with {token} (an auth token, often for a gateway or proxy), not your claude.ai login, so this session is billed to whoever issued that token.";
+            if (login != null && login.IndexOf("Console", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                return "Claude Code is signed in to a Claude Console organization" + (string.IsNullOrEmpty(org) ? "" : $" ({org})")
+                    + ", so this session is billed per token to it, not to a claude.ai plan. If your claude.ai login ended, `claude auth login` signs in again.";
+            return null;
+        }
+
+        /// <summary>
         /// MCP servers Claude can't use: <c>mcp_servers[] = {name, status, source}</c>, where 2.1.319 reported
         /// "needs-auth" (a claude.ai connector not signed in) and "pending" (still connecting, not mentioned).
         /// </summary>

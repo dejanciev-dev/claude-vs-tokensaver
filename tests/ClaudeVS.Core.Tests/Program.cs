@@ -1527,6 +1527,24 @@ namespace ClaudeVS.Core.Tests
             True(SessionNotices.ApiKey(Init("\"apiKeySource\":\"project\"")).Contains("(project)"), "other sources named");
         }
 
+        private static void Test_SessionNotices_Auth_FromStatus()
+        {
+            // Row labels as /status gave them with 2.1.322 (values made up)
+            List<StatusRow> Rows(params string[] lv) => Enumerable.Range(0, lv.Length / 2).Select(i => new StatusRow { Section = "Account", Label = lv[2 * i], Value = lv[2 * i + 1] }).ToList();
+
+            Eq(null, SessionNotices.Auth(Rows("Login method", "Claude Pro account", "Organization", "Someone's Organization")), "claude.ai sign-in: nothing to say");
+            Eq(null, SessionNotices.Auth(null), "no rows");
+
+            string token = SessionNotices.Auth(Rows("Auth token", "ANTHROPIC_AUTH_TOKEN", "Model", "claude-haiku-5-5"));
+            True(token != null && token.Contains("ANTHROPIC_AUTH_TOKEN") && token.Contains("not your claude.ai login"), token);
+
+            string both = SessionNotices.Auth(Rows("Auth token", "ANTHROPIC_AUTH_TOKEN", "API key", "ANTHROPIC_API_KEY"));
+            True(both != null && both.StartsWith("Both ANTHROPIC_AUTH_TOKEN and ANTHROPIC_API_KEY are set") && both.Contains("bills the API key"), both);
+
+            string console = SessionNotices.Auth(Rows("Login method", "Claude Console account", "Organization", "Acme"));
+            True(console != null && console.Contains("Claude Console organization (Acme)") && console.Contains("claude auth login"), console);
+        }
+
         private static void Test_SessionNotices_McpServers()
         {
             // The real 2.1.319 list: one connector still connecting, one not signed in.
