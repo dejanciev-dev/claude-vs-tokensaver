@@ -18,6 +18,10 @@ namespace ClaudeVS.Core.Tokens
         public string FromFamily { get; set; }
         public string ToFamily { get; set; }
         public bool ModelChanged => FromFamily != null;
+        /// <summary>Fast mode turned on or off on the same model: fast and standard speed have separate caches.</summary>
+        public bool SpeedChanged { get; set; }
+        /// <summary>The request after the change ran in fast mode.</summary>
+        public bool NowFast { get; set; }
 
         private static string Name(string family) =>
             string.IsNullOrEmpty(family) ? "another model" : char.ToUpperInvariant(family[0]) + family.Substring(1);
@@ -28,6 +32,9 @@ namespace ClaudeVS.Core.Tokens
             string cost = ExtraUsd >= 0.01 ? $" (~${ExtraUsd.ToString("0.00", CultureInfo.InvariantCulture)} more than reading them)" : "";
             string why = ModelChanged
                 ? $"The model changed from {Name(FromFamily)} to {Name(ToFamily)}, and each model has its own cache: keeping one model for a conversation avoids this."
+                : SpeedChanged
+                ? (NowFast ? "Fast mode started" : "Fast mode stopped (turned off, or Claude Code fell back to standard speed)")
+                  + ", and fast and standard speed have separate caches."
                 : "Something at the start of the conversation changed (CLAUDE.md, MCP servers or tools, settings or the system prompt): changes there take effect cheapest in a New chat.";
             return $"The prompt cache was rebuilt while still warm: ~{TokenMeter.Format(Tokens)} tokens of context were written again instead of read{cost}. {why}";
         }
@@ -47,10 +54,11 @@ namespace ClaudeVS.Core.Tokens
         private DateTime? _lastUseUtc;
         private TimeSpan _lifetime = CacheWindow.Short;
         private bool _compacted;
+        private bool _lastFast;
 
         public void Reset()
         {
-            _lastMessageId = null; _lastUsage = default; _lastModel = null; _lastContext = 0; _lastUseUtc = null;
+            _lastMessageId = null; _lastUsage = default; _lastModel = null; _lastContext = 0; _lastUseUtc = null; _lastFast = false;
             _lifetime = CacheWindow.Short; _compacted = false;
         }
 
@@ -76,12 +84,15 @@ namespace ClaudeVS.Core.Tokens
                 double write = usage.CacheCreation1h > 0 ? 2 * p.Input : p.CacheWrite;
                 string from = PriceTable.Family(_lastModel), to = PriceTable.Family(model);
                 bool changed = from != null && to != null && from != to;
+                bool fast = usage.AnyFast;
                 found = new CacheBreak
                 {
                     Tokens = missed,
-                    ExtraUsd = Math.Max(0, missed * (write - p.CacheRead) / 1_000_000.0),
+                    ExtraUsd = Math.Max(0, missed * (write - p.CacheRead) / 1_000_000.0 * ModelPrice.SpeedMultiplier(usage.FastTokens, usage.Total)),
                     FromFamily = changed ? from : null,
                     ToFamily = changed ? to : null,
+                    SpeedChanged = !changed && fast != _lastFast,
+                    NowFast = fast,
                 };
             }
 
@@ -91,6 +102,7 @@ namespace ClaudeVS.Core.Tokens
                 _lastUseUtc = nowUtc;
             }
             _lastContext = usage.ContextTokens;
+            _lastFast = usage.AnyFast;
             if (!string.IsNullOrEmpty(model)) _lastModel = model;
             _compacted = false;
             return found;

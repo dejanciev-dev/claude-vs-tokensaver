@@ -14,6 +14,8 @@ namespace ClaudeVS.Core.Tokens
         public static string Extras(TokenUsage turn, double cacheSavedUsd = 0)
         {
             var parts = new List<string>();
+            // Fast mode doubles every price: say so where the turn's cost is shown
+            if (turn.AnyFast) parts.Add(turn.FastTokens >= turn.Total ? "fast" : "partly fast");
             // Thinking is billed as output, the dearest kind of token: worth seeing per answer.
             if (turn.Thinking > 0) parts.Add($"{TokenMeter.Format(turn.Thinking)} thinking");
             if (CachedPercent(turn) is int cached)

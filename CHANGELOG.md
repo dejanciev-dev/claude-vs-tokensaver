@@ -342,6 +342,10 @@ All notable changes to this project are listed here. The format follows
 - Turns answered by Claude Fable (`claude-fable-5-2`, Claude Code 2.1.321) are priced as Fable, $8 / $40 per
   million tokens, instead of at Sonnet's prices, a quarter of the real cost. This covers the footer, meter,
   sessions list, next-prompt line, cache savings and savings report. Options → Pricing has a new *Fable price* row.
+- Turns answered in fast mode are priced at fast mode's prices, twice the standard ones (`usage.speed`), in the
+  meter, sessions list, cache savings and savings report. The footer says `· fast` (or `· partly fast` when Claude
+  Code fell back to standard speed mid-turn, 2.1.321), and a prompt cache rebuilt because fast mode started or
+  stopped says so: fast and standard speed have separate caches.
 - Diffs of Claude's edits and writes are exact even when the tool runs before the extension reads the file:
   the result's `originalFile` (Claude Code 2.1.319) replaces that copy for the red / green lines, the Diff button
   and Files changed. The Output pane notes each correction.

@@ -400,11 +400,16 @@ and desktop entries are left out.
       The meter shows Fable in amber; the cache-break note gets "model changed" from the family. Verified with
       2.1.322: `--model fable` is answered by `claude-fable-5-2`, and `PriceTable` gives the CLI's own
       `total_cost_usd` exactly ($0.011432 for 2 in, 5 out, 701 1-hour cache-write tokens)
-- [ ] **Fast mode** (2.1.321: when fast serving fails it now drops to standard speed on the same model first).
+- [x] **Fast mode** (2.1.321: when fast serving fails it now drops to standard speed on the same model first).
       Found while verifying Fable: the result has `usage.speed` ("standard") and `fast_mode_state` ("off", with
-      `fast_mode_disabled_reason: "sdk_opt_in_required"` in `-p`).
-      Capture a fast-mode turn: if usage or the result says which speed answered, price fast turns at the fast
-      price (or at least say "fast" in the footer); if not, note it under Known limitations
+      `fast_mode_disabled_reason: "sdk_opt_in_required"` in `-p`), so the extension's sessions run at standard speed
+      unless fast mode is opted into. The API's fast mode page (2026-11): Opus 5.5 $8 / $40 and Fable 5.2 $16 / $80,
+      2x standard, with the cache multipliers on top (so every token type doubles); `usage.speed` says which speed
+      ran; fast and standard speed do not share cached prefixes. Now `TokenUsage.FastTokens` (from `usage.speed`,
+      summed apart because a turn can fall back mid-way) prices fast tokens at `ModelPrice.FastMultiplier` (2x) in
+      the meter, sessions list, cache savings and savings report; the usage log records `fastTokens` (only when
+      above 0); the footer says `· fast` or `· partly fast`; the cache-break note names fast mode starting or
+      stopping as the cause. Not captured live: no fast turn could be run from `-p` without the opt-in
 - [ ] **Verify with 2.1.322 and raise `CliVersion.Tested`** from 2.1.318: run all live tests (`--live`,
       `--live-session`, `--live-dialogs`, `--live-mcp`, `--live-edit-review`, `--live-haiku-router`, `--live-setup`,
       `--live-ask`), refresh the status table, and check plan mode still answers with Sonnet when Haiku is asked for

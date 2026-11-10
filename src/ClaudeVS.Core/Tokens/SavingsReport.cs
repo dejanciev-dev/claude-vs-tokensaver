@@ -15,15 +15,29 @@ namespace ClaudeVS.Core.Tokens
         public double CacheWrite { get; set; }
         public double CacheRead { get; set; }
 
-        public double Cost(UsageRecord r) =>
-            (r.InputTokens * Input + r.OutputTokens * Output + r.CacheWriteTokens * CacheWrite + r.CacheReadTokens * CacheRead) / 1_000_000.0;
+        /// <summary>
+        /// Fast mode bills every token type at this multiple of the standard price (Opus 5.5: $8 / $40 instead of
+        /// $4 / $20; Fable 5.2: $16 / $80); the cache multipliers apply on top. Source: the API's fast mode page, 2026-11.
+        /// </summary>
+        public const double FastMultiplier = 2.0;
 
-        /// <summary>One request's (or a sum of requests') cost: 1-hour cache writes at twice the input price, the rest at <see cref="CacheWrite"/>.</summary>
+        /// <summary>
+        /// The price multiple for tokens of which <paramref name="fastTokens"/> of <paramref name="totalTokens"/> ran in
+        /// fast mode: 1 for none, <see cref="FastMultiplier"/> for all, in between by token share for a mixed sum.
+        /// </summary>
+        public static double SpeedMultiplier(long fastTokens, long totalTokens) =>
+            fastTokens <= 0 || totalTokens <= 0 ? 1.0 : 1.0 + (FastMultiplier - 1.0) * Math.Min(1.0, (double)fastTokens / totalTokens);
+
+        public double Cost(UsageRecord r) =>
+            (r.InputTokens * Input + r.OutputTokens * Output + r.CacheWriteTokens * CacheWrite + r.CacheReadTokens * CacheRead) / 1_000_000.0 * r.SpeedMultiplier;
+
+        /// <summary>One request's (or a sum of requests') cost: 1-hour cache writes at twice the input price, the rest at <see cref="CacheWrite"/>; fast tokens at <see cref="FastMultiplier"/>×.</summary>
         public double Cost(Cli.TokenUsage u)
         {
             long write1h = Math.Min(Math.Max(0, u.CacheCreation1h), Math.Max(0, u.CacheCreation));
             long write5m = Math.Max(0, u.CacheCreation) - write1h;
-            return (u.Input * Input + u.Output * Output + write5m * CacheWrite + write1h * 2 * Input + u.CacheRead * CacheRead) / 1_000_000.0;
+            return (u.Input * Input + u.Output * Output + write5m * CacheWrite + write1h * 2 * Input + u.CacheRead * CacheRead) / 1_000_000.0
+                * SpeedMultiplier(u.FastTokens, u.Total);
         }
 
         /// <summary>
@@ -39,7 +53,10 @@ namespace ClaudeVS.Core.Tokens
             return saved / 1_000_000.0;
         }
 
-        public double CacheSavedUsd(Cli.TokenUsage u) => CacheSavedUsd(u.CacheRead, u.CacheCreation, u.CacheCreation1h);
+        /// <summary>As above; in fast mode every price doubles, and so does what the cache saves.</summary>
+        public double CacheSavedUsd(Cli.TokenUsage u) => CacheSavedUsd(u.CacheRead, u.CacheCreation, u.CacheCreation1h) * SpeedMultiplier(u.FastTokens, u.Total);
+
+        public double CacheSavedUsd(UsageRecord r) => CacheSavedUsd(r.CacheReadTokens, r.CacheWriteTokens, r.CacheWrite1hTokens) * r.SpeedMultiplier;
 
         /// <summary>Parses "input, output, cacheWrite, cacheRead" (invariant culture). Returns null when malformed.</summary>
         public static ModelPrice Parse(string text)
@@ -228,14 +245,14 @@ namespace ClaudeVS.Core.Tokens
                 rep.OpusEquivalentUsd += PriceTable.Family(r.ModelUsed) == "opus" ? r.CostUsd : prices.Opus.Cost(r);
                 long avoided = r.CharsAvoided / 4;
                 rep.TokensAvoided += avoided;
-                rep.ReferencesSavedUsd += avoided * (prices.For(r.ModelUsed) ?? prices.Sonnet).Input / 1_000_000.0;
+                rep.ReferencesSavedUsd += avoided * (prices.For(r.ModelUsed) ?? prices.Sonnet).Input / 1_000_000.0 * r.SpeedMultiplier;
                 input += r.InputTokens + r.CacheReadTokens + r.CacheWriteTokens;
                 cacheRead += r.CacheReadTokens;
                 rep.CacheReadTokens += r.CacheReadTokens;
-                rep.CacheSavedUsd += (prices.For(r.ModelUsed) ?? prices.Sonnet).CacheSavedUsd(r.CacheReadTokens, r.CacheWriteTokens, r.CacheWrite1hTokens);
+                rep.CacheSavedUsd += (prices.For(r.ModelUsed) ?? prices.Sonnet).CacheSavedUsd(r);
                 rep.OutputTokens += r.OutputTokens;
                 rep.ThinkingTokens += r.ThinkingTokens;
-                rep.ThinkingCostUsd += r.ThinkingTokens * (prices.For(r.ModelUsed) ?? prices.Sonnet).Output / 1_000_000.0;
+                rep.ThinkingCostUsd += r.ThinkingTokens * (prices.For(r.ModelUsed) ?? prices.Sonnet).Output / 1_000_000.0 * r.SpeedMultiplier;
             }
             rep.CacheHitPercent = input > 0 ? 100.0 * cacheRead / input : 0;
             var timed = list.Where(r => r.RouterMs > 0).ToList();
@@ -258,7 +275,7 @@ namespace ClaudeVS.Core.Tokens
                     Turns = day.Count(),
                     Tokens = day.Sum(r => r.TotalTokens),
                     CostUsd = day.Sum(r => r.CostUsd + r.RouterCostUsd),
-                    CacheSavedUsd = day.Sum(r => (prices.For(r.ModelUsed) ?? prices.Sonnet).CacheSavedUsd(r.CacheReadTokens, r.CacheWriteTokens, r.CacheWrite1hTokens)),
+                    CacheSavedUsd = day.Sum(r => (prices.For(r.ModelUsed) ?? prices.Sonnet).CacheSavedUsd(r)),
                     CacheHitPercent = dIn > 0 ? 100.0 * dRead / dIn : 0,
                 });
             }
