@@ -89,7 +89,10 @@ namespace ClaudeVS.Options
         [Category("Pricing"), DisplayName("Haiku price"), Description("USD per million tokens: input, output, cache write, cache read.")]
         public string HaikuPrice { get; set; } = PriceTable.DefaultHaiku;
 
-        public PriceTable ToPriceTable() => PriceTable.FromStrings(OpusPrice, SonnetPrice, HaikuPrice);
+        [Category("Pricing"), DisplayName("Fable price"), Description("USD per million tokens: input, output, cache write, cache read.")]
+        public string FablePrice { get; set; } = PriceTable.DefaultFable;
+
+        public PriceTable ToPriceTable() => PriceTable.FromStrings(OpusPrice, SonnetPrice, HaikuPrice, FablePrice);
 
         [Category("Diagnostics"), DisplayName("Log raw CLI traffic"), Description("Write every stream-json line sent to and received from claude to Output > Claude Code. Large; turn on only when debugging.")]
         public bool LogRawCliTraffic { get; set; } = false;

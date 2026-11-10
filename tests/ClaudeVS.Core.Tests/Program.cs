@@ -664,6 +664,16 @@ namespace ClaudeVS.Core.Tests
             Eq("sonnet", PriceTable.Family("claude-sonnet-5-5"), "family");
             Eq(null, PriceTable.Family("gpt"), "unknown");
             Eq(4.0, PriceTable.FromStrings("bad", null, null).Opus.Input, "falls back to default");
+
+            // Fable 5.2 (2.1.321): its own family, not priced as Sonnet
+            var prices = new PriceTable();
+            Eq("fable", PriceTable.Family("claude-fable-5-2"), "fable family");
+            Eq("fable", PriceTable.Family("fable"), "fable alias");
+            Eq(40.0, prices.For("claude-fable-5-2").Output, "fable output price");
+            Eq(8.0, PriceTable.FromStrings(null, null, null).Fable.Input, "fable default");
+            Eq(9.0, PriceTable.FromStrings(null, null, null, "9, 45, 11.25, 0.2").Fable.Input, "fable from options");
+            var u = new TokenUsage { Input = 1_000, Output = 1_000, CacheRead = 100_000 };
+            Eq(0.068, Math.Round(prices.For("claude-fable-5-2").Cost(u), 6), "fable turn: 1k in $0.008 + 1k out $0.04 + 100k read $0.02");
         }
 
         private static void Test_RouterReplay_FindsChangedDecisions()
