@@ -531,8 +531,15 @@ Picked on 2026-11-10.
       old default was not chosen), a price you typed stays. The captures are `Fixtures/cli-2.1.322-model-costs.jsonl`
       and `Test_Prices_MatchTheCliCosts` prices them. Not checked: 5-minute cache writes (Claude Code on a
       claude.ai plan writes for 1 hour) and Haiku above 100k tokens (next item)
-- [ ] **Haiku price above 100k tokens.** Haiku 5.5 costs $0.50 / $2.50 for prompts over 100k tokens (5x); a 200k-
-      character turn cost $0.09 instead of ~$0.02. Price that tier, and tip when a Haiku conversation nears 100k
+- [x] **Haiku price above 100k tokens.** Haiku 5.5 costs $0.50 / $2.50 for prompts over 100k tokens (5x); a 200k-
+      character turn cost $0.09 instead of ~$0.02. Price that tier, and tip when a Haiku conversation nears 100k.
+      Measured with 2.1.322 (`Fixtures/cli-2.1.322-haiku-over-100k.jsonl`, $0.13): a request with more than 100k
+      input tokens (input + cache reads + cache writes) is billed at 5x every price, cache reads too ($0.05); 74k
+      matched the normal prices. The tier is per request, so `TokenUsage.LargeContextTokens` counts tokens of
+      requests over 100k (`AsRequest`; `TokenMeter` sums them per turn from each message's usage), and
+      `ModelPrice.LongContextFrom` / `LongContextMultiplier` (Haiku only) price that share. Sessions list, cache-break
+      note and next-prompt price use each request's own size. The usage log and CSV record `largeContextTokens` /
+      `large_context_tokens`. A tip, once per conversation, at 90k tokens of Haiku context
 - [ ] **Plan mode: say Sonnet before sending.** In plan mode Claude Code answers with Sonnet even when Auto picks
       Haiku, but the route hint and the "to send" price under the box say Haiku. Make them say Sonnet there, and
       keep the savings report from counting such turns as routed to Haiku

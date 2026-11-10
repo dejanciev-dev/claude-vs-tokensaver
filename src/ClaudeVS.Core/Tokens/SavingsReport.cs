@@ -28,16 +28,40 @@ namespace ClaudeVS.Core.Tokens
         public static double SpeedMultiplier(long fastTokens, long totalTokens) =>
             fastTokens <= 0 || totalTokens <= 0 ? 1.0 : 1.0 + (FastMultiplier - 1.0) * Math.Min(1.0, (double)fastTokens / totalTokens);
 
-        public double Cost(UsageRecord r) =>
-            (r.InputTokens * Input + r.OutputTokens * Output + r.CacheWriteTokens * CacheWrite + r.CacheReadTokens * CacheRead) / 1_000_000.0 * r.SpeedMultiplier;
+        /// <summary>
+        /// A request with more input than this (fresh input + cache reads + cache writes) is billed at
+        /// <see cref="LongContextMultiplier"/>× every price; 0 = no such tier. Haiku 5.5: over 100k, 5× ($0.50 / $2.50,
+        /// cache read $0.05), measured with Claude Code 2.1.322 (Fixtures/cli-2.1.322-haiku-over-100k.jsonl).
+        /// </summary>
+        public long LongContextFrom { get; set; }
+        public double LongContextMultiplier { get; set; } = 1;
 
-        /// <summary>One request's (or a sum of requests') cost: 1-hour cache writes at twice the input price, the rest at <see cref="CacheWrite"/>; fast tokens at <see cref="FastMultiplier"/>×.</summary>
+        /// <summary>For one request with <paramref name="inputTokens"/> of input: <see cref="LongContextMultiplier"/> above the tier, else 1.</summary>
+        public double RequestMultiplier(long inputTokens) =>
+            LongContextFrom > 0 && LongContextMultiplier > 1 && inputTokens > LongContextFrom ? LongContextMultiplier : 1.0;
+
+        /// <summary>For a sum of requests: by the share of tokens from requests over <see cref="Cli.TokenUsage.LargeContextFrom"/>.</summary>
+        public double ContextMultiplier(long largeTokens, long totalTokens) =>
+            LongContextFrom <= 0 || LongContextMultiplier <= 1 || largeTokens <= 0 || totalTokens <= 0 ? 1.0
+                : 1.0 + (LongContextMultiplier - 1.0) * Math.Min(1.0, (double)largeTokens / totalTokens);
+
+        /// <summary>Everything a logged turn's tokens are multiplied by: fast mode and the long-context tier.</summary>
+        public double Multiplier(UsageRecord r) => r.SpeedMultiplier * ContextMultiplier(r.LargeContextTokens, r.TotalTokens);
+
+        public double Cost(UsageRecord r) =>
+            (r.InputTokens * Input + r.OutputTokens * Output + r.CacheWriteTokens * CacheWrite + r.CacheReadTokens * CacheRead) / 1_000_000.0 * Multiplier(r);
+
+        /// <summary>
+        /// One request's (or a sum of requests') cost: 1-hour cache writes at twice the input price, the rest at
+        /// <see cref="CacheWrite"/>; fast tokens at <see cref="FastMultiplier"/>×, tokens of requests over the
+        /// long-context tier at <see cref="LongContextMultiplier"/>× (see <see cref="Cli.TokenUsage.LargeContextTokens"/>).
+        /// </summary>
         public double Cost(Cli.TokenUsage u)
         {
             long write1h = Math.Min(Math.Max(0, u.CacheCreation1h), Math.Max(0, u.CacheCreation));
             long write5m = Math.Max(0, u.CacheCreation) - write1h;
             return (u.Input * Input + u.Output * Output + write5m * CacheWrite + write1h * 2 * Input + u.CacheRead * CacheRead) / 1_000_000.0
-                * SpeedMultiplier(u.FastTokens, u.Total);
+                * SpeedMultiplier(u.FastTokens, u.Total) * ContextMultiplier(u.LargeContextTokens, u.Total);
         }
 
         /// <summary>
@@ -54,9 +78,10 @@ namespace ClaudeVS.Core.Tokens
         }
 
         /// <summary>As above; in fast mode every price doubles, and so does what the cache saves.</summary>
-        public double CacheSavedUsd(Cli.TokenUsage u) => CacheSavedUsd(u.CacheRead, u.CacheCreation, u.CacheCreation1h) * SpeedMultiplier(u.FastTokens, u.Total);
+        public double CacheSavedUsd(Cli.TokenUsage u) => CacheSavedUsd(u.CacheRead, u.CacheCreation, u.CacheCreation1h)
+            * SpeedMultiplier(u.FastTokens, u.Total) * ContextMultiplier(u.LargeContextTokens, u.Total);
 
-        public double CacheSavedUsd(UsageRecord r) => CacheSavedUsd(r.CacheReadTokens, r.CacheWriteTokens, r.CacheWrite1hTokens) * r.SpeedMultiplier;
+        public double CacheSavedUsd(UsageRecord r) => CacheSavedUsd(r.CacheReadTokens, r.CacheWriteTokens, r.CacheWrite1hTokens) * Multiplier(r);
 
         /// <summary>Parses "input, output, cacheWrite, cacheRead" (invariant culture). Returns null when malformed.</summary>
         public static ModelPrice Parse(string text)
@@ -91,8 +116,11 @@ namespace ClaudeVS.Core.Tokens
 
         public ModelPrice Opus { get; set; } = ModelPrice.Parse(DefaultOpus);
         public ModelPrice Sonnet { get; set; } = ModelPrice.Parse(DefaultSonnet);
-        public ModelPrice Haiku { get; set; } = ModelPrice.Parse(DefaultHaiku);
+        public ModelPrice Haiku { get; set; } = HaikuTier(ModelPrice.Parse(DefaultHaiku));
         public ModelPrice Fable { get; set; } = ModelPrice.Parse(DefaultFable);
+
+        /// <summary>Haiku 5.5 bills a request over 100k input tokens at 5x every price (measured with 2.1.322).</summary>
+        private static ModelPrice HaikuTier(ModelPrice p) { p.LongContextFrom = Cli.TokenUsage.LargeContextFrom; p.LongContextMultiplier = 5; return p; }
 
         /// <summary>
         /// A Sonnet price saved in Options that is an earlier default (nobody chose it: Options saves every value on
@@ -115,7 +143,7 @@ namespace ClaudeVS.Core.Tokens
         {
             Opus = ModelPrice.Parse(opus) ?? ModelPrice.Parse(DefaultOpus),
             Sonnet = ModelPrice.Parse(sonnet) ?? ModelPrice.Parse(DefaultSonnet),
-            Haiku = ModelPrice.Parse(haiku) ?? ModelPrice.Parse(DefaultHaiku),
+            Haiku = HaikuTier(ModelPrice.Parse(haiku) ?? ModelPrice.Parse(DefaultHaiku)),
             Fable = ModelPrice.Parse(fable) ?? ModelPrice.Parse(DefaultFable),
         };
 
@@ -272,14 +300,14 @@ namespace ClaudeVS.Core.Tokens
                 rep.OpusEquivalentUsd += PriceTable.Family(r.ModelUsed) == "opus" ? r.CostUsd : prices.Opus.Cost(r);
                 long avoided = TokenEstimate.FromChars(r.CharsAvoided);
                 rep.TokensAvoided += avoided;
-                rep.ReferencesSavedUsd += avoided * (prices.For(r.ModelUsed) ?? prices.Sonnet).Input / 1_000_000.0 * r.SpeedMultiplier;
+                rep.ReferencesSavedUsd += avoided * (prices.For(r.ModelUsed) ?? prices.Sonnet).Input / 1_000_000.0 * (prices.For(r.ModelUsed) ?? prices.Sonnet).Multiplier(r);
                 input += r.InputTokens + r.CacheReadTokens + r.CacheWriteTokens;
                 cacheRead += r.CacheReadTokens;
                 rep.CacheReadTokens += r.CacheReadTokens;
                 rep.CacheSavedUsd += (prices.For(r.ModelUsed) ?? prices.Sonnet).CacheSavedUsd(r);
                 rep.OutputTokens += r.OutputTokens;
                 rep.ThinkingTokens += r.ThinkingTokens;
-                rep.ThinkingCostUsd += r.ThinkingTokens * (prices.For(r.ModelUsed) ?? prices.Sonnet).Output / 1_000_000.0 * r.SpeedMultiplier;
+                rep.ThinkingCostUsd += r.ThinkingTokens * (prices.For(r.ModelUsed) ?? prices.Sonnet).Output / 1_000_000.0 * (prices.For(r.ModelUsed) ?? prices.Sonnet).Multiplier(r);
 
                 // What Fable and fast mode added: the same tokens at Opus prices / at standard speed, both at Options → Pricing
                 var own = prices.For(r.ModelUsed) ?? prices.Sonnet;

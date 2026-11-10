@@ -103,7 +103,7 @@ namespace ClaudeVS.Core.Chat
                         string model = (string)msg?["model"];
                         string id = (string)msg?["id"] ?? (string)o["requestId"] ?? (string)o["uuid"];
                         if (id != null && !seen.Add(id)) continue;
-                        var u = TokenUsage.From(msg?["usage"]);
+                        var u = TokenUsage.From(msg?["usage"]).AsRequest(); // one API message = one request: its own tier
                         if (u.IsEmpty) continue; // "<synthetic>" messages (errors, interruptions) cost nothing
                         info.Requests++;
                         info.Usage += u;

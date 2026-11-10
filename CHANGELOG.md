@@ -353,6 +353,8 @@ All notable changes to this project are listed here. The format follows
 - `dotnet test` runs the Core test runner instead of silently reporting zero tests.
 
 ### Fixed
+- Haiku requests with more than 100k tokens of input are priced at 5x, as Claude Code bills them (cache reads too),
+  and a token tip says so once when a Haiku conversation nears 100k. The usage CSV gets `large_context_tokens`.
 - Sonnet's cache reads are priced at $0.10 per million tokens, as Claude Code bills them, not $0.20. Costs and cache
   savings for Sonnet conversations come out right (a long Sonnet conversation is mostly cache reads). If Options
   had the old default saved, it is updated; a price you entered yourself is kept. All four default prices are now

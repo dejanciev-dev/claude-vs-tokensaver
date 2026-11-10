@@ -54,6 +54,8 @@ namespace ClaudeVS.Core.Tokens
         /// <summary>Of <see cref="TotalTokens"/>: tokens of requests answered in fast mode (2x prices); 0 in older lines.</summary>
         [JsonProperty("fastTokens", DefaultValueHandling = DefaultValueHandling.Ignore)] public long FastTokens { get; set; }
         [JsonIgnore] public double SpeedMultiplier => ModelPrice.SpeedMultiplier(FastTokens, TotalTokens);
+        /// <summary>Of <see cref="TotalTokens"/>: tokens of requests over 100k input tokens (Haiku bills those 5x); 0 in older lines.</summary>
+        [JsonProperty("largeContextTokens", DefaultValueHandling = DefaultValueHandling.Ignore)] public long LargeContextTokens { get; set; }
         [JsonProperty("cost")] public double CostUsd { get; set; }
         [JsonProperty("ms")] public long DurationMs { get; set; }
         [JsonProperty("error")] public bool IsError { get; set; }

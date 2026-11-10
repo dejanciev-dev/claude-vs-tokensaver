@@ -124,9 +124,13 @@ namespace ClaudeVS.Core.Tokens
             Cache.Reset();
             _breaks.Reset(); _pendingBreak = null;
             Learner.Reset();
+            _turnLargeByMessage.Clear();
             LastTurnCacheSavedUsd = 0; SessionCacheSavedUsd = 0; _turnModel = null; LastModel = null;
             Changed?.Invoke(this, EventArgs.Empty);
         }
+
+        // This turn's main-agent requests over the long-context tier: tokens by message id
+        private readonly Dictionary<string, long> _turnLargeByMessage = new Dictionary<string, long>(StringComparer.Ordinal);
 
         /// <summary>Learns the characters-per-token estimate from this conversation's turns (<see cref="TokenEstimate"/>).</summary>
         public PromptTokenLearner Learner { get; } = new PromptTokenLearner();
@@ -137,7 +141,10 @@ namespace ClaudeVS.Core.Tokens
             switch (ev.Kind)
             {
                 case ClaudeEventKind.AssistantUsage when !ev.IsSubagent:
-                    _pendingBreak = _breaks.Observe(ev.Usage, ev.Model, ev.MessageId, DateTime.UtcNow, Prices ?? DefaultPrices) ?? _pendingBreak;
+                    // A request over the long-context tier: its tokens, by message (the last copy of a message's usage is final)
+                    var req = ev.Usage.AsRequest();
+                    _turnLargeByMessage[ev.MessageId ?? "m" + _turnLargeByMessage.Count] = req.LargeContextTokens;
+                    _pendingBreak = _breaks.Observe(req, ev.Model, ev.MessageId, DateTime.UtcNow, Prices ?? DefaultPrices) ?? _pendingBreak;
                     Cache.Use(ev.Usage, DateTime.UtcNow);
                     if (!string.IsNullOrEmpty(ev.Model)) _turnModel = LastModel = ev.Model;
                     ContextTokens = ev.Usage.ContextTokens; // live update while a long turn runs
@@ -166,13 +173,17 @@ namespace ClaudeVS.Core.Tokens
                     return;
                 case ClaudeEventKind.TurnCompleted:
                     Turns++;
-                    LastTurn = ev.Usage;
-                    // Priced at the model that answered (Sonnet when unknown); the turn's usage sums all its requests.
+                    // The turn's usage sums all its requests; which were over the long-context tier only the requests say
+                    var turn = ev.Usage;
+                    turn.LargeContextTokens = Math.Min(turn.Total, _turnLargeByMessage.Values.Sum());
+                    _turnLargeByMessage.Clear();
+                    LastTurn = turn;
+                    // Priced at the model that answered (Sonnet when unknown).
                     var prices = Prices ?? DefaultPrices;
-                    LastTurnCacheSavedUsd = (prices.For(_turnModel) ?? prices.Sonnet).CacheSavedUsd(ev.Usage);
+                    LastTurnCacheSavedUsd = (prices.For(_turnModel) ?? prices.Sonnet).CacheSavedUsd(turn);
                     SessionCacheSavedUsd += LastTurnCacheSavedUsd;
                     _turnModel = null;
-                    SessionTotal += ev.Usage;
+                    SessionTotal += turn;
                     if (!ev.LastRequestUsage.IsEmpty) ContextTokens = ev.LastRequestUsage.ContextTokens;
                     if (ev.ContextWindow.HasValue && ev.ContextWindow.Value > 0) ContextWindow = ev.ContextWindow.Value;
                     if (ev.TotalCostUsd.HasValue)

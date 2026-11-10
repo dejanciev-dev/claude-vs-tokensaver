@@ -1810,6 +1810,7 @@ namespace ClaudeVS.ToolWindow
             {
                 ThreadHelper.ThrowIfNotOnUIThread();
                 _meterModel?.Observe(ev);
+                if (ev.Kind == ClaudeEventKind.AssistantUsage && !ev.IsSubagent) Tip(SessionNotices.HaikuLongContext(ev.Model, ev.Usage.ContextTokens));
                 switch (ev.Kind)
                 {
                     case ClaudeEventKind.SessionStarted:
@@ -1954,6 +1955,7 @@ namespace ClaudeVS.ToolWindow
             rec.CacheWriteTokens = ev.Usage.CacheCreation;
             rec.CacheWrite1hTokens = ev.Usage.CacheCreation1h;
             rec.FastTokens = ev.Usage.FastTokens;
+            rec.LargeContextTokens = _meterModel?.LastTurn.LargeContextTokens ?? 0; // per request: the meter counted it
             rec.CostUsd = _meterModel?.LastTurnCostUsd ?? 0;
             rec.DurationMs = ev.DurationMs;
             rec.IsError = ev.IsError;

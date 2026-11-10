@@ -88,7 +88,7 @@ namespace ClaudeVS.Core.Tokens
                 found = new CacheBreak
                 {
                     Tokens = missed,
-                    ExtraUsd = Math.Max(0, missed * (write - p.CacheRead) / 1_000_000.0 * ModelPrice.SpeedMultiplier(usage.FastTokens, usage.Total)),
+                    ExtraUsd = Math.Max(0, missed * (write - p.CacheRead) / 1_000_000.0 * ModelPrice.SpeedMultiplier(usage.FastTokens, usage.Total) * p.RequestMultiplier(usage.ContextTokens)),
                     FromFamily = changed ? from : null,
                     ToFamily = changed ? to : null,
                     SpeedChanged = !changed && fast != _lastFast,

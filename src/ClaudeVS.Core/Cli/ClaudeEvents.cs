@@ -21,6 +21,23 @@ namespace ClaudeVS.Core.Cli
         /// Claude Code 2.1.321 a fast turn falls back to standard speed on the same model when fast serving fails.
         /// </summary>
         public long FastTokens;
+        /// <summary>
+        /// Of <see cref="Total"/>: tokens of requests with more than <see cref="LargeContextFrom"/> input tokens, which a
+        /// model with a long-context tier bills higher (Haiku 5.5: 5×). The price depends on each request, not on a sum,
+        /// so a turn's total says it only through this (set per request: <see cref="AsRequest"/>, summed by +).
+        /// </summary>
+        public long LargeContextTokens;
+
+        /// <summary>Haiku 5.5's long-context tier starts above this many input tokens per request.</summary>
+        public const long LargeContextFrom = 100_000;
+
+        /// <summary>This usage as one request's: <see cref="LargeContextTokens"/> = all of it when its input passes <see cref="LargeContextFrom"/>.</summary>
+        public TokenUsage AsRequest()
+        {
+            var t = this;
+            t.LargeContextTokens = ContextTokens > LargeContextFrom ? Total : 0;
+            return t;
+        }
 
         /// <summary>Tokens the model had to read for this request = how full the context window is.</summary>
         public long ContextTokens => Input + CacheRead + CacheCreation;
@@ -61,6 +78,7 @@ namespace ClaudeVS.Core.Cli
             CacheCreation5m = a.CacheCreation5m + b.CacheCreation5m,
             Thinking = a.Thinking + b.Thinking,
             FastTokens = a.FastTokens + b.FastTokens,
+            LargeContextTokens = a.LargeContextTokens + b.LargeContextTokens,
         };
     }
 
