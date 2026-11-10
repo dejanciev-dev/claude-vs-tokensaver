@@ -132,7 +132,7 @@ namespace ClaudeVS.Core.Cli
             long? lines = file["numLines"]?.Type == JTokenType.Integer ? (long?)file["numLines"] : null;
             long? total = file["totalLines"]?.Type == JTokenType.Integer ? (long?)file["totalLines"] : null;
             long start = file["startLine"]?.Type == JTokenType.Integer ? (long)file["startLine"] : 1;
-            int tokens = resultChars / 4;
+            int tokens = Tokens.TokenEstimate.FromChars(resultChars);
             if (lines == null || total == null || lines < total || start > 1 || tokens < LargeReadTokens) return null;
             string name = System.IO.Path.GetFileName((string)file["filePath"] ?? "") is string n && n.Length > 0 ? n : "a file";
             return $"Claude read all {total:N0} lines of {name} (~{Tokens.TokenMeter.Format(tokens)} tokens), which now go with every request. "
@@ -149,8 +149,8 @@ namespace ClaudeVS.Core.Cli
         /// </summary>
         public static string LargeCommandOutput(string toolName, int resultChars, bool hookInstalled)
         {
-            if ((toolName != "Bash" && toolName != "PowerShell") || resultChars / 4 < LargeOutputTokens) return null;
-            string size = $"That command put ~{Tokens.TokenMeter.Format(resultChars / 4)} tokens of output into the context.";
+            if ((toolName != "Bash" && toolName != "PowerShell") || Tokens.TokenEstimate.FromChars(resultChars) < LargeOutputTokens) return null;
+            string size = $"That command put ~{Tokens.TokenMeter.Format(Tokens.TokenEstimate.FromChars(resultChars))} tokens of output into the context.";
             return hookInstalled
                 ? size + " Asking Claude to filter it (only errors, the first lines, a quieter flag) keeps it small."
                 : size + " Tools → Claude Code → Install Token-Saving Settings and Hooks caps shell output and runs dotnet build / test, msbuild and git log quietly.";

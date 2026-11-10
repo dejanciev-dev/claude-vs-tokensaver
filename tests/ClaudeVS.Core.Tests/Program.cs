@@ -25,6 +25,7 @@ namespace ClaudeVS.Core.Tests
             if (args.Length > 0 && args[0] == "--live-dialogs") return LiveSmoke.RunDialogs();
             if (args.Length > 0 && args[0] == "--live-edit-review") return LiveSmoke.RunEditReview();
             if (args.Length > 0 && args[0] == "--live-long-prompt") return LiveSmoke.RunLongPrompt();
+            if (args.Length > 0 && args[0] == "--live-prompt-tokens") return LiveSmoke.RunPromptTokens();
             if (args.Length > 0 && args[0] == "--live-edit-review-interrupt") return LiveSmoke.RunEditReviewInterrupted(args.Length > 1 ? args[1] : null);
             if (args.Length > 0 && args[0] == "--live-edit-stop-allow") return LiveSmoke.RunEditReviewInterrupted(args.Length > 1 ? args[1] : null, allowPlain: true);
             if (args.Length > 1 && args[0] == "--scan")
@@ -716,7 +717,7 @@ namespace ClaudeVS.Core.Tests
                 var a = UsageSummary.From(all, @"c:\A");
                 Eq(2, a.Turns, "turns for solution a (case-insensitive)");
                 True(Math.Abs(a.CostUsd - 0.11) < 1e-9, "cost " + a.CostUsd);
-                Eq(1000L, a.TokensAvoided, "chars/4");
+                Eq(1334L, a.TokensAvoided, "4,000 chars at 3 per token");
                 Eq(1, a.TurnsByModel["haiku"], "by model");
                 True(Math.Abs(a.CacheHitPercent - 45) < 0.01, "cache % " + a.CacheHitPercent); // 900 / 2000
                 Eq(3, UsageSummary.From(all).Turns, "all solutions");
@@ -814,8 +815,8 @@ namespace ClaudeVS.Core.Tests
             True(Math.Abs(r.ActualCostUsd - 3.4) < 1e-9, "actual " + r.ActualCostUsd);
             True(Math.Abs(r.OpusEquivalentUsd - 6.4) < 1e-9, "opus eq " + r.OpusEquivalentUsd);
             True(Math.Abs(r.RoutingSavedUsd - 3.0) < 1e-9, "saved " + r.RoutingSavedUsd);
-            Eq(1_000_000L, r.TokensAvoided, "tokens avoided");
-            True(Math.Abs(r.ReferencesSavedUsd - 2.0) < 1e-9, "refs priced at sonnet input " + r.ReferencesSavedUsd);
+            Eq(1_333_334L, r.TokensAvoided, "tokens avoided (3 chars per token)");
+            True(Math.Abs(r.ReferencesSavedUsd - 1_333_334 * 2.0 / 1e6) < 1e-9, "refs priced at sonnet input " + r.ReferencesSavedUsd);
             True(r.ToText().Contains("Saved by model routing:     $3.00  (47%)"), r.ToText());
         }
 
@@ -1650,7 +1651,7 @@ namespace ClaudeVS.Core.Tests
             JObject Read(int numLines, int totalLines, int startLine = 1) => JObject.Parse(
                 $"{{\"type\":\"text\",\"file\":{{\"filePath\":\"C:\\\\repo\\\\src\\\\Big.cs\",\"numLines\":{numLines},\"startLine\":{startLine},\"totalLines\":{totalLines}}}}}");
             string tip = SessionNotices.WholeFileRead(Read(2400, 2400), 120_000);
-            True(tip?.StartsWith("Claude read all 2,400 lines of Big.cs (~30") == true, tip);
+            True(tip?.StartsWith("Claude read all 2,400 lines of Big.cs (~40") == true, tip);
             True(tip.Contains("look at Save() in Big.cs"), "names the file in the example");
             Eq(null, SessionNotices.WholeFileRead(Read(200, 2400), 120_000), "only part of it");
             Eq(null, SessionNotices.WholeFileRead(Read(2400, 2400, 10), 120_000), "not from the start");
@@ -1720,8 +1721,8 @@ namespace ClaudeVS.Core.Tests
             ClaudeEvent Result(string id, string text, bool sub = false) => new ClaudeEvent { Kind = ClaudeEventKind.ToolResult, ToolUseId = id, ResultText = text, ResultChars = text.Length, IsSubagent = sub };
 
             t.Observe(Read("1", @"C:\r\Big.cs")); Eq(null, t.Observe(Result("1", body)), "first read");
-            t.Observe(Read("2", @"c:\r\big.cs")); Eq((@"c:\r\big.cs", 3000), t.Observe(Result("2", body)), "same file, same text: repeated");
-            Eq(3000L, t.RepeatedTokens);
+            t.Observe(Read("2", @"c:\r\big.cs")); Eq((@"c:\r\big.cs", 4000), t.Observe(Result("2", body)), "same file, same text: repeated");
+            Eq(4000L, t.RepeatedTokens);
 
             t.Observe(new ClaudeEvent { Kind = ClaudeEventKind.ToolUse, ToolName = "Edit", ToolUseId = "3", ToolInput = JObject.Parse("{\"file_path\":\"C:\\\\r\\\\Big.cs\"}") });
             t.Observe(Read("4", @"C:\r\Big.cs")); Eq(null, t.Observe(Result("4", body)), "after Claude's edit: new");
@@ -1740,7 +1741,7 @@ namespace ClaudeVS.Core.Tests
         private static void Test_LargeCommandOutput()
         {
             string without = SessionNotices.LargeCommandOutput("Bash", 48_000, hookInstalled: false);
-            True(without?.StartsWith("That command put ~12.0k tokens of output into the context.") == true, without);
+            True(without?.StartsWith("That command put ~16.0k tokens of output into the context.") == true, without);
             True(without.Contains("Install Token-Saving Settings and Hooks"), "points to the setup");
             True(SessionNotices.LargeCommandOutput("PowerShell", 48_000, hookInstalled: true).Contains("Asking Claude to filter it"), "hook in place: filter");
             Eq(null, SessionNotices.LargeCommandOutput("Bash", 8_000, false), "small output");
@@ -1896,13 +1897,55 @@ namespace ClaudeVS.Core.Tests
             True(SessionSummary.Format(m).Contains("\nCache hits: 75% (saved $0.49)"), "session summary: " + SessionSummary.Format(m));
         }
 
+        private static void Test_TokenEstimate_LearnsFromTurns()
+        {
+            try
+            {
+                TokenEstimate.Reset();
+                Eq(3.0, TokenEstimate.CharsPerToken, "start: 3 characters per token (measured 2.7-3.0 with 2.1.322)");
+                Eq(2667, TokenEstimate.FromChars(8000));
+                Eq(0, TokenEstimate.FromText(null));
+
+                // Turns as --live-prompt-tokens saw them: context grows by the prompt + ~30 tokens of framing
+                var learner = new PromptTokenLearner();
+                int msg = 0;
+                long ctx = 25_000;
+                ClaudeEvent Usage(long context, long output) => new ClaudeEvent { Kind = ClaudeEventKind.AssistantUsage, MessageId = "m" + (++msg), Usage = new TokenUsage { CacheRead = context, Output = output } };
+                void Turn(int promptChars, long promptTokens, long extra = 0)
+                {
+                    learner.Observe(new ClaudeEvent { Kind = ClaudeEventKind.SessionStarted, IsFirstInit = msg == 0 });
+                    if (promptChars > 0) learner.PromptSent(promptChars);
+                    ctx += promptTokens + PromptTokenLearner.FramingTokens + extra + 5; // + the previous answer (5 output tokens)
+                    learner.Observe(Usage(ctx, 5));
+                    learner.Observe(new ClaudeEvent { Kind = ClaudeEventKind.TurnCompleted });
+                }
+                Turn(14, 6);
+                Turn(8000, 2700, extra: 2000);          // second turn of the process: its one-time extra is not learned from
+                Eq(3.0, TokenEstimate.CharsPerToken, "first two turns of a process are skipped");
+                Turn(8000, 2900);                       // code-like: 2.76 per token
+                Eq(8000.0 / 2900, learner.LastMeasured, "measured");
+                True(TokenEstimate.CharsPerToken < 3.0 && TokenEstimate.CharsPerToken > 2.76, "moved toward it: " + TokenEstimate.CharsPerToken);
+                double before = TokenEstimate.CharsPerToken;
+                Turn(500, 170);                         // short prompt: framing would dominate
+                Eq(before, TokenEstimate.CharsPerToken, "short prompts are not used");
+                learner.Observe(new ClaudeEvent { Kind = ClaudeEventKind.Compacted });
+                ctx = 3_000;                            // after compaction the context is rebuilt
+                Turn(8000, 2700);
+                Eq(before, TokenEstimate.CharsPerToken, "not across a compaction");
+                Eq(false, TokenEstimate.Learn(8000, 500), "16 chars per token: implausible, ignored");
+                for (int i = 0; i < 40; i++) TokenEstimate.Learn(8000, 2700);
+                True(Math.Abs(TokenEstimate.CharsPerToken - 8000.0 / 2700) < 0.05, "follows steady evidence: " + TokenEstimate.CharsPerToken);
+            }
+            finally { TokenEstimate.Reset(); }
+        }
+
         private static void Test_PromptSize()
         {
             Eq(null, PromptSize.Note("fix the null check in Save()"), "short prompt");
             Eq(null, PromptSize.Note(""), "empty");
-            Eq("~2.0k tokens", PromptSize.Note(new string('a', 8_000)), "long prompt: just the size");
+            Eq("~2.7k tokens", PromptSize.Note(new string('a', 8_000)), "long prompt: just the size");
             string huge = PromptSize.Note(new string('a', 40_000));
-            True(huge.StartsWith("~10.0k tokens: it goes with every later request."), huge);
+            True(huge.StartsWith("~13.3k tokens: it goes with every later request."), huge);
             True(huge.Contains("Ctrl+Alt+K, F"), "points to Attach Current File as Reference");
         }
 
@@ -1950,8 +1993,8 @@ namespace ClaudeVS.Core.Tests
                 var index = FileIndex.Build(dir);
                 var big = index.SearchWithSizes("big").Single();
                 Eq("src/Big.cs", big.Path, "the path is what gets inserted");
-                Eq("~3.2k tok", big.SizeLabel);
-                Eq("src/Big.cs   ~3.2k tok", big.ToString(), "what the list shows");
+                Eq("~4.3k tok", big.SizeLabel);
+                Eq("src/Big.cs   ~4.3k tok", big.ToString(), "what the list shows");
                 Eq("src/Empty.cs", index.SearchWithSizes("empty").Single().ToString(), "empty file: no size");
                 Eq("", new FileHit { Path = "gone.cs" }.SizeLabel, "unreadable: no size");
             }
@@ -1976,9 +2019,9 @@ namespace ClaudeVS.Core.Tests
             }
             Call("1", "Read", 40_000); Call("2", "Bash", 8_000); Call("3", "PowerShell", 4_000); Call("4", "mcp__visualstudio__get_error_list", 400);
             Call("5", "Read", 99_000, sub: true); // a subagent's own context
-            Eq("Read 10000|Shell 3000|MCP 100", string.Join("|", m.ResultTokensByTool().Select(kv => kv.Key + " " + kv.Value)));
+            Eq("Read 13334|Shell 4000|MCP 134", string.Join("|", m.ResultTokensByTool().Select(kv => kv.Key + " " + kv.Value)));
             m.Observe(new ClaudeEvent { Kind = ClaudeEventKind.TurnCompleted, Usage = new TokenUsage { Input = 10 } });
-            True(SessionSummary.Format(m).EndsWith("\nTool results: Read 10.0k · Shell 3.0k · MCP 100"), SessionSummary.Format(m));
+            True(SessionSummary.Format(m).EndsWith("\nTool results: Read 13.3k · Shell 4.0k · MCP 134"), SessionSummary.Format(m));
             m.Reset();
             Eq(0, m.ResultTokensByTool().Count, "reset");
         }
@@ -2115,7 +2158,7 @@ namespace ClaudeVS.Core.Tests
             Eq(2, UsageCsv.Write(recs, sw), "rows");
             var lines = sw.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None);
             Eq(string.Join(",", UsageCsv.Columns), lines[0], "header");
-            Eq(t.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") + @",C:\src\a\,claude-opus-5-5,1,,,,5,1200,300,9000,100,100,0.25,0.0001,4200,0,100,multi-file,", lines[1], "oldest first, invariant numbers");
+            Eq(t.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") + @",C:\src\a\,claude-opus-5-5,1,,,,5,1200,300,9000,100,100,0.25,0.0001,4200,0,134,multi-file,", lines[1], "oldest first, invariant numbers");
             True(lines[2].EndsWith(",0.001235,0,0,0,0,,\"'=SUM(A1) say \"\"hi\"\", ok\""), "quoted, formula-guarded prompt: " + lines[2]);
             Eq("", lines[3], "ends with a line break");
 
@@ -2511,7 +2554,7 @@ namespace ClaudeVS.Core.Tests
                 "# Login questions\n\n*Exported from Claude Code in Visual Studio on 2026-11-03 10:05*\n" +
                 "\n## You\n\nHow does login work?\n" +
                 "\n## Claude\n\nLet me look.\n" +
-                "\n- 🔧 `Read: C:/a/Login.cs` · ~2.0k tok\n- 🔧 `Bash: echo 'x'` · failed\n" +
+                "\n- 🔧 `Read: C:/a/Login.cs` · ~2.7k tok\n- 🔧 `Bash: echo 'x'` · failed\n" +
                 "\nIt uses **JWT**.\n" +
                 "\n---\n\n*Conversation compacted here; Claude continued from a summary of the part above.*\n" +
                 "\n## You\n\nThanks\n";

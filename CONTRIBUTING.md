@@ -26,7 +26,8 @@ requests (questions, plan approval), use `--live-ask <rawPath> <PermissionMode> 
 $0.005); `--live-edit-review-interrupt [rawPath]` does the same but presses Stop right after approving, then asks
 Claude what happened (about $0.007); `--live-edit-stop-allow [rawPath]` allows the edit as proposed instead, then
 checks that the file is read after the stop and that Claude believes the note (about $0.007). `--live-long-prompt` sends 60,000- and 200,000-character prompts and checks
-that their last line arrives (about $0.02). `--live-setup` installs the token-saving settings into a temp .NET project and checks the quiet `dotnet build`, the
+that their last line arrives (about $0.02). `--live-prompt-tokens` measures what prose, code and log-like prompts
+really cost in tokens and checks that the extension's estimate learns it (about $0.01). `--live-setup` installs the token-saving settings into a temp .NET project and checks the quiet `dotnet build`, the
 `bin/` block and the output cap (about $0.005; needs the .NET SDK). `--live-session` checks the meter against
 `/context`, a mid-session model switch, cost across a relaunch and `/compact` (about $0.05). `--live-haiku-router` warms up the trimmed Haiku router and routes four prompts next to the local rules (about $0.001). `--live-dialogs` reads every dialog and sets an output style in a temp folder (no prompt, no cost). `--live-mcp` starts the CLI
 with the in-process Error List MCP server, checks that it connects and prints the context breakdown

@@ -11,8 +11,8 @@ namespace ClaudeVS.Core.Tokens
         /// <summary>From this many tokens a file reference is suggested instead.</summary>
         public const int LargeFrom = 8000;
 
-        /// <summary>Rough token count, ~4 characters per token.</summary>
-        public static int Estimate(string text) => string.IsNullOrEmpty(text) ? 0 : (text.Length + 3) / 4;
+        /// <summary>Estimated token count (<see cref="TokenEstimate"/>: ~3 characters per token, learned from real turns).</summary>
+        public static int Estimate(string text) => TokenEstimate.FromText(text);
 
         /// <summary>"~1.8k tokens", a longer note for a huge paste, or null for a short prompt.</summary>
         public static string Note(string text)

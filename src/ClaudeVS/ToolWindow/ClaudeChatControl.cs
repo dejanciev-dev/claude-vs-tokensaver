@@ -1255,7 +1255,7 @@ namespace ClaudeVS.ToolWindow
                 if (built.ReferencedFiles > 0) meta.Add($"{built.ReferencedFiles} file reference(s)");
                 if (built.InlinedLines > 0) meta.Add($"{built.InlinedLines} lines inlined");
                 if (built.AttachedErrors > 0) meta.Add($"{built.AttachedErrors} error(s)");
-                if (built.CharsAvoided > 0) meta.Add($"~{built.CharsAvoided / 4:N0} tokens of file content not sent");
+                if (built.CharsAvoided > 0) meta.Add($"~{TokenEstimate.FromChars(built.CharsAvoided):N0} tokens of file content not sent");
                 if (images.Count > 0) meta.Add(ImageSummary(images));
                 // Our own id for the message, so its file changes can be rewound later (slash commands edit nothing).
                 string messageId = userText.StartsWith("/") ? null : Guid.NewGuid().ToString();
@@ -1275,6 +1275,9 @@ namespace ClaudeVS.ToolWindow
                 _requestedFamilies.Enqueue(model == ModelChoice.Auto ? null : model.ToCli());
                 await _session.SetModelAsync(model);
                 await _session.SetEffortAsync(effort);
+                // Its real token count teaches the size estimate: text-only prompts that start a turn now (a queued one
+                // would be measured against another request)
+                if (!queued && routed && images.Count == 0) _meterModel?.Learner.PromptSent(built.Text.Length);
                 await _session.SendPromptAsync(built.Text, messageId, images.Select(i => i.Image).ToList());
             });
         }

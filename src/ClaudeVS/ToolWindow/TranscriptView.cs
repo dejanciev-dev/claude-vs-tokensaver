@@ -1164,7 +1164,7 @@ namespace ClaudeVS.ToolWindow
             public void Complete(string id, int resultChars, bool isError)
             {
                 _running.Remove(id);
-                _tokens += resultChars / 4;
+                _tokens += Core.Tokens.TokenEstimate.FromChars(resultChars);
                 if (isError) _failed++;
                 Update();
             }
@@ -1282,7 +1282,7 @@ namespace ClaudeVS.ToolWindow
         }
 
         /// <summary>
-        /// Adds the result size (≈ chars / 4 tokens) to a tool row and marks failed calls; with the result text,
+        /// Adds the result size (≈ chars / TokenEstimate.CharsPerToken tokens) to a tool row and marks failed calls; with the result text,
         /// the ⎿ summary under the row and the whole output inside it.
         /// </summary>
         /// <param name="confirmedDiff">
@@ -1313,7 +1313,7 @@ namespace ClaudeVS.ToolWindow
             var a = ChatTheme.Accents(Box);
             var header = row.Header;
             row.Dot.Foreground = isError ? a.Failure : a.Success;
-            if (resultChars > 0) header.Inlines.Add(new Run($"  · ~{Core.Tokens.TokenMeter.Format(resultChars / 4)} tok") { FontSize = 11 });
+            if (resultChars > 0) header.Inlines.Add(new Run($"  · ~{Core.Tokens.TokenMeter.Format(Core.Tokens.TokenEstimate.FromChars(resultChars))} tok") { FontSize = 11 });
             if (isError && row.ToolName == null) header.Inlines.Add(new Run(" · failed") { Foreground = a.Failure });
             if (Core.Cli.ToolCallView.AllowedNote(row.ToolName, allowedBy) is var (allowedText, allowedTip))
             {
@@ -1328,7 +1328,7 @@ namespace ClaudeVS.ToolWindow
                 header.Inlines.Add(new Run("  · " + deniedText) { FontSize = 11, ToolTip = deniedTip, Foreground = a.Failure });
             }
             // Large results are what fill the context window; make them stand out.
-            if (resultChars / 4 >= 5000) header.FontWeight = FontWeights.SemiBold;
+            if (Core.Tokens.TokenEstimate.FromChars(resultChars) >= 5000) header.FontWeight = FontWeights.SemiBold;
             if (row.ToolName != null) ShowResult(row, resultText, isError, a, resultData);
         }
 
