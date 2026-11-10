@@ -315,7 +315,7 @@ namespace ClaudeVS.ToolWindow
             string model = _session?.CurrentModel.ToCli() ?? "-";
             if (model.Length > 1 && char.IsLower(model[0])) model = char.ToUpperInvariant(model[0]) + model.Substring(1); // "Sonnet"
             string family = PriceTable.Family(model);
-            Brush modelBrush = family == "opus" ? a.Brand : family == "sonnet" ? a.Link : family == "haiku" ? a.Success : null;
+            Brush modelBrush = family == "opus" ? a.Brand : family == "sonnet" ? a.Link : family == "haiku" ? a.Success : family == "fable" ? a.Running : null;
 
             _ctxBar.Foreground = ctx;
             var lines = _meter.Inlines;

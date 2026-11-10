@@ -393,10 +393,16 @@ and desktop entries are left out.
       and savings report. Now a `fable` family (default `8, 40, 10, 0.2`, cache write 1.25x input) with an
       Options → Pricing row. The savings report's "Opus equivalent" stays at Opus prices, so Fable turns lower
       the routing savings, which is right: Fable costs twice as much as Opus
-- [ ] **Fable in the model picker** (2.1.321: Fable 5.2 is the default `fable` alias; saved Fable 5.1 picks move to
-      it). Offer *Fable* as a manual choice (`--model fable`), never picked by Auto. The route hint says what it
-      costs next to Opus. The family colour in the activity strip and the cache-break note ("model changed") need it too
+- [x] **Fable in the model picker** (2.1.321: Fable 5.2 is the default `fable` alias; saved Fable 5.1 picks move to
+      it). `ModelChoice.Fable` (last, so stored choices keep their meaning) runs `--model fable`; neither router
+      picks it (the Haiku router's schema has no `fable`, and such an answer is dropped). The picker entry and the
+      line under the input box say "Fable: 2× the Opus price" (`PriceTable.VersusOpus`, from Options → Pricing).
+      The meter shows Fable in amber; the cache-break note gets "model changed" from the family. Verified with
+      2.1.322: `--model fable` is answered by `claude-fable-5-2`, and `PriceTable` gives the CLI's own
+      `total_cost_usd` exactly ($0.011432 for 2 in, 5 out, 701 1-hour cache-write tokens)
 - [ ] **Fast mode** (2.1.321: when fast serving fails it now drops to standard speed on the same model first).
+      Found while verifying Fable: the result has `usage.speed` ("standard") and `fast_mode_state` ("off", with
+      `fast_mode_disabled_reason: "sdk_opt_in_required"` in `-p`).
       Capture a fast-mode turn: if usage or the result says which speed answered, price fast turns at the fast
       price (or at least say "fast" in the footer); if not, note it under Known limitations
 - [ ] **Verify with 2.1.322 and raise `CliVersion.Tested`** from 2.1.318: run all live tests (`--live`,

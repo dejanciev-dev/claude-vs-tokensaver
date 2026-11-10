@@ -700,8 +700,20 @@ namespace ClaudeVS.ToolWindow
 
         private IEnumerable<ChatPopup.Entry> ModelEntries()
         {
+            var prices = Options?.ToPriceTable() ?? new PriceTable();
             foreach (ModelChoice m in Enum.GetValues(typeof(ModelChoice)))
-                yield return new ChatPopup.Entry { Group = "Model", Label = m == ModelChoice.Auto ? "Auto (route each prompt)" : m.ToString(), Checked = _modelChoice == m, Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); SetModel(m); } };
+            {
+                // A model dearer than Opus (Fable) says so: Auto never picks it, so this is the only place you choose it.
+                string dearer = prices.VersusOpus(m.ToCli());
+                yield return new ChatPopup.Entry
+                {
+                    Group = "Model",
+                    Label = m == ModelChoice.Auto ? "Auto (route each prompt)" : m.ToString(),
+                    Description = dearer != null ? $"{dearer}; Auto never picks it" : null,
+                    Checked = _modelChoice == m,
+                    Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); SetModel(m); },
+                };
+            }
             foreach (EffortChoice ef in Enum.GetValues(typeof(EffortChoice)))
                 yield return new ChatPopup.Entry { Group = "Effort", Label = ef == EffortChoice.Auto ? "Auto (follow the model choice)" : ef.ToString(), Checked = _effortChoice == ef, Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); SetEffort(ef); } };
             yield return new ChatPopup.Entry { Group = "Thinking", Label = "Extended thinking", Description = "Off answers faster and cheaper on simple tasks", Checked = _thinking, Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); SetThinking(!_thinking); } };
@@ -1336,7 +1348,9 @@ namespace ClaudeVS.ToolWindow
             if (_modelChoice != ModelChoice.Auto || string.IsNullOrWhiteSpace(_prompt.Text) || _prompt.Text.TrimStart().StartsWith("/"))
             {
                 string send = _modelChoice != ModelChoice.Auto ? _modelChoice.ToCli() : null;
-                _route.Text = string.Join("   ·   ", new[] { size, PriceNote(send) }.Where(s => s != null));
+                string dearer = send != null && !string.IsNullOrWhiteSpace(_prompt.Text) ? (Options?.ToPriceTable() ?? new PriceTable()).VersusOpus(send) : null;
+                if (dearer != null) dearer = _modelChoice + ": " + dearer; // "Fable: 2× the Opus price"
+                _route.Text = string.Join("   ·   ", new[] { dearer, size, PriceNote(send) }.Where(s => s != null));
                 return;
             }
             int lines = _selection == null ? 0 : _selection.EndLine - _selection.StartLine + 1;

@@ -7,6 +7,9 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Fable in the model picker** (Claude Code 2.1.321): pick *Fable* to run `--model fable` (Fable 5.2). Auto and
+  the Haiku router never pick it. The picker and the line under the input box say "Fable: 2× the Opus price",
+  from Options → Pricing, and the meter shows the model in amber.
 - **Activity strip** above the input box while Claude works, like the Claude Code terminal:
   `✻ Imagining… (1m 05s · ↓ 9.5k tokens · thinking)` with a tip underneath. The spinner, the verb and a moving
   line take the color of what Claude is doing (thinking in orange, writing in blue, tools in amber with the

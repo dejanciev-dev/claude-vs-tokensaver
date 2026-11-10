@@ -288,7 +288,7 @@ Editor commands go to the chat window you used last.
 | CLI | File checkpoints (rewind) | On | Claude Code keeps a copy of each file before Claude changes it, so prompts can be rewound. Applies to new sessions. |
 | CLI | Extra arguments | | Appended to the `claude` command line, e.g. `--add-dir ..\shared`. |
 | Token saving | Concise answers | On | One-line brevity prompt. |
-| Token saving | Default model | Auto | Auto = route each prompt. |
+| Token saving | Default model | Auto | Auto = route each prompt. Fable (2× the Opus price) is only ever your own pick. |
 | Token saving | Route with Haiku | Off | A Haiku call picks model and effort instead of the local rules (~$0.0001, 1–2 s per prompt). |
 | Token saving | Inline selection up to (lines) | 60 | Larger selections become references. |
 | Token saving | Keep model above context (tokens) | 30000 | Cache-aware routing threshold. |

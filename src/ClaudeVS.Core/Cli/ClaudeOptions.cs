@@ -5,8 +5,11 @@ using System.Text;
 
 namespace ClaudeVS.Core.Cli
 {
-    /// <summary>Model picked in the UI. <see cref="Auto"/> lets <see cref="Tokens.ModelRouter"/> decide.</summary>
-    public enum ModelChoice { Auto, Haiku, Sonnet, Opus }
+    /// <summary>
+    /// Model picked in the UI. <see cref="Auto"/> lets <see cref="Tokens.ModelRouter"/> decide; the routers never pick
+    /// <see cref="Fable"/> (the dearest, Claude Code 2.1.321), only you do. New values go at the end.
+    /// </summary>
+    public enum ModelChoice { Auto, Haiku, Sonnet, Opus, Fable }
 
     /// <summary>Values accepted by <c>claude --effort</c>. <see cref="Auto"/> = router decides / CLI default.</summary>
     public enum EffortChoice { Auto, Low, Medium, High, XHigh, Max }
@@ -28,6 +31,7 @@ namespace ClaudeVS.Core.Cli
                 case ModelChoice.Haiku: return "haiku";
                 case ModelChoice.Sonnet: return "sonnet";
                 case ModelChoice.Opus: return "opus";
+                case ModelChoice.Fable: return "fable";
                 default: return null;
             }
         }

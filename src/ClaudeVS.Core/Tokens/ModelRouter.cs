@@ -154,6 +154,6 @@ namespace ClaudeVS.Core.Tokens
             return d;
         }
 
-        private static int Rank(ModelChoice m) => m == ModelChoice.Haiku ? 1 : m == ModelChoice.Sonnet ? 2 : m == ModelChoice.Opus ? 3 : 0;
+        private static int Rank(ModelChoice m) => m == ModelChoice.Haiku ? 1 : m == ModelChoice.Sonnet ? 2 : m == ModelChoice.Opus ? 3 : m == ModelChoice.Fable ? 4 : 0;
     }
 }
