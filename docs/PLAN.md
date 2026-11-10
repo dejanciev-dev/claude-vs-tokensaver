@@ -471,6 +471,23 @@ and desktop entries are left out.
 
 ---
 
+## Phase 19 — Loose ends from Phase 18
+
+Things Phase 18 turned up, picked on 2026-11-10.
+
+- [ ] **Stop after a plain Allow edit.** Phase 18 fixed Stop during a reviewed edit. An edit approved with Allow, or
+      run without asking in Accept Edits, gets the same "stopped while running … may have been written" result with
+      no hook. Check the file and tell Claude with the next prompt whether the change is in
+- [ ] **Better prompt-size estimate.** `PromptSize.Estimate` counts chars / 4; dense text ran at ~2.7 characters
+      per token in `--live-long-prompt`. Learn the ratio from real turns, so the size and "to send" lines under the
+      input box come closer
+- [ ] **Fable and fast mode in reports.** The savings report and the CSV don't show what Fable or fast mode added.
+      Add what they cost above Opus / standard speed to the report, and a `fast_tokens` column to the CSV
+- [ ] **One command for all live tests.** `--live-all`: every live test in order, never in plan mode by mistake,
+      with the total cost at the end (replaces the shell script used in Phase 18)
+
+---
+
 ## Working in Visual Studio — daily loop
 
 1. Core logic change → edit in `ClaudeVS.Core` → run tests (`ClaudeVS.Core.Tests` → Set as Startup → Ctrl+F5, or `dotnet run` in its folder).
