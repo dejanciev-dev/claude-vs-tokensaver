@@ -521,9 +521,16 @@ Things Phase 18 turned up, picked on 2026-11-10.
 
 Picked on 2026-11-10.
 
-- [ ] **Check prices against the CLI.** The API reference lists Sonnet 5.5 cache reads at $0.10 per Mtok; the
+- [x] **Check prices against the CLI.** The API reference lists Sonnet 5.5 cache reads at $0.10 per Mtok; the
       default is $0.20. Compare every default (Opus, Sonnet, Haiku, Fable) with Claude Code's own `costUSD` from
-      real turns, fix what differs, and keep the captures as a test
+      real turns, fix what differs, and keep the captures as a test. Two turns per model with 2.1.322 (trimmed
+      process, a ~4.5k-token system prompt cached for 1 hour, $0.19 in all): Haiku, Opus and Fable match the CLI to
+      the last digit; Sonnet came out $0.0005684 high, exactly 5,684 cache-read tokens × $0.10, so its cache read is
+      $0.10. `DefaultSonnet` is now `2, 10, 2.5, 0.1`; a Sonnet price saved in Options that equals the old default
+      is upgraded when Options load (`PriceTable.UpgradeStored`; Visual Studio saves every value on OK, so a saved
+      old default was not chosen), a price you typed stays. The captures are `Fixtures/cli-2.1.322-model-costs.jsonl`
+      and `Test_Prices_MatchTheCliCosts` prices them. Not checked: 5-minute cache writes (Claude Code on a
+      claude.ai plan writes for 1 hour) and Haiku above 100k tokens (next item)
 - [ ] **Haiku price above 100k tokens.** Haiku 5.5 costs $0.50 / $2.50 for prompts over 100k tokens (5x); a 200k-
       character turn cost $0.09 instead of ~$0.02. Price that tier, and tip when a Haiku conversation nears 100k
 - [ ] **Plan mode: say Sonnet before sending.** In plan mode Claude Code answers with Sonnet even when Auto picks

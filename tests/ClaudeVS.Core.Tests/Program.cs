@@ -782,17 +782,17 @@ namespace ClaudeVS.Core.Tests
 
         private static void Test_Savings_PromptCache()
         {
-            var prices = new PriceTable(); // Sonnet: input 2, cache write 2.5, cache read 0.2; Haiku: 0.1, 0.125, 0.01
+            var prices = new PriceTable(); // Sonnet: input 2, cache write 2.5, cache read 0.1; Haiku: 0.1, 0.125, 0.01
             var recs = new[]
             {
-                new UsageRecord { ModelUsed = "claude-sonnet-5-5", CacheReadTokens = 1_000_000, CacheWriteTokens = 100_000, CacheWrite1hTokens = 100_000 }, // 1.80 - 0.20
+                new UsageRecord { ModelUsed = "claude-sonnet-5-5", CacheReadTokens = 1_000_000, CacheWriteTokens = 100_000, CacheWrite1hTokens = 100_000 }, // 1.90 - 0.20
                 new UsageRecord { ModelUsed = "claude-sonnet-5-5", CacheWriteTokens = 200_000 },                                                         // older line: 5-minute, -0.10
                 new UsageRecord { ModelUsed = "claude-haiku-5-5", CacheReadTokens = 1_000_000 },                                                         // 0.09
             };
             var r = SavingsReport.Build(recs, prices);
-            True(Math.Abs(r.CacheSavedUsd - 1.59) < 1e-9, "1.60 - 0.10 + 0.09 = " + r.CacheSavedUsd);
+            True(Math.Abs(r.CacheSavedUsd - 1.69) < 1e-9, "1.70 - 0.10 + 0.09 = " + r.CacheSavedUsd);
             Eq(2_000_000L, r.CacheReadTokens);
-            True(r.ToText().Contains("Saved by the prompt cache:  $1.59  (2.0M tokens read from the cache instead of sent in full)"), r.ToText());
+            True(r.ToText().Contains("Saved by the prompt cache:  $1.69  (2.0M tokens read from the cache instead of sent in full)"), r.ToText());
 
             var line = Newtonsoft.Json.JsonConvert.SerializeObject(new UsageRecord { CacheWriteTokens = 5, CacheWrite1hTokens = 5 });
             True(line.Contains("\"cacheWrite1h\":5"), line);
@@ -1808,10 +1808,10 @@ namespace ClaudeVS.Core.Tests
             Eq(meter.LastTurnCacheSavedUsd, meter.SessionCacheSavedUsd, "one turn so far");
             Eq(" · 56 thinking · 60% cached", TurnFooter.Extras(meter.LastTurn, meter.LastTurnCacheSavedUsd), "under $0.001: no amount");
 
-            var sonnet = new PriceTable().Sonnet; // input 2, cache write 2.5, cache read 0.2
-            True(Math.Abs(sonnet.CacheSavedUsd(14_256, 9_679, 9_679) - 0.0063028) < 1e-9, "the same turn on Sonnet");
+            var sonnet = new PriceTable().Sonnet; // input 2, cache write 2.5, cache read 0.1
+            True(Math.Abs(sonnet.CacheSavedUsd(14_256, 9_679, 9_679) - 0.0077284) < 1e-9, "the same turn on Sonnet");
             True(Math.Abs(sonnet.CacheSavedUsd(0, 10_000, 0) + 0.005) < 1e-9, "a 5-minute write only: -0.25 x 2 per MTok");
-            True(Math.Abs(sonnet.CacheSavedUsd(1_000_000, 0, 0) - 1.8) < 1e-9, "1M read from the cache saves $1.80");
+            True(Math.Abs(sonnet.CacheSavedUsd(1_000_000, 0, 0) - 1.9) < 1e-9, "1M read from the cache saves $1.90");
             Eq(" · 90% cached (saved $0.018)", TurnFooter.Extras(new TokenUsage { Input = 1000, CacheRead = 9000 }, 0.018), "footer with an amount");
 
             meter.Reset();
@@ -1832,12 +1832,12 @@ namespace ClaudeVS.Core.Tests
             var b = w.Observe(U(5, 0, 42_100), "claude-sonnet-5-5", "m3", t0.AddMinutes(2), prices);
             True(b != null && b.ModelChanged, "model changed while warm");
             Eq(42_010L, b.Tokens, "the previous context, written again");
-            True(Math.Abs(b.ExtraUsd - 42_010 * (2.5 - 0.2) / 1e6) < 1e-9, "Sonnet 5-minute write minus cache read: " + b.ExtraUsd);
+            True(Math.Abs(b.ExtraUsd - 42_010 * (2.5 - 0.1) / 1e6) < 1e-9, "Sonnet 5-minute write minus cache read: " + b.ExtraUsd);
             True(b.Note().Contains("from Opus to Sonnet") && b.Note().Contains("~42.0k tokens") && b.Note().Contains("(~$0.10 more"), b.Note());
 
             var p = w.Observe(U(5, 0, 44_000, 44_000), "claude-sonnet-5-5", "m4", t0.AddMinutes(3), prices);
             True(p != null && !p.ModelChanged && p.Note().Contains("CLAUDE.md"), "same model: the prefix changed");
-            True(Math.Abs(p.ExtraUsd - 42_105 * (4.0 - 0.2) / 1e6) < 1e-9, "1-hour write at 2x input: " + p.ExtraUsd);
+            True(Math.Abs(p.ExtraUsd - 42_105 * (4.0 - 0.1) / 1e6) < 1e-9, "1-hour write at 2x input: " + p.ExtraUsd);
 
             // After an hour-long cache's lifetime it is a cold cache, not a break; within it, still a break.
             True(w.Observe(U(5, 0, 44_100), "claude-sonnet-5-5", "m5", t0.AddMinutes(50), prices) != null, "1-hour cache still warm after 47 min");
@@ -1911,8 +1911,8 @@ namespace ClaudeVS.Core.Tests
             Eq("Prompt cache: 0% of input read from the cache, writing it cost $0.05 more than it saved so far (it pays off on the next prompts).", m.CacheSavedLine());
             m.Observe(new ClaudeEvent { Kind = ClaudeEventKind.AssistantUsage, Model = "claude-sonnet-5-5", Usage = new TokenUsage { Input = 10, CacheRead = 300_000 } });
             m.Observe(new ClaudeEvent { Kind = ClaudeEventKind.TurnCompleted, Usage = new TokenUsage { Input = 10, CacheRead = 300_000 } });
-            Eq("Prompt cache: 75% of input read from the cache, saved $0.49 in this conversation (API prices).", m.CacheSavedLine(), "0.54 saved - 0.05 for the write");
-            True(SessionSummary.Format(m).Contains("\nCache hits: 75% (saved $0.49)"), "session summary: " + SessionSummary.Format(m));
+            Eq("Prompt cache: 75% of input read from the cache, saved $0.52 in this conversation (API prices).", m.CacheSavedLine(), "0.57 saved - 0.05 for the write");
+            True(SessionSummary.Format(m).Contains("\nCache hits: 75% (saved $0.52)"), "session summary: " + SessionSummary.Format(m));
         }
 
         private static void Test_TokenEstimate_LearnsFromTurns()
@@ -2081,8 +2081,8 @@ namespace ClaudeVS.Core.Tests
 
             var warm = NextPromptPrice.Estimate(cache, "claude-sonnet-5-5", null, 1000, prices, t0.AddMinutes(1));
             True(warm.Cached && !warm.Expired && !warm.OtherModel, "warm, same model");
-            True(Math.Abs(warm.InputUsd - (100_000 * 0.2 + 1000 * 2.5) / 1e6) < 1e-12, "context at cache read, prompt at cache write: " + warm.InputUsd);
-            Eq("~$0.02 to send (context cached)", warm.Note(), "note");
+            True(Math.Abs(warm.InputUsd - (100_000 * 0.1 + 1000 * 2.5) / 1e6) < 1e-12, "context at cache read, prompt at cache write: " + warm.InputUsd);
+            Eq("~$0.01 to send (context cached)", warm.Note(), "note: 100k cached tokens at Sonnet's $0.10");
 
             var cold = NextPromptPrice.Estimate(cache, "claude-sonnet-5-5", "sonnet", 1000, prices, t0.AddMinutes(6));
             True(cold.Expired && !cold.Cached, "expired after 5 minutes");
@@ -2163,6 +2163,37 @@ namespace ClaudeVS.Core.Tests
             Eq(null, SlashCommands.TypedName("fix /this"), "not a command");
         }
 
+        private static void Test_Prices_MatchTheCliCosts()
+        {
+            // Two real turns per model with Claude Code 2.1.322 (trimmed: no tools, a ~4.5k-token system prompt cached
+            // for 1 hour); the default prices must give the CLI's own costUSD for the same tokens
+            var prices = new PriceTable();
+            var seen = new List<string>();
+            foreach (var line in File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.322-model-costs.jsonl")).Where(l => l.Trim().Length > 0))
+            {
+                foreach (var kv in (JObject)JObject.Parse(line)["modelUsage"])
+                {
+                    var m = (JObject)kv.Value;
+                    var u = new TokenUsage
+                    {
+                        Input = (long)m["inputTokens"], Output = (long)m["outputTokens"], CacheRead = (long)m["cacheReadInputTokens"],
+                        CacheCreation = (long)m["cacheCreationInputTokens"], CacheCreation1h = (long)m["cacheCreationEphemeral1hInputTokens"],
+                    };
+                    double ours = prices.For(kv.Key).Cost(u), cli = (double)m["costUSD"];
+                    True(Math.Abs(ours - cli) < 1e-9, $"{kv.Key}: ours ${ours:0.0000000} vs the CLI's ${cli:0.0000000}");
+                    seen.Add(PriceTable.Family(kv.Key));
+                }
+            }
+            Eq("haiku,sonnet,opus,fable", string.Join(",", seen), "all four families checked");
+            Eq(0.1, prices.Sonnet.CacheRead, "Sonnet 5.5 cache reads: $0.10");
+
+            // A Sonnet price saved with the old default is upgraded; one you typed stays
+            Eq(PriceTable.DefaultSonnet, PriceTable.UpgradeStored("2, 10, 2.5, 0.2"), "old default");
+            Eq(PriceTable.DefaultSonnet, PriceTable.UpgradeStored("2,10,2.5,0.20"), "old default, other spacing");
+            Eq("3, 15, 3.75, 0.3", PriceTable.UpgradeStored("3, 15, 3.75, 0.3"), "your own price");
+            Eq("junk", PriceTable.UpgradeStored("junk"), "unreadable: left alone");
+        }
+
         private static void Test_SavingsReport_FableAndFastExtra()
         {
             var prices = new PriceTable(); // Opus 4 / 20, Fable 8 / 40; fast mode 2x
@@ -2226,7 +2257,7 @@ namespace ClaudeVS.Core.Tests
             Eq(2000L, rep.ByDay[0].Tokens, "tokens on day 1");
             True(Math.Abs(rep.ByDay[0].CostUsd - 2.5) < 1e-9, "router cost included: " + rep.ByDay[0].CostUsd);
             Eq(90.0, rep.ByDay[0].CacheHitPercent, "900 of 1000 input from the cache");
-            True(Math.Abs(rep.ByDay[1].CacheSavedUsd - 1.8) < 1e-9, "1M read on Sonnet saves $1.80: " + rep.ByDay[1].CacheSavedUsd);
+            True(Math.Abs(rep.ByDay[1].CacheSavedUsd - 1.9) < 1e-9, "1M read on Sonnet saves $1.90: " + rep.ByDay[1].CacheSavedUsd);
 
             string text = rep.ToText();
             var lines = text.Replace("\r", "").Split('\n');

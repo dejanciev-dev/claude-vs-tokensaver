@@ -11,6 +11,13 @@ namespace ClaudeVS.Options
     {
         public const string BrevityPrompt = "Be concise. Show only changed code; do not restate unchanged code or repeat the question.";
 
+        /// <summary>After loading the saved values: an earlier default price that was saved along is replaced by the current one.</summary>
+        public override void LoadSettingsFromStorage()
+        {
+            base.LoadSettingsFromStorage();
+            SonnetPrice = PriceTable.UpgradeStored(SonnetPrice);
+        }
+
         [Category("CLI"), DisplayName("Claude executable path"), Description("Leave empty to find claude.exe / claude.cmd automatically.")]
         public string ClaudePath { get; set; } = "";
 

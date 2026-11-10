@@ -75,12 +75,16 @@ namespace ClaudeVS.Core.Tokens
     /// <summary>
     /// Prices for the model families behind Claude Code's haiku / sonnet / opus / fable aliases.
     /// Defaults are Anthropic API list prices as of 2026-11 (Opus 5.5, Sonnet 5.5, Haiku 5.5, Fable 5.2);
-    /// cache write = 1.25x input. Users can override them in Options when prices change.
+    /// cache write = 1.25x input. Users can override them in Options when prices change. Checked against Claude
+    /// Code 2.1.322's own costUSD for two real turns per model (Fixtures/cli-2.1.322-model-costs.jsonl): all match.
     /// </summary>
     public sealed class PriceTable
     {
         public const string DefaultOpus = "4, 20, 5, 0.2";
-        public const string DefaultSonnet = "2, 10, 2.5, 0.2";
+        /// <summary>Sonnet 5.5: cache reads are $0.10, half the other models' (the CLI's costUSD shows it).</summary>
+        public const string DefaultSonnet = "2, 10, 2.5, 0.1";
+        /// <summary>Defaults shipped before, for <see cref="UpgradeStored"/>.</summary>
+        private static readonly string[] OldSonnetDefaults = { "2, 10, 2.5, 0.2" };
         public const string DefaultHaiku = "0.1, 0.5, 0.125, 0.01";
         /// <summary>Fable 5.2 (Claude Code 2.1.321): $8 / $40 per Mtok, cache read $0.20.</summary>
         public const string DefaultFable = "8, 40, 10, 0.2";
@@ -89,6 +93,23 @@ namespace ClaudeVS.Core.Tokens
         public ModelPrice Sonnet { get; set; } = ModelPrice.Parse(DefaultSonnet);
         public ModelPrice Haiku { get; set; } = ModelPrice.Parse(DefaultHaiku);
         public ModelPrice Fable { get; set; } = ModelPrice.Parse(DefaultFable);
+
+        /// <summary>
+        /// A Sonnet price saved in Options that is an earlier default (nobody chose it: Options saves every value on
+        /// OK) becomes the current default; a price you typed stays. Compared by value, so spacing does not matter.
+        /// </summary>
+        public static string UpgradeStored(string storedSonnet)
+        {
+            var stored = ModelPrice.Parse(storedSonnet);
+            if (stored == null) return storedSonnet;
+            foreach (var old in OldSonnetDefaults)
+            {
+                var o = ModelPrice.Parse(old);
+                if (o.Input == stored.Input && o.Output == stored.Output && o.CacheWrite == stored.CacheWrite && o.CacheRead == stored.CacheRead)
+                    return DefaultSonnet;
+            }
+            return storedSonnet;
+        }
 
         public static PriceTable FromStrings(string opus, string sonnet, string haiku, string fable = null) => new PriceTable
         {
