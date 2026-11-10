@@ -69,6 +69,51 @@ namespace ClaudeVS.Core.Tests
             True(a.Contains("--model haiku") && a.Contains("--effort low") && a.Contains("--resume abc") && a.Contains("--append-system-prompt \"Be brief.\""), a);
         }
 
+        private static void Test_FastMode_PricedAtTwice()
+        {
+            var prices = new PriceTable(); // Opus 5.5: 4 / 20; fast mode: 8 / 40
+            var fast = TokenUsage.From(JObject.Parse("{\"input_tokens\":1000,\"output_tokens\":1000,\"speed\":\"fast\"}"));
+            var std = TokenUsage.From(JObject.Parse("{\"input_tokens\":1000,\"output_tokens\":1000,\"speed\":\"standard\"}"));
+            Eq(2000L, fast.FastTokens, "all of a fast request");
+            Eq(0L, std.FastTokens, "standard");
+            Eq(0.048, Math.Round(prices.Opus.Cost(fast), 6), "fast Opus: 1k in $0.008 + 1k out $0.04");
+            Eq(0.024, Math.Round(prices.Opus.Cost(std), 6), "standard Opus");
+            Eq(0.072, Math.Round(prices.Opus.Cost(fast + std), 6), "a turn that fell back to standard speed: each part at its price");
+
+            // Real 2.1.322 result usage (Fable, standard): unchanged, to the CLI's own total_cost_usd
+            var real = TokenUsage.From(JObject.Parse("{\"input_tokens\":2,\"cache_creation_input_tokens\":701,\"cache_read_input_tokens\":0,\"output_tokens\":5,\"cache_creation\":{\"ephemeral_1h_input_tokens\":701,\"ephemeral_5m_input_tokens\":0},\"speed\":\"standard\"}"));
+            Eq(0.011432, Math.Round(prices.Fable.Cost(real), 6), "CLI total_cost_usd");
+
+            // Cache savings double too (every price doubles)
+            var cached = TokenUsage.From(JObject.Parse("{\"input_tokens\":10,\"output_tokens\":10,\"cache_read_input_tokens\":100000,\"speed\":\"fast\"}"));
+            Eq(0.76, Math.Round(prices.Opus.CacheSavedUsd(cached), 6), "100k reads × (4 − 0.2) × 2");
+
+            // Usage log: written only when fast; priced at twice
+            var rec = new UsageRecord { ModelUsed = "claude-opus-5-5", InputTokens = 1000, OutputTokens = 1000 };
+            True(!Newtonsoft.Json.JsonConvert.SerializeObject(rec).Contains("fastTokens"), "not written for standard turns");
+            Eq(0.024, Math.Round(prices.Opus.Cost(rec), 6), "standard record");
+            rec.FastTokens = 2000;
+            True(Newtonsoft.Json.JsonConvert.SerializeObject(rec).Contains("\"fastTokens\":2000"), "written for fast turns");
+            Eq(0.048, Math.Round(prices.Opus.Cost(rec), 6), "fast record");
+
+            // Footer
+            True(TurnFooter.Extras(fast).Contains("fast") && !TurnFooter.Extras(fast).Contains("partly"), TurnFooter.Extras(fast));
+            True(TurnFooter.Extras(fast + std).Contains("partly fast"), TurnFooter.Extras(fast + std));
+            True(!TurnFooter.Extras(std).Contains("fast"), "standard: nothing");
+
+            // Cache break: fast and standard speed have separate caches
+            var w = new CacheBreakWatch();
+            var t0 = new DateTime(2026, 11, 10, 10, 0, 0, DateTimeKind.Utc);
+            TokenUsage U(long read, long write, bool isFast) => new TokenUsage { Input = 5, CacheRead = read, CacheCreation = write, Output = 100, FastTokens = isFast ? 5 + read + write + 100 : 0 };
+            True(w.Observe(U(0, 40_000, false), "claude-opus-5-5", "m1", t0, prices) == null, "first request");
+            var b = w.Observe(U(0, 40_100, true), "claude-opus-5-5", "m2", t0.AddMinutes(1), prices);
+            True(b != null && b.SpeedChanged && b.NowFast && !b.ModelChanged, "fast mode started while warm");
+            True(b.Note().Contains("Fast mode started") && b.Note().Contains("separate caches"), b.Note());
+            True(Math.Abs(b.ExtraUsd - 40_005 * (5 - 0.2) * 2 / 1e6) < 1e-9, "the rewrite at fast prices: " + b.ExtraUsd);
+            var back = w.Observe(U(0, 40_200, false), "claude-opus-5-5", "m3", t0.AddMinutes(2), prices);
+            True(back != null && back.SpeedChanged && !back.NowFast && back.Note().Contains("fell back to standard speed"), back?.Note());
+        }
+
         private static void Test_Fable_ManualChoiceOnly()
         {
             Eq("fable", ModelChoice.Fable.ToCli(), "CLI alias");

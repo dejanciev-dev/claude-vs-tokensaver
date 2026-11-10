@@ -51,6 +51,9 @@ namespace ClaudeVS.Core.Tokens
         [JsonProperty("cacheWrite1h", DefaultValueHandling = DefaultValueHandling.Ignore)] public long CacheWrite1hTokens { get; set; }
         /// <summary>Of <see cref="OutputTokens"/>: thinking (Claude Code 2.1.319 reports it); 0 in older lines.</summary>
         [JsonProperty("thinking", DefaultValueHandling = DefaultValueHandling.Ignore)] public long ThinkingTokens { get; set; }
+        /// <summary>Of <see cref="TotalTokens"/>: tokens of requests answered in fast mode (2x prices); 0 in older lines.</summary>
+        [JsonProperty("fastTokens", DefaultValueHandling = DefaultValueHandling.Ignore)] public long FastTokens { get; set; }
+        [JsonIgnore] public double SpeedMultiplier => ModelPrice.SpeedMultiplier(FastTokens, TotalTokens);
         [JsonProperty("cost")] public double CostUsd { get; set; }
         [JsonProperty("ms")] public long DurationMs { get; set; }
         [JsonProperty("error")] public bool IsError { get; set; }

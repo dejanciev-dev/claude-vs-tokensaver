@@ -15,15 +15,30 @@ namespace ClaudeVS.Core.Cli
         public long CacheCreation5m;
         /// <summary>Of <see cref="Output"/>: thinking (<c>output_tokens_details.thinking_tokens</c>, 2.1.319).</summary>
         public long Thinking;
+        /// <summary>
+        /// Of <see cref="Total"/>: tokens of requests answered in fast mode (<c>usage.speed == "fast"</c>), billed at
+        /// <see cref="Tokens.ModelPrice.FastMultiplier"/>× every price. Counted apart because a sum can mix speeds: since
+        /// Claude Code 2.1.321 a fast turn falls back to standard speed on the same model when fast serving fails.
+        /// </summary>
+        public long FastTokens;
 
         /// <summary>Tokens the model had to read for this request = how full the context window is.</summary>
         public long ContextTokens => Input + CacheRead + CacheCreation;
         public long Total => Input + Output + CacheRead + CacheCreation;
         public bool IsEmpty => Total == 0;
+        /// <summary>Some of it ran in fast mode.</summary>
+        public bool AnyFast => FastTokens > 0;
 
         public static TokenUsage From(JToken u)
         {
             if (u == null || u.Type != JTokenType.Object) return default;
+            var t = Parse(u);
+            if ((string)u["speed"] == "fast") t.FastTokens = t.Total;
+            return t;
+        }
+
+        private static TokenUsage Parse(JToken u)
+        {
             return new TokenUsage
             {
                 Input = u.Value<long?>("input_tokens") ?? 0,
@@ -45,6 +60,7 @@ namespace ClaudeVS.Core.Cli
             CacheCreation1h = a.CacheCreation1h + b.CacheCreation1h,
             CacheCreation5m = a.CacheCreation5m + b.CacheCreation5m,
             Thinking = a.Thinking + b.Thinking,
+            FastTokens = a.FastTokens + b.FastTokens,
         };
     }
 
