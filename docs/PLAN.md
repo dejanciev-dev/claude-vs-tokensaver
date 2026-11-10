@@ -502,8 +502,18 @@ Things Phase 18 turned up, picked on 2026-11-10.
       report has `Paid extra for Fable: $… (N turns, above the same tokens on Opus)` and `Paid extra for fast mode:
       $… (N turns, above standard speed)`, each only when there were such turns, at Options → Pricing
       (`SavingsReport.FableExtraUsd`, `FastExtraUsd`); the CSV has `fast_tokens` after `cache_write_1h`
-- [ ] **One command for all live tests.** `--live-all`: every live test in order, never in plan mode by mistake,
-      with the total cost at the end (replaces the shell script used in Phase 18)
+- [x] **One command for all live tests.** `--live-all`: every live test in order, never in plan mode by mistake,
+      with the total cost at the end (replaces the shell script used in Phase 18). `LiveSmoke.RunAll` runs the 12
+      live tests (a throw counts as a failure) and prints PASS / FAIL, cost and time per test, then the total; exit
+      code 0 only when all pass. Every test now makes its sessions with `NewSession`, which adds each turn's share of
+      the CLI's `total_cost_usd` to `LiveSmoke.Spent` (the Haiku router's own process is added apart); a single
+      `--live-…` test prints it too. Found on the first run: after `--resume` the CLI **carries on** the session's
+      total (2.1.322: $0.0518 before the relaunch, $0.0539 after a $0.0021 turn), so counting per process counted
+      `--live-session` twice; the count is now kept per Claude session id. `TokenMeter` was right either way (a
+      continuing total adds no offset), only its comment said the total restarts at 0. `--live` now defaults to
+      Accept Edits (it was plan mode, where the CLI answers with Sonnet, ~20x the cost); `--live raw Plan` still
+      checks that, with a warning. `--live-ask` now fails when no question was asked. With 2.1.322: 12 of 12
+      passed, $0.18, 4.6 min
 
 ---
 

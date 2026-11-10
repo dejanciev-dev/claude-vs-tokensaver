@@ -177,7 +177,8 @@ namespace ClaudeVS.Core.Tokens
                     if (ev.ContextWindow.HasValue && ev.ContextWindow.Value > 0) ContextWindow = ev.ContextWindow.Value;
                     if (ev.TotalCostUsd.HasValue)
                     {
-                        // total_cost_usd is cumulative for the CLI process. A relaunch (--resume) restarts it at 0.
+                        // total_cost_usd is cumulative. With 2.1.322 a relaunch (--resume) carries on the session's total;
+                        // should a CLI start it again at 0, the lower value adds an offset, so both add up.
                         double reported = ev.TotalCostUsd.Value;
                         double before = SessionCostUsd;
                         if (reported + 1e-9 < _lastReportedCost) _costOffset += _lastReportedCost;

@@ -15,13 +15,19 @@ dotnet test tests/ClaudeVS.Core.Tests        # Core tests (exit code 0 = all pas
 msbuild ClaudeVS.sln /restore /p:Configuration=Release /warnaserror
 ```
 
-To check the Core code against the real CLI (costs a few cents, never runs in CI):
+To check the Core code against the real CLI (costs real money, never runs in CI), run every live test at once:
 
 ```
-dotnet run --project tests/ClaudeVS.Core.Tests -- --live [path-for-raw-output.txt]
+dotnet run --project tests/ClaudeVS.Core.Tests -- --live-all
 ```
 
-It runs two short turns in read-only plan mode in an empty temp folder. To capture and answer permission
+It runs them one after another, each in an empty temp folder and asking for Haiku, then prints a summary with each
+test's cost and the total (12 tests, about $0.18 and 5 minutes with Claude Code 2.1.322; a single `--live-…` test
+prints its cost too). The exit code is 0 only when all pass. It never uses plan mode, where Claude Code answers
+with Sonnet even when Haiku is asked for (~20x the cost).
+
+Each test also runs on its own. `--live [path-for-raw-output.txt] [mode]` runs two short turns, in Accept Edits
+unless a mode is named (`Plan` checks the known Sonnet case on purpose). To capture and answer permission
 requests (questions, plan approval), use `--live-ask <rawPath> <PermissionMode> "<prompt>"`. `--live-edit-review` has Haiku make a two-line edit, applies one line and checks that Claude was told (about
 $0.005); `--live-edit-review-interrupt [rawPath]` does the same but presses Stop right after approving, then asks
 Claude what happened (about $0.007); `--live-edit-stop-allow [rawPath]` allows the edit as proposed instead, then
