@@ -10,13 +10,92 @@ using ClaudeVS.Core.Cli;
 namespace ClaudeVS.Core.Tests
 {
     /// <summary>
-    /// Opt-in check against the real claude CLI: `dotnet run --project tests/ClaudeVS.Core.Tests -- --live [rawLogPath]`.
-    /// Asks for Haiku at low effort in plan (read-only) mode in an empty temp folder, so it cannot change files.
-    /// Each request carries the CLI's ~25k-token system context: expect a few cents per run (about $0.08 when the
-    /// CLI answered with Sonnet on 2026-11-02). Never runs in CI or `dotnet test`.
+    /// Opt-in checks against the real claude CLI, each in an empty temp folder: `dotnet run --project
+    /// tests/ClaudeVS.Core.Tests -- --live-all` runs them all (see <see cref="RunAll"/>), `--live …` one each.
+    /// Each request carries the CLI's ~25k-token system context: a few cents per test on Haiku. Never runs in CI or
+    /// `dotnet test`.
     /// </summary>
     internal static class LiveSmoke
     {
+        private static readonly object CostGate = new object();
+        private static double _spent;
+
+        /// <summary>What the live tests of this run have cost so far (USD, the CLI's own total_cost_usd).</summary>
+        public static double Spent { get { lock (CostGate) return _spent; } }
+
+        private static void AddCost(double usd) { if (usd > 0) lock (CostGate) _spent += usd; }
+
+        // The last total_cost_usd seen per Claude session id: a process started with --resume carries on the resumed
+        // session's total (seen with 2.1.322: $0.0518 before the relaunch, $0.0539 after one $0.0021 turn), so counting
+        // per process would count the first part twice.
+        private static readonly Dictionary<string, double> LastCostBySession = new Dictionary<string, double>(StringComparer.Ordinal);
+
+        /// <summary>A session whose turns' cost adds to <see cref="Spent"/>; every live test makes its sessions here.</summary>
+        private static ClaudeSession NewSession(ClaudeLaunchOptions options)
+        {
+            var s = new ClaudeSession(options);
+            double lastHere = 0; // when the session id is not known yet
+            s.EventReceived += (_, ev) =>
+            {
+                if (ev.Kind != ClaudeEventKind.TurnCompleted || !ev.TotalCostUsd.HasValue) return;
+                double now = ev.TotalCostUsd.Value; // cumulative for the session
+                string id = s.SessionId;
+                lock (CostGate)
+                {
+                    double last = id != null && LastCostBySession.TryGetValue(id, out var l) ? l : lastHere;
+                    _spent += now >= last ? now - last : now; // lower: the total started again
+                    if (id != null) LastCostBySession[id] = now;
+                    lastHere = now;
+                }
+            };
+            return s;
+        }
+
+        /// <summary>
+        /// `--live-all`: every live test in order, with a summary and the total cost (about $0.15 on Haiku with
+        /// 2.1.322). Nothing runs in plan mode: there the CLI answers with Sonnet even when Haiku is asked for
+        /// (2.1.316-2.1.322), which costs ~20x more and fails the "answered by Haiku" check; `--live raw.jsonl Plan`
+        /// checks that on purpose. Exit code 0 only when every test passed.
+        /// </summary>
+        public static int RunAll()
+        {
+            if (ClaudeCliLocator.Resolve("") == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }
+            const string ask = "Use the AskUserQuestion tool once to ask me which fruits I like (multi-select: Apple, Banana, Cherry), then repeat my answer in one line.";
+            var steps = new (string Name, Func<int> Run)[]
+            {
+                ("dialogs", RunDialogs),
+                ("mcp", () => RunMcp()),
+                ("haiku-router", RunHaikuRouter),
+                ("setup", () => RunSetup(null)),
+                ("edit-review", RunEditReview),
+                ("edit-review-interrupt", () => RunEditReviewInterrupted(null)),
+                ("edit-stop-allow", () => RunEditReviewInterrupted(null, allowPlain: true)),
+                ("live (Accept Edits)", () => Run(null, PermissionModeChoice.AcceptEdits)),
+                ("ask", () => RunInteractive(null, PermissionModeChoice.Default, ask)),
+                ("session", RunSession),
+                ("long-prompt", RunLongPrompt),
+                ("prompt-tokens", RunPromptTokens),
+            };
+            var results = new List<(string Name, int Code, double Cost, TimeSpan Time)>();
+            foreach (var (name, run) in steps)
+            {
+                Console.WriteLine($"=== {name}");
+                double before = Spent;
+                var sw = System.Diagnostics.Stopwatch.StartNew();
+                int code;
+                try { code = run(); }
+                catch (Exception ex) { Console.WriteLine("  FAIL threw: " + (ex.InnerException ?? ex).Message); code = 1; }
+                results.Add((name, code, Spent - before, sw.Elapsed));
+                Console.WriteLine();
+            }
+            Console.WriteLine("=== summary");
+            foreach (var r in results)
+                Console.WriteLine($"  {(r.Code == 0 ? "PASS" : r.Code == 2 ? "SKIP" : "FAIL"),-4}  {r.Name,-24} ${r.Cost,7:0.0000}  {r.Time.TotalSeconds,5:0} s");
+            int failed = results.Count(r => r.Code != 0);
+            Console.WriteLine($"  {results.Count - failed} of {results.Count} passed · total ${Spent:0.0000} · {TimeSpan.FromTicks(results.Sum(r => r.Time.Ticks)).TotalMinutes:0.0} min");
+            Console.WriteLine("  Not run: --live in plan mode (answers with Sonnet, a known limitation; check it with --live raw.jsonl Plan).");
+            return failed == 0 ? 0 : 1;
+        }
         /// <summary>
         /// `-- --live-haiku-router`: warms up the trimmed Haiku router, routes four prompts, and compares each with the
         /// local rules. Checks the answers are usable, warm routes take under 4 s, and the cost stays tiny (~$0.001).
@@ -52,6 +131,7 @@ namespace ClaudeVS.Core.Tests
                     Check(d != null, "usable answer");
                     Check(sw.ElapsedMilliseconds < 4000, "answered in under 4 s (warm)");
                 }
+                AddCost(router.TotalCostUsd); // its own trimmed process, not a NewSession
                 Console.WriteLine($"  {router.Routes} routes, total ${router.TotalCostUsd:0.00000} (last ${router.LastRouteCostUsd:0.00000}), {(DateTime.UtcNow - t0).TotalSeconds:0} s including warm-up");
                 Check(router.Routes == prompts.Length, "every route counted");
                 Check(router.TotalCostUsd > 0 && router.TotalCostUsd < 0.01, "cost under a cent for all routes");
@@ -80,7 +160,7 @@ namespace ClaudeVS.Core.Tests
 
             ClaudeSession Open(string resumeId)
             {
-                var s = new ClaudeSession(new ClaudeLaunchOptions { WorkingDirectory = dir, Model = ModelChoice.Haiku, Effort = EffortChoice.Low, PermissionMode = PermissionModeChoice.Default, ResumeSessionId = resumeId });
+                var s = NewSession(new ClaudeLaunchOptions { WorkingDirectory = dir, Model = ModelChoice.Haiku, Effort = EffortChoice.Low, PermissionMode = PermissionModeChoice.Default, ResumeSessionId = resumeId });
                 s.EventReceived += (o, ev) =>
                 {
                     meter.Observe(ev);
@@ -162,7 +242,7 @@ namespace ClaudeVS.Core.Tests
             var done = new AutoResetEvent(false);
             double cost = 0;
             var options = new ClaudeLaunchOptions { WorkingDirectory = dir, Model = ModelChoice.Haiku, Effort = EffortChoice.Low, PermissionMode = PermissionModeChoice.Default };
-            using (var session = new ClaudeSession(options))
+            using (var session = NewSession(options))
             {
                 session.RawLine += (s, e) => { lock (raw) raw.Append(e.Direction == RawLineDirection.Stdin ? ">> " : "<< ").AppendLine(e.Line); };
                 session.EventReceived += (s, ev) =>
@@ -226,7 +306,7 @@ namespace ClaudeVS.Core.Tests
             File.WriteAllText(Path.Combine(dir, ".claude", "settings.json"), "{\"permissions\":{\"deny\":[\"Read(./secrets/**)\"]},\"hooks\":{\"PreToolUse\":[{\"matcher\":\"Bash\",\"hooks\":[{\"type\":\"command\",\"command\":\"echo hi\"}]}]}}");
             var failures = new List<string>();
             void Check(bool ok, string what) { Console.WriteLine((ok ? "  ok   " : "  FAIL ") + what); if (!ok) failures.Add(what); }
-            using (var session = new ClaudeSession(new ClaudeLaunchOptions { WorkingDirectory = dir, PermissionMode = PermissionModeChoice.Plan, EditNotesHook = true }))
+            using (var session = NewSession(new ClaudeLaunchOptions { WorkingDirectory = dir, PermissionMode = PermissionModeChoice.Plan, EditNotesHook = true }))
             {
                 try
                 {
@@ -276,7 +356,7 @@ namespace ClaudeVS.Core.Tests
                 ("code", code + "\nReply with OK."), ("tiny", "Reply with OK."), ("dense", dense + "\nReply with OK."), ("tiny", "Reply with OK.") };
 
             var usages = new BlockingCollection<ClaudeEvent>();
-            using (var session = new ClaudeSession(new ClaudeLaunchOptions { WorkingDirectory = dir, Model = ModelChoice.Haiku, Effort = EffortChoice.Low, PermissionMode = PermissionModeChoice.AcceptEdits }))
+            using (var session = NewSession(new ClaudeLaunchOptions { WorkingDirectory = dir, Model = ModelChoice.Haiku, Effort = EffortChoice.Low, PermissionMode = PermissionModeChoice.AcceptEdits }))
             {
                 // The extension's learner on the same events, as TokenMeter feeds it
                 var learner = new Tokens.PromptTokenLearner();
@@ -352,7 +432,7 @@ namespace ClaudeVS.Core.Tests
                     var done = new ManualResetEventSlim();
                     string reply = "";
                     ClaudeEvent result = null;
-                    using (var session = new ClaudeSession(new ClaudeLaunchOptions { WorkingDirectory = dir, Model = ModelChoice.Haiku, Effort = EffortChoice.Low, PermissionMode = PermissionModeChoice.AcceptEdits })) // not Plan: plan mode answers with Sonnet
+                    using (var session = NewSession(new ClaudeLaunchOptions { WorkingDirectory = dir, Model = ModelChoice.Haiku, Effort = EffortChoice.Low, PermissionMode = PermissionModeChoice.AcceptEdits })) // not Plan: plan mode answers with Sonnet
                     {
                         session.EventReceived += (s, ev) =>
                         {
@@ -391,7 +471,7 @@ namespace ClaudeVS.Core.Tests
             var done = new ManualResetEventSlim();
             string reply = "";
             bool reviewed = false;
-            using (var session = new ClaudeSession(options))
+            using (var session = NewSession(options))
             {
                 session.EventReceived += (s, ev) =>
                 {
@@ -450,7 +530,7 @@ namespace ClaudeVS.Core.Tests
             var replies = new List<StringBuilder> { new StringBuilder() };
             string editId = null;
             int ended = 0;
-            using (var session = new ClaudeSession(options))
+            using (var session = NewSession(options))
             {
                 session.RawLine += (s, e) => { lock (raw) raw.Append(e.Direction).Append('\t').Append(e.Line).Append('\n'); };
                 session.EventReceived += (s, ev) =>
@@ -562,7 +642,7 @@ namespace ClaudeVS.Core.Tests
             options.SdkMcpServers.Add(Context.IdeMcpServer.Create(
                 () => System.Threading.Tasks.Task.FromResult<IReadOnlyList<Context.BuildError>>(new Context.BuildError[0]), () => dir));
             var raw = new StringBuilder();
-            using (var session = new ClaudeSession(options))
+            using (var session = NewSession(options))
             {
                 session.RawLine += (s, e) => { lock (raw) raw.Append(e.Direction).Append('\t').Append(e.Line).Append('\n'); };
                 try
@@ -596,11 +676,17 @@ namespace ClaudeVS.Core.Tests
             }
         }
 
-        public static int Run(string rawLogPath, PermissionModeChoice mode = PermissionModeChoice.Plan, int turns = 2)
+        /// <summary>
+        /// `--live [rawLogPath] [mode] [turns]`: short turns asking for Haiku, Accept Edits unless another mode is named.
+        /// Plan mode is the known exception: the CLI answers with Sonnet there (2.1.316-2.1.322), ~20x the cost.
+        /// </summary>
+        public static int Run(string rawLogPath, PermissionModeChoice mode = PermissionModeChoice.AcceptEdits, int turns = 2)
         {
             string exe = ClaudeCliLocator.Resolve("");
             if (exe == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }
             Console.WriteLine("claude: " + exe);
+            if (mode == PermissionModeChoice.Plan)
+                Console.WriteLine("  note: plan mode answers with Sonnet even when Haiku is asked for (known since 2.1.316): ~20x the cost, and the Haiku check fails");
 
             string dir = Path.Combine(Path.GetTempPath(), "cvs-live-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(dir);
@@ -609,7 +695,7 @@ namespace ClaudeVS.Core.Tests
             var failures = new List<string>();
             void Check(bool ok, string what) { Console.WriteLine((ok ? "  ok   " : "  FAIL ") + what); if (!ok) failures.Add(what); }
 
-            var session = new ClaudeSession(new ClaudeLaunchOptions
+            var session = NewSession(new ClaudeLaunchOptions
             {
                 WorkingDirectory = dir,
                 Model = ModelChoice.Haiku,
@@ -675,7 +761,7 @@ namespace ClaudeVS.Core.Tests
             string dir = Path.Combine(Path.GetTempPath(), "cvs-live-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(dir);
             var raw = new StringBuilder();
-            var session = new ClaudeSession(new ClaudeLaunchOptions { WorkingDirectory = dir, Model = ModelChoice.Haiku, Effort = EffortChoice.Low, PermissionMode = mode });
+            var session = NewSession(new ClaudeLaunchOptions { WorkingDirectory = dir, Model = ModelChoice.Haiku, Effort = EffortChoice.Low, PermissionMode = mode });
             var events = new BlockingCollection<ClaudeEvent>();
             session.EventReceived += (s, e) => events.Add(e);
             session.RawLine += (s, e) => { lock (raw) raw.Append(e.Direction).Append('\t').Append(e.Line).Append('\n'); };
@@ -723,7 +809,7 @@ namespace ClaudeVS.Core.Tests
                 try { Directory.Delete(dir, true); } catch { }
             }
             Console.WriteLine($"permission requests: {requests}");
-            return 0;
+            return requests > 0 ? 0 : 1; // the prompt is meant to raise at least one
         }
 
         /// <summary>Events until a TurnCompleted (or timeout), skipping leftovers from before.</summary>
