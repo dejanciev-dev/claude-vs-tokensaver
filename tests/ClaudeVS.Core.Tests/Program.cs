@@ -69,6 +69,30 @@ namespace ClaudeVS.Core.Tests
             True(a.Contains("--model haiku") && a.Contains("--effort low") && a.Contains("--resume abc") && a.Contains("--append-system-prompt \"Be brief.\""), a);
         }
 
+        private static void Test_Fable_ManualChoiceOnly()
+        {
+            Eq("fable", ModelChoice.Fable.ToCli(), "CLI alias");
+            True(ClaudeArgsBuilder.Build(new ClaudeLaunchOptions { Model = ModelChoice.Fable }).Contains("--model fable"), "launch arg");
+
+            // Picked by hand in a big conversation: the routers' cheaper picks keep Fable for its cache, as for any model
+            var router = new ModelRouter { StickyContextTokens = 30000 };
+            var big = new RouteRequest { Prompt = "x", CurrentModel = ModelChoice.Fable, ContextTokens = 50000 };
+            Eq(ModelChoice.Fable, router.ApplyCacheStickiness(new RouteDecision { Model = ModelChoice.Opus, Effort = EffortChoice.High, Reason = "r" }, big, clearlyHard: true).Model, "Opus is no upgrade from Fable");
+
+            // The routers never pick it
+            foreach (var p in new[] { "rename x", "refactor the whole architecture to fix this deadlock across services", "explain this" })
+                True(new ModelRouter().Route(new RouteRequest { Prompt = p }).Model != ModelChoice.Fable, p);
+            Eq(null, HaikuRouter.Parse("{\"model\":\"fable\",\"effort\":\"high\",\"reason\":\"r\"}"), "Haiku router answer 'fable' is not taken");
+
+            // What it costs next to Opus, where you pick it
+            var prices = new PriceTable();
+            Eq("2× the Opus price", prices.VersusOpus("fable"), "fable");
+            Eq(null, prices.VersusOpus("opus"), "opus");
+            Eq(null, prices.VersusOpus("sonnet"), "cheaper");
+            Eq(null, prices.VersusOpus(null), "auto");
+            Eq("2.5× the Opus price", PriceTable.FromStrings(null, null, null, "10, 50, 12.5, 0.25").VersusOpus("claude-fable-5-2"), "custom price");
+        }
+
         // ---------- Haiku router ----------
         private static void Test_HaikuRouter_ParseAndRequest()
         {

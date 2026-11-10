@@ -103,6 +103,19 @@ namespace ClaudeVS.Core.Tokens
                 default: return null;
             }
         }
+
+        /// <summary>
+        /// "2× the Opus price" for a model dearer than Opus (by its output price; Fable 5.2: $40 vs $20), else null.
+        /// Said where you pick it by hand, since the routers never do.
+        /// </summary>
+        public string VersusOpus(string model)
+        {
+            var p = For(model);
+            if (p == null || Opus == null || Opus.Output <= 0 || Family(model) == "opus") return null;
+            double x = p.Output / Opus.Output;
+            if (x < 1.05) return null;
+            return (Math.Abs(x - Math.Round(x)) < 0.05 ? Math.Round(x).ToString("0", CultureInfo.InvariantCulture) : x.ToString("0.0", CultureInfo.InvariantCulture)) + "× the Opus price";
+        }
     }
 
     /// <summary>One local day of the savings report.</summary>
