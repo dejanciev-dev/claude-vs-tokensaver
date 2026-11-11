@@ -69,6 +69,15 @@ namespace ClaudeVS.Core.Tokens
         /// When resuming a conversation idle for longer than the longest cache lifetime (1 hour) with a context worth
         /// mentioning: its cache is surely gone, so the first prompt sends it all at the full input price. Null otherwise.
         /// </summary>
+        /// <summary>
+        /// With <see cref="ResumeNote"/>: the line by the /compact button under the meter. Compacting reads the conversation
+        /// once at the input price and leaves a short summary, where the first prompt would write all of it to the cache
+        /// again (1.25× input, 2× for a 1-hour cache) and every later prompt would read it. Null when there is no note.
+        /// </summary>
+        public static string ResumeCompactAdvice(DateTime lastActiveUtc, long contextTokens, DateTime nowUtc) =>
+            ResumeNote(lastActiveUtc, contextTokens, nowUtc) == null ? null
+                : $"To go on here, /compact first: it reads the ~{TokenMeter.Format(contextTokens)} tokens once to summarize them, so the next prompts start small.";
+
         public static string ResumeNote(DateTime lastActiveUtc, long contextTokens, DateTime nowUtc)
         {
             var idle = nowUtc - lastActiveUtc;

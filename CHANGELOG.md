@@ -56,6 +56,9 @@ All notable changes to this project are listed here. The format follows
   conversations, from the usage log and the turns since.
 - **This week against last week** in the savings report: `This week: $14.20 since Monday (last week by the same day:
   $11.00, +29%)`.
+- **/compact first, on resume**: when a resumed conversation's cache has expired, a /compact button appears by the
+  meter. Compacting reads the conversation once to summarize it, instead of the first prompt writing all of it to
+  the cache again.
 
 ## [0.9.0] - 2026-11-11
 
