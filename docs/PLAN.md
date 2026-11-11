@@ -20,10 +20,12 @@ Tick the boxes as you go. Each phase ends with something you can run.
 
 **Goal:** F5 opens the experimental instance, the chat window appears, one prompt gets an answer.
 
+The checks left in Phases 1–5, and the newer ones to look at in VS, are on one page: [MANUAL-CHECKS.md](MANUAL-CHECKS.md).
+
 ### 1.1 Environment
 - [ ] Visual Studio 2022 17.14+ (or VS 2026) with workload **Visual Studio extension development**
-- [ ] .NET 8 SDK (for the Core tests)
-- [ ] Claude Code CLI installed and logged in — `claude --version` and `claude -p "hi"` work in a terminal
+- [x] .NET 8 SDK (for the Core tests) — the Core tests run here (2026-11-11)
+- [x] Claude Code CLI installed and logged in — `claude --version` and `claude -p "hi"` work in a terminal (2.1.322, 2026-11-11)
 - [x] Create the GitHub repo `claude-vs-tokensaver`, push the scaffold, replace `OWNER` in `source.extension.vsixmanifest`
 
 ### 1.2 First build
@@ -712,8 +714,9 @@ Picked on 2026-11-11.
       agent …`. `SessionNotices.AgentAutoStop`
 - [ ] **Explore tip for read-only agents.** A one-time tip when a general-purpose agent on Opus or Sonnet only read,
       searched and listed files: an Explore agent does that for less (check which model Explore runs on first)
-- [ ] **Manual check list.** The unchecked VS checks of Phases 1–5 on one short page (steps and what to look for), to
-      go through in the experimental instance in one sitting
+- [x] **Manual check list.** The unchecked VS checks of Phases 1–5 on one short page (steps and what to look for), to
+      go through in the experimental instance in one sitting. [MANUAL-CHECKS.md](MANUAL-CHECKS.md), with the subagent
+      features of Phases 22–26 too (not seen in VS yet)
 
 ---
 
