@@ -180,6 +180,34 @@ namespace ClaudeVS.Core.Cli
                 + "For quick questions, Auto in the model picker (or Haiku) is cheaper. A new model writes the conversation to its own cache once, so switch at the start of a task.";
         }
 
+        /// <summary>The heavy-thinking tip: at least this much thinking, this share of the output, this cost, and an answer no longer than this.</summary>
+        public const long HeavyThinkingFromTokens = 2_000;
+        public const double HeavyThinkingShare = 0.7;
+        public const double HeavyThinkingFromUsd = 0.02;
+        public const long HeavyThinkingMaxAnswer = 800;
+
+        /// <summary>
+        /// A token tip when, at high effort or above (<paramref name="effort"/> as sent: "high", "xhigh", "max"), thinking
+        /// was most of a short answer's output: at least <see cref="HeavyThinkingFromTokens"/> thinking tokens,
+        /// <see cref="HeavyThinkingShare"/> of the output and <see cref="HeavyThinkingFromUsd"/> at the model's output
+        /// price, with at most <see cref="HeavyThinkingMaxAnswer"/> other output tokens. Null otherwise.
+        /// </summary>
+        public static string HeavyThinking(string model, string effort, TokenUsage turn, Tokens.PriceTable prices)
+        {
+            string e = effort?.ToLowerInvariant();
+            if (e != "high" && e != "xhigh" && e != "max") return null;
+            long thinking = turn.Thinking, answer = turn.Output - turn.Thinking;
+            if (thinking < HeavyThinkingFromTokens || turn.Output <= 0 || thinking < HeavyThinkingShare * turn.Output || answer > HeavyThinkingMaxAnswer) return null;
+            prices = prices ?? new Tokens.PriceTable();
+            var p = prices.For(model) ?? prices.Sonnet;
+            double usd = thinking * p.Output / 1_000_000.0 * Tokens.ModelPrice.SpeedMultiplier(turn.FastTokens, turn.Total);
+            if (usd < HeavyThinkingFromUsd) return null;
+            var c = System.Globalization.CultureInfo.InvariantCulture;
+            string lower = e == "high" ? "Medium" : "High";
+            return $"Claude thought for ~{Tokens.TokenMeter.Format(thinking)} tokens (${usd.ToString("0.00", c)}) to write a short answer at {e} effort. "
+                + $"For questions like this, a lower effort in the effort picker ({lower}, or Auto) thinks less.";
+        }
+
         /// <summary>Subagents that cost less than this in a turn get no tip, however small the main agent's share.</summary>
         public const double SubagentTipFromUsd = 0.05;
 

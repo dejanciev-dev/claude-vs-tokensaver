@@ -269,6 +269,21 @@ namespace ClaudeVS.ToolWindow
             Tip(tip);
         }
 
+        /// <summary>The effort the last finished turn was sent with ("high" …), null for Claude Code's default.</summary>
+        private string _lastTurnEffort;
+        private bool _gaveHeavyThinkingTip;
+
+        /// <summary>After a turn: once per conversation, thinking that was most of a short answer at high effort or above.</summary>
+        private void HeavyThinkingTip(string model)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (_gaveHeavyThinkingTip || _meterModel == null) return;
+            string tip = SessionNotices.HeavyThinking(model ?? _meterModel.LastModel, _lastTurnEffort, _meterModel.LastTurn, _meterModel.Prices);
+            if (tip == null) return;
+            _gaveHeavyThinkingTip = true;
+            Tip(tip);
+        }
+
         // ---------------- Cache breaks ----------------
 
         private bool _gaveCacheBreakTip;
@@ -321,6 +336,7 @@ namespace ClaudeVS.ToolWindow
             _gaveCacheBreakTip = false;
             _gavePriceyContextTip = false;
             _gaveOverkillTip = false;
+            _gaveHeavyThinkingTip = false;
             _reads.Reset();
         }
     }

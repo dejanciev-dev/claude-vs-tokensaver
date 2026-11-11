@@ -35,6 +35,8 @@ All notable changes to this project are listed here. The format follows
 - **Amber cost in the meter**: the meter's cost turns amber, with ⚠, once today's or this month's spend has passed
   its warning amount.
 - **Tool results in the usage CSV**: a `tools` column, e.g. `Read:1200;Shell:400`, in the style of `agent_types`.
+- **Token tip for heavy thinking**: once per conversation, when at high effort or above thinking was most of a short
+  answer's output, with what it cost and a lower effort to try.
 
 ## [0.9.0] - 2026-11-11
 

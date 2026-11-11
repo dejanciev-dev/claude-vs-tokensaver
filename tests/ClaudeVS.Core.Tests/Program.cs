@@ -2713,6 +2713,18 @@ namespace ClaudeVS.Core.Tests
             toolMeter.Observe(new ClaudeEvent { Kind = ClaudeEventKind.TurnCompleted, Usage = new TokenUsage { Input = 10 } });
             Eq(0, toolMeter.LastTurnToolCalls, "counted per turn");
 
+            // Thinking that was most of a short answer at high effort or above
+            var thought = new TokenUsage { Input = 500, Output = 6_400, Thinking = 6_000, CacheRead = 20_000 };
+            Eq("Claude thought for ~6.0k tokens ($0.12) to write a short answer at high effort. For questions like this, a lower effort in the effort picker (Medium, or Auto) thinks less.",
+                SessionNotices.HeavyThinking("claude-opus-5-5", "high", thought, prices), "Opus: 6000 × $20 per Mtok");
+            True(SessionNotices.HeavyThinking("claude-opus-5-5", "MAX", thought, prices)?.Contains("at max effort") == true && SessionNotices.HeavyThinking("claude-opus-5-5", "max", thought, prices).Contains("(High, or Auto)"), "max: try High");
+            Eq(null, SessionNotices.HeavyThinking("claude-opus-5-5", "medium", thought, prices), "medium: no tip");
+            Eq(null, SessionNotices.HeavyThinking("claude-opus-5-5", null, thought, prices), "Claude Code's default: not ours to judge");
+            Eq(null, SessionNotices.HeavyThinking("claude-opus-5-5", "high", new TokenUsage { Output = 7_000, Thinking = 6_000 }, prices), "a long answer: 1000 tokens");
+            Eq(null, SessionNotices.HeavyThinking("claude-opus-5-5", "high", new TokenUsage { Output = 2_500, Thinking = 1_900 }, prices), "little thinking");
+            Eq(null, SessionNotices.HeavyThinking("claude-haiku-5-5", "high", thought, prices), "Haiku: $0.003, too cheap");
+            True(SessionNotices.HeavyThinking("claude-sonnet-5-5", "xhigh", thought, prices)?.Contains("($0.06)") == true, "Sonnet: 6000 × $10");
+
             // Subagents costing more than the main agent: the turn's cost includes them
             True(SessionNotices.SubagentsDominate(0.30, 0.50)?.Contains("model: haiku") == true, "agents $0.30 of $0.50: tip");
             Eq(null, SessionNotices.SubagentsDominate(0.20, 0.50), "agents $0.20 of $0.50: the main agent cost more");
