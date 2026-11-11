@@ -82,6 +82,7 @@ This extension attacks all three, and shows the numbers so you can see the effec
 | **Agents panel** | Claude's subagents and background commands above the input box, as a tree: what each is doing, its tokens, what it cost (API prices), tool calls and time, and its result. **Background** lets Claude carry on while an agent works; **Stop** ends one agent (and what it started) without stopping Claude. A subagent's own tool calls are marked `↳` in the conversation, and its Agent call says what it used and on which model once it finishes. Forks (subagents that start with a copy of the conversation) show as `● Fork(…)`. |
 | **Tool rows with sizes** | Tool calls read like the terminal: `● Update(src/a.cs)` with a `⎿ Added 13 lines` line, `● Read(big.txt)` with `⎿ Read 20 of 301 lines (from line 10)`, `● Bash(dotnet test)` with the first lines of its output. Each row shows the size of its result in tokens; results of 5k+ tokens are in bold, because those fill the context. A command or edit your settings let through without asking says so (`· allowed by a rule`), and one they block says `· denied by a rule`. Click a row for its input and whole output. |
 | **Savings report** | Actual cost vs the same tokens at Opus prices, tokens saved by references, what the prompt cache saved and what writing it again cost, what Fable, fast mode and Haiku over 100k tokens cost extra, what subagents cost by kind (Explore, general-purpose, Fork, your own agents) and by model (with what Opus agents would have cost on Sonnet), cost per model, per effort and per solution, the costliest turns and conversations, which tools filled the context, this month so far with a month-end projection and last month by the same day, this week against last week, and per day: turns, tokens, cost, cache hits and what the cache saved. |
+| **Report as Markdown** | Tools → Claude Code → *Save Savings Report as Markdown…* saves the same report as a `.md` file (in a fixed-width block, so its columns stay aligned) to attach to a ticket or share, and opens it. |
 | **Usage CSV export** | Tools → Claude Code → *Export Usage as CSV…* saves the usage log as a spreadsheet: one row per turn with time, solution, model, routing, tokens (input, output, thinking, cache, fast mode, over 100k, subagents), cost and duration. |
 | **Router replay** | With the opt-in prompt preview, the report re-runs your real prompts through the current router rules and lists those that would now route differently, with what each would have cost more or less at its logged tokens, and the total. |
 
@@ -257,6 +258,7 @@ First run:
 | Attach Error List | Tools → Claude Code | `Ctrl+Alt+K, E` |
 | Focus last message (keyboard to Claude's last answer; `Esc` goes back) | Tools → Claude Code · `/` | `Ctrl+Alt+K, M` |
 | Show Savings Report | Tools → Claude Code | |
+| Save Savings Report as Markdown… | Tools → Claude Code | |
 | Export Usage as CSV… | Tools → Claude Code | |
 | Generate Lean CLAUDE.md | Tools → Claude Code | |
 | Install Token-Saving Settings and Hooks | Tools → Claude Code | |

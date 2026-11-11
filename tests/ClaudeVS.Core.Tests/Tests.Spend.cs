@@ -905,6 +905,27 @@ namespace ClaudeVS.Core.Tests
             Eq(0, SavingsReport.Build(new[] { sonnetBig }, prices).LongContextTurns, "Sonnet has no such tier");
         }
 
+        private static void Test_SavingsReportText_FullAndMarkdown()
+        {
+            var t = DateTime.UtcNow.AddDays(-1);
+            var recs = new[]
+            {
+                new UsageRecord { Timestamp = t, Solution = @"C:\src\shop", ModelUsed = "claude-sonnet-5-5", CostUsd = 0.5, Routed = true, RouteModel = "sonnet", PromptPreview = "fix the typo in this comment", InputTokens = 10_000, OutputTokens = 1_000 },
+                new UsageRecord { Timestamp = t, Solution = @"C:\src\blog", ModelUsed = "claude-haiku-5-5", CostUsd = 0.1 },
+            };
+            string text = SavingsReportText.Full(recs, new PriceTable(), @"C:\src\shop", DateTime.UtcNow, @"C:\logs");
+            True(text.StartsWith(@"Claude Code — savings report for C:\src\shop"), text);
+            True(text.Contains("All solutions: 2 turns, $0.60 actual"), "the all-solutions summary for a solution's report");
+            True(text.Contains("Router replay: 1 of 1 logged prompts would route differently") && text.Contains("sonnet → haiku (≈ −$0.029)"), text);
+            True(text.TrimEnd().EndsWith(@"Log: C:\logs"), "the log folder last");
+            True(!SavingsReportText.Full(recs, new PriceTable(), null, DateTime.UtcNow).Contains("All solutions:"), "all solutions: no second summary");
+            True(SavingsReportText.Full(new UsageRecord[0], new PriceTable(), null, DateTime.UtcNow).Contains("no prompt previews logged"), "empty log");
+
+            var now = new DateTime(2026, 11, 11, 13, 5, 0, DateTimeKind.Local).ToUniversalTime();
+            Eq("# Claude Code savings report\n\nMade 2026-11-11 13:05, at API prices.\n\n```text\nline 1\n  line 2\n```\n", SavingsReportText.Markdown("line 1\r\n  line 2\r\n", now));
+            True(SavingsReportText.Markdown("a ``` b\n````", now).Contains("\n`````text\n"), "fenced past the longest backtick run");
+        }
+
         private static void Test_UsageCsv()
         {
             var t = new DateTime(2026, 11, 9, 9, 30, 0, DateTimeKind.Local).ToUniversalTime();
