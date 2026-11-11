@@ -1965,6 +1965,7 @@ namespace ClaudeVS.ToolWindow
             rec.CacheWrite1hTokens = ev.Usage.CacheCreation1h;
             rec.FastTokens = ev.Usage.FastTokens;
             rec.LargeContextTokens = _meterModel?.LastTurn.LargeContextTokens ?? 0; // per request: the meter counted it
+            rec.Agents = AgentTokens.From(_meterModel?.LastTurnSubagents); // not in the counts above, which are the main agent's
             rec.CostUsd = _meterModel?.LastTurnCostUsd ?? 0;
             rec.DurationMs = ev.DurationMs;
             rec.IsError = ev.IsError;

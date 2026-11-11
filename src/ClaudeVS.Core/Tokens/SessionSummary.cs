@@ -21,6 +21,7 @@ namespace ClaudeVS.Core.Tokens
             sb.Append($"Tokens: {TokenMeter.Format(s.Total)} (input {TokenMeter.Format(s.Input)}, output {TokenMeter.Format(s.Output)}");
             if (s.Thinking > 0) sb.Append($" of which thinking {TokenMeter.Format(s.Thinking)}");
             sb.Append($", cache read {TokenMeter.Format(s.CacheRead)}, cache write {TokenMeter.Format(s.CacheCreation)})\n");
+            if (m.SessionSubagentTokens > 0) sb.Append($"Subagents: {TokenMeter.Format(m.SessionSubagentTokens)} tokens more (not in the line above; in the cost)\n");
             sb.Append($"Cache hits: {m.CacheHitPercent.ToString("0", c)}%");
             if (m.SessionCacheSavedUsd >= 0.005) sb.Append($" (saved ${m.SessionCacheSavedUsd.ToString("0.00", c)})");
             if (m.ContextTokens > 0)
