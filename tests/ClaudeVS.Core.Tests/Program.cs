@@ -2288,6 +2288,32 @@ namespace ClaudeVS.Core.Tests
             Eq(null, SavingsReport.Build(recs, new PriceTable(), nowUtc: At(12, 5)).MonthLine(), "nothing in December yet");
         }
 
+        private static void Test_SavingsReport_CostliestConversations()
+        {
+            var t = new DateTime(2026, 11, 9, 9, 0, 0, DateTimeKind.Local).ToUniversalTime();
+            var recs = new[]
+            {
+                new UsageRecord { Timestamp = t, SessionId = "a", Solution = @"C:\src\shop", CostUsd = 0.40, PromptPreview = null },
+                new UsageRecord { Timestamp = t.AddMinutes(5), SessionId = "a", Solution = @"C:\src\shop", CostUsd = 0.50, PromptPreview = "fix the\ncart total", RouterCostUsd = 0.10 },
+                new UsageRecord { Timestamp = t.AddMinutes(1), SessionId = "b", Solution = @"C:\src\blog", CostUsd = 0.70 },
+                new UsageRecord { Timestamp = t.AddMinutes(2), CostUsd = 9 },                // older line: no session id
+                new UsageRecord { Timestamp = t.AddMinutes(3), SessionId = "c", CostUsd = 0 }, // nothing spent
+            };
+            var rep = SavingsReport.Build(recs, new PriceTable());
+            Eq("a,b", string.Join(",", rep.CostliestConversations.Select(b => b.SessionId)), "dearest first; no id and $0 left out");
+            var a = rep.CostliestConversations[0];
+            Eq(2, a.Turns, "turns");
+            True(Math.Abs(a.CostUsd - 1.0) < 1e-9, "router cost included: " + a.CostUsd);
+            Eq(t, a.Started, "its first turn");
+            Eq("fix the\ncart total", a.FirstPrompt, "the first prompt logged");
+            string text = rep.ToText();
+            True(text.Contains("Costliest conversations:"), text);
+            True(text.Contains("$  1.00     2 turns  shop  “fix the cart total”"), text);
+            True(text.Contains("$  0.70     1 turn   blog"), text);
+            True(!SavingsReport.Build(recs, new PriceTable(), solution: @"C:\src\shop").ToText().Contains("Costliest conversations:"), "one conversation: no list");
+            Eq("shop", SolutionBreakdown.NameOf(@"C:\src\shop\"), "folder name");
+        }
+
         private static void Test_SlashPicker_Matching()
         {
             var cmds = new List<SlashCommand>
@@ -2635,9 +2661,13 @@ namespace ClaudeVS.Core.Tests
             Eq(2, UsageCsv.Write(recs, sw), "rows");
             var lines = sw.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None);
             Eq(string.Join(",", UsageCsv.Columns), lines[0], "header");
-            Eq(t.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") + @",C:\src\a\,claude-opus-5-5,1,,,,5,1200,300,9000,100,100,10405,0,0,,0.25,0.0001,4200,0,134,multi-file,", lines[1], "oldest first, invariant numbers; fast_tokens, large_context_tokens, agent_tokens and agent_types after the cache columns");
-            True(lines[2].EndsWith(",0,,0.001235,0,0,0,0,,\"'=SUM(A1) say \"\"hi\"\", ok\""), "quoted, formula-guarded prompt: " + lines[2]);
+            Eq(t.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") + @",C:\src\a\,claude-opus-5-5,1,,,,5,1200,300,9000,100,100,10405,0,0,,0.25,0.0001,4200,0,134,multi-file,,", lines[1], "oldest first, invariant numbers; fast_tokens, large_context_tokens, agent_tokens and agent_types after the cache columns");
+            True(lines[2].EndsWith(",0,,0.001235,0,0,0,0,,\"'=SUM(A1) say \"\"hi\"\", ok\","), "quoted, formula-guarded prompt: " + lines[2]);
             Eq("", lines[3], "ends with a line break");
+            Eq("session", UsageCsv.Columns.Last(), "session id last");
+            var withSession = new StringWriter();
+            UsageCsv.Write(new[] { new UsageRecord { Timestamp = t, SessionId = "abc-123" } }, withSession);
+            True(withSession.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",,abc-123"), "after the prompt: " + withSession);
 
             var one = new StringWriter();
             Eq(1, UsageCsv.Write(recs, one, solution: @"c:\SRC\a"), "one solution, any case or trailing slash");

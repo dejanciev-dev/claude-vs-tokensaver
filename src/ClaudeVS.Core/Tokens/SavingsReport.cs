@@ -205,7 +205,24 @@ namespace ClaudeVS.Core.Tokens
         /// <summary>Including what asking the Haiku router cost.</summary>
         public double CostUsd { get; set; }
         /// <summary>The folder's name ("linq-samples"), or "(no folder)".</summary>
-        public string Name => string.IsNullOrEmpty(Solution) ? "(no folder)" : System.IO.Path.GetFileName(Solution.TrimEnd('\\', '/')) is string n && n.Length > 0 ? n : Solution;
+        public string Name => NameOf(Solution);
+
+        public static string NameOf(string folder) =>
+            string.IsNullOrEmpty(folder) ? "(no folder)" : System.IO.Path.GetFileName(folder.TrimEnd('\\', '/')) is string n && n.Length > 0 ? n : folder;
+    }
+
+    /// <summary>One conversation (a session id in the usage log) of the savings report.</summary>
+    public sealed class ConversationBreakdown
+    {
+        public string SessionId { get; set; }
+        /// <summary>Its first logged turn (UTC).</summary>
+        public DateTime Started { get; set; }
+        public int Turns { get; set; }
+        /// <summary>Including what asking the Haiku router cost.</summary>
+        public double CostUsd { get; set; }
+        public string Solution { get; set; }
+        /// <summary>The first prompt logged for it (only with Options → Log prompt preview); else null.</summary>
+        public string FirstPrompt { get; set; }
     }
 
     public sealed class ModelBreakdown
@@ -310,6 +327,12 @@ namespace ClaudeVS.Core.Tokens
         public List<UsageRecord> Costliest { get; } = new List<UsageRecord>();
         public const int CostliestCount = 5;
 
+        /// <summary>
+        /// The dearest conversations, dearest first (at most <see cref="CostliestCount"/>): turns grouped by their logged
+        /// session id; turns logged without one are left out.
+        /// </summary>
+        public List<ConversationBreakdown> CostliestConversations { get; } = new List<ConversationBreakdown>();
+
         /// <summary>Turns, tokens, cost and cache per local day, oldest first.</summary>
         public List<DayBreakdown> ByDay { get; } = new List<DayBreakdown>();
         /// <summary>How many days the text shows (the latest).</summary>
@@ -407,6 +430,21 @@ namespace ClaudeVS.Core.Tokens
                 .OrderByDescending(b => b.Turns));
 
             rep.Costliest.AddRange(list.Where(r => r.CostUsd > 0).OrderByDescending(r => r.CostUsd).Take(CostliestCount));
+            rep.CostliestConversations.AddRange(list
+                .Where(r => !string.IsNullOrEmpty(r.SessionId))
+                .GroupBy(r => r.SessionId, StringComparer.Ordinal)
+                .Select(g => new ConversationBreakdown
+                {
+                    SessionId = g.Key,
+                    Started = g.First().Timestamp, // the list is oldest first
+                    Turns = g.Count(),
+                    CostUsd = g.Sum(r => r.CostUsd + r.RouterCostUsd),
+                    Solution = g.First().Solution,
+                    FirstPrompt = g.Select(r => r.PromptPreview).FirstOrDefault(p => !string.IsNullOrWhiteSpace(p)),
+                })
+                .Where(b => b.CostUsd > 0)
+                .OrderByDescending(b => b.CostUsd)
+                .Take(CostliestCount));
 
             foreach (var day in list.GroupBy(r => r.Timestamp.ToLocalTime().Date))
             {
@@ -515,6 +553,18 @@ namespace ClaudeVS.Core.Tokens
                     string what = !string.IsNullOrWhiteSpace(r.PromptPreview) ? "“" + OneLine(r.PromptPreview, 60) + "”"
                         : !string.IsNullOrEmpty(r.RouteReason) ? "(" + OneLine(r.RouteReason, 60) + ")" : "";
                     sb.AppendLine($"  {r.Timestamp.ToLocalTime():yyyy-MM-dd HH:mm}  ${r.CostUsd,6:0.00}  {PriceTable.Family(r.ModelUsed) ?? "other",-6} {TokenMeter.Format(r.TotalTokens),7} tok  {what}".TrimEnd());
+                }
+            }
+            if (CostliestConversations.Count > 1)
+            {
+                // Whole conversations: a long one of cheap turns can cost more than any single turn shows.
+                sb.AppendLine();
+                sb.AppendLine("Costliest conversations:");
+                foreach (var b in CostliestConversations)
+                {
+                    string where = Solution == null ? SolutionBreakdown.NameOf(b.Solution) + "  " : "";
+                    string what = b.FirstPrompt != null ? "“" + OneLine(b.FirstPrompt, 50) + "”" : "";
+                    sb.AppendLine($"  {b.Started.ToLocalTime():yyyy-MM-dd HH:mm}  ${b.CostUsd,6:0.00}  {b.Turns,4} {(b.Turns == 1 ? "turn " : "turns")}  {where}{what}".TrimEnd());
                 }
             }
             if (ByDay.Count > 1)

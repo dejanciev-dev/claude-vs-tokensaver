@@ -10,6 +10,9 @@ All notable changes to this project are listed here. The format follows
 - **Monthly cost warning** (Options → *Warn at monthly cost (USD)*, default 200): said once each time this calendar
   month's spend in Visual Studio, all conversations together, passes another multiple. The month's earlier turns
   come from the usage log.
+- **Costliest conversations in the savings report**: each turn now logs its Claude Code session id, so the report
+  lists the five dearest conversations (start, cost, turns, solution, first prompt when logged) and the usage CSV
+  gets a `session` column. Turns logged before this release have no id and are left out of the list.
 
 ## [0.9.0] - 2026-11-11
 
