@@ -10,7 +10,8 @@ namespace ClaudeVS.Core.Tokens
     /// <c>modelUsage</c> counts everything the session used so far, per model (Fixtures/cli-2.1.319-fork.jsonl):
     /// the growth of <c>modelUsage</c> over the turn, less the main agent's usage, is exactly the subagents'. After
     /// <c>--resume</c> the CLI carries <c>modelUsage</c> on (seen with 2.1.322), so growth is only taken once an earlier
-    /// reading exists; on the first turn the subagents' own streamed messages are added up instead (input and cache
+    /// reading exists, or the session is new (<see cref="StartsFromZero"/>: counted from 0). On a resumed session's
+    /// first turn the subagents' own streamed messages are added up instead (input and cache
     /// exact; output can be low, as a message streams before it is finished).
     /// </summary>
     public sealed class SubagentUsageTracker
@@ -19,7 +20,13 @@ namespace ClaudeVS.Core.Tokens
         // This turn's subagent messages: id → (model, usage); the last copy of a message's usage is kept
         private readonly Dictionary<string, (string Model, TokenUsage Usage)> _streamed = new Dictionary<string, (string, TokenUsage)>(StringComparer.Ordinal);
 
-        public void Reset() { _previous.Clear(); _streamed.Clear(); }
+        // A new session: modelUsage counts from 0, so its first reading is all growth (exact, as in the fork capture)
+        private bool _fromZero;
+
+        public void Reset() { _previous.Clear(); _streamed.Clear(); _fromZero = false; }
+
+        /// <summary>The session is new (not resumed): take <c>modelUsage</c>'s growth from 0 on its first turn.</summary>
+        public void StartsFromZero() { if (_previous.Count == 0) _fromZero = true; }
 
         /// <summary>A subagent's AssistantUsage.</summary>
         public void ObserveSubagent(ClaudeEvent ev)
@@ -35,7 +42,8 @@ namespace ClaudeVS.Core.Tokens
         public Dictionary<string, TokenUsage> TurnCompleted(Dictionary<string, ModelUsageEntry> modelUsage, string mainModel, TokenUsage mainUsage)
         {
             var result = new Dictionary<string, TokenUsage>(StringComparer.Ordinal);
-            bool exact = _previous.Count > 0 && modelUsage != null && modelUsage.Count > 0;
+            bool exact = (_previous.Count > 0 || _fromZero) && modelUsage != null && modelUsage.Count > 0;
+            _fromZero = false;
             if (exact)
             {
                 foreach (var kv in modelUsage)

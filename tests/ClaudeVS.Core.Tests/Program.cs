@@ -2335,6 +2335,18 @@ namespace ClaudeVS.Core.Tests
             True(m.LastTurnSubagentCostUsd > 0, "priced");
             Eq(first.Total, m.SessionSubagentTokens, "conversation total");
 
+            // The same run as a new session (not resumed): modelUsage counts from 0, so the first turn is exact, output too
+            var fresh = new TokenMeter();
+            fresh.FreshSession();
+            foreach (var e in events) fresh.Observe(e);
+            var exactFirst = fresh.LastTurnSubagents["claude-haiku-5-5"];
+            Eq(131L, exactFirst.Output, "output exact (the streamed copy said 2)");
+            Eq(4L, exactFirst.Input); Eq(23_917L, exactFirst.CacheRead); Eq(462L, exactFirst.CacheCreation);
+            True(first.Output < exactFirst.Output, "resumed: streamed, output low");
+            // task_notification's total_tokens is not the API's count: 24,649 against 24,514, so it cannot fix the output
+            long reported = (long)events.Last(e => e.Kind == ClaudeEventKind.Task && (string)e.Payload["subtype"] == "task_notification").Payload["usage"]["total_tokens"];
+            Eq(24_649L, reported); Eq(24_514L, exactFirst.Total);
+
             // A later turn: modelUsage's growth less the main agent's usage, exact (output too)
             var tr = new SubagentUsageTracker();
             var u1 = new Dictionary<string, ModelUsageEntry> { ["claude-haiku-5-5"] = new ModelUsageEntry { Usage = new TokenUsage { Input = 4, Output = 204, CacheRead = 38_169, CacheCreation = 12_175 } } };

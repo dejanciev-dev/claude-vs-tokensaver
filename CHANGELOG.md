@@ -368,6 +368,8 @@ All notable changes to this project are listed here. The format follows
 - `dotnet test` runs the Core test runner instead of silently reporting zero tests.
 
 ### Fixed
+- **Subagent output on a new conversation's first turn** is now exact (it was counted from the streamed message,
+  which ends before the output does). A resumed conversation's first turn still counts it that way.
 - The savings report counts subagents. Their cost was in the actual cost, but their tokens were missing from "same
   tokens at Opus prices" and from the cache savings, so routing savings came out low when agents ran. Each turn now
   logs its subagents' tokens per model; the report shows a `Subagents:` line, the CSV an `agent_tokens` column and
