@@ -725,6 +725,36 @@ Picked on 2026-11-11.
 
 ---
 
+## Phase 27 — Spend across conversations
+
+Picked on 2026-11-11.
+
+- [ ] **Monthly cost warning.** *Warn at monthly cost (USD)*: like the daily warning, once per multiple of the amount,
+      this calendar month's spend in all chat windows, the month's earlier turns read from the usage log
+- [ ] **Session id in the usage log.** Each turn logs its session id; the savings report lists the costliest
+      conversations (date, turns, cost, first prompt when logged) and the CSV gets a `session` column
+- [ ] **Tool results in the report.** Each turn logs the tokens its main agent's tool results added, per tool; the
+      report says which tools filled the context across conversations (Read, Shell, Search …)
+- [ ] **Pricey context tip.** A one-time tip when re-reading a large conversation from the cache costs most of a
+      turn (a big context, a small question): a new chat for a new topic, or /compact
+
+---
+
+## Phase 28 — Model choice that pays
+
+Picked on 2026-11-11.
+
+- [ ] **Overkill-model tip.** A one-time tip when a model you picked (Opus or Fable) gave a short answer with no tools,
+      with what the same tokens cost on Haiku
+- [ ] **Effort in the report.** Log the effort each turn was sent with; the report lists turns, cost and thinking per
+      effort
+- [ ] **Router accuracy line.** For prompts the Haiku router decided against the local rules: how often it chose a
+      cheaper or a dearer model, and what that changed (the same tokens at the other model's prices)
+- [ ] **Budget left in the meter.** The meter's tooltip shows today's and this month's spend against the warnings,
+      e.g. `Today $3.20 (warning at $20.00)`
+
+---
+
 ## Working in Visual Studio — daily loop
 
 1. Core logic change → edit in `ClaudeVS.Core` → run tests (`ClaudeVS.Core.Tests` → Set as Startup → Ctrl+F5, or `dotnet run` in its folder).
