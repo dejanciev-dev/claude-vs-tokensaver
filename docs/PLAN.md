@@ -702,8 +702,10 @@ Picked on 2026-11-11.
 
 Picked on 2026-11-11.
 
-- [ ] **Keep up with the CLI.** Check for a Claude Code release newer than the installed 2.1.322 and read its
-      changelog; add here what affects the extension, verified by running it
+- [x] **Keep up with the CLI.** Check for a Claude Code release newer than the installed 2.1.322 and read its
+      changelog; add here what affects the extension, verified by running it. None on 2026-11-11: npm's `latest` and
+      `next` are 2.1.322 (published 2026-11-10), `stable` is 2.1.311; 2.1.319–2.1.322 were covered in Phase 18. Nothing
+      to add
 - [ ] **Auto-stop runaway agents.** An optional hard limit (Options, off by default): an agent whose requests pass it
       is stopped, and the chat says so
 - [ ] **Explore tip for read-only agents.** A one-time tip when a general-purpose agent on Opus or Sonnet only read,
