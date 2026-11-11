@@ -2019,7 +2019,7 @@ namespace ClaudeVS.ToolWindow
             rec.IsError = ev.IsError;
             _ = System.Threading.Tasks.Task.Run(() =>
             {
-                try { Usage.Append(rec); }
+                try { Usage.KeepMonths = Options?.KeepUsageMonths ?? 3; Usage.Append(rec); }
                 catch (Exception ex) { ClaudeOutputPane.WriteLine("Could not write usage log: " + ex.Message); }
             });
         }

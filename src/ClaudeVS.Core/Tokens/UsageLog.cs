@@ -165,28 +165,76 @@ namespace ClaudeVS.Core.Tokens
     }
 
     /// <summary>
-    /// Append-only JSON-lines log of completed turns, kept locally (never sent anywhere).
-    /// Feeds router tuning and the savings report. Thread-safe within one process.
+    /// Append-only JSON-lines log of completed turns, kept locally (never sent anywhere), one file per local month
+    /// (<c>usage-2026-11.jsonl</c> next to <see cref="Path"/>). Older versions wrote <see cref="Path"/> itself and moved it to
+    /// <see cref="ArchivePath"/> at 5 MB: both are still read, first. With <see cref="KeepMonths"/> set, files older than
+    /// that many months are deleted (the old two once last written before then). Feeds router tuning and the savings
+    /// report. Thread-safe within one process.
     /// </summary>
     public sealed class UsageLog
     {
         private static readonly object Gate = new object();
+        private DateTime _prunedFor; // the month the last prune ran in
 
-        public UsageLog(string path, long maxBytes = DefaultMaxBytes)
+        public UsageLog(string path)
         {
             Path = path ?? throw new ArgumentNullException(nameof(path));
-            MaxBytes = maxBytes;
         }
 
-        /// <summary>When the log passes this size it is moved to <see cref="ArchivePath"/> (replacing the previous archive).</summary>
-        public const long DefaultMaxBytes = 5 * 1024 * 1024;
-
+        /// <summary>The base name: the folder and name the monthly files are made from; the log of older versions.</summary>
         public string Path { get; }
-        public long MaxBytes { get; }
+        /// <summary>Where older versions moved <see cref="Path"/> when it passed 5 MB.</summary>
         public string ArchivePath => System.IO.Path.ChangeExtension(Path, ".1" + System.IO.Path.GetExtension(Path));
+        public string Folder => System.IO.Path.GetDirectoryName(Path);
+
+        /// <summary>How many months to keep, this one included; 0 or less keeps everything.</summary>
+        public int KeepMonths { get; set; }
 
         public static string DefaultPath => System.IO.Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "claude-vs-tokensaver", "usage.jsonl");
+
+        /// <summary>The file for the local month of <paramref name="utc"/>: "usage-2026-11.jsonl".</summary>
+        public string MonthPath(DateTime utc)
+        {
+            var local = utc.ToLocalTime();
+            return System.IO.Path.Combine(Folder, System.IO.Path.GetFileNameWithoutExtension(Path)
+                + "-" + local.ToString("yyyy-MM", System.Globalization.CultureInfo.InvariantCulture) + System.IO.Path.GetExtension(Path));
+        }
+
+        /// <summary>The monthly files there are, oldest first.</summary>
+        public IReadOnlyList<string> MonthFiles()
+        {
+            if (!Directory.Exists(Folder)) return new string[0];
+            string stem = System.IO.Path.GetFileNameWithoutExtension(Path), ext = System.IO.Path.GetExtension(Path);
+            return Directory.GetFiles(Folder, stem + "-*" + ext)
+                .Where(f => MonthOf(f) != null)
+                .OrderBy(f => System.IO.Path.GetFileName(f), StringComparer.Ordinal)
+                .ToList();
+        }
+
+        /// <summary>The first day of the month a monthly file is for; null for another file.</summary>
+        private DateTime? MonthOf(string file)
+        {
+            string name = System.IO.Path.GetFileNameWithoutExtension(file), stem = System.IO.Path.GetFileNameWithoutExtension(Path) + "-";
+            if (!name.StartsWith(stem, StringComparison.OrdinalIgnoreCase)) return null;
+            return DateTime.TryParseExact(name.Substring(stem.Length), "yyyy-MM", System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None, out var month) ? month : (DateTime?)null;
+        }
+
+        /// <summary>Every file the log reads from, oldest first: the old two, then the monthly ones.</summary>
+        public IReadOnlyList<string> Files()
+        {
+            var files = new List<string>();
+            if (File.Exists(ArchivePath)) files.Add(ArchivePath);
+            if (File.Exists(Path)) files.Add(Path);
+            files.AddRange(MonthFiles());
+            return files;
+        }
+
+        /// <summary>The size of all of them, in bytes.</summary>
+        public long SizeBytes() { lock (Gate) return Files().Sum(f => { try { return new FileInfo(f).Length; } catch (IOException) { return 0L; } }); }
+
+        public bool HasAny => Files().Count > 0;
 
         public void Append(UsageRecord record)
         {
@@ -194,26 +242,49 @@ namespace ClaudeVS.Core.Tokens
             string line = JsonConvert.SerializeObject(record, Formatting.None, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
             lock (Gate)
             {
-                Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Path));
-                if (MaxBytes > 0 && File.Exists(Path) && new FileInfo(Path).Length >= MaxBytes)
-                {
-                    if (File.Exists(ArchivePath)) File.Delete(ArchivePath);
-                    File.Move(Path, ArchivePath);
-                }
-                File.AppendAllText(Path, line + "\n");
+                Directory.CreateDirectory(Folder);
+                File.AppendAllText(MonthPath(record.Timestamp), line + "\n");
+                var month = new DateTime(record.Timestamp.ToLocalTime().Year, record.Timestamp.ToLocalTime().Month, 1);
+                if (KeepMonths > 0 && month != _prunedFor) { _prunedFor = month; Prune(record.Timestamp); }
             }
         }
 
-        /// <summary>All readable records, archive first; malformed lines (e.g. a partial write) are skipped.</summary>
+        /// <summary>
+        /// Deletes what is older than <see cref="KeepMonths"/> months before the month of <paramref name="nowUtc"/>: monthly
+        /// files of earlier months, and the old two once last written before the first month kept. Nothing with 0.
+        /// </summary>
+        public int Prune(DateTime nowUtc)
+        {
+            if (KeepMonths <= 0) return 0;
+            var local = nowUtc.ToLocalTime();
+            var firstKept = new DateTime(local.Year, local.Month, 1).AddMonths(-(KeepMonths - 1));
+            int deleted = 0;
+            lock (Gate)
+            {
+                foreach (var f in MonthFiles())
+                    if (MonthOf(f) < firstKept && TryDelete(f)) deleted++;
+                foreach (var f in new[] { ArchivePath, Path })
+                    if (File.Exists(f) && File.GetLastWriteTime(f) < firstKept && TryDelete(f)) deleted++;
+            }
+            return deleted;
+        }
+
+        private static bool TryDelete(string file)
+        {
+            try { File.Delete(file); return true; }
+            catch (IOException) { return false; }
+            catch (UnauthorizedAccessException) { return false; }
+        }
+
+        /// <summary>All readable records, oldest file first; malformed lines (e.g. a partial write) are skipped.</summary>
         public IReadOnlyList<UsageRecord> ReadAll()
         {
             var list = new List<UsageRecord>();
             var lines = new List<string>();
             lock (Gate)
-            {
-                if (File.Exists(ArchivePath)) lines.AddRange(File.ReadAllLines(ArchivePath));
-                if (File.Exists(Path)) lines.AddRange(File.ReadAllLines(Path));
-            }
+                foreach (var f in Files())
+                    try { lines.AddRange(File.ReadAllLines(f)); }
+                    catch (FileNotFoundException) { }
             foreach (var l in lines)
             {
                 if (string.IsNullOrWhiteSpace(l)) continue;

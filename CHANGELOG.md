@@ -62,6 +62,10 @@ All notable changes to this project are listed here. The format follows
 - **Monthly cost warning per solution** (Options → *Warn at monthly cost per solution (USD)*, off by default): said
   once each time this month's spend on the open solution passes another multiple, from the usage log and the turns
   since.
+- **Usage history by month** (Options → Diagnostics → *Keep usage history (months)*, default 3): the usage log is
+  now one file per month (`usage-2026-11.jsonl`), and months older than that are deleted when a new month starts,
+  instead of one 5 MB archive that could drop last month's turns. The old `usage.jsonl` and `usage.1.jsonl` are
+  still read, and deleted once older than the months kept.
 
 ### Changed
 - **Cost limits in their own Options category**: the cost warnings (conversation, daily, monthly, per solution, agent),

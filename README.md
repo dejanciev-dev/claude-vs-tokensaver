@@ -140,7 +140,7 @@ flowchart LR
 
     CLI["claude CLI<br/>stream-json mode"]
     API[("Anthropic API")]
-    Disk[("usage.jsonl<br/>(local only)")]
+    Disk[("usage-yyyy-mm.jsonl<br/>(local only)")]
 
     Editor --> Commands --> Chat
     Chat --> Context --> Session
@@ -184,7 +184,7 @@ sequenceDiagram
     end
     CLI-->>Session: result (usage, cost, model)
     Session-->>Chat: footer, meter, /compact advice
-    Chat->>Chat: append one line to usage.jsonl
+    Chat->>Chat: append one line to this month's usage file
 ```
 
 ### How the router decides
@@ -307,6 +307,7 @@ Editor commands go to the chat window you used last.
 | Token saving | Max attached errors | 20 | For Attach Error List. |
 | Pricing | Opus / Sonnet / Haiku / Fable price | 2026-11 list prices | `input, output, cache write, cache read` in USD per million tokens. Used only for the savings estimate. |
 | Diagnostics | Keep local usage log | On | See Privacy. |
+| Diagnostics | Keep usage history (months) | 3 | How many months of the usage log to keep, this one included; older monthly files are deleted when a new month starts. 0 = all. |
 | Diagnostics | Log prompt preview (for router tuning) | Off | Stores the first 200 characters of each prompt locally. |
 | Diagnostics | Log raw CLI traffic | Off | Every JSON line in Output → Claude Code. Large; for debugging. |
 
@@ -316,8 +317,8 @@ Editor commands go to the chat window you used last.
   in a terminal. The extension has no server and sends nothing anywhere else. The one exception is that
   unexpected errors in background work are reported through Visual Studio's own fault reporting
   (`FileAndForget`), which follows your VS privacy settings.
-- **Usage log**: `%LocalAppData%\claude-vs-tokensaver\usage.jsonl`, one line per turn with the model, tokens,
-  cost and route decision. It never leaves your machine, rotates at 5 MB and can be turned off.
+- **Usage log**: `%LocalAppData%\claude-vs-tokensaver\usage-2026-11.jsonl` (one file per month), one line per turn with the model, tokens,
+  cost and route decision. It never leaves your machine, keeps 3 months by default (Options → Diagnostics → Keep usage history) and can be turned off.
 - **Prompt preview** (off by default): the first 200 characters of each prompt, stored in that same local log.
 - **Token estimate**: `%LocalAppData%\claude-vs-tokensaver\token-estimate.json`, two numbers (characters and tokens
   seen) that keep the learned characters-per-token value across restarts. No prompt text. Local only.
