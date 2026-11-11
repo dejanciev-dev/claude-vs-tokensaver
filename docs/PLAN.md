@@ -617,8 +617,9 @@ Picked on 2026-11-11.
       with how to keep them cheaper. After a turn whose subagents cost at least $0.05 and more than the rest of
       the turn (`total_cost_usd` less their price): one agent instead of several, a plain search, `model: haiku`
       in `.claude/agents`. `SessionNotices.SubagentsDominate`
-- [ ] **Subagent tokens in the footer.** The line under each answer says `· 2 agents`; add what they used, e.g.
-      `· 2 agents (31k tok)`
+- [x] **Subagent tokens in the footer.** The line under each answer says `· 2 agents`; add what they used, e.g.
+      `· 2 agents (31k tok)`. From the meter's `LastTurnSubagentTotal`; a background agent from an earlier turn
+      that worked in this one shows as `· agents 31.0k tok`. `TurnFooter.Agents`
 
 ---
 

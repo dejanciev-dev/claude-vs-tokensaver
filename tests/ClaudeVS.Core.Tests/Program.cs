@@ -1646,6 +1646,16 @@ namespace ClaudeVS.Core.Tests
             Eq("1 agent", fork.Subagents.FooterNote(), "footer");
             Eq(null, fork.Subagents.Warning(), "nothing went wrong");
 
+            // The footer adds what they used (from the meter: the fork's 23,917 cache reads + 462 writes + 4 input + output)
+            var meter = new TokenMeter();
+            foreach (var e in File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.319-fork.jsonl")).SelectMany(l => new ClaudeStreamParser().Parse(l))) meter.Observe(e);
+            True(meter.LastTurnSubagentTotal.Total > 24_383, "the fork's tokens: " + meter.LastTurnSubagentTotal.Total);
+            Eq($"1 agent ({TokenMeter.Format(meter.LastTurnSubagentTotal.Total)} tok)", TurnFooter.Agents(fork.Subagents, meter.LastTurnSubagentTotal.Total), "footer with tokens");
+            Eq("2 agents (31.0k tok)", TurnFooter.Agents(SubagentStats.Parse(JObject.Parse("{\"spawned\":2}")), 31_000));
+            Eq("1 agent", TurnFooter.Agents(fork.Subagents, 0), "tokens not known");
+            Eq("agents 1.2k tok", TurnFooter.Agents(null, 1_234), "a background agent from an earlier turn, or no subagent_stats");
+            Eq(null, TurnFooter.Agents(null, 0));
+
             // A turn without agents (2.1.319 thinking capture): no footer note.
             var plain = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.319-thinking-duration.jsonl"))
                 .SelectMany(l => new ClaudeStreamParser().Parse(l)).Single(e => e.Kind == ClaudeEventKind.TurnCompleted);
