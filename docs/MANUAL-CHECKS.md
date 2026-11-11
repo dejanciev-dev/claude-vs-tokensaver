@@ -15,7 +15,7 @@ Tip: set the model to **Haiku** while checking, so the prompts cost cents.
 | Do | Expect |
 |---|---|
 | **View → Other Windows → Claude Code** | The chat window opens |
-| **Tools → Options → Claude Code** | The settings page, with the categories Chat, CLI, Token saving, Pricing… |
+| **Tools → Options → Claude Code** | The settings page, with the categories Chat, CLI, Token saving, Cost limits, Pricing… |
 | **Tools → Claude Code** | The submenu, with *New Chat Window* and *Show Savings Report* among its commands |
 
 ## 2. A first conversation (Phase 1.3)

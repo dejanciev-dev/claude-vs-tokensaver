@@ -63,6 +63,11 @@ All notable changes to this project are listed here. The format follows
   once each time this month's spend on the open solution passes another multiple, from the usage log and the turns
   since.
 
+### Changed
+- **Cost limits in their own Options category**: the cost warnings (conversation, daily, monthly, per solution, agent),
+  *Ask before sending past daily cost* and *Stop agents at cost* moved from *Token saving* to *Cost limits*. Values
+  set before are kept.
+
 ## [0.9.0] - 2026-11-11
 
 The first release on the Visual Studio Marketplace, as a **preview**. It runs Claude Code 2.1.318 or newer (checked

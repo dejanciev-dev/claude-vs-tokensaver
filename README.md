@@ -295,13 +295,13 @@ Editor commands go to the chat window you used last.
 | Token saving | Keep model above context (tokens) | 30000 | Cache-aware routing threshold. |
 | Token saving | Suggest / Urge /compact at (%) | 60 / 85 | Meter advice. |
 | Token saving | Token tips | On | One-time tips when something costs more than it needs to (large or repeated reads, output floods, heavy MCP tools, cold or rebuilt cache, Haiku near 100k, subagents costing more than Claude itself, a costly fork, a big conversation read back for a small question, a short answer from Opus or Fable picked by hand, heavy thinking for a short answer at high effort, a long answer to a short question). Off: Output pane only. |
-| Token saving | Warn at conversation cost (USD) | 5 | Said once each time a conversation passes another multiple ($5, $10…). 0 = off. |
-| Token saving | Warn at daily cost (USD) | 20 | Said once each time today's spend in Visual Studio, all conversations together, passes another multiple ($20, $40…). Earlier turns today come from the usage log. 0 = off. |
-| Token saving | Warn at monthly cost (USD) | 200 | The same for this calendar month's spend ($200, $400…). Earlier turns this month come from the usage log. 0 = off. |
-| Token saving | Warn at monthly cost per solution (USD) | 0 | The same for this month's spend on the open solution alone (its folder's conversations). 0 = off. |
-| Token saving | Ask before sending past daily cost (USD) | 0 | Once today's spend in Visual Studio has passed this amount, sending a prompt asks first; after a yes, not again today until the next multiple. Commands such as `/compact` always go. 0 = never asks. |
-| Token saving | Warn at agent cost (USD) | 0.50 | A subagent's row in the agents panel turns amber once its requests pass this amount, with a screen-reader note, so a runaway agent can be stopped. 0 = off. |
-| Token saving | Stop agents at cost (USD) | 0 | A subagent whose requests pass this amount is stopped, and the chat says so; Claude carries on without its result. 0 = never. |
+| Cost limits | Warn at conversation cost (USD) | 5 | Said once each time a conversation passes another multiple ($5, $10…). 0 = off. |
+| Cost limits | Warn at daily cost (USD) | 20 | Said once each time today's spend in Visual Studio, all conversations together, passes another multiple ($20, $40…). Earlier turns today come from the usage log. 0 = off. |
+| Cost limits | Warn at monthly cost (USD) | 200 | The same for this calendar month's spend ($200, $400…). Earlier turns this month come from the usage log. 0 = off. |
+| Cost limits | Warn at monthly cost per solution (USD) | 0 | The same for this month's spend on the open solution alone (its folder's conversations). 0 = off. |
+| Cost limits | Ask before sending past daily cost (USD) | 0 | Once today's spend in Visual Studio has passed this amount, sending a prompt asks first; after a yes, not again today until the next multiple. Commands such as `/compact` always go. 0 = never asks. |
+| Cost limits | Warn at agent cost (USD) | 0.50 | A subagent's row in the agents panel turns amber once its requests pass this amount, with a screen-reader note, so a runaway agent can be stopped. 0 = off. |
+| Cost limits | Stop agents at cost (USD) | 0 | A subagent whose requests pass this amount is stopped, and the chat says so; Claude carries on without its result. 0 = never. |
 | Token saving | Auto-approve quiet rewrites | Off | Hook installer: run rewritten build/test commands without asking. |
 | Token saving | Claude can read the Error List | On | The `get_error_list` tool, for new sessions. |
 | Token saving | Max attached errors | 20 | For Attach Error List. |

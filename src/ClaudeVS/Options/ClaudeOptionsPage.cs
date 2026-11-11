@@ -69,25 +69,25 @@ namespace ClaudeVS.Options
         [Category("Token saving"), DisplayName("Token tips"), Description("One-time tips in the chat when something costs more tokens than it needs to: a large file read whole or twice, a flood of command output, heavy MCP tools or memory files, a costly output style, a cold or rebuilt prompt cache, a big conversation read back for a small question, a short answer from Opus or Fable picked by hand, heavy thinking for a short answer at high effort, a long answer to a short question. Billing, MCP server and permission mode notes are always shown.")]
         public bool TokenTips { get; set; } = true;
 
-        [Category("Token saving"), DisplayName("Warn at conversation cost (USD)"), Description("The chat says so once each time a conversation passes another multiple of this amount (at API prices, as Claude Code reports them). 0 turns it off.")]
+        [Category("Cost limits"), DisplayName("Warn at conversation cost (USD)"), Description("The chat says so once each time a conversation passes another multiple of this amount (at API prices, as Claude Code reports them). 0 turns it off.")]
         public double CostWarningUsd { get; set; } = 5;
 
-        [Category("Token saving"), DisplayName("Warn at daily cost (USD)"), Description("The chat says so once each time today's spend in Visual Studio, across all conversations and chat windows, passes another multiple of this amount (at API prices). Today's turns from before Visual Studio started are read from the usage log. 0 turns it off.")]
+        [Category("Cost limits"), DisplayName("Warn at daily cost (USD)"), Description("The chat says so once each time today's spend in Visual Studio, across all conversations and chat windows, passes another multiple of this amount (at API prices). Today's turns from before Visual Studio started are read from the usage log. 0 turns it off.")]
         public double DailyCostWarningUsd { get; set; } = 20;
 
-        [Category("Token saving"), DisplayName("Warn at monthly cost (USD)"), Description("The chat says so once each time this calendar month's spend in Visual Studio, across all conversations and chat windows, passes another multiple of this amount (at API prices). The month's turns from before Visual Studio started are read from the usage log. 0 turns it off.")]
+        [Category("Cost limits"), DisplayName("Warn at monthly cost (USD)"), Description("The chat says so once each time this calendar month's spend in Visual Studio, across all conversations and chat windows, passes another multiple of this amount (at API prices). The month's turns from before Visual Studio started are read from the usage log. 0 turns it off.")]
         public double MonthlyCostWarningUsd { get; set; } = 200;
 
-        [Category("Token saving"), DisplayName("Warn at monthly cost per solution (USD)"), Description("The chat says so once each time this calendar month's spend on the open solution (its folder's conversations, in all chat windows) passes another multiple of this amount (at API prices). Its earlier turns this month are read from the usage log. 0 (the default) turns it off.")]
+        [Category("Cost limits"), DisplayName("Warn at monthly cost per solution (USD)"), Description("The chat says so once each time this calendar month's spend on the open solution (its folder's conversations, in all chat windows) passes another multiple of this amount (at API prices). Its earlier turns this month are read from the usage log. 0 (the default) turns it off.")]
         public double SolutionMonthlyCostWarningUsd { get; set; } = 0;
 
-        [Category("Token saving"), DisplayName("Ask before sending past daily cost (USD)"), Description("Once today's spend in Visual Studio, across all conversations and chat windows, has passed this amount (at API prices), sending a prompt asks first; after you say yes, not again today until the next multiple. Commands such as /compact always go. 0 (the default) never asks.")]
+        [Category("Cost limits"), DisplayName("Ask before sending past daily cost (USD)"), Description("Once today's spend in Visual Studio, across all conversations and chat windows, has passed this amount (at API prices), sending a prompt asks first; after you say yes, not again today until the next multiple. Commands such as /compact always go. 0 (the default) never asks.")]
         public double DailyCostLimitUsd { get; set; } = 0;
 
-        [Category("Token saving"), DisplayName("Warn at agent cost (USD)"), Description("A subagent's row in the agents panel turns amber once its requests pass this amount (at API prices), so one that runs away can be stopped. 0 turns it off.")]
+        [Category("Cost limits"), DisplayName("Warn at agent cost (USD)"), Description("A subagent's row in the agents panel turns amber once its requests pass this amount (at API prices), so one that runs away can be stopped. 0 turns it off.")]
         public double AgentCostWarningUsd { get; set; } = 0.5;
 
-        [Category("Token saving"), DisplayName("Stop agents at cost (USD)"), Description("A subagent whose requests pass this amount (at API prices) is stopped, and the chat says so; Claude carries on without its result. 0 (the default) never stops one.")]
+        [Category("Cost limits"), DisplayName("Stop agents at cost (USD)"), Description("A subagent whose requests pass this amount (at API prices) is stopped, and the chat says so; Claude carries on without its result. 0 (the default) never stops one.")]
         public double AgentCostStopUsd { get; set; } = 0;
 
         [Category("Token saving"), DisplayName("Auto-approve quiet rewrites"), Description("When installing hooks: run rewritten dotnet build/test commands without asking.")]
