@@ -38,9 +38,20 @@ namespace ClaudeVS.Core.Tokens
             var byTool = m.ResultTokensByTool().Where(kv => kv.Value > 0).Take(5).ToList();
             if (byTool.Count > 0)
                 sb.Append("Tool results: ").Append(string.Join(" · ", byTool.Select(kv => $"{kv.Key} {TokenMeter.Format(kv.Value)}"))).Append('\n');
+            if (m.SessionByEffort.Keys.Any(k => k != SavingsReport.DefaultEffort))
+                sb.Append("By effort: ").Append(string.Join(" · ", m.SessionByEffort
+                    .OrderBy(kv => EffortRank(kv.Key)).ThenBy(kv => kv.Key, System.StringComparer.Ordinal)
+                    .Select(kv => $"{kv.Key} {kv.Value.Turns} {(kv.Value.Turns == 1 ? "turn" : "turns")} ${kv.Value.CostUsd.ToString("0.00", c)}"))).Append('\n');
             if (m.CompactionsSaved > 0) sb.Append($"Compactions: {m.CompactionsSaved}\n");
             if (!string.IsNullOrEmpty(sessionId)) sb.Append($"Session: {sessionId}\n");
             return sb.ToString().TrimEnd('\n');
+        }
+
+        /// <summary>Low to max, then other names, then Claude Code's default.</summary>
+        private static int EffortRank(string effort)
+        {
+            int i = System.Array.IndexOf(new[] { "low", "medium", "high", "xhigh", "max" }, effort);
+            return i >= 0 ? i : effort == SavingsReport.DefaultEffort ? 6 : 5;
         }
     }
 }

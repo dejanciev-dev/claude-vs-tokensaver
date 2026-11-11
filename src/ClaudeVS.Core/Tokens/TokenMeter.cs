@@ -114,6 +114,17 @@ namespace ClaudeVS.Core.Tokens
         /// <summary>The main agent's tool calls in the last turn (a subagent's are its own).</summary>
         public int LastTurnToolCalls { get; private set; }
 
+        /// <summary>Turns and cost per effort in this conversation ("high" …, "default" for Claude Code's own), from <see cref="AddTurnEffort"/>.</summary>
+        public Dictionary<string, (int Turns, double CostUsd)> SessionByEffort { get; } = new Dictionary<string, (int, double)>(StringComparer.Ordinal);
+
+        /// <summary>After a turn: the effort it was sent with (null: Claude Code's default) gets the turn and its cost (<see cref="LastTurnCostUsd"/>).</summary>
+        public void AddTurnEffort(string effort)
+        {
+            string key = string.IsNullOrWhiteSpace(effort) ? SavingsReport.DefaultEffort : effort.Trim().ToLowerInvariant();
+            var had = SessionByEffort.TryGetValue(key, out var v) ? v : (0, 0.0);
+            SessionByEffort[key] = (had.Item1 + 1, had.Item2 + LastTurnCostUsd);
+        }
+
         /// <summary>
         /// Tokens the main agent's tool results added to the conversation, per tool (shell commands and searches
         /// grouped, MCP tools as "MCP"), largest first.
@@ -170,6 +181,7 @@ namespace ClaudeVS.Core.Tokens
             _resultCharsByTool.Clear();
             _turnResultCharsByTool.Clear(); LastTurnResultTokensByTool = null;
             _turnToolCalls = 0; LastTurnToolCalls = 0;
+            SessionByEffort.Clear();
             Cache.Reset();
             _breaks.Reset(); _pendingBreak = null;
             Learner.Reset();
