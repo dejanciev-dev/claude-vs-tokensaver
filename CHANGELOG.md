@@ -42,6 +42,8 @@ All notable changes to this project are listed here. The format follows
 - **Router replay with costs**: in *Show Savings Report*, each prompt the current rules would route differently says
   what that changes at its logged tokens (`sonnet → haiku (≈ −$0.029)`), followed by a total of the cheaper and
   dearer picks.
+- **Effort in the session summary**: Copy session summary adds turns and cost per effort, e.g. `By effort: low 1 turn
+  $0.02 · high 2 turns $0.40 · default 1 turn $0.05`.
 
 ## [0.9.0] - 2026-11-11
 

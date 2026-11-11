@@ -2237,6 +2237,21 @@ namespace ClaudeVS.Core.Tests
             Eq("Search 1000", string.Join("|", m.LastTurnResultTokensByTool.Select(kv => kv.Key + " " + kv.Value)), "only the next turn's");
             m.Observe(new ClaudeEvent { Kind = ClaudeEventKind.TurnCompleted, Usage = new TokenUsage { Input = 10 } });
             Eq(null, m.LastTurnResultTokensByTool, "a turn without tools");
+            Eq(false, SessionSummary.Format(m).Contains("By effort:"), "no effort known: no line");
+            m.AddTurnEffort(null);
+            Eq(false, SessionSummary.Format(m).Contains("By effort:"), "only Claude Code's default: no line");
+
+            var em = new TokenMeter();
+            void Turn(double cumulativeCost, string effort)
+            {
+                em.Observe(new ClaudeEvent { Kind = ClaudeEventKind.TurnCompleted, Usage = new TokenUsage { Input = 10 }, TotalCostUsd = cumulativeCost });
+                em.AddTurnEffort(effort);
+            }
+            Turn(0.10, "high"); Turn(0.15, null); Turn(0.45, "HIGH"); Turn(0.47, "low");
+            True(SessionSummary.Format(em).EndsWith("\nBy effort: low 1 turn $0.02 · high 2 turns $0.40 · default 1 turn $0.05"), SessionSummary.Format(em));
+            em.Reset();
+            Eq(0, em.SessionByEffort.Count, "reset");
+
             m.Reset();
             Eq(0, m.ResultTokensByTool().Count, "reset");
         }

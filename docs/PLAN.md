@@ -804,7 +804,9 @@ Picked on 2026-11-11.
       picks would have cost, at the logged tokens. Each row `sonnet → haiku (≈ −$0.029)`, then `At the logged tokens:
       12 cheaper (≈ $0.40 less), 3 dearer (≈ $0.10 more), net ≈ $0.30 less.`; main-agent tokens, at Options →
       Pricing. `ReplayDiff.CostChangeUsd`, `RouterReplay.CostSummary`
-- [ ] **Effort in the session summary.** Copy session summary gets turns and cost per effort
+- [x] **Effort in the session summary.** Copy session summary gets turns and cost per effort. `By effort: low 1 turn
+      $0.02 · high 2 turns $0.40 · default 1 turn $0.05`, low to max, then the default; left out when no turn had an
+      effort set. `TokenMeter.SessionByEffort`
 
 ---
 

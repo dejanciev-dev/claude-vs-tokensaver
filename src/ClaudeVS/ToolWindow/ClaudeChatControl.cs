@@ -1914,6 +1914,7 @@ namespace ClaudeVS.ToolWindow
                         }
                         CheckModelMismatch(_turnModel);
                         RecordUsage(ev, _turnModel);
+                        _meterModel?.AddTurnEffort(_lastTurnEffort); // for Copy session summary
                         SaveModelUsage(ev.SessionId, ev.ModelUsage);
                         CheckCost();
                         CacheBreakTip();
