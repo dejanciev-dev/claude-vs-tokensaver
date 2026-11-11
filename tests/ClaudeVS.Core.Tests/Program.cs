@@ -577,6 +577,16 @@ namespace ClaudeVS.Core.Tests
             Eq(null, pricey.CostWarning(1));
             True(!new AgentTask { TaskType = "local_bash", CostUsd = 9 }.CostsOver(0.5), "commands have no cost of their own");
 
+            // Options → Stop agents at cost: a running agent past it is stopped, and the chat says so
+            var runaway = new AgentTask { TaskType = "local_agent", Description = "Refactor everything", CostUsd = 1.25 };
+            Eq("Stopped “Refactor everything” at $1.25: past your limit of $1.00 per agent (Options → Stop agents at cost). Claude carries on without its result.",
+                SessionNotices.AgentAutoStop(runaway, 1.0));
+            Eq(null, SessionNotices.AgentAutoStop(runaway, 0), "0: never");
+            Eq(null, SessionNotices.AgentAutoStop(runaway, 2.0), "under the limit");
+            runaway.Status = AgentTaskStatus.Completed;
+            Eq(null, SessionNotices.AgentAutoStop(runaway, 1.0), "finished: nothing to stop");
+            True(SessionNotices.AgentAutoStop(new AgentTask { TaskType = "local_agent", CostUsd = 1.25 }, 1.0).StartsWith("Stopped an agent at"), "no description");
+
             Eq("$0.700", AgentTask.FormatCost(0.7)); Eq("$1.23", AgentTask.FormatCost(1.234)); Eq("<$0.001", AgentTask.FormatCost(0.0002)); Eq(null, AgentTask.FormatCost(0));
 
             var text = events.Where(e => e.Kind == ClaudeEventKind.AssistantText).Select(e => e.Text).ToList();

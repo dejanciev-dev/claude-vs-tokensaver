@@ -148,6 +148,18 @@ namespace ClaudeVS.Core.Cli
                 + "so asking for one agent instead of several, or a plain search instead of an agent, costs less; an agent defined with \"model: haiku\" in .claude/agents runs at Haiku prices.";
         }
 
+        /// <summary>
+        /// A running agent whose requests passed <paramref name="stopUsd"/> (Options → Stop agents at cost; 0: never)
+        /// is to be stopped: the chat line saying so; null when it is not.
+        /// </summary>
+        public static string AgentAutoStop(AgentTask t, double stopUsd)
+        {
+            if (t == null || !t.IsRunning || !t.CostsOver(stopUsd)) return null;
+            string limit = stopUsd.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+            string name = string.IsNullOrWhiteSpace(t.Description) ? "an agent" : "“" + t.Description.Trim() + "”";
+            return $"Stopped {name} at {AgentTask.FormatCost(t.CostUsd)}: past your limit of ${limit} per agent (Options → Stop agents at cost). Claude carries on without its result.";
+        }
+
         /// <summary>A finished fork that cost at least this much gets the fork tip.</summary>
         public const double ForkTipFromUsd = 0.05;
 

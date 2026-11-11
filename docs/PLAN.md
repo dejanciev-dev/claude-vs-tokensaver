@@ -706,8 +706,10 @@ Picked on 2026-11-11.
       changelog; add here what affects the extension, verified by running it. None on 2026-11-11: npm's `latest` and
       `next` are 2.1.322 (published 2026-11-10), `stable` is 2.1.311; 2.1.319–2.1.322 were covered in Phase 18. Nothing
       to add
-- [ ] **Auto-stop runaway agents.** An optional hard limit (Options, off by default): an agent whose requests pass it
-      is stopped, and the chat says so
+- [x] **Auto-stop runaway agents.** An optional hard limit (Options, off by default): an agent whose requests pass it
+      is stopped, and the chat says so. *Stop agents at cost (USD)*, 0 = never; checked as each request is priced, each
+      agent stopped once with the panel's Stop (`stop_task`): `⏹ Stopped “…” at $1.25: past your limit of $1.00 per
+      agent …`. `SessionNotices.AgentAutoStop`
 - [ ] **Explore tip for read-only agents.** A one-time tip when a general-purpose agent on Opus or Sonnet only read,
       searched and listed files: an Explore agent does that for less (check which model Explore runs on first)
 - [ ] **Manual check list.** The unchecked VS checks of Phases 1–5 on one short page (steps and what to look for), to

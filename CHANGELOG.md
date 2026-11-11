@@ -7,6 +7,8 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Stop agents at cost** (Options, off by default): a subagent whose requests pass the amount is stopped, and the
+  chat says so (`⏹ Stopped “…” at $1.25: past your limit of $1.00 per agent`).
 - **What subagents cost, per conversation in the sessions list**: `$0.42 ($0.12 agents) · 3h`, read from Claude
   Code's own session files and their subagents' files.
 - **Subagent cost by model in the savings report**: `by model: opus $1.20 (≈ $0.72 on Sonnet) · sonnet $0.40`,

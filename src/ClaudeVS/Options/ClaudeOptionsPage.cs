@@ -78,6 +78,9 @@ namespace ClaudeVS.Options
         [Category("Token saving"), DisplayName("Warn at agent cost (USD)"), Description("A subagent's row in the agents panel turns amber once its requests pass this amount (at API prices), so one that runs away can be stopped. 0 turns it off.")]
         public double AgentCostWarningUsd { get; set; } = 0.5;
 
+        [Category("Token saving"), DisplayName("Stop agents at cost (USD)"), Description("A subagent whose requests pass this amount (at API prices) is stopped, and the chat says so; Claude carries on without its result. 0 (the default) never stops one.")]
+        public double AgentCostStopUsd { get; set; } = 0;
+
         [Category("Token saving"), DisplayName("Auto-approve quiet rewrites"), Description("When installing hooks: run rewritten dotnet build/test commands without asking.")]
         public bool AutoApproveHookRewrites { get; set; } = false;
 
