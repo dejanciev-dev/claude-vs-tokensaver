@@ -371,6 +371,8 @@ All notable changes to this project are listed here. The format follows
 - `dotnet test` runs the Core test runner instead of silently reporting zero tests.
 
 ### Fixed
+- **Subagent output on a resumed conversation's first turn** is now exact as well, from the session's last token
+  reading kept here (`model-usage.json`). If the session ran elsewhere since, the streamed messages count as before.
 - **Subagent output on a new conversation's first turn** is now exact (it was counted from the streamed message,
   which ends before the output does). A resumed conversation's first turn still counts it that way.
 - The savings report counts subagents. Their cost was in the actual cost, but their tokens were missing from "same

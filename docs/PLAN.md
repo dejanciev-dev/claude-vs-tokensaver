@@ -651,8 +651,11 @@ Picked on 2026-11-11.
 
 Picked on 2026-11-11.
 
-- [ ] **Exact resumed first turn.** Keep each session's last `modelUsage` reading, so a resumed conversation's first
-      turn counts subagent output exactly too (today only a new conversation's does)
+- [x] **Exact resumed first turn.** Keep each session's last `modelUsage` reading, so a resumed conversation's first
+      turn counts subagent output exactly too (today only a new conversation's does). Kept in `model-usage.json`
+      (the latest 300 sessions; `ModelUsageReadings`). The session may have run elsewhere since (the terminal), so the
+      growth from a kept reading counts only when it agrees with the streamed messages on input and cache, which are
+      exact in both; otherwise the streamed messages count, as before. `SubagentUsageTracker.ResumeFrom`
 - [ ] **Agent model on its row.** The agents panel row and the line under the Agent call say which model the agent
       ran on (e.g. `Explore · haiku`), since that decides most of its cost
 - [ ] **Kinds in summary and CSV.** The session summary gets a `Subagents by kind:` line, the usage CSV an

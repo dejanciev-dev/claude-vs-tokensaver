@@ -101,6 +101,8 @@ namespace ClaudeVS.ToolWindow
         internal static readonly UsageLog Usage = new UsageLog(UsageLog.DefaultPath);
         internal static readonly BookmarkStore Bookmarks = new BookmarkStore(BookmarkStore.DefaultPath);
         internal static readonly SessionMetaStore SessionMeta = new SessionMetaStore(SessionMetaStore.DefaultPath);
+        // Each session's last modelUsage, so a resumed conversation's first turn counts its subagents exactly
+        private static readonly ModelUsageReadings ModelReadings = new ModelUsageReadings(ModelUsageReadings.DefaultPath);
         // Name given to this conversation (title click or the sessions list); passed to the CLI as --name.
         private string _sessionName;
         private bool _showArchived;
@@ -666,6 +668,19 @@ namespace ClaudeVS.ToolWindow
             SetTitle(name ?? _title.Text);
             string id = _session?.SessionId ?? _resumeId;
             if (id != null) SaveSessionMeta(() => SessionMeta.SetName(id, name));
+        }
+
+        // The modelUsage readings only sharpen a count: a failure goes to the Output pane, not the chat
+        private static Dictionary<string, TokenUsage> ReadModelUsage(string sessionId)
+        {
+            try { return ModelReadings.Get(sessionId); }
+            catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException) { ClaudeOutputPane.WriteLine("model-usage.json: " + ex.Message); return null; }
+        }
+
+        private static void SaveModelUsage(string sessionId, Dictionary<string, ModelUsageEntry> modelUsage)
+        {
+            try { ModelReadings.Save(sessionId, modelUsage); }
+            catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException) { ClaudeOutputPane.WriteLine("model-usage.json: " + ex.Message); }
         }
 
         private void SaveSessionMeta(Action save)
@@ -1408,6 +1423,7 @@ namespace ClaudeVS.ToolWindow
                 _session.Options.SdkMcpServers.Add(IdeMcpServer.Create(ReadErrorListAsync, () => dir));
             HaikuRouterIfOn(); // with Route with Haiku on: start its process now, so it is warm for the first prompt
             if (_resumeId == null && _meterModel?.Turns == 0) _meterModel.FreshSession(); // its modelUsage starts at 0: subagents exact from the first turn
+            else if (_resumeId != null && _meterModel?.Turns == 0) _meterModel.ResumedSession(ReadModelUsage(_resumeId)); // the CLI carries it on from there
             _resumeId = null;
             _forkNext = false;
             _sessionDir = dir;
@@ -1893,6 +1909,7 @@ namespace ClaudeVS.ToolWindow
                         }
                         CheckModelMismatch(_turnModel);
                         RecordUsage(ev, _turnModel);
+                        SaveModelUsage(ev.SessionId, ev.ModelUsage);
                         CheckCost();
                         CacheBreakTip();
                         if (_meterModel != null) Tip(SessionNotices.SubagentsDominate(_meterModel.LastTurnSubagentCostUsd, _meterModel.LastTurnCostUsd));

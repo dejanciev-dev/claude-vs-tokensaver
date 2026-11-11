@@ -72,6 +72,13 @@ namespace ClaudeVS.Core.Tokens
         /// </summary>
         public void FreshSession() => _subagents.StartsFromZero();
 
+        /// <summary>
+        /// The conversation is resumed and <paramref name="lastReading"/> is its last <c>modelUsage</c> here
+        /// (<see cref="ModelUsageReadings"/>): the first turn's subagents are exact when it is still current. Call
+        /// before its first turn.
+        /// </summary>
+        public void ResumedSession(Dictionary<string, TokenUsage> lastReading) => _subagents.ResumeFrom(lastReading);
+
         /// <summary>One request's cost at <see cref="Prices"/> (Sonnet's when the model is unknown), its long-context tier included.</summary>
         public double RequestCostUsd(string model, TokenUsage request)
         {
