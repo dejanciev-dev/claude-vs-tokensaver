@@ -6,6 +6,32 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-11
+
+The first release on the Visual Studio Marketplace, as a **preview**. It runs Claude Code 2.1.318 or newer (checked
+up to 2.1.322) and reads its streamed output, which is not a documented API and can change between Claude Code
+releases.
+
+### Highlights
+
+- **Spend fewer tokens:** prompts are routed to Haiku, Sonnet or Opus by a local classifier, or optionally by a
+  small Haiku call. Files and large selections go as references, and the prompt cache stays warm. A one-click lean
+  `CLAUDE.md` and token-saving hooks are included, along with one-time token tips when something costs more than
+  it needs to.
+- **See what you spend:** a colored meter shows context, cost and cache hits, plus what the next prompt will
+  cost. Under each answer is a line with its tokens, cost, model, thinking and cache savings. Warnings fire per
+  conversation and per day.
+- **Savings report:** compares your cost against the same tokens at Opus prices, and shows what the cache saved,
+  this month with a projection, spend per day and per solution, the costliest turns, and a CSV export.
+- **Subagents, priced:** each agent's cost and model in the agents panel and under its call. Subagent cost by kind
+  and model in the report. An amber row past a set cost, an optional automatic stop, and a *No forks* option.
+- **Sessions:** resume, rename, archive, fork and rewind, with each conversation's cost and its agents' part.
+- **A chat that works like the Claude Code terminal:** tool rows with inline diffs and per-change review,
+  question and plan cards, permission cards, Claude Code's own dialogs, images, bookmarks, export, and screen
+  reader support.
+
+The full list follows.
+
 ### Added
 - **Stop agents at cost** (Options, off by default): a subagent whose requests pass the amount is stopped, and the
   chat says so (`⏹ Stopped “…” at $1.25: past your limit of $1.00 per agent`).

@@ -123,6 +123,9 @@ The checks left in Phases 1–5, and the newer ones to look at in VS, are on one
 - [x] Tag-triggered release workflow: `v*` tag → build, test, **draft** GitHub Release with the `.vsix` and CHANGELOG notes
 - [ ] `publishManifest.json` + `VsixPublisher.exe` publish step (manual approval) — prepared: `marketplace/` (manifest, overview, `publish.ps1`) and `.github/workflows/publish.yml` (runs when a release is published, waits for approval in the `marketplace` environment). Still needs the publisher ID (variable `MARKETPLACE_PUBLISHER`), the `VS_MARKETPLACE_PAT` secret and the environment's reviewers
 - [x] CHANGELOG.md, issue templates, CONTRIBUTING.md
+- [x] Version 0.9.0, released as a Marketplace **preview** (`<Preview>true</Preview>` in `source.extension.vsixmanifest`;
+      `publishManifest.json` has no such field). CHANGELOG `[0.9.0]` opens with highlights, which the release workflow
+      puts in the GitHub release; `marketplace/overview.md` says it is a preview and lists the cost features
 - [ ] Publish to Visual Studio Marketplace as **Claude Code for Visual Studio — Token Saver**
 
 Tag `v1.0.0`.

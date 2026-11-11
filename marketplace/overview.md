@@ -6,6 +6,10 @@ warm, and shows what every turn costs.
 
 > Community project, not affiliated with or endorsed by Anthropic. "Claude" and "Claude Code" are trademarks of Anthropic.
 
+> **Preview.** The extension reads Claude Code's streamed output, which is not a documented API and can change
+> between Claude Code releases. It is tested with Claude Code 2.1.318–2.1.322. If something breaks after a
+> `claude update`, please [open an issue](https://github.com/dejanciev-dev/claude-vs-tokensaver/issues).
+
 ![Claude Code chat in Visual Studio](https://raw.githubusercontent.com/dejanciev-dev/claude-vs-tokensaver/main/src/ClaudeVS/Resources/preview.png)
 
 ## Requirements
@@ -29,10 +33,16 @@ warm, and shows what every turn costs.
 
 ## See what you spend
 
-- **Live token meter:** context fill %, session tokens and cost, cache-hit rate, with `/compact` advice.
-- **Per-turn footer** with the model that actually answered.
-- **Savings report:** actual cost vs the same tokens at Opus prices, cost per model, cache-hit rate by day.
-- **Agents panel** for subagents and background tasks, with Stop and Run in background.
+- **Live token meter:** context fill %, session tokens and cost, cache-hit rate, with `/compact` advice, plus
+  what the next prompt will cost while you type.
+- **A line under each answer** with its tokens, its cost (and its subagents' part), the model that actually answered,
+  thinking tokens and what the prompt cache saved.
+- **Cost warnings** per conversation and per day, and one-time **token tips** when something costs more than it needs to.
+- **Savings report:** actual cost vs the same tokens at Opus prices, what the cache saved, this month with a
+  projection, spend per day, per solution and per model, the costliest turns, and a CSV export.
+- **Agents panel** for subagents and background tasks, with Stop and Run in background. It shows each agent's
+  model and cost, turns a row amber past a cost you set, and can stop an agent automatically.
+- **Sessions list** with each conversation's cost.
 
 ## Chat
 
