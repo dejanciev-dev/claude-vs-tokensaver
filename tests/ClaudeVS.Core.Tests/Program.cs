@@ -568,6 +568,15 @@ namespace ClaudeVS.Core.Tests
             Eq(null, ToolCallView.AgentUsageLine(new AgentTask { TaskType = "local_bash", Status = AgentTaskStatus.Completed }), "a shell command");
             Eq("Stopped · 1 tool", ToolCallView.AgentUsageLine(new AgentTask { TaskType = "local_agent", Status = AgentTaskStatus.Stopped, ToolUses = 1 }));
 
+            // Past Options → Warn at agent cost: the row turns amber, and its tooltip says why
+            var pricey = new AgentTask { TaskType = "local_agent", CostUsd = 0.62 };
+            True(pricey.CostsOver(0.5) && !pricey.CostsOver(0) && !pricey.CostsOver(1), "over $0.50, no limit at 0, under $1");
+            Eq("Cost $0.620 so far, past your warning at $0.50: Stop ends it.", pricey.CostWarning(0.5));
+            pricey.Status = AgentTaskStatus.Completed;
+            Eq("Cost $0.620 so far, past your warning at $0.50.", pricey.CostWarning(0.5), "finished: nothing to stop");
+            Eq(null, pricey.CostWarning(1));
+            True(!new AgentTask { TaskType = "local_bash", CostUsd = 9 }.CostsOver(0.5), "commands have no cost of their own");
+
             Eq("$0.700", AgentTask.FormatCost(0.7)); Eq("$1.23", AgentTask.FormatCost(1.234)); Eq("<$0.001", AgentTask.FormatCost(0.0002)); Eq(null, AgentTask.FormatCost(0));
 
             var text = events.Where(e => e.Kind == ClaudeEventKind.AssistantText).Select(e => e.Text).ToList();

@@ -7,6 +7,8 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **A subagent that passes a set cost turns amber** in the agents panel (Options → *Warn at agent cost*, default
+  $0.50), so a runaway agent can be stopped early. Its tooltip says what it cost so far.
 - **Options → Claude Code → No forks**: Claude can't start forks, which copy the whole conversation
   (`CLAUDE_CODE_FORK_SUBAGENT=0`, checked with Claude Code 2.1.322). The fork cost tip now points to it.
 - **A token tip when a fork cost $0.05 or more**: a fork starts with a copy of the whole conversation, so for a

@@ -683,8 +683,10 @@ Picked on 2026-11-11.
       same prompt ran a fork (Fixtures/cli-2.1.322-fork-off.jsonl, scrubbed). Also seen: in 2.1.322 an Agent call
       without `subagent_type` runs as general-purpose, not as a fork, and "fork" is not in `init`'s agent list.
       `ClaudeLaunchOptions.NoForks`, `Environment()`
-- [ ] **Live cost warning on a row.** An agent's row in the panel turns amber once it passes a set cost (Options,
-      default $0.50) while it runs, so a runaway agent can be stopped early
+- [x] **Live cost warning on a row.** An agent's row in the panel turns amber once it passes a set cost (Options,
+      default $0.50) while it runs, so a runaway agent can be stopped early. *Warn at agent cost (USD)*; the row's
+      details turn amber (the meter's amber), its tooltip says `Cost $0.620 so far, past your warning at $0.50: Stop
+      ends it.`, and screen readers hear it once as it passes. `AgentTask.CostsOver`, `CostWarning`
 - [ ] **Agent models in the report.** The savings report lists subagent cost per model (Haiku, Sonnet, Opus agents)
       and what the Opus agents would have cost on Sonnet
 - [ ] **Agent cost in the sessions list.** Each conversation shows its subagent cost next to its total, from the

@@ -52,6 +52,14 @@ namespace ClaudeVS.Core.Cli
         }
 
         public bool IsAgent => TaskType == "local_agent" || SubagentType != null;
+
+        /// <summary>An agent whose requests so far cost <paramref name="limitUsd"/> or more (0 or less: no limit).</summary>
+        public bool CostsOver(double limitUsd) => IsAgent && limitUsd > 0 && CostUsd >= limitUsd;
+
+        /// <summary>"Cost $0.620 so far, past your warning at $0.50: Stop ends it."; null under the limit.</summary>
+        public string CostWarning(double limitUsd) => !CostsOver(limitUsd) ? null
+            : $"Cost {FormatCost(CostUsd)} so far, past your warning at ${limitUsd.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}"
+              + (IsRunning ? ": Stop ends it." : ".");
         public bool IsRunning => Status == AgentTaskStatus.Running;
         /// <summary>A running foreground agent started by Claude itself: it can be moved to the background.</summary>
         public bool CanMoveToBackground => IsRunning && IsAgent && !IsBackgrounded && ParentTaskId == null && ToolUseId != null;
