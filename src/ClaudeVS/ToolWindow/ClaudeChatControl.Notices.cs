@@ -216,6 +216,20 @@ namespace ClaudeVS.ToolWindow
             Tip(tip);
         }
 
+        private bool _gaveOverkillTip;
+
+        /// <summary>After a turn: once per conversation, a short tool-free answer from Opus or Fable picked by hand.</summary>
+        private void OverkillModelTip(string model)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (_gaveOverkillTip || _meterModel == null || _modelChoice == ModelChoice.Auto) return;
+            string tip = SessionNotices.OverkillModel(model, _meterModel.LastTurn, _meterModel.LastTurnToolCalls,
+                _meterModel.LastTurnSubagentTotal.Total > 0, _meterModel.Prices);
+            if (tip == null) return;
+            _gaveOverkillTip = true;
+            Tip(tip);
+        }
+
         // ---------------- Cache breaks ----------------
 
         private bool _gaveCacheBreakTip;
@@ -267,6 +281,7 @@ namespace ClaudeVS.ToolWindow
             _gaveBaseContextTip = false;
             _gaveCacheBreakTip = false;
             _gavePriceyContextTip = false;
+            _gaveOverkillTip = false;
             _reads.Reset();
         }
     }

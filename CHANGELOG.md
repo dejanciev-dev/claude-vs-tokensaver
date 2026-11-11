@@ -18,6 +18,8 @@ All notable changes to this project are listed here. The format follows
 - **Token tip when the conversation costs more than the question**: once per conversation, when reading a big
   conversation (50k tokens or more) back from the prompt cache cost most of a turn, with what it cost and how to
   start small (a New chat for a new topic, or /compact).
+- **Token tip for a short answer from a dear model**: once per conversation, when Opus or Fable, picked by hand, gave
+  a short answer with no tools and no subagents, with what the same tokens cost on Haiku.
 
 ## [0.9.0] - 2026-11-11
 

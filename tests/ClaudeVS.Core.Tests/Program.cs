@@ -2623,6 +2623,26 @@ namespace ClaudeVS.Core.Tests
             True(SessionNotices.PriceyContext("claude-fable-5-2", longAnswer, 154_000, prices) == null, "Fable: reads $0.03 of $0.21");
             True(SessionNotices.PriceyContext(null, new TokenUsage { CacheRead = 400_000, Output = 100 }, 100_000, prices)?.Contains("$0.04 of that turn's $0.04") == true, "unknown model: Sonnet prices; several requests in a turn");
 
+            // A short answer with no tools on Opus / Fable picked by hand: what Haiku would have charged
+            var quick = new TokenUsage { Input = 3_000, Output = 400, CacheRead = 20_000, CacheCreation = 1_000 };
+            // Opus: 3000×4 + 400×20 + 20000×0.2 + 1000×5 = $0.029; Haiku: 3000×0.1 + 400×0.5 + 20000×0.01 + 1000×0.125 = $0.000825
+            Eq("That short answer on Opus cost $0.03; the same tokens on Haiku cost about $0.001. For quick questions, Auto in the model picker (or Haiku) is cheaper. "
+                + "A new model writes the conversation to its own cache once, so switch at the start of a task.",
+                SessionNotices.OverkillModel("claude-opus-5-5", quick, 0, false, prices));
+            True(SessionNotices.OverkillModel("claude-fable-5-2", quick, 0, false, prices)?.StartsWith("That short answer on Fable cost $0.05") == true, "Fable");
+            Eq(null, SessionNotices.OverkillModel("claude-sonnet-5-5", quick, 0, false, prices), "Sonnet: no tip");
+            Eq(null, SessionNotices.OverkillModel("claude-opus-5-5", quick, 1, false, prices), "a tool call: real work");
+            Eq(null, SessionNotices.OverkillModel("claude-opus-5-5", quick, 0, true, prices), "subagents: real work");
+            Eq(null, SessionNotices.OverkillModel("claude-opus-5-5", new TokenUsage { Input = 3_000, Output = 2_000, CacheRead = 20_000 }, 0, false, prices), "a long answer");
+            Eq(null, SessionNotices.OverkillModel("claude-opus-5-5", new TokenUsage { Input = 10, Output = 200, CacheRead = 20_000 }, 0, false, prices), "too cheap to matter: $0.008");
+            var toolMeter = new TokenMeter();
+            toolMeter.Observe(new ClaudeEvent { Kind = ClaudeEventKind.ToolUse, ToolUseId = "t1", ToolName = "Read" });
+            toolMeter.Observe(new ClaudeEvent { Kind = ClaudeEventKind.ToolUse, ToolUseId = "t2", ToolName = "Read", IsSubagent = true });
+            toolMeter.Observe(new ClaudeEvent { Kind = ClaudeEventKind.TurnCompleted, Usage = new TokenUsage { Input = 10 } });
+            Eq(1, toolMeter.LastTurnToolCalls, "the main agent's tool calls");
+            toolMeter.Observe(new ClaudeEvent { Kind = ClaudeEventKind.TurnCompleted, Usage = new TokenUsage { Input = 10 } });
+            Eq(0, toolMeter.LastTurnToolCalls, "counted per turn");
+
             // Subagents costing more than the main agent: the turn's cost includes them
             True(SessionNotices.SubagentsDominate(0.30, 0.50)?.Contains("model: haiku") == true, "agents $0.30 of $0.50: tip");
             Eq(null, SessionNotices.SubagentsDominate(0.20, 0.50), "agents $0.20 of $0.50: the main agent cost more");

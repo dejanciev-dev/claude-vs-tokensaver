@@ -157,6 +157,29 @@ namespace ClaudeVS.Core.Cli
                 + "every request sends the whole conversation again. For a new topic, a New chat (or /clear) starts small; /compact keeps a summary of this one.";
         }
 
+        /// <summary>The overkill-model tip: an answer up to this many output tokens, costing at least this much.</summary>
+        public const long OverkillMaxOutput = 600;
+        public const double OverkillFromUsd = 0.02;
+
+        /// <summary>
+        /// A token tip when a model picked by hand (Opus or Fable) gave a short answer (at most
+        /// <see cref="OverkillMaxOutput"/> output tokens) with no tool calls and no subagents, costing at least
+        /// <see cref="OverkillFromUsd"/>, while the same tokens at Haiku prices cost a third or less. The caller says
+        /// whether the model was picked by hand: Auto routing chose it for a reason. Null otherwise.
+        /// </summary>
+        public static string OverkillModel(string model, TokenUsage turn, int toolCalls, bool hadSubagents, Tokens.PriceTable prices)
+        {
+            prices = prices ?? new Tokens.PriceTable();
+            string family = Tokens.PriceTable.Family(model);
+            if ((family != "opus" && family != "fable") || toolCalls > 0 || hadSubagents || turn.Output > OverkillMaxOutput || turn.Output <= 0) return null;
+            double own = prices.For(model).Cost(turn), onHaiku = prices.Haiku.Cost(turn);
+            if (own < OverkillFromUsd || onHaiku > own / 3) return null;
+            var c = System.Globalization.CultureInfo.InvariantCulture;
+            string name = family == "opus" ? "Opus" : "Fable";
+            return $"That short answer on {name} cost ${own.ToString("0.00", c)}; the same tokens on Haiku cost about ${onHaiku.ToString("0.000", c)}. "
+                + "For quick questions, Auto in the model picker (or Haiku) is cheaper. A new model writes the conversation to its own cache once, so switch at the start of a task.";
+        }
+
         /// <summary>Subagents that cost less than this in a turn get no tip, however small the main agent's share.</summary>
         public const double SubagentTipFromUsd = 0.05;
 
