@@ -26,6 +26,11 @@ test's cost and the total (12 tests, about $0.18 and 5 minutes with Claude Code 
 prints its cost too). The exit code is 0 only when all pass. It never uses plan mode, where Claude Code answers
 with Sonnet even when Haiku is asked for (~20x the cost).
 
+When prices may have changed (a new model or a Claude Code update), run `--live-prices`: two short turns on each of
+Haiku, Sonnet, Opus and Fable, each turn's usage priced with the default prices next to what Claude Code billed
+(about $0.18, not part of `--live-all`). A FAIL line shows which model is off and by how much; update `PriceTable`
+and the prices fixture.
+
 Each test also runs on its own. `--live [path-for-raw-output.txt] [mode]` runs two short turns, in Accept Edits
 unless a mode is named (`Plan` checks the known Sonnet case on purpose). To capture and answer permission
 requests (questions, plan approval), use `--live-ask <rawPath> <PermissionMode> "<prompt>"`. `--live-edit-review` has Haiku make a two-line edit, applies one line and checks that Claude was told (about

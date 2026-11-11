@@ -46,6 +46,7 @@ namespace ClaudeVS.Core.Tests
             if (args.Length > 0 && args[0] == "--live-dialogs") return LiveSmoke.RunDialogs();
             if (args.Length > 0 && args[0] == "--live-edit-review") return LiveSmoke.RunEditReview();
             if (args.Length > 0 && args[0] == "--live-long-prompt") return LiveSmoke.RunLongPrompt();
+            if (args.Length > 0 && args[0] == "--live-prices") return LiveSmoke.RunPrices();
             if (args.Length > 0 && args[0] == "--live-prompt-tokens") return LiveSmoke.RunPromptTokens();
             if (args.Length > 0 && args[0] == "--live-edit-review-interrupt") return LiveSmoke.RunEditReviewInterrupted(args.Length > 1 ? args[1] : null);
             if (args.Length > 0 && args[0] == "--live-edit-stop-allow") return LiveSmoke.RunEditReviewInterrupted(args.Length > 1 ? args[1] : null, allowPlain: true);

@@ -563,9 +563,12 @@ Picked on 2026-11-10.
 
 Picked on 2026-11-11.
 
-- [ ] **Live price check command.** Phases 18 and 20 checked prices against Claude Code's own costs with ad-hoc
+- [x] **Live price check command.** Phases 18 and 20 checked prices against Claude Code's own costs with ad-hoc
       shell probes. Make it `--live-prices`: two turns per model, compared with the prices in use (~$0.19), kept
-      out of `--live-all` because of its cost
+      out of `--live-all` because of its cost. `LiveSmoke.RunPrices`: a trimmed process per model (the Haiku
+      router's flags, a ~4.5k-token system prompt), the first turn writes the cache and the second reads it; each
+      turn's usage priced with `PriceTable` against the growth of `total_cost_usd`. With 2.1.322: all 8 turns
+      matched to the last digit (Sonnet with its $0.10 cache read), $0.18
 - [ ] **Long-context extra in the report.** The savings report shows what Fable and fast mode cost extra, but not
       what Haiku requests over 100k tokens cost above the normal Haiku price. Add that line
 - [ ] **Stopped reviewed edit not written.** After Stop, a reviewed edit's note goes with the next prompt only if
