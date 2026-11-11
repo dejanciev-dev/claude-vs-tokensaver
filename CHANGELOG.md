@@ -7,6 +7,8 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **A token tip when subagents cost more than Claude itself** in a turn (and at least $0.05): fewer agents, a
+  plain search instead, or an agent defined with `model: haiku`. Said once per conversation.
 - **What each subagent cost, in the agents panel**: each agent's row adds its cost at API prices next to its
   tokens (`Read: Foo.cs · 20.1k tok · $0.042 · 3 tools · 0:23`), priced request by request as it works, at the
   prices in Options → Pricing.

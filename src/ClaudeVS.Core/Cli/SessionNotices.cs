@@ -132,6 +132,22 @@ namespace ClaudeVS.Core.Cli
             return "This Haiku conversation is near 100k tokens of context. Above that, Haiku bills every request at 5x its prices ($0.50 / $2.50 per million tokens, cache reads too), so /compact or a New chat keeps it cheap.";
         }
 
+        /// <summary>Subagents that cost less than this in a turn get no tip, however small the main agent's share.</summary>
+        public const double SubagentTipFromUsd = 0.05;
+
+        /// <summary>
+        /// A token tip when a turn's subagents cost more than the main agent (<paramref name="turnUsd"/> is the
+        /// whole turn, agents included, as the CLI's <c>total_cost_usd</c> counts it). Null otherwise. The text is
+        /// fixed, so it is said once.
+        /// </summary>
+        public static string SubagentsDominate(double agentsUsd, double turnUsd)
+        {
+            // turnUsd 0: the CLI sent no cost, so there is nothing to compare with
+            if (agentsUsd < SubagentTipFromUsd || turnUsd <= 0 || agentsUsd <= turnUsd - agentsUsd) return null;
+            return "Subagents cost more than Claude itself in that turn. Each one reads its own context from scratch (a fork copies the whole conversation), "
+                + "so asking for one agent instead of several, or a plain search instead of an agent, costs less; an agent defined with \"model: haiku\" in .claude/agents runs at Haiku prices.";
+        }
+
         /// <summary>A whole-file read this large (in tokens, from the result size) earns the tip.</summary>
         public const int LargeReadTokens = 8000;
 
