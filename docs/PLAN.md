@@ -818,8 +818,10 @@ Picked on 2026-11-11.
       output, thinking, cache reads, cache writes, subagents. On the whole line; the main agent's tokens at the
       answering model's price (1-hour writes at 2× input, fast mode and long context as a multiple), and Claude Code's
       own figure when the sum is a cent or more off. `TurnFooter.CostBreakdown`
-- [ ] **Cache rewrites in the report.** What writing the conversation to the cache again cost: turns that wrote a big
-      context instead of reading it (expired or broken cache)
+- [x] **Cache rewrites in the report.** What writing the conversation to the cache again cost: turns that wrote a big
+      context instead of reading it (expired or broken cache). A logged turn after the first of its session that wrote
+      10k tokens or more, and more than it read; priced as the writes less the same tokens read from the cache. Turns
+      without a session id are not judged. `Cache written again:` in the report; `SavingsReport.IsCacheRewrite`
 - [ ] **Long answer tip.** A one-time tip when a short prompt got a very long answer, with how to ask for less
 - [ ] **MCP results per server.** Tool results from MCP tools grouped per server (`MCP github`) instead of one `MCP`
 

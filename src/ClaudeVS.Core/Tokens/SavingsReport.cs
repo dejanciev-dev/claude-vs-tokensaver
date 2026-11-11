@@ -341,6 +341,30 @@ namespace ClaudeVS.Core.Tokens
             return string.Join(" · ", parts);
         }
 
+        /// <summary>
+        /// Turns that wrote the conversation to the cache again (<see cref="IsCacheRewrite"/>), the tokens, and what writing
+        /// them cost more than reading them would have. Only turns with a logged session id count.
+        /// </summary>
+        public int CacheRewriteTurns { get; set; }
+        public long CacheRewriteTokens { get; set; }
+        public double CacheRewriteExtraUsd { get; set; }
+        /// <summary>A turn that wrote at least this many tokens to the cache, and more than it read, wrote the conversation again.</summary>
+        public const long CacheRewriteFromTokens = 10_000;
+
+        /// <summary>
+        /// A turn after the first of its conversation that wrote at least <see cref="CacheRewriteFromTokens"/> to the cache
+        /// and more than it read from it: the cache had expired, the model changed, or the start of the conversation did.
+        /// </summary>
+        public static bool IsCacheRewrite(UsageRecord r, bool firstOfSession) =>
+            !firstOfSession && r.CacheWriteTokens >= CacheRewriteFromTokens && r.CacheWriteTokens > r.CacheReadTokens;
+
+        /// <summary>What a turn's cache writes cost more than reading the same tokens from the cache.</summary>
+        private static double RewriteExtra(UsageRecord r, ModelPrice p)
+        {
+            long write1h = Math.Min(Math.Max(0, r.CacheWrite1hTokens), r.CacheWriteTokens), write5m = r.CacheWriteTokens - write1h;
+            return (write5m * (p.CacheWrite - p.CacheRead) + write1h * (2 * p.Input - p.CacheRead)) / 1_000_000.0 * p.Multiplier(r);
+        }
+
         public int LongContextTurns { get; set; }
         public double LongContextExtraUsd { get; set; }
         public List<ModelBreakdown> ByModel { get; } = new List<ModelBreakdown>();
@@ -486,6 +510,20 @@ namespace ClaudeVS.Core.Tokens
                 }
             }
             rep.CacheHitPercent = input > 0 ? 100.0 * cacheRead / input : 0;
+            foreach (var session in list.Where(r => !string.IsNullOrEmpty(r.SessionId)).GroupBy(r => r.SessionId, StringComparer.Ordinal))
+            {
+                bool first = true; // the list is oldest first
+                foreach (var r in session)
+                {
+                    if (IsCacheRewrite(r, first))
+                    {
+                        rep.CacheRewriteTurns++;
+                        rep.CacheRewriteTokens += r.CacheWriteTokens;
+                        rep.CacheRewriteExtraUsd += RewriteExtra(r, prices.For(r.ModelUsed) ?? prices.Sonnet);
+                    }
+                    first = false;
+                }
+            }
             var timed = list.Where(r => r.RouterMs > 0).ToList();
             rep.RouterAverageMs = timed.Count > 0 ? (long)timed.Average(r => r.RouterMs) : 0;
 
@@ -607,6 +645,8 @@ namespace ClaudeVS.Core.Tokens
             sb.AppendLine($"Saved by file references:   ~{TokenMeter.Format(TokensAvoided)} tokens ≈ ${ReferencesSavedUsd:0.00}");
             sb.AppendLine($"Saved by the prompt cache:  ${CacheSavedUsd:0.00}  ({TokenMeter.Format(CacheReadTokens)} tokens read from the cache instead of sent in full)");
             sb.AppendLine($"Cache hit rate:             {CacheHitPercent:0}%");
+            if (CacheRewriteTurns > 0)
+                sb.AppendLine($"Cache written again:        ${CacheRewriteExtraUsd:0.00} more than reading it  ({CacheRewriteTurns} {(CacheRewriteTurns == 1 ? "turn" : "turns")}, {TokenMeter.Format(CacheRewriteTokens)} tokens: an expired cache, a model switch or a changed CLAUDE.md, MCP tools or settings)");
             if (ThinkingTokens > 0)
                 sb.AppendLine($"Thinking:                   {TokenMeter.Format(ThinkingTokens)} tokens ≈ ${ThinkingCostUsd:0.00}  ({(OutputTokens > 0 ? 100.0 * ThinkingTokens / OutputTokens : 0):0}% of output tokens; Thinking off or lower effort cuts it)");
             if (FableTurns > 0)
