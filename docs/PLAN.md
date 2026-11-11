@@ -647,6 +647,22 @@ Picked on 2026-11-11.
 
 ---
 
+## Phase 24 — Agent details, and the last uncounted output
+
+Picked on 2026-11-11.
+
+- [ ] **Exact resumed first turn.** Keep each session's last `modelUsage` reading, so a resumed conversation's first
+      turn counts subagent output exactly too (today only a new conversation's does)
+- [ ] **Agent model on its row.** The agents panel row and the line under the Agent call say which model the agent
+      ran on (e.g. `Explore · haiku`), since that decides most of its cost
+- [ ] **Kinds in summary and CSV.** The session summary gets a `Subagents by kind:` line, the usage CSV an
+      `agent_types` column (e.g. `Explore:0.75;general-purpose:0.25`)
+- [ ] **Fork cost tip.** A one-time tip when a fork (a subagent that starts with a copy of the whole conversation)
+      costs much more than a fresh agent would, with how to avoid forks (check first whether Claude Code has a
+      switch for them; say only what is verified)
+
+---
+
 ## Working in Visual Studio — daily loop
 
 1. Core logic change → edit in `ClaudeVS.Core` → run tests (`ClaudeVS.Core.Tests` → Set as Startup → Ctrl+F5, or `dotnet run` in its folder).
