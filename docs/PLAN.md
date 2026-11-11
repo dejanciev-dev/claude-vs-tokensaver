@@ -810,6 +810,30 @@ Picked on 2026-11-11.
 
 ---
 
+## Phase 31 — Why a turn cost what it did
+
+Picked on 2026-11-11.
+
+- [ ] **Cost breakdown tooltip.** The cost in the line under an answer gets a tooltip with what made it up: input,
+      output, thinking, cache reads, cache writes, subagents
+- [ ] **Cache rewrites in the report.** What writing the conversation to the cache again cost: turns that wrote a big
+      context instead of reading it (expired or broken cache)
+- [ ] **Long answer tip.** A one-time tip when a short prompt got a very long answer, with how to ask for less
+- [ ] **MCP results per server.** Tool results from MCP tools grouped per server (`MCP github`) instead of one `MCP`
+
+---
+
+## Phase 32 — Spend over time
+
+Picked on 2026-11-11.
+
+- [ ] **Last 7 days in the meter's tooltip.** Each day's spend, from the usage log
+- [ ] **Week vs last week.** The savings report adds this week's spend against last week's by the same day
+- [ ] **Compact first on resume.** The note on resuming a conversation whose cache has expired gets a /compact button
+- [ ] **Per-solution monthly warning.** Optional: a warning when this solution's spend this month passes an amount
+
+---
+
 ## Working in Visual Studio — daily loop
 
 1. Core logic change → edit in `ClaudeVS.Core` → run tests (`ClaudeVS.Core.Tests` → Set as Startup → Ctrl+F5, or `dotnet run` in its folder).
