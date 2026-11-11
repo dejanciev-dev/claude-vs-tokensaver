@@ -785,7 +785,8 @@ Picked on 2026-11-11.
 - [x] **Amber meter past a warning.** The meter's cost turns amber once today's spend passes the daily warning.
       Also past the monthly warning; with a ⚠ in front, so it does not rely on color alone (amber is close to Claude
       orange). Redrawn with the meter, after each turn. `SpendWatch.IsPastWarning`
-- [ ] **Tool results in the CSV.** One `tools` column (`Read:1200;Shell:400`), like `agent_types`
+- [x] **Tool results in the CSV.** One `tools` column (`Read:1200;Shell:400`), like `agent_types`. Largest first,
+      the last column. `UsageCsv.Tools`
 
 ---
 

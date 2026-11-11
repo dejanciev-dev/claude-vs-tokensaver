@@ -34,6 +34,7 @@ All notable changes to this project are listed here. The format follows
   day and the change, e.g. `(Oct 1–11: $9.00, +37%)`.
 - **Amber cost in the meter**: the meter's cost turns amber, with ⚠, once today's or this month's spend has passed
   its warning amount.
+- **Tool results in the usage CSV**: a `tools` column, e.g. `Read:1200;Shell:400`, in the style of `agent_types`.
 
 ## [0.9.0] - 2026-11-11
 
