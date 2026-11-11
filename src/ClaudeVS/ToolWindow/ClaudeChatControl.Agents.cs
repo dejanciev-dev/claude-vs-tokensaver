@@ -71,6 +71,9 @@ namespace ClaudeVS.ToolWindow
             Announce($"{what.Replace('“', '"').Replace('”', '"')}; Claude continues.");
         }
 
+        // Agents stopped for passing Options → Stop agents at cost, so each is stopped (and said) once
+        private readonly HashSet<string> _autoStopped = new HashSet<string>(StringComparer.Ordinal);
+
         /// <summary>Options → Warn at agent cost: a row past it turns amber (0: off).</summary>
         private double AgentCostLimit => Options?.AgentCostWarningUsd ?? 0.5;
 
@@ -84,6 +87,15 @@ namespace ClaudeVS.ToolWindow
             bool overBefore = before?.CostsOver(AgentCostLimit) == true;
             if (meter == null || !_tasks.ObserveRequest(ev, meter.RequestCostUsd)) return;
             var t = _tasks.Tasks.FirstOrDefault(x => x.ToolUseId == ev.ParentToolUseId);
+            if (SessionNotices.AgentAutoStop(t, Options?.AgentCostStopUsd ?? 0) is string stopped && _autoStopped.Add(t.TaskId))
+            {
+                // Options → Stop agents at cost: past the hard limit, stopped once (its notification redraws the row)
+                FlushText();
+                Append("\n  ⏹ " + stopped + "\n");
+                ClaudeOutputPane.WriteLine(stopped);
+                Announce(stopped);
+                StopTask(t);
+            }
             if (t != null && t.IsRunning && !overBefore && t.CostsOver(AgentCostLimit))
                 Announce($"Agent {t.Description} has cost {AgentTask.FormatCost(t.CostUsd)} so far."); // the row turns amber
             if (t?.Model != modelBefore || t?.CostsOver(AgentCostLimit) != overBefore) { RefreshAgentsPanel(); return; } // the tag names the model; amber past the limit
@@ -102,6 +114,7 @@ namespace ClaudeVS.ToolWindow
         private void ClearTasks()
         {
             _tasks.Clear();
+            _autoStopped.Clear();
             _lastBackgroundDone = null;
             _agentDetails.Clear();
             _agentsTimer?.Stop();

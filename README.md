@@ -298,6 +298,7 @@ Editor commands go to the chat window you used last.
 | Token saving | Warn at conversation cost (USD) | 5 | Said once each time a conversation passes another multiple ($5, $10…). 0 = off. |
 | Token saving | Warn at daily cost (USD) | 20 | Said once each time today's spend in Visual Studio, all conversations together, passes another multiple ($20, $40…). Earlier turns today come from the usage log. 0 = off. |
 | Token saving | Warn at agent cost (USD) | 0.50 | A subagent's row in the agents panel turns amber once its requests pass this amount, with a screen-reader note, so a runaway agent can be stopped. 0 = off. |
+| Token saving | Stop agents at cost (USD) | 0 | A subagent whose requests pass this amount is stopped, and the chat says so; Claude carries on without its result. 0 = never. |
 | Token saving | Auto-approve quiet rewrites | Off | Hook installer: run rewritten build/test commands without asking. |
 | Token saving | Claude can read the Error List | On | The `get_error_list` tool, for new sessions. |
 | Token saving | Max attached errors | 20 | For Attach Error List. |
