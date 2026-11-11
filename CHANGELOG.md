@@ -25,6 +25,8 @@ All notable changes to this project are listed here. The format follows
 - **What the Haiku router's own picks changed**: the savings report says, for prompts where it chose another model
   than the local rules, how many went to a cheaper or a dearer model and what that changed (the same tokens at both
   models' prices).
+- **Spend so far in the meter's tooltip**: `Spent in Visual Studio: today $3.20 (next warning at $20.00) · this month
+  $41.20 (next warning at $200.00), at API prices.`
 
 ## [0.9.0] - 2026-11-11
 

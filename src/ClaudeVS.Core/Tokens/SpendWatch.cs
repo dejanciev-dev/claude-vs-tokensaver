@@ -45,6 +45,33 @@ namespace ClaudeVS.Core.Tokens
         /// <summary>Spent so far in the current day or month (USD at API prices).</summary>
         public double Spent { get { lock (_gate) return _spent; } }
 
+        /// <summary>Spent in the period that <paramref name="nowUtc"/> falls in: 0 when a new one has started since the last turn.</summary>
+        public double SpentAt(DateTime nowUtc) { lock (_gate) return StartOf(nowUtc) == _start ? _spent : 0; }
+
+        /// <summary>
+        /// "today $3.20 (next warning at $20.00)", "this month $41.00" without a warning amount; the next warning is the
+        /// next multiple of <see cref="StepUsd"/> above what was spent.
+        /// </summary>
+        public string Line(DateTime nowUtc)
+        {
+            var c = CultureInfo.InvariantCulture;
+            double spent = SpentAt(nowUtc);
+            string line = (Period == SpendPeriod.Month ? "this month $" : "today $") + spent.ToString("0.00", c);
+            if (StepUsd <= 0) return line;
+            double next = (Math.Floor(spent / StepUsd + 1e-9) + 1) * StepUsd;
+            return line + " (next warning at $" + next.ToString("0.00", c) + ")";
+        }
+
+        /// <summary>
+        /// For the meter's tooltip: "Spent in Visual Studio: today $3.20 (next warning at $20.00) · this month $41.00
+        /// (next warning at $200.00), at API prices."; null while nothing was spent this month.
+        /// </summary>
+        public static string BudgetLine(SpendWatch day, SpendWatch month, DateTime nowUtc)
+        {
+            if (day == null || month == null || month.SpentAt(nowUtc) <= 0 && day.SpentAt(nowUtc) <= 0) return null;
+            return "Spent in Visual Studio: " + day.Line(nowUtc) + " · " + month.Line(nowUtc) + ", at API prices.";
+        }
+
         /// <summary>Adds the logged turns of this period from before this watch was made, without warning about them.</summary>
         public void Load(IEnumerable<UsageRecord> records)
         {
