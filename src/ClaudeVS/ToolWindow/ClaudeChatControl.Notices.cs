@@ -201,6 +201,21 @@ namespace ClaudeVS.ToolWindow
             });
         }
 
+        // ---------------- Pricey context ----------------
+
+        private bool _gavePriceyContextTip;
+
+        /// <summary>After a turn: once per conversation, when reading the conversation from the cache cost most of it.</summary>
+        private void PriceyContextTip(string model)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (_gavePriceyContextTip || _meterModel == null) return;
+            string tip = SessionNotices.PriceyContext(model ?? _meterModel.LastModel, _meterModel.LastTurn, _meterModel.ContextTokens, _meterModel.Prices);
+            if (tip == null) return;
+            _gavePriceyContextTip = true;
+            Tip(tip);
+        }
+
         // ---------------- Cache breaks ----------------
 
         private bool _gaveCacheBreakTip;
@@ -251,6 +266,7 @@ namespace ClaudeVS.ToolWindow
             _costWatch.Reset();
             _gaveBaseContextTip = false;
             _gaveCacheBreakTip = false;
+            _gavePriceyContextTip = false;
             _reads.Reset();
         }
     }
