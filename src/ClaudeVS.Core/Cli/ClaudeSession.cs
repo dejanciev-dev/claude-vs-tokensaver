@@ -473,6 +473,8 @@ namespace ClaudeVS.Core.Cli
             public Func<bool> Applied;
             /// <summary>The turn ended before the PostToolUse hook ran for the call.</summary>
             public volatile bool Stranded;
+            /// <summary>What the plain file check says (<see cref="AddNextPromptNote"/>), for when <see cref="Applied"/> says no: e.g. "not applied".</summary>
+            public volatile string Fallback;
         }
 
         // Notes for the tool results of specific tool calls, by tool_use_id; added by the PostToolUse hook.
@@ -516,7 +518,7 @@ namespace ClaudeVS.Core.Cli
                 if (!kv.Value.Stranded || !_toolNotes.TryRemove(kv.Key, out var n)) continue;
                 bool applied;
                 try { applied = n.Applied?.Invoke() == true; } catch (Exception) { applied = false; }
-                if (!applied) continue;
+                if (!applied) { if (n.Fallback != null) parts.Add(n.Fallback); continue; }
                 parts.Add($"About the stopped {(string.IsNullOrEmpty(n.FileName) ? "edit" : "edit of " + n.FileName)}: it was written before the stop, as the user reviewed it, not left undone. " + n.Note);
             }
             return parts.Count == 0 ? null : EditorNotePrefix + " " + string.Join("\n\n", parts);
@@ -532,7 +534,9 @@ namespace ClaudeVS.Core.Cli
         public void AddNextPromptNote(string toolUseId, string note)
         {
             if (string.IsNullOrWhiteSpace(note)) return;
-            if (!string.IsNullOrEmpty(toolUseId) && _toolNotes.ContainsKey(toolUseId)) return;
+            // A reviewed-edit note for the same call says more when the reviewed edit was written; this one is kept
+            // for when it was not (the reviewed note is then dropped, and Claude would hear nothing)
+            if (!string.IsNullOrEmpty(toolUseId) && _toolNotes.TryGetValue(toolUseId, out var reviewed)) { reviewed.Fallback = note; return; }
             _nextPromptNotes.Enqueue(note);
         }
 

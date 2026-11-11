@@ -574,9 +574,12 @@ Picked on 2026-11-11.
       $… (N Haiku turns over 100k tokens, above Haiku's normal price; /compact keeps it under)`, only when there
       were such turns (`SavingsReport.LongContextExtraUsd`: each turn's cost less the same at the normal price, from
       the logged `largeContextTokens`)
-- [ ] **Stopped reviewed edit not written.** After Stop, a reviewed edit's note goes with the next prompt only if
+- [x] **Stopped reviewed edit not written.** After Stop, a reviewed edit's note goes with the next prompt only if
       the file holds what was approved; if it was not written, Claude hears nothing. Fall back to the plain file
-      check, so Claude is told it was not applied
+      check, so Claude is told it was not applied. `AddNextPromptNote` no longer drops the file check's note for a
+      call with a reviewed note: it keeps it as that note's `Fallback`, which `TakeStrandedNotes` sends when the
+      reviewed edit is not in the file ("was not applied: c.cs still has …"); when the file check cannot tell
+      either, still nothing. Unit-tested only: in every live run so far the edit was written before Stop landed
 - [ ] **Subagents in the long-context count.** The meter counts requests over 100k only for the main agent; Haiku
       subagents with big contexts are billed 5x too. Count their requests where the turn's tokens include them
 
