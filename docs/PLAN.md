@@ -852,6 +852,30 @@ Picked on 2026-11-11.
 
 ---
 
+## Phase 33 — Upkeep before the next release
+
+Picked on 2026-11-11. The version comes last, after Phase 34, so its notes cover both.
+
+- [ ] **Manual checks for Phases 27–32.** The VS-only parts (limit dialog, amber meter, tooltips, /compact on resume,
+      new tips) in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
+- [ ] **Cost options grouped.** The cost warnings and limits in their own *Cost limits* category in Options
+- [ ] **Split the big test file.** `tests/ClaudeVS.Core.Tests/Program.cs` into one file per area, no behavior change
+- [ ] **Version 0.10.0.** Version bump; the Unreleased changelog becomes the 0.10.0 notes
+
+---
+
+## Phase 34 — Keep the history
+
+Picked on 2026-11-11.
+
+- [ ] **Keep more usage history.** An option for how many months of usage to keep (default 3), as monthly files,
+      instead of one 5 MB archive
+- [ ] **Report as Markdown file.** Save the savings report as a Markdown file
+- [ ] **Report period picker.** Run the report for this month, last month or the last 30 days, not only everything
+- [ ] **Usage log size in Options.** Where the log is and how big; a command to open its folder
+
+---
+
 ## Working in Visual Studio — daily loop
 
 1. Core logic change → edit in `ClaudeVS.Core` → run tests (`ClaudeVS.Core.Tests` → Set as Startup → Ctrl+F5, or `dotnet run` in its folder).
