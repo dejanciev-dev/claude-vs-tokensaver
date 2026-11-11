@@ -693,6 +693,15 @@ namespace ClaudeVS.Core.Tokens
         public string LoggedModel { get; set; }
         public string NowModel { get; set; }
         public string NowReason { get; set; }
+        /// <summary>
+        /// The logged turn's main-agent tokens at the model the rules pick now, less at the model that answered; negative
+        /// = cheaper. Null when either model's price is not known. An estimate: another model writes other tokens.
+        /// </summary>
+        public double? CostChangeUsd { get; set; }
+
+        /// <summary>" (≈ −$0.030)" / " (≈ +$0.012)"; "" when not known.</summary>
+        public string CostChangeText() =>
+            CostChangeUsd is double d ? " (≈ " + (d < 0 ? "−" : "+") + "$" + Math.Abs(d).ToString("0.000", CultureInfo.InvariantCulture) + ")" : "";
     }
 
     /// <summary>
@@ -701,7 +710,30 @@ namespace ClaudeVS.Core.Tokens
     /// </summary>
     public static class RouterReplay
     {
-        public static List<ReplayDiff> Compare(IEnumerable<UsageRecord> records, ModelRouter router, out int replayed)
+        /// <summary>
+        /// "At the logged tokens: 12 cheaper (≈ $0.40 less), 3 dearer (≈ $0.10 more), net ≈ $0.30 less."; null when no
+        /// difference could be priced.
+        /// </summary>
+        public static string CostSummary(IReadOnlyCollection<ReplayDiff> diffs)
+        {
+            var priced = (diffs ?? new ReplayDiff[0]).Where(d => d.CostChangeUsd.HasValue && d.CostChangeUsd.Value != 0).ToList();
+            if (priced.Count == 0) return null;
+            var c = CultureInfo.InvariantCulture;
+            var cheaper = priced.Where(d => d.CostChangeUsd < 0).ToList();
+            var dearer = priced.Where(d => d.CostChangeUsd > 0).ToList();
+            var parts = new List<string>();
+            if (cheaper.Count > 0) parts.Add($"{cheaper.Count} cheaper (≈ ${(-cheaper.Sum(d => d.CostChangeUsd.Value)).ToString("0.00", c)} less)");
+            if (dearer.Count > 0) parts.Add($"{dearer.Count} dearer (≈ ${dearer.Sum(d => d.CostChangeUsd.Value).ToString("0.00", c)} more)");
+            double net = priced.Sum(d => d.CostChangeUsd.Value);
+            return "At the logged tokens: " + string.Join(", ", parts)
+                + $", net ≈ ${Math.Abs(net).ToString("0.00", c)} {(net <= 0 ? "less" : "more")}.";
+        }
+
+        public static List<ReplayDiff> Compare(IEnumerable<UsageRecord> records, ModelRouter router, out int replayed) =>
+            Compare(records, router, null, out replayed);
+
+        /// <summary>As above; with <paramref name="prices"/>, each difference is priced (<see cref="ReplayDiff.CostChangeUsd"/>).</summary>
+        public static List<ReplayDiff> Compare(IEnumerable<UsageRecord> records, ModelRouter router, PriceTable prices, out int replayed)
         {
             var diffs = new List<ReplayDiff>();
             replayed = 0;
@@ -712,7 +744,12 @@ namespace ClaudeVS.Core.Tokens
                 // Replay as a fresh conversation: logged context size is not stored, so stickiness is left out.
                 var d = router.Route(new RouteRequest { Prompt = r.PromptPreview, AttachedCodeLines = r.AttachedLines, AttachedFiles = r.AttachedFiles });
                 if (!string.Equals(d.Model.ToCli(), r.RouteModel, StringComparison.OrdinalIgnoreCase))
-                    diffs.Add(new ReplayDiff { PromptPreview = r.PromptPreview, LoggedModel = r.RouteModel, NowModel = d.Model.ToCli(), NowReason = d.Reason });
+                {
+                    double? change = null;
+                    if (prices != null && prices.For(d.Model.ToCli()) is ModelPrice now && prices.For(r.ModelUsed ?? r.RouteModel) is ModelPrice then)
+                        change = now.Cost(r) - then.Cost(r);
+                    diffs.Add(new ReplayDiff { PromptPreview = r.PromptPreview, LoggedModel = r.RouteModel, NowModel = d.Model.ToCli(), NowReason = d.Reason, CostChangeUsd = change });
+                }
             }
             return diffs;
         }

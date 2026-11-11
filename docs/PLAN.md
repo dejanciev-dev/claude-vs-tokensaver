@@ -800,8 +800,10 @@ Picked on 2026-11-11.
       output tokens. Suggests Medium after high, else High. `SessionNotices.HeavyThinking`
 - [x] **Effort in the footer.** The line under each answer names the effort when one was set (`· high`). As
       `· high effort` after the model (a bare "high" read unclear), from the turn's usage record. `TurnFooter.Effort`
-- [ ] **Router replay by cost.** The router replay in the savings report adds what the current rules' different
-      picks would have cost, at the logged tokens
+- [x] **Router replay by cost.** The router replay in the savings report adds what the current rules' different
+      picks would have cost, at the logged tokens. Each row `sonnet → haiku (≈ −$0.029)`, then `At the logged tokens:
+      12 cheaper (≈ $0.40 less), 3 dearer (≈ $0.10 more), net ≈ $0.30 less.`; main-agent tokens, at Options →
+      Pricing. `ReplayDiff.CostChangeUsd`, `RouterReplay.CostSummary`
 - [ ] **Effort in the session summary.** Copy session summary gets turns and cost per effort
 
 ---

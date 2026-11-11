@@ -39,6 +39,9 @@ All notable changes to this project are listed here. The format follows
   answer's output, with what it cost and a lower effort to try.
 - **Effort in the line under each answer**: `· high effort` after the model, when the turn was sent with an effort
   (routed or picked); nothing for Claude Code's default.
+- **Router replay with costs**: in *Show Savings Report*, each prompt the current rules would route differently says
+  what that changes at its logged tokens (`sonnet → haiku (≈ −$0.029)`), followed by a total of the cheaper and
+  dearer picks.
 
 ## [0.9.0] - 2026-11-11
 
