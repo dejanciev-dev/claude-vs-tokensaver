@@ -13,6 +13,8 @@ All notable changes to this project are listed here. The format follows
 - **Costliest conversations in the savings report**: each turn now logs its Claude Code session id, so the report
   lists the five dearest conversations (start, cost, turns, solution, first prompt when logged) and the usage CSV
   gets a `session` column. Turns logged before this release have no id and are left out of the list.
+- **Tool results in the savings report**: each turn logs the tokens its tool results added, per tool, and the report
+  says which tools filled the context across conversations (`Tool results: Read 1.2M · Shell 410k · Search 120k …`).
 
 ## [0.9.0] - 2026-11-11
 

@@ -736,8 +736,10 @@ Picked on 2026-11-11.
       conversations (date, turns, cost, first prompt when logged) and the CSV gets a `session` column. From the
       result's `session_id` (`session` in the log); five at most, with the folder in the all-solutions report; older
       lines without an id are left out. The CSV column is the last one. `SavingsReport.CostliestConversations`
-- [ ] **Tool results in the report.** Each turn logs the tokens its main agent's tool results added, per tool; the
-      report says which tools filled the context across conversations (Read, Shell, Search …)
+- [x] **Tool results in the report.** Each turn logs the tokens its main agent's tool results added, per tool; the
+      report says which tools filled the context across conversations (Read, Shell, Search …). Logged as `tools`
+      (the meter's groups, tokens estimated from characters; `TokenMeter.LastTurnResultTokensByTool`); the report's
+      `Tool results:` line names the five largest, then "other". Not in the CSV (one column per tool would be messy)
 - [ ] **Pricey context tip.** A one-time tip when re-reading a large conversation from the cache costs most of a
       turn (a big context, a small question): a new chat for a new topic, or /compact
 

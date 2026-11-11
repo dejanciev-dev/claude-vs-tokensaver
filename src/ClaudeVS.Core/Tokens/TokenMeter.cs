@@ -101,6 +101,14 @@ namespace ClaudeVS.Core.Tokens
 
         private readonly Dictionary<string, long> _resultCharsByTool = new Dictionary<string, long>(StringComparer.Ordinal);
 
+        private readonly Dictionary<string, long> _turnResultCharsByTool = new Dictionary<string, long>(StringComparer.Ordinal);
+
+        /// <summary>
+        /// Tokens the main agent's tool results added in the last turn, per tool group (<see cref="ToolGroup"/>); null
+        /// when none. Logged per turn (<see cref="UsageRecord.ToolResultTokens"/>).
+        /// </summary>
+        public Dictionary<string, long> LastTurnResultTokensByTool { get; private set; }
+
         /// <summary>
         /// Tokens the main agent's tool results added to the conversation, per tool (shell commands and searches
         /// grouped, MCP tools as "MCP"), largest first.
@@ -155,6 +163,7 @@ namespace ClaudeVS.Core.Tokens
             _costOffset = 0; _lastReportedCost = 0; LastTurnCostUsd = 0; LargestToolResultChars = 0; LargestToolResultTool = null;
             _toolNames.Clear();
             _resultCharsByTool.Clear();
+            _turnResultCharsByTool.Clear(); LastTurnResultTokensByTool = null;
             Cache.Reset();
             _breaks.Reset(); _pendingBreak = null;
             Learner.Reset();
@@ -196,6 +205,7 @@ namespace ClaudeVS.Core.Tokens
                     {
                         string group = ToolGroup(tool);
                         _resultCharsByTool[group] = (_resultCharsByTool.TryGetValue(group, out var sofar) ? sofar : 0) + ev.ResultChars;
+                        _turnResultCharsByTool[group] = (_turnResultCharsByTool.TryGetValue(group, out var inTurn) ? inTurn : 0) + ev.ResultChars;
                     }
                     if (ev.ResultChars > LargestToolResultChars)
                     {
@@ -216,6 +226,9 @@ namespace ClaudeVS.Core.Tokens
                     var turn = ev.Usage;
                     turn.LargeContextTokens = Math.Min(turn.Total, _turnLargeByMessage.Values.Sum());
                     _turnLargeByMessage.Clear();
+                    LastTurnResultTokensByTool = _turnResultCharsByTool.Count == 0 ? null
+                        : _turnResultCharsByTool.ToDictionary(kv => kv.Key, kv => (long)TokenEstimate.FromChars(kv.Value), StringComparer.Ordinal);
+                    _turnResultCharsByTool.Clear();
                     LastTurn = turn;
                     LastTurnSubagents = _subagents.TurnCompleted(ev.ModelUsage, _turnModel, turn);
                     var pt = Prices ?? DefaultPrices;
