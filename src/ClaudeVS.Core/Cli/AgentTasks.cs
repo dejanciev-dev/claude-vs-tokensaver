@@ -36,6 +36,16 @@ namespace ClaudeVS.Core.Cli
         public DateTime? EndedUtc { get; set; }
         /// <summary>Duration from the CLI's usage, when it has sent one.</summary>
         public long? ReportedDurationMs { get; set; }
+        /// <summary>What its own requests cost so far (USD at API prices; 0 for shell commands or when none were seen).</summary>
+        public double CostUsd { get; set; }
+
+        /// <summary>"$0.042", "$1.23" or "&lt;$0.001"; null when nothing was priced.</summary>
+        public static string FormatCost(double usd)
+        {
+            if (usd <= 0) return null;
+            if (usd < 0.001) return "<$0.001";
+            return "$" + usd.ToString(usd < 1 ? "0.000" : "0.00", System.Globalization.CultureInfo.InvariantCulture);
+        }
 
         public bool IsAgent => TaskType == "local_agent" || SubagentType != null;
         public bool IsRunning => Status == AgentTaskStatus.Running;
@@ -59,12 +69,31 @@ namespace ClaudeVS.Core.Cli
     public sealed class AgentTaskList
     {
         private readonly List<AgentTask> _tasks = new List<AgentTask>();
+        // Priced subagent requests by the Agent call they run under (parent_tool_use_id), then by message id: the last
+        // copy of a message's usage is kept. A message can come before its task_started.
+        private readonly Dictionary<string, Dictionary<string, double>> _costs = new Dictionary<string, Dictionary<string, double>>(StringComparer.Ordinal);
 
         public IReadOnlyList<AgentTask> Tasks => _tasks;
         public int RunningCount => _tasks.Count(t => t.IsRunning);
         public bool IsEmpty => _tasks.Count == 0;
 
         public AgentTask Find(string taskId) => taskId == null ? null : _tasks.FirstOrDefault(t => t.TaskId == taskId);
+
+        /// <summary>
+        /// A subagent's AssistantUsage: <paramref name="price"/> (model, one request's usage → USD) prices it, and it
+        /// counts toward the task its Agent call started. True when a task's cost changed.
+        /// </summary>
+        public bool ObserveRequest(ClaudeEvent ev, Func<string, TokenUsage, double> price)
+        {
+            if (ev == null || !ev.IsSubagent || ev.Usage.IsEmpty || string.IsNullOrEmpty(ev.ParentToolUseId) || price == null) return false;
+            if (!_costs.TryGetValue(ev.ParentToolUseId, out var byMessage))
+                _costs[ev.ParentToolUseId] = byMessage = new Dictionary<string, double>(StringComparer.Ordinal);
+            byMessage[ev.MessageId ?? "m" + byMessage.Count] = price(ev.Model, ev.Usage.AsRequest());
+            var t = _tasks.FirstOrDefault(x => x.ToolUseId == ev.ParentToolUseId);
+            if (t == null) return false;
+            t.CostUsd = byMessage.Values.Sum();
+            return true;
+        }
 
         public static bool IsTaskMessage(JObject json)
         {
@@ -93,6 +122,7 @@ namespace ClaudeVS.Core.Cli
                 _tasks.Add(t);
             }
             Fill(t, json);
+            if (t.ToolUseId != null && _costs.TryGetValue(t.ToolUseId, out var priced)) t.CostUsd = priced.Values.Sum();
             switch (subtype)
             {
                 case "task_started":
@@ -193,11 +223,12 @@ namespace ClaudeVS.Core.Cli
             var keep = new HashSet<string>();
             foreach (var t in _tasks.Where(t => t.IsRunning))
                 for (var x = t; x != null && keep.Add(x.TaskId); x = Find(x.ParentTaskId)) { }
+            foreach (var t in _tasks.Where(t => !keep.Contains(t.TaskId) && t.ToolUseId != null)) _costs.Remove(t.ToolUseId);
             _tasks.RemoveAll(t => !keep.Contains(t.TaskId));
             return _tasks.Count != before;
         }
 
-        public void Clear() => _tasks.Clear();
+        public void Clear() { _tasks.Clear(); _costs.Clear(); }
 
         /// <summary>"2 agents running · 1 done", for the panel's header.</summary>
         public string Headline()

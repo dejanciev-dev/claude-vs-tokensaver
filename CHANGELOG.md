@@ -7,6 +7,9 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **What each subagent cost, in the agents panel**: each agent's row adds its cost at API prices next to its
+  tokens (`Read: Foo.cs · 20.1k tok · $0.042 · 3 tools · 0:23`), priced request by request as it works, at the
+  prices in Options → Pricing.
 - **Fable and fast mode in the savings report**: what Fable turns cost above the same tokens on Opus, and what fast
   mode cost above standard speed, each with its number of turns (shown only when there were any). The usage CSV
   gets a `fast_tokens` column after `cache_write_1h`. Also what Haiku turns over 100k tokens cost above Haiku's

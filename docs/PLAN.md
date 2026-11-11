@@ -609,8 +609,10 @@ Picked on 2026-11-11.
       tokens at Opus prices" (an Opus main turn's own cost less its agents), to cache savings and the hit rate,
       and says `Subagents: … tokens ≈ $… (N turns; included above)`; the CSV has `agent_tokens`; the session
       summary a `Subagents:` line. Replayed from the real fork capture in `Test_SubagentUsage_FromRealFork`
-- [ ] **Cost per agent in the agents panel.** The panel shows each subagent's status but not what it cost: price
-      its requests as they arrive and show it on its row
+- [x] **Cost per agent in the agents panel.** The panel shows each subagent's status but not what it cost: price
+      its requests as they arrive and show it on its row. Each subagent message (`parent_tool_use_id` = its Agent
+      call) is priced as one request at Options → Pricing, the last copy of a message kept; the row adds it after
+      its tokens (`· $0.042`, `<$0.001` when tiny). Replayed from the fork capture in `Test_AgentTasks_Fork_RealCli_2_1_319`
 - [ ] **Tip when subagents dominate.** A one-time token tip when subagents cost more than the main agent in a turn,
       with how to keep them cheaper
 - [ ] **Subagent tokens in the footer.** The line under each answer says `· 2 agents`; add what they used, e.g.
