@@ -333,7 +333,8 @@ All notable changes to this project are listed here. The format follows
 - Token estimates for text (the prompt's size and price under the input box, tool-result sizes, file sizes in the
   `@` picker, the thresholds for token tips) count ~3 characters per token instead of 4, and learn the real ratio
   from your turns. Measured with Claude Code 2.1.322, prose, code and logs all ran at 2.7-3.0, so the old
-  estimates were about 30% low.
+  estimates were about 30% low. What it learned is kept across Visual Studio restarts, in
+  `%LocalAppData%\claude-vs-tokensaver\token-estimate.json` (two numbers, no prompt text).
 - Verified with Claude Code 2.1.322 (all live tests). The extension still needs 2.1.318 or newer and only warns
   below that; the Output pane names both: `Claude Code 2.1.320 (needs 2.1.318, tested with 2.1.322)`. Plan mode
   still answers with Sonnet when Haiku is asked for.
