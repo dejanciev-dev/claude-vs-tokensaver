@@ -2278,6 +2278,32 @@ namespace ClaudeVS.Core.Tests
             Eq(null, TurnFooter.CostBreakdown("claude-opus-5-5", default(TokenUsage), 0, 0, prices), "no tokens");
         }
 
+        private static void Test_SavingsReport_CacheRewrites()
+        {
+            var t = DateTime.UtcNow.AddDays(-1);
+            var recs = new[]
+            {
+                // a: the first turn writes (not a rewrite), the second reads, the third writes 50k again (1-hour) after a break
+                new UsageRecord { Timestamp = t, SessionId = "a", ModelUsed = "claude-sonnet-5-5", CacheWriteTokens = 40_000, CacheWrite1hTokens = 40_000 },
+                new UsageRecord { Timestamp = t.AddMinutes(5), SessionId = "a", ModelUsed = "claude-sonnet-5-5", CacheReadTokens = 40_000, CacheWriteTokens = 2_000 },
+                new UsageRecord { Timestamp = t.AddHours(3), SessionId = "a", ModelUsed = "claude-sonnet-5-5", CacheReadTokens = 3_000, CacheWriteTokens = 50_000, CacheWrite1hTokens = 50_000 },
+                // b: a 5-minute rewrite on Opus
+                new UsageRecord { Timestamp = t, SessionId = "b", ModelUsed = "claude-opus-5-5", InputTokens = 10 },
+                new UsageRecord { Timestamp = t.AddMinutes(1), SessionId = "b", ModelUsed = "claude-opus-5-5", CacheWriteTokens = 20_000 },
+                // no session id: not judged; a small write: not counted
+                new UsageRecord { Timestamp = t, CacheWriteTokens = 90_000 },
+                new UsageRecord { Timestamp = t.AddMinutes(9), SessionId = "a", ModelUsed = "claude-sonnet-5-5", CacheWriteTokens = 9_000 },
+            };
+            var rep = SavingsReport.Build(recs, new PriceTable());
+            Eq(2, rep.CacheRewriteTurns, "a's third turn and b's second");
+            Eq(70_000L, rep.CacheRewriteTokens, "tokens");
+            // Sonnet 1-hour: 50k × (2×2 − 0.1) = $0.195; Opus 5-minute: 20k × (5 − 0.2) = $0.096
+            True(Math.Abs(rep.CacheRewriteExtraUsd - 0.291) < 1e-9, "extra: " + rep.CacheRewriteExtraUsd);
+            True(rep.ToText().Contains("Cache written again:        $0.29 more than reading it  (2 turns, 70.0k tokens:"), rep.ToText());
+            Eq(0, SavingsReport.Build(recs.Take(2), new PriceTable()).CacheRewriteTurns, "none");
+            True(!SavingsReport.Build(recs.Take(2), new PriceTable()).ToText().Contains("Cache written again"), "no line");
+        }
+
         private static void Test_SavingsReport_ByEffort()
         {
             var t = DateTime.UtcNow.AddDays(-1);

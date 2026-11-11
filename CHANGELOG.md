@@ -46,6 +46,8 @@ All notable changes to this project are listed here. The format follows
   $0.02 · high 2 turns $0.40 · default 1 turn $0.05`.
 - **What a turn's cost was made of**: hovering the line under an answer shows its input, output, thinking, cache
   reads, cache writes and subagents, each in $, and the total.
+- **Cache written again, in the savings report**: what turns that wrote the conversation to the cache again (after
+  the first turn of a conversation: an expired cache, a model switch, a changed CLAUDE.md) cost more than reading it.
 
 ## [0.9.0] - 2026-11-11
 
