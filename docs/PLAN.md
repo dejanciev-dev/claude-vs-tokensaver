@@ -623,6 +623,21 @@ Picked on 2026-11-11.
 
 ---
 
+## Phase 23 — Agent costs where you look
+
+Picked on 2026-11-11.
+
+- [ ] **Agent cost in the footer.** The turn's cost includes its subagents: split it, e.g. `$0.020 ($0.012 agents)`,
+      priced as the agents panel prices them
+- [ ] **Cost on the Agent tool row.** The `● Agent(…)` row in the conversation gets the agent's tokens and cost on its
+      ⎿ line when it finishes, so they stay after the panel is cleared
+- [ ] **Report by agent type.** Log each subagent's type (Explore, general-purpose, fork, a custom agent) with its
+      tokens, and list the cost per type in the savings report, costliest first
+- [ ] **Exact first-turn agent output.** On a meter's first turn subagent output is counted low (a message streams
+      before it ends): correct it with the task's final `total_tokens` from `task_notification`
+
+---
+
 ## Working in Visual Studio — daily loop
 
 1. Core logic change → edit in `ClaudeVS.Core` → run tests (`ClaudeVS.Core.Tests` → Set as Startup → Ctrl+F5, or `dotnet run` in its folder).
