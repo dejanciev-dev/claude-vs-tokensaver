@@ -2080,11 +2080,15 @@ namespace ClaudeVS.ToolWindow
             UpdateMeterTooltip();
         }
 
-        /// <summary>The meter's tooltip: what fills the context (once measured), then what the prompt cache saved.</summary>
+        /// <summary>The meter's tooltip: what fills the context (once measured), what the prompt cache saved, then today's and this month's spend.</summary>
         private void UpdateMeterTooltip()
         {
             string tip = _contextUsage != null ? ContextTooltip(_contextUsage) : "Click for what fills the context window";
             if (_meterModel?.CacheSavedLine() is string cache) tip += "\n\n" + cache;
+            DailyCost.StepUsd = Options?.DailyCostWarningUsd ?? 20;
+            MonthlyCost.StepUsd = Options?.MonthlyCostWarningUsd ?? 200;
+            LoadSpend(); // the month's earlier turns, once; the line shows them from the next refresh
+            if (Core.Tokens.SpendWatch.BudgetLine(DailyCost, MonthlyCost, DateTime.UtcNow) is string spend) tip += "\n\n" + spend;
             _meterArea.ToolTip = tip;
         }
 

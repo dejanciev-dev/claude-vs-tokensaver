@@ -2859,6 +2859,19 @@ namespace ClaudeVS.Core.Tests
             True(w.Add(195, december.AddDays(1))?.Contains("passed $200.00") == true, "first step of the new month");
 
             True(new SpendWatch(SpendPeriod.Day, 20, start).Add(25, start)?.StartsWith("Today's") == true, "the daily text");
+
+            // The meter's tooltip line
+            var d = new SpendWatch(SpendPeriod.Day, 20, start);
+            var m = new SpendWatch(SpendPeriod.Month, 200, start);
+            Eq(null, SpendWatch.BudgetLine(d, m, start), "nothing spent yet");
+            m.Load(new[] { new UsageRecord { Timestamp = start.AddDays(-2), CostUsd = 38 } });
+            d.Add(3.2, start.AddMinutes(1)); m.Add(3.2, start.AddMinutes(1));
+            Eq("Spent in Visual Studio: today $3.20 (next warning at $20.00) · this month $41.20 (next warning at $200.00), at API prices.", SpendWatch.BudgetLine(d, m, start.AddMinutes(2)));
+            d.Add(20, start.AddMinutes(3));
+            Eq("today $23.20 (next warning at $40.00)", d.Line(start.AddMinutes(3)), "past a step: the next one");
+            Eq("today $0.00 (next warning at $20.00)", d.Line(start.AddDays(1)), "a new day before its first turn");
+            d.StepUsd = 0;
+            Eq("today $23.20", d.Line(start.AddMinutes(3)), "warning off");
         }
 
         private static void Test_CostWatch()

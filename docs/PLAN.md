@@ -763,8 +763,10 @@ Picked on 2026-11-11.
       cheaper or a dearer model, and what that changed (the same tokens at the other model's prices). Under the
       `Haiku router:` line: `where they differed: 2 to a cheaper model (≈ $0.12 less), 1 to a dearer one (≈ $0.03
       more)`, the main agent's tokens only (subagents pick their own models). `SavingsReport.HaikuDifferedLine`
-- [ ] **Budget left in the meter.** The meter's tooltip shows today's and this month's spend against the warnings,
-      e.g. `Today $3.20 (warning at $20.00)`
+- [x] **Budget left in the meter.** The meter's tooltip shows today's and this month's spend against the warnings,
+      e.g. `Today $3.20 (warning at $20.00)`. As `Spent in Visual Studio: today $3.20 (next warning at $20.00) · this
+      month $41.20 (next warning at $200.00), at API prices.`, from the shared watches (the usage log read once, the
+      line shows it from the next refresh); without the amount when a warning is off. `SpendWatch.BudgetLine`
 
 ---
 
