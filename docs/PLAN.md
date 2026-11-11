@@ -659,8 +659,9 @@ Picked on 2026-11-11.
 - [x] **Agent model on its row.** The agents panel row and the line under the Agent call say which model the agent
       ran on (e.g. `Explore · haiku`), since that decides most of its cost. From its requests' `model`, the last one
       seen (a request before `task_started` counts); the family name, or the id for another model. `AgentTask.ModelShort`
-- [ ] **Kinds in summary and CSV.** The session summary gets a `Subagents by kind:` line, the usage CSV an
-      `agent_types` column (e.g. `Explore:0.75;general-purpose:0.25`)
+- [x] **Kinds in summary and CSV.** The session summary gets a `Subagents by kind:` line, the usage CSV an
+      `agent_types` column (e.g. `Explore:0.75;general-purpose:0.25`). The summary sums each turn's split of the exact
+      subagent cost (`TokenMeter.SessionAgentCostByType`); the column has the shares, 4 decimals, after `agent_tokens`
 - [ ] **Fork cost tip.** A one-time tip when a fork (a subagent that starts with a copy of the whole conversation)
       costs much more than a fresh agent would, with how to avoid forks (check first whether Claude Code has a
       switch for them; say only what is verified)
