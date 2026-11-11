@@ -539,6 +539,27 @@ namespace ClaudeVS.Core.Tests
             Eq(AgentTaskStatus.Completed, fork.Status, "finished");
             Eq("fork of this chat", ToolCallView.AgentKind(fork.SubagentType), "panel tag");
 
+            // Its cost on its row: its requests (parent_tool_use_id = its Agent call), priced as they come, in stream order
+            var meter = new TokenMeter();
+            var priced = new AgentTaskList();
+            foreach (var ev in events)
+                if (ev.Kind == ClaudeEventKind.Task) priced.Apply(ev.Payload);
+                else if (ev.Kind == ClaudeEventKind.AssistantUsage) priced.ObserveRequest(ev, meter.RequestCostUsd);
+            var subReq = events.Where(e => e.Kind == ClaudeEventKind.AssistantUsage && e.IsSubagent).GroupBy(e => e.MessageId).Select(g => g.Last()).ToList();
+            double expected = subReq.Sum(e => meter.RequestCostUsd(e.Model, e.Usage.AsRequest()));
+            True(expected > 0 && Math.Abs(priced.Find("a3930c38f13bbef71").CostUsd - expected) < 1e-12, "the fork's cost: " + priced.Find("a3930c38f13bbef71").CostUsd);
+            True(events.Where(e => e.Kind == ClaudeEventKind.AssistantUsage && !e.IsSubagent).All(e => !priced.ObserveRequest(e, meter.RequestCostUsd)), "the main agent's requests are not an agent's");
+
+            // A request that comes before its task_started still counts; a removed task takes its cost with it
+            var early = new AgentTaskList();
+            var req = new ClaudeEvent { Kind = ClaudeEventKind.AssistantUsage, IsSubagent = true, ParentToolUseId = "toolu_x", MessageId = "msg_1", Model = "claude-sonnet-5-5", Usage = new TokenUsage { Input = 1000, Output = 100 } };
+            True(!early.ObserveRequest(req, (m, u) => 0.5), "no task yet");
+            early.Apply(JObject.Parse("{\"type\":\"system\",\"subtype\":\"task_started\",\"task_id\":\"t1\",\"tool_use_id\":\"toolu_x\",\"task_type\":\"local_agent\"}"));
+            Eq(0.5, early.Find("t1").CostUsd, "picked up at task_started");
+            True(early.ObserveRequest(req, (m, u) => 0.7), "the same message again");
+            Eq(0.7, early.Find("t1").CostUsd, "its last copy counts, once");
+            Eq("$0.700", AgentTask.FormatCost(0.7)); Eq("$1.23", AgentTask.FormatCost(1.234)); Eq("<$0.001", AgentTask.FormatCost(0.0002)); Eq(null, AgentTask.FormatCost(0));
+
             var text = events.Where(e => e.Kind == ClaudeEventKind.AssistantText).Select(e => e.Text).ToList();
             True(!text.Any(t => t.Contains("one two three") && t.StartsWith("Task:")), "the fork's own reply is not shown as Claude's answer");
             True(text.Contains("done"), "Claude's answer is");

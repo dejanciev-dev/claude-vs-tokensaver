@@ -69,6 +69,16 @@ namespace ClaudeVS.ToolWindow
             Announce($"{what.Replace('“', '"').Replace('”', '"')}; Claude continues.");
         }
 
+        /// <summary>A subagent's request: priced (at the meter's prices) onto its row.</summary>
+        private void OnSubagentUsage(ClaudeEvent ev)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var meter = _meterModel;
+            if (meter == null || !_tasks.ObserveRequest(ev, meter.RequestCostUsd)) return;
+            var now = DateTime.UtcNow;
+            foreach (var (line, task) in _agentDetails) line.Text = AgentDetail(task, now); // running rows; a finished one is redrawn by its notification
+        }
+
         /// <summary>Before a new prompt: finished tasks from earlier turns leave the panel.</summary>
         private void ForgetFinishedTasks()
         {
@@ -219,7 +229,7 @@ namespace ClaudeVS.ToolWindow
         }
 
         /// <summary>
-        /// "Read: Foo.cs · 20.1k tok · 3 tools · 0:23" while running, "Done · 0:08" once finished; short, since it sits
+        /// "Read: Foo.cs · 20.1k tok · $0.042 · 3 tools · 0:23" while running, "Done · 0:08" once finished; short, since it sits
         /// on the row's right. The result is in the row's tooltip and in the chat.
         /// </summary>
         private static string AgentDetail(AgentTask t, DateTime nowUtc)
@@ -228,6 +238,8 @@ namespace ClaudeVS.ToolWindow
             if (t.IsRunning) parts.Add(Shorten(t.Activity ?? (t.IsAgent ? "Starting…" : "Running…"), 40));
             else parts.Add(StatusWord(t.Status));
             if (t.TotalTokens > 0) parts.Add(TokenMeter.Format(t.TotalTokens) + " tok");
+            string cost = AgentTask.FormatCost(t.CostUsd);
+            if (cost != null) parts.Add(cost);
             if (t.ToolUses > 0) parts.Add(t.ToolUses + (t.ToolUses == 1 ? " tool" : " tools"));
             var elapsed = t.Elapsed(nowUtc);
             parts.Add(elapsed.TotalHours >= 1 ? elapsed.ToString(@"h\:mm\:ss") : elapsed.ToString(@"m\:ss"));

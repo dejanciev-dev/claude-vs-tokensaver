@@ -62,6 +62,13 @@ namespace ClaudeVS.Core.Tokens
         /// <summary>The model of the main agent's last request: the one the conversation is cached for.</summary>
         public string LastModel { get; private set; }
         private static readonly PriceTable DefaultPrices = new PriceTable();
+
+        /// <summary>One request's cost at <see cref="Prices"/> (Sonnet's when the model is unknown), its long-context tier included.</summary>
+        public double RequestCostUsd(string model, TokenUsage request)
+        {
+            var pt = Prices ?? DefaultPrices;
+            return (pt.For(model) ?? pt.Sonnet).Cost(request);
+        }
         public int LargestToolResultChars { get; private set; }
         public string LargestToolResultTool { get; private set; }
         public int CompactionsSaved { get; private set; }

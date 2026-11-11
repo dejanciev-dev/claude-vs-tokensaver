@@ -1834,6 +1834,7 @@ namespace ClaudeVS.ToolWindow
                         break;
                     case ClaudeEventKind.AssistantUsage:
                         if (!ev.IsSubagent && !string.IsNullOrEmpty(ev.Model)) _turnModel = ev.Model;
+                        else if (ev.IsSubagent) OnSubagentUsage(ev);
                         break;
                     case ClaudeEventKind.ToolUse:
                         FlushText();
