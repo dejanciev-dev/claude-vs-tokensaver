@@ -859,7 +859,8 @@ Picked on 2026-11-11. The version comes last, after Phase 34, so its notes cover
 - [x] **Manual checks for Phases 27–32.** The VS-only parts (limit dialog, amber meter, tooltips, /compact on resume,
       new tips) in [MANUAL-CHECKS.md](MANUAL-CHECKS.md). Section 6, *Spend and tips*, with low amounts to trigger
       the warnings and the values to set back
-- [ ] **Cost options grouped.** The cost warnings and limits in their own *Cost limits* category in Options
+- [x] **Cost options grouped.** The cost warnings and limits in their own *Cost limits* category in Options. Seven
+      options; only the category changed, and the page stores values by property name, so they are kept
 - [ ] **Split the big test file.** `tests/ClaudeVS.Core.Tests/Program.cs` into one file per area, no behavior change
 - [ ] **Version 0.10.0.** Version bump; the Unreleased changelog becomes the 0.10.0 notes
 
