@@ -759,8 +759,10 @@ Picked on 2026-11-11.
       effort. `effort` in the log (null for Claude Code's default; older routed lines fall back to `routeEffort`);
       `By effort:` from low to max, then "default", with the cost per turn; an `effort` column ends the CSV.
       `SavingsReport.ByEffort`
-- [ ] **Router accuracy line.** For prompts the Haiku router decided against the local rules: how often it chose a
-      cheaper or a dearer model, and what that changed (the same tokens at the other model's prices)
+- [x] **Router accuracy line.** For prompts the Haiku router decided against the local rules: how often it chose a
+      cheaper or a dearer model, and what that changed (the same tokens at the other model's prices). Under the
+      `Haiku router:` line: `where they differed: 2 to a cheaper model (≈ $0.12 less), 1 to a dearer one (≈ $0.03
+      more)`, the main agent's tokens only (subagents pick their own models). `SavingsReport.HaikuDifferedLine`
 - [ ] **Budget left in the meter.** The meter's tooltip shows today's and this month's spend against the warnings,
       e.g. `Today $3.20 (warning at $20.00)`
 

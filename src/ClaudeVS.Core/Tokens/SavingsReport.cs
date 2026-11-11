@@ -357,6 +357,27 @@ namespace ClaudeVS.Core.Tokens
         public int HaikuAgreed { get; set; }
         public double RouterCostUsd { get; set; }
         public long RouterAverageMs { get; set; }
+
+        /// <summary>
+        /// Of the Haiku router's prompts that went to another model than the local rules picked: how many went to a
+        /// cheaper one and what that saved, how many to a dearer one and what that added, each the turn's main-agent
+        /// tokens at the model that answered against the local rules' model (an estimate: another model would not
+        /// write the same tokens).
+        /// </summary>
+        public int HaikuCheaper { get; set; }
+        public double HaikuCheaperSavedUsd { get; set; }
+        public int HaikuDearer { get; set; }
+        public double HaikuDearerExtraUsd { get; set; }
+
+        /// <summary>"2 to a cheaper model (≈ $0.12 less), 1 to a dearer one (≈ $0.30 more)"; null when they never differed in price.</summary>
+        public string HaikuDifferedLine()
+        {
+            if (HaikuCheaper == 0 && HaikuDearer == 0) return null;
+            var parts = new List<string>();
+            if (HaikuCheaper > 0) parts.Add($"{HaikuCheaper} to a cheaper model (≈ ${HaikuCheaperSavedUsd:0.00} less)");
+            if (HaikuDearer > 0) parts.Add($"{HaikuDearer} to a dearer one (≈ ${HaikuDearerExtraUsd:0.00} more)");
+            return string.Join(", ", parts);
+        }
         /// <summary>The dearest turns, dearest first (at most <see cref="CostliestCount"/>).</summary>
         public List<UsageRecord> Costliest { get; } = new List<UsageRecord>();
         public const int CostliestCount = 5;
@@ -407,6 +428,13 @@ namespace ClaudeVS.Core.Tokens
                 {
                     rep.HaikuRouted++;
                     if (r.LocalModel != null && string.Equals(r.LocalModel, r.RouteModel, StringComparison.OrdinalIgnoreCase)) rep.HaikuAgreed++;
+                    else if (r.LocalModel != null && prices.For(r.LocalModel) is ModelPrice localPrice && prices.For(r.ModelUsed ?? r.RouteModel) is ModelPrice usedPrice)
+                    {
+                        // The main agent's tokens only: subagents run on their own models whichever the router picked
+                        double diff = localPrice.Cost(r) - usedPrice.Cost(r);
+                        if (diff > 0) { rep.HaikuCheaper++; rep.HaikuCheaperSavedUsd += diff; }
+                        else if (diff < 0) { rep.HaikuDearer++; rep.HaikuDearerExtraUsd -= diff; }
+                    }
                 }
                 // The logged cost includes the turn's subagents; their tokens are logged apart (r.Agents), so both sides
                 // of "same tokens at Opus prices" take them: main at Opus (or its own cost on Opus), plus each agent at Opus
@@ -582,6 +610,8 @@ namespace ClaudeVS.Core.Tokens
             if (HaikuRouted > 0 || RouterCostUsd > 0)
             {
                 sb.AppendLine($"Haiku router:               {HaikuRouted} prompts, same model as the local rules {(HaikuRouted > 0 ? 100.0 * HaikuAgreed / HaikuRouted : 0):0}% of the time");
+                if (HaikuDifferedLine() is string differed)
+                    sb.AppendLine($"                            where they differed: {differed}, at the same tokens");
                 sb.AppendLine($"                            cost ${RouterCostUsd:0.000} (included above), {RouterAverageMs / 1000.0:0.0} s per prompt on average");
             }
             sb.AppendLine();
