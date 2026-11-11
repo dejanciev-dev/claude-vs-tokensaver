@@ -774,8 +774,11 @@ Picked on 2026-11-11.
 
 Picked on 2026-11-11.
 
-- [ ] **Daily hard limit.** Optional (off by default): once today's spend passes an amount, sending a prompt asks
-      first
+- [x] **Daily hard limit.** Optional (off by default): once today's spend passes an amount, sending a prompt asks
+      first. *Ask before sending past daily cost (USD)*: an OK / Cancel box (Cancel keeps the prompt in the box);
+      after OK, not again today until the next multiple. Typed prompts only: /compact and other commands always go.
+      Right after Visual Studio starts, before the usage log has loaded, today's spend is read from it directly.
+      `SpendLimit`
 - [ ] **Month vs last month.** The report's month line adds last month's cost by the same day and the change
 - [ ] **Amber meter past a warning.** The meter's cost turns amber once today's spend passes the daily warning
 - [ ] **Tool results in the CSV.** One `tools` column (`Read:1200;Shell:400`), like `agent_types`

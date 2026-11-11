@@ -27,6 +27,9 @@ All notable changes to this project are listed here. The format follows
   models' prices).
 - **Spend so far in the meter's tooltip**: `Spent in Visual Studio: today $3.20 (next warning at $20.00) · this month
   $41.20 (next warning at $200.00), at API prices.`
+- **Daily hard limit** (Options → *Ask before sending past daily cost (USD)*, off by default): once today's spend
+  has passed the amount, sending a prompt asks first. After a yes, it doesn't ask again that day until the next
+  multiple. Commands such as /compact always go.
 
 ## [0.9.0] - 2026-11-11
 
