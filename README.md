@@ -313,6 +313,8 @@ Editor commands go to the chat window you used last.
 - **Usage log**: `%LocalAppData%\claude-vs-tokensaver\usage.jsonl`, one line per turn with the model, tokens,
   cost and route decision. It never leaves your machine, rotates at 5 MB and can be turned off.
 - **Prompt preview** (off by default): the first 200 characters of each prompt, stored in that same local log.
+- **Token estimate**: `%LocalAppData%\claude-vs-tokensaver\token-estimate.json`, two numbers (characters and tokens
+  seen) that keep the learned characters-per-token value across restarts. No prompt text. Local only.
 - **Conversation history** is the CLI's own (`~/.claude/projects`). The sessions list only reads it.
 - **Session names and archive flags**: `%LocalAppData%\claude-vs-tokensaver\sessions.json`. Local only.
 - **Bookmarks**: `%LocalAppData%\claude-vs-tokensaver\bookmarks.json`, the prompt and answer text of each starred answer. Local only.

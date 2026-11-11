@@ -1942,6 +1942,36 @@ namespace ClaudeVS.Core.Tests
             True(SessionSummary.Format(m).Contains("\nCache hits: 75% (saved $0.52)"), "session summary: " + SessionSummary.Format(m));
         }
 
+        private static void Test_TokenEstimate_KeptAcrossRestarts()
+        {
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-est-" + Guid.NewGuid().ToString("N"));
+            string file = Path.Combine(dir, "token-estimate.json");
+            try
+            {
+                TokenEstimate.Reset();
+                TokenEstimate.UseStore(file);             // nothing saved yet: the start value
+                Eq(3.0, TokenEstimate.CharsPerToken, "no file: 3.0");
+                for (int i = 0; i < 20; i++) TokenEstimate.Learn(8000, 2900);
+                double learned = TokenEstimate.CharsPerToken;
+                True(File.Exists(file), "saved after learning");
+                True(!File.ReadAllText(file).Contains("8000 chars") && File.ReadAllText(file).Contains("\"charsPerToken\""), File.ReadAllText(file));
+
+                TokenEstimate.Reset();                     // a restart
+                Eq(3.0, TokenEstimate.CharsPerToken, "fresh process");
+                TokenEstimate.UseStore(file);
+                True(Math.Abs(TokenEstimate.CharsPerToken - learned) < 0.001, $"loaded {TokenEstimate.CharsPerToken} = {learned}");
+
+                foreach (var bad in new[] { "not json", "{\"chars\":100,\"tokens\":10}", "{\"chars\":-5,\"tokens\":2}", "{}" })
+                {
+                    File.WriteAllText(file, bad);
+                    TokenEstimate.Reset();
+                    TokenEstimate.UseStore(file);
+                    Eq(3.0, TokenEstimate.CharsPerToken, "ignored: " + bad);
+                }
+            }
+            finally { TokenEstimate.Reset(); try { Directory.Delete(dir, true); } catch (IOException) { } }
+        }
+
         private static void Test_TokenEstimate_LearnsFromTurns()
         {
             try

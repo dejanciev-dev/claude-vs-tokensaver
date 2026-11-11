@@ -25,6 +25,8 @@ namespace ClaudeVS
         protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
         {
             Instance = this;
+            // What earlier runs learned about characters per token (a small file next to the usage log)
+            Core.Tokens.TokenEstimate.UseStore(Core.Tokens.TokenEstimate.DefaultStorePath);
             await JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
             await Diagnostics.ClaudeOutputPane.InitializeAsync(this, cancellationToken);
             await ClaudeCommands.InitializeAsync(this);

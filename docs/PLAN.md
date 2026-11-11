@@ -550,8 +550,12 @@ Picked on 2026-11-10.
       haiku, but sonnet answered" warning no longer comes up for Auto. A Haiku picked by hand stays as picked, but
       the line under the box says "Plan mode: Sonnet answers, not Haiku" and prices the prompt at Sonnet
       (`ModelRouter.AnsweredBy`); switching modes refreshes that line. Not run live: the CLI side is unchanged
-- [ ] **Keep the learned token ratio.** The characters-per-token value learned in Phase 19 starts again at 3.0 on
-      every Visual Studio restart; save it next to the usage log and load it at start
+- [x] **Keep the learned token ratio.** The characters-per-token value learned in Phase 19 starts again at 3.0 on
+      every Visual Studio restart; save it next to the usage log and load it at start. `TokenEstimate.UseStore`
+      (called when the package starts) loads `%LocalAppData%\claude-vs-tokensaver\token-estimate.json` and saves the
+      evidence there after each learned sample (characters and tokens seen, written to a temp file and swapped in;
+      no prompt text). A missing, unreadable or implausible file (outside 1.5-6 characters per token) leaves 3.0;
+      saved evidence over the cap is scaled down so new turns still move it. Listed under Privacy in the README
 
 ---
 
