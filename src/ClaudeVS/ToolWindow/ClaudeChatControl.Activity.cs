@@ -302,7 +302,8 @@ namespace ClaudeVS.ToolWindow
 
         /// <summary>
         /// The meter line with colored values: context fill green / amber / red at the /compact thresholds, cache
-        /// hits green when most input comes from the cache, cost in Claude orange, the model by family.
+        /// hits green when most input comes from the cache, cost in Claude orange (amber with ⚠ past the daily or monthly
+        /// cost warning), the model by family.
         /// </summary>
         private void RenderMeter(TokenMeter m, long window)
         {
@@ -333,7 +334,12 @@ namespace ClaudeVS.ToolWindow
             Label($" ({TokenMeter.Format(m.ContextTokens)}/{TokenMeter.Format(window)})  ·  Session ");
             Value($"{TokenMeter.Format(m.SessionTotal.Total)} tok", null);
             Label(", ");
-            Value($"${m.SessionCostUsd:0.00}", a.Brand);
+            // Amber once today's (or this month's) spend in all windows has passed its warning; the tooltip says how much
+            DailyCost.StepUsd = Options?.DailyCostWarningUsd ?? 20;
+            MonthlyCost.StepUsd = Options?.MonthlyCostWarningUsd ?? 200;
+            var now = DateTime.UtcNow;
+            bool pastWarning = DailyCost.IsPastWarning(now) || MonthlyCost.IsPastWarning(now);
+            Value((pastWarning ? "⚠ " : "") + $"${m.SessionCostUsd:0.00}", pastWarning ? a.Running : a.Brand);
             Label("  ·  Cache ");
             Value($"{cache:0}%", cacheBrush);
             Label("  ·  Model ");

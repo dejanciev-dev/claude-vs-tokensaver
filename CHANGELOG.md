@@ -32,6 +32,8 @@ All notable changes to this project are listed here. The format follows
   multiple. Commands such as /compact always go.
 - **This month against last month** in the savings report: the month line adds last month's cost up to the same
   day and the change, e.g. `(Oct 1–11: $9.00, +37%)`.
+- **Amber cost in the meter**: the meter's cost turns amber, with ⚠, once today's or this month's spend has passed
+  its warning amount.
 
 ## [0.9.0] - 2026-11-11
 

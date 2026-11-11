@@ -48,6 +48,9 @@ namespace ClaudeVS.Core.Tokens
         /// <summary>Spent in the period that <paramref name="nowUtc"/> falls in: 0 when a new one has started since the last turn.</summary>
         public double SpentAt(DateTime nowUtc) { lock (_gate) return StartOf(nowUtc) == _start ? _spent : 0; }
 
+        /// <summary>The period's spend at <paramref name="nowUtc"/> has passed the warning amount (false when the warning is off).</summary>
+        public bool IsPastWarning(DateTime nowUtc) => StepUsd > 0 && SpentAt(nowUtc) >= StepUsd;
+
         /// <summary>
         /// "today $3.20 (next warning at $20.00)", "this month $41.00" without a warning amount; the next warning is the
         /// next multiple of <see cref="StepUsd"/> above what was spent.
