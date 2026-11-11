@@ -2470,6 +2470,30 @@ namespace ClaudeVS.Core.Tests
             Eq("shop", SolutionBreakdown.NameOf(@"C:\src\shop\"), "folder name");
         }
 
+        private static void Test_SavingsReport_Week()
+        {
+            DateTime At(int day) => new DateTime(2026, 11, day, 12, 0, 0, DateTimeKind.Local).ToUniversalTime();
+            // Wednesday Nov 11: this week from Mon Nov 9; last week Mon Nov 2 to Wed Nov 4
+            var recs = new[]
+            {
+                new UsageRecord { Timestamp = At(2), CostUsd = 4 },
+                new UsageRecord { Timestamp = At(4), CostUsd = 6.5, RouterCostUsd = 0.5 },
+                new UsageRecord { Timestamp = At(5), CostUsd = 100 },  // last Thursday: after the same weekday
+                new UsageRecord { Timestamp = At(8), CostUsd = 50 },   // Sunday: last week
+                new UsageRecord { Timestamp = At(9), CostUsd = 10 },
+                new UsageRecord { Timestamp = At(11), CostUsd = 4.2 },
+            };
+            var rep = SavingsReport.Build(recs, new PriceTable(), nowUtc: At(11));
+            Eq(new DateTime(2026, 11, 9), rep.WeekStart, "Monday");
+            Eq("This week:                  $14.20 since Monday (last week by the same day: $11.00, +29%)", rep.WeekLine());
+            True(rep.ToText().Contains(rep.WeekLine()), "in the report");
+            Eq(new DateTime(2026, 11, 9), SavingsReport.Build(recs, new PriceTable(), nowUtc: At(9)).WeekStart, "on Monday itself");
+            Eq(new DateTime(2026, 11, 9), SavingsReport.Build(recs, new PriceTable(), nowUtc: At(15)).WeekStart, "on Sunday");
+            Eq("This week:                  $10.00 since Monday (last week by the same day: $4.00, +150%)", SavingsReport.Build(recs, new PriceTable(), nowUtc: At(9)).WeekLine());
+            Eq("This week:                  $10.00 since Monday", SavingsReport.Build(recs.Skip(4).Take(1), new PriceTable(), nowUtc: At(9)).WeekLine(), "nothing last week");
+            Eq(null, SavingsReport.Build(recs.Take(2), new PriceTable(), nowUtc: At(11)).WeekLine(), "nothing this week");
+        }
+
         private static void Test_SavingsReport_LastMonth()
         {
             DateTime At(int month, int day) => new DateTime(2026, month, day, 12, 0, 0, DateTimeKind.Local).ToUniversalTime();

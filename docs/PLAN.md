@@ -838,7 +838,9 @@ Picked on 2026-11-11.
 - [x] **Last 7 days in the meter's tooltip.** Each day's spend, from the usage log. Under the spend line, oldest
       first, "–" for a day without turns; the log read once with the spend watches, then each turn added.
       `SpendHistory.LastDaysLine`
-- [ ] **Week vs last week.** The savings report adds this week's spend against last week's by the same day
+- [x] **Week vs last week.** The savings report adds this week's spend against last week's by the same day. Weeks
+      start on Monday; under the month line; the comparison left out when nothing was logged then.
+      `SavingsReport.WeekLine`
 - [ ] **Compact first on resume.** The note on resuming a conversation whose cache has expired gets a /compact button
 - [ ] **Per-solution monthly warning.** Optional: a warning when this solution's spend this month passes an amount
 
