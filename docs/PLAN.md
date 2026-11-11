@@ -633,8 +633,11 @@ Picked on 2026-11-11.
 - [x] **Cost on the Agent tool row.** The `● Agent(…)` row in the conversation gets the agent's tokens and cost on its
       ⎿ line when it finishes, so they stay after the panel is cleared. On `task_notification`, under the row its
       `tool_use_id` drew: `Done · 24.6k tok · $0.042 · 3 tools`. `ToolCallView.AgentUsageLine`
-- [ ] **Report by agent type.** Log each subagent's type (Explore, general-purpose, fork, a custom agent) with its
-      tokens, and list the cost per type in the savings report, costliest first
+- [x] **Report by agent type.** Log each subagent's type (Explore, general-purpose, fork, a custom agent) with its
+      tokens, and list the cost per type in the savings report, costliest first. Logged as each kind's share of the
+      turn's subagent cost (`agentTypes: [{type, share}]`), from its requests priced as they stream; the shares split
+      the exact cost, since streamed output runs low. The report: `  by kind of agent: Explore $0.40 · …`, older turns
+      under "not known". `AgentTypeSplit`, `AgentRequestCosts` (shared with the agents panel)
 - [x] **Exact first-turn agent output.** On a meter's first turn subagent output is counted low (a message streams
       before it ends): correct it with the task's final `total_tokens` from `task_notification`. Not done that way:
       in the fork capture `total_tokens` is 24,649 while the API counted 24,514, so it would add twice the missing

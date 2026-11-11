@@ -71,4 +71,65 @@ namespace ClaudeVS.Core.Tokens
         private static bool Lower(TokenUsage now, TokenUsage before) =>
             now.Input < before.Input || now.Output < before.Output || now.CacheRead < before.CacheRead || now.CacheCreation < before.CacheCreation;
     }
+
+    /// <summary>
+    /// Which kinds of subagent (Explore, general-purpose, Fork, a custom agent) a turn's subagent cost went to. Each
+    /// Agent call's type comes from its input (or its <c>task_started</c>); its requests (<c>parent_tool_use_id</c>)
+    /// are priced one by one as they stream. Those prices only give the shares: streamed output can be low, so the
+    /// shares split the turn's exact subagent cost (<see cref="TokenMeter.LastTurnSubagentCostUsd"/>).
+    /// </summary>
+    public sealed class AgentTypeSplit
+    {
+        private readonly Dictionary<string, string> _typeByCall = new Dictionary<string, string>(StringComparer.Ordinal);
+        private readonly AgentRequestCosts _turn = new AgentRequestCosts();
+
+        public void Reset() { _typeByCall.Clear(); _turn.Clear(); }
+
+        public void Observe(ClaudeEvent ev, Func<string, TokenUsage, double> price)
+        {
+            switch (ev.Kind)
+            {
+                case ClaudeEventKind.ToolUse when (ev.ToolName == "Agent" || ev.ToolName == "Task") && ev.ToolUseId != null:
+                    _typeByCall[ev.ToolUseId] = ToolCallView.AgentLabel((string)ev.ToolInput?["subagent_type"]);
+                    break;
+                case ClaudeEventKind.Task when ev.Payload != null && ev.Payload.Value<string>("subtype") == "task_started":
+                {
+                    string id = ev.Payload.Value<string>("tool_use_id"), type = ev.Payload.Value<string>("subagent_type");
+                    if (id != null && type != null) _typeByCall[id] = ToolCallView.AgentLabel(type); // the CLI's own word: it wins over the call's input
+                    break;
+                }
+                case ClaudeEventKind.AssistantUsage when ev.IsSubagent:
+                    _turn.Observe(ev, price);
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// The turn ended: <paramref name="agentsCostUsd"/> (its exact subagent cost) split by type, costliest first;
+        /// null when no subagent request was seen. An Agent call of unknown type counts as "Agent".
+        /// </summary>
+        public List<AgentTypeCost> TurnCompleted(double agentsCostUsd)
+        {
+            var byType = _turn.Calls
+                .GroupBy(c => _typeByCall.TryGetValue(c, out var t) ? t : "Agent", StringComparer.Ordinal)
+                .Select(g => (Type: g.Key, Priced: g.Sum(_turn.Of)))
+                .ToList();
+            _turn.Clear();
+            double priced = byType.Sum(t => t.Priced);
+            if (priced <= 0) return null;
+            double target = agentsCostUsd > 0 ? agentsCostUsd : priced;
+            return byType.Where(t => t.Priced > 0)
+                .Select(t => new AgentTypeCost { Type = t.Type, Share = t.Priced / priced, CostUsd = target * t.Priced / priced })
+                .OrderByDescending(t => t.CostUsd).ToList();
+        }
+    }
+
+    /// <summary>One kind of subagent's part of a turn's subagent cost.</summary>
+    public sealed class AgentTypeCost
+    {
+        [Newtonsoft.Json.JsonProperty("type")] public string Type { get; set; }
+        /// <summary>Its part of the turn's subagent cost, 0–1: the report applies it to the cost at its own prices.</summary>
+        [Newtonsoft.Json.JsonProperty("share")] public double Share { get; set; }
+        [Newtonsoft.Json.JsonIgnore] public double CostUsd { get; set; }
+    }
 }

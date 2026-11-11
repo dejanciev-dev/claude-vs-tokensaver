@@ -7,6 +7,9 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Subagent cost by kind of agent in the savings report**: `by kind of agent: Explore $0.40 · general-purpose
+  $0.25 · Fork $0.03`, costliest first. The usage log keeps each turn's split (`agentTypes`); turns from before it
+  show as "not known".
 - **What a subagent used, under its Agent call in the conversation**: `Done · 24.6k tok · $0.042 · 3 tools` once
   it finishes (background agents too), so it stays after the agents panel is cleared.
 - **The subagents' share of a turn's cost** in the line under each answer: `$0.020 ($0.012 agents)`, from $0.001.

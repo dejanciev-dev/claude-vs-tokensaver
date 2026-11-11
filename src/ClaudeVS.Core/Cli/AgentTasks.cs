@@ -61,6 +61,37 @@ namespace ClaudeVS.Core.Cli
     }
 
     /// <summary>
+    /// Subagent requests priced one by one, by the Agent call they run under (<c>parent_tool_use_id</c>) and message
+    /// id: the last copy of a message's usage is kept (a message streams more than once).
+    /// </summary>
+    public sealed class AgentRequestCosts
+    {
+        private readonly Dictionary<string, Dictionary<string, double>> _byCall = new Dictionary<string, Dictionary<string, double>>(StringComparer.Ordinal);
+
+        /// <summary>The Agent calls priced so far.</summary>
+        public IEnumerable<string> Calls => _byCall.Keys;
+
+        /// <summary>
+        /// A subagent's AssistantUsage, priced by <paramref name="price"/> (model, one request's usage → USD). False
+        /// for anything else.
+        /// </summary>
+        public bool Observe(ClaudeEvent ev, Func<string, TokenUsage, double> price)
+        {
+            if (ev == null || !ev.IsSubagent || ev.Usage.IsEmpty || string.IsNullOrEmpty(ev.ParentToolUseId) || price == null) return false;
+            if (!_byCall.TryGetValue(ev.ParentToolUseId, out var byMessage))
+                _byCall[ev.ParentToolUseId] = byMessage = new Dictionary<string, double>(StringComparer.Ordinal);
+            byMessage[ev.MessageId ?? "m" + byMessage.Count] = price(ev.Model, ev.Usage.AsRequest());
+            return true;
+        }
+
+        /// <summary>What one Agent call's requests cost so far; 0 when none were seen.</summary>
+        public double Of(string toolUseId) => toolUseId != null && _byCall.TryGetValue(toolUseId, out var m) ? m.Values.Sum() : 0;
+
+        public void Remove(string toolUseId) { if (toolUseId != null) _byCall.Remove(toolUseId); }
+        public void Clear() => _byCall.Clear();
+    }
+
+    /// <summary>
     /// The session's subagents and background commands, built from the CLI's system messages (verified with Claude
     /// Code 2.1.318): <c>task_started</c>, <c>task_progress</c> (activity and usage), <c>task_updated</c> (a patch:
     /// <c>is_backgrounded</c>, <c>status</c>, <c>end_time</c>), <c>task_notification</c> (final status and summary)
@@ -69,9 +100,8 @@ namespace ClaudeVS.Core.Cli
     public sealed class AgentTaskList
     {
         private readonly List<AgentTask> _tasks = new List<AgentTask>();
-        // Priced subagent requests by the Agent call they run under (parent_tool_use_id), then by message id: the last
-        // copy of a message's usage is kept. A message can come before its task_started.
-        private readonly Dictionary<string, Dictionary<string, double>> _costs = new Dictionary<string, Dictionary<string, double>>(StringComparer.Ordinal);
+        // A message can come before its task_started
+        private readonly AgentRequestCosts _costs = new AgentRequestCosts();
 
         public IReadOnlyList<AgentTask> Tasks => _tasks;
         public int RunningCount => _tasks.Count(t => t.IsRunning);
@@ -85,13 +115,10 @@ namespace ClaudeVS.Core.Cli
         /// </summary>
         public bool ObserveRequest(ClaudeEvent ev, Func<string, TokenUsage, double> price)
         {
-            if (ev == null || !ev.IsSubagent || ev.Usage.IsEmpty || string.IsNullOrEmpty(ev.ParentToolUseId) || price == null) return false;
-            if (!_costs.TryGetValue(ev.ParentToolUseId, out var byMessage))
-                _costs[ev.ParentToolUseId] = byMessage = new Dictionary<string, double>(StringComparer.Ordinal);
-            byMessage[ev.MessageId ?? "m" + byMessage.Count] = price(ev.Model, ev.Usage.AsRequest());
+            if (!_costs.Observe(ev, price)) return false;
             var t = _tasks.FirstOrDefault(x => x.ToolUseId == ev.ParentToolUseId);
             if (t == null) return false;
-            t.CostUsd = byMessage.Values.Sum();
+            t.CostUsd = _costs.Of(t.ToolUseId);
             return true;
         }
 
@@ -122,7 +149,7 @@ namespace ClaudeVS.Core.Cli
                 _tasks.Add(t);
             }
             Fill(t, json);
-            if (t.ToolUseId != null && _costs.TryGetValue(t.ToolUseId, out var priced)) t.CostUsd = priced.Values.Sum();
+            if (t.ToolUseId != null && _costs.Of(t.ToolUseId) is double priced && priced > 0) t.CostUsd = priced;
             switch (subtype)
             {
                 case "task_started":
