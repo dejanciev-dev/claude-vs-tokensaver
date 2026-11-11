@@ -361,7 +361,8 @@ msbuild ClaudeVS.sln /restore /p:Configuration=Release /warnaserror     # → sr
 - **The VS UI has not been run yet.** Everything builds and the Core is verified against the real CLI, but the
   first F5 session may still turn up UI issues. Please [open an issue](https://github.com/dejanciev-dev/claude-vs-tokensaver/issues).
 - **Plan mode ignores Haiku.** With Claude Code 2.1.316 to 2.1.322, plan mode answered with Sonnet even when Haiku
-  was requested. The chat warns you when this happens.
+  was requested. So in plan mode Auto picks Sonnet instead of Haiku, and a Haiku you pick by hand shows "Plan mode:
+  Sonnet answers" under the input box, priced at Sonnet.
 - **Resume** redraws at most the last 300 items (prompts, answers, tool calls) of a conversation. Redrawn tool
   rows have no Diff button.
 - **Renaming a running session** shows the new name here at once, but the CLI only records it (`--name`) the next

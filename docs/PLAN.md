@@ -540,9 +540,16 @@ Picked on 2026-11-10.
       `ModelPrice.LongContextFrom` / `LongContextMultiplier` (Haiku only) price that share. Sessions list, cache-break
       note and next-prompt price use each request's own size. The usage log and CSV record `largeContextTokens` /
       `large_context_tokens`. A tip, once per conversation, at 90k tokens of Haiku context
-- [ ] **Plan mode: say Sonnet before sending.** In plan mode Claude Code answers with Sonnet even when Auto picks
+- [x] **Plan mode: say Sonnet before sending.** In plan mode Claude Code answers with Sonnet even when Auto picks
       Haiku, but the route hint and the "to send" price under the box say Haiku. Make them say Sonnet there, and
-      keep the savings report from counting such turns as routed to Haiku
+      keep the savings report from counting such turns as routed to Haiku. Done in the router, so everything after
+      it agrees: `RouteRequest.PlanMode`, and `ApplyCacheStickiness` (the step both the local rules and the Haiku
+      router's answers go through) turns a Haiku pick into Sonnet with the reason "Sonnet: plan mode answers with
+      Sonnet". The hint, the price, the model switch sent to the CLI and the usage log's `routeModel` then all say
+      Sonnet, so the savings report and router replay count it as Sonnet, and the after-the-fact "asked for
+      haiku, but sonnet answered" warning no longer comes up for Auto. A Haiku picked by hand stays as picked, but
+      the line under the box says "Plan mode: Sonnet answers, not Haiku" and prices the prompt at Sonnet
+      (`ModelRouter.AnsweredBy`); switching modes refreshes that line. Not run live: the CLI side is unchanged
 - [ ] **Keep the learned token ratio.** The characters-per-token value learned in Phase 19 starts again at 3.0 on
       every Visual Studio restart; save it next to the usage log and load it at start
 

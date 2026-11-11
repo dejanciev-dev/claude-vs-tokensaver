@@ -45,6 +45,8 @@ namespace ClaudeVS.Core.Tokens
         public EffortChoice CurrentEffort { get; set; } = EffortChoice.Auto;
         /// <summary>Current context fill — used to avoid cache-busting downgrades in a big conversation.</summary>
         public long ContextTokens { get; set; }
+        /// <summary>The chat is in plan mode, where Claude Code answers with Sonnet even when Haiku is asked for.</summary>
+        public bool PlanMode { get; set; }
     }
 
     public sealed class RouteDecision
@@ -146,6 +148,13 @@ namespace ClaudeVS.Core.Tokens
         public RouteDecision ApplyCacheStickiness(RouteDecision d, RouteRequest r, bool clearlyHard)
         {
             if (d == null || r == null) return d;
+            if (r.PlanMode && d.Model == ModelChoice.Haiku)
+            {
+                // Claude Code answers with Sonnet in plan mode even when Haiku is asked for (2.1.316-2.1.322): say so up
+                // front, so the hint, the price, the model switch and the usage log all name what answers
+                d.Model = ModelChoice.Sonnet;
+                d.Reason = (d.Reason == "default" ? "" : d.Reason + ", ") + PlanModeNote;
+            }
             if (r.CurrentModel == ModelChoice.Auto || r.ContextTokens < StickyContextTokens || d.Model == r.CurrentModel) return d;
             bool upgrade = Rank(d.Model) > Rank(r.CurrentModel);
             if (upgrade && clearlyHard) return d;
@@ -153,6 +162,16 @@ namespace ClaudeVS.Core.Tokens
             d.Model = r.CurrentModel;
             return d;
         }
+
+        /// <summary>The reason added when plan mode turns a Haiku pick into Sonnet.</summary>
+        public const string PlanModeNote = "Sonnet: plan mode answers with Sonnet";
+
+        /// <summary>
+        /// The model that answers for a manual pick: in plan mode Haiku is answered by Sonnet. Null when it is the pick
+        /// itself (or Auto).
+        /// </summary>
+        public static ModelChoice? AnsweredBy(ModelChoice picked, bool planMode) =>
+            planMode && picked == ModelChoice.Haiku ? ModelChoice.Sonnet : (ModelChoice?)null;
 
         private static int Rank(ModelChoice m) => m == ModelChoice.Haiku ? 1 : m == ModelChoice.Sonnet ? 2 : m == ModelChoice.Opus ? 3 : m == ModelChoice.Fable ? 4 : 0;
     }
