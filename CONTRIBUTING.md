@@ -60,7 +60,8 @@ Experimental Instance* from the Start menu.
   session, parser, router, meter, context building, Markdown and the usage log. **Add tests here.**
 - `src/ClaudeVS` (net472 VSIX): thin VS-specific code, such as the package, commands, tool window and options.
 - `tests/ClaudeVS.Core.Tests`: a dependency-free runner. Add a `private static void Test_Something()`
-  method to `Program.cs` and it is picked up automatically.
+  method to the `Tests.<Area>.cs` file it belongs to (Spend, Meter, Router, Notices, Cli, Chat, Context; each a
+  part of the `Program` class) and it is picked up automatically. `Program.cs` holds only the runner and `Eq` / `True`.
 
 ## Pull requests
 
