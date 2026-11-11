@@ -2609,6 +2609,20 @@ namespace ClaudeVS.Core.Tests
             True(SessionNotices.HaikuLongContext("claude-haiku-5-5", 92_000)?.Contains("5x its prices") == true, "near 100k: tip");
             Eq(null, SessionNotices.HaikuLongContext("claude-sonnet-5-5", 150_000), "not Haiku: no tip");
 
+            // Reading a big conversation from the cache: most of a short turn's cost
+            var prices = new PriceTable();
+            var shortTurn = new TokenUsage { Input = 20, Output = 300, CacheRead = 150_000, CacheCreation = 400 };
+            // Opus: reads $0.030, the turn 150k×0.2 + 20×4 + 300×20 + 400×5 per Mtok = $0.0381
+            Eq("Reading this conversation (~150.4k tokens) back from the cache cost $0.03 of that turn's $0.04: every request sends the whole conversation again. "
+                + "For a new topic, a New chat (or /clear) starts small; /compact keeps a summary of this one.",
+                SessionNotices.PriceyContext("claude-opus-5-5", shortTurn, 150_400, prices));
+            Eq(null, SessionNotices.PriceyContext("claude-sonnet-5-5", shortTurn, 150_400, prices), "Sonnet: $0.015 of reads, too little");
+            Eq(null, SessionNotices.PriceyContext("claude-opus-5-5", shortTurn, 40_000, prices), "a small context after /compact");
+            var longAnswer = new TokenUsage { Input = 20, Output = 3_000, CacheRead = 150_000, CacheCreation = 4_000 };
+            Eq(null, SessionNotices.PriceyContext("claude-opus-5-5", longAnswer, 154_000, prices), "the answer itself cost most: $0.03 of $0.11");
+            True(SessionNotices.PriceyContext("claude-fable-5-2", longAnswer, 154_000, prices) == null, "Fable: reads $0.03 of $0.21");
+            True(SessionNotices.PriceyContext(null, new TokenUsage { CacheRead = 400_000, Output = 100 }, 100_000, prices)?.Contains("$0.04 of that turn's $0.04") == true, "unknown model: Sonnet prices; several requests in a turn");
+
             // Subagents costing more than the main agent: the turn's cost includes them
             True(SessionNotices.SubagentsDominate(0.30, 0.50)?.Contains("model: haiku") == true, "agents $0.30 of $0.50: tip");
             Eq(null, SessionNotices.SubagentsDominate(0.20, 0.50), "agents $0.20 of $0.50: the main agent cost more");

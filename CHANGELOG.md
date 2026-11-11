@@ -15,6 +15,9 @@ All notable changes to this project are listed here. The format follows
   gets a `session` column. Turns logged before this release have no id and are left out of the list.
 - **Tool results in the savings report**: each turn logs the tokens its tool results added, per tool, and the report
   says which tools filled the context across conversations (`Tool results: Read 1.2M · Shell 410k · Search 120k …`).
+- **Token tip when the conversation costs more than the question**: once per conversation, when reading a big
+  conversation (50k tokens or more) back from the prompt cache cost most of a turn, with what it cost and how to
+  start small (a New chat for a new topic, or /compact).
 
 ## [0.9.0] - 2026-11-11
 

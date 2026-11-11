@@ -132,6 +132,31 @@ namespace ClaudeVS.Core.Cli
             return "This Haiku conversation is near 100k tokens of context. Above that, Haiku bills every request at 5x its prices ($0.50 / $2.50 per million tokens, cache reads too), so /compact or a New chat keeps it cheap.";
         }
 
+        /// <summary>The pricey-context tip needs a context this large, cache reads this dear and this share of the turn.</summary>
+        public const long PriceyContextFromTokens = 50_000;
+        public const double PriceyContextFromUsd = 0.02;
+        public const double PriceyContextShare = 0.6;
+
+        /// <summary>
+        /// A token tip when reading the conversation back from the prompt cache cost most of a turn: every request sends
+        /// the whole conversation again, so a big context makes even a small question cost. <paramref name="turn"/> is the
+        /// main agent's usage of the turn (all its requests), <paramref name="contextTokens"/> the conversation's size
+        /// after it. Null below <see cref="PriceyContextFromTokens"/>, <see cref="PriceyContextFromUsd"/> or
+        /// <see cref="PriceyContextShare"/> of the main agent's cost.
+        /// </summary>
+        public static string PriceyContext(string model, TokenUsage turn, long contextTokens, Tokens.PriceTable prices)
+        {
+            prices = prices ?? new Tokens.PriceTable();
+            var p = prices.For(model) ?? prices.Sonnet;
+            double readUsd = turn.CacheRead * p.CacheRead / 1_000_000.0
+                * Tokens.ModelPrice.SpeedMultiplier(turn.FastTokens, turn.Total) * p.ContextMultiplier(turn.LargeContextTokens, turn.Total);
+            double turnUsd = p.Cost(turn);
+            if (contextTokens < PriceyContextFromTokens || readUsd < PriceyContextFromUsd || turnUsd <= 0 || readUsd < PriceyContextShare * turnUsd) return null;
+            var c = System.Globalization.CultureInfo.InvariantCulture;
+            return $"Reading this conversation (~{Tokens.TokenMeter.Format(contextTokens)} tokens) back from the cache cost ${readUsd.ToString("0.00", c)} of that turn's ${turnUsd.ToString("0.00", c)}: "
+                + "every request sends the whole conversation again. For a new topic, a New chat (or /clear) starts small; /compact keeps a summary of this one.";
+        }
+
         /// <summary>Subagents that cost less than this in a turn get no tip, however small the main agent's share.</summary>
         public const double SubagentTipFromUsd = 0.05;
 

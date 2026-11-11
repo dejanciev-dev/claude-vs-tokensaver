@@ -740,8 +740,10 @@ Picked on 2026-11-11.
       report says which tools filled the context across conversations (Read, Shell, Search …). Logged as `tools`
       (the meter's groups, tokens estimated from characters; `TokenMeter.LastTurnResultTokensByTool`); the report's
       `Tool results:` line names the five largest, then "other". Not in the CSV (one column per tool would be messy)
-- [ ] **Pricey context tip.** A one-time tip when re-reading a large conversation from the cache costs most of a
-      turn (a big context, a small question): a new chat for a new topic, or /compact
+- [x] **Pricey context tip.** A one-time tip when re-reading a large conversation from the cache costs most of a
+      turn (a big context, a small question): a new chat for a new topic, or /compact. From 50k tokens of context,
+      when the main agent's cache reads cost $0.02 or more and 60% of its cost in the turn, at the answering model's
+      prices (so mostly Opus and Fable, or a turn of many requests). `SessionNotices.PriceyContext`
 
 ---
 

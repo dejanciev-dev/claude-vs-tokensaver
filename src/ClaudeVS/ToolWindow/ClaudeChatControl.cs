@@ -1914,6 +1914,7 @@ namespace ClaudeVS.ToolWindow
                         CheckCost();
                         CacheBreakTip();
                         if (_meterModel != null) Tip(SessionNotices.SubagentsDominate(_meterModel.LastTurnSubagentCostUsd, _meterModel.LastTurnCostUsd));
+                        PriceyContextTip(_turnModel);
                         RefreshContextUsage(show: false); // control request, no model call
                         _turnModel = null;
                         var turn = _turnPrompts.Count > 0 ? _turnPrompts.Dequeue() : new TurnPrompt();
