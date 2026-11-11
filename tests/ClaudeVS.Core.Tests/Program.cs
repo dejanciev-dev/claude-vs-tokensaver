@@ -2531,6 +2531,15 @@ namespace ClaudeVS.Core.Tests
             Eq(null, SessionNotices.SubagentsDominate(0.04, 0.045), "too little to matter");
             Eq(null, SessionNotices.SubagentsDominate(0, 1), "no agents");
             Eq(null, SessionNotices.SubagentsDominate(0.30, 0), "no cost from the CLI");
+
+            // A costly fork, once finished: the tip, without naming a switch that is not settled
+            var costlyFork = new AgentTask { TaskType = "local_agent", SubagentType = ToolCallView.ForkType, Status = AgentTaskStatus.Completed, CostUsd = 0.08 };
+            string forkTip = SessionNotices.ForkCost(costlyFork);
+            True(forkTip?.Contains("Explore agent") == true && !forkTip.Contains("CLAUDE_CODE_FORK_SUBAGENT"), forkTip);
+            Eq(null, SessionNotices.ForkCost(new AgentTask { TaskType = "local_agent", SubagentType = ToolCallView.ForkType, CostUsd = 0.08 }), "still running");
+            Eq(null, SessionNotices.ForkCost(new AgentTask { TaskType = "local_agent", SubagentType = ToolCallView.ForkType, Status = AgentTaskStatus.Completed, CostUsd = 0.02 }), "cheap");
+            Eq(null, SessionNotices.ForkCost(new AgentTask { TaskType = "local_agent", SubagentType = "Explore", Status = AgentTaskStatus.Completed, CostUsd = 0.08 }), "not a fork");
+            Eq(null, SessionNotices.ForkCost(null));
         }
 
         private static void Test_SavingsReport_FableAndFastExtra()

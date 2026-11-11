@@ -7,6 +7,8 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **A token tip when a fork cost $0.05 or more**: a fork starts with a copy of the whole conversation, so for a
+  task that does not need it, an Explore agent or a plain search costs much less. Said once per conversation.
 - **Subagents by kind in the session summary** (`Subagents by kind: Explore $0.400 · Fork $0.030`) and an
   `agent_types` column in the usage CSV, after `agent_tokens`: each kind's share of the turn's subagent cost
   (`Explore:0.75;general-purpose:0.25`).
