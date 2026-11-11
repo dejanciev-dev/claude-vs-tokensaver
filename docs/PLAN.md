@@ -593,6 +593,22 @@ Picked on 2026-11-11.
 
 ---
 
+## Phase 22 — What subagents cost
+
+Picked on 2026-11-11.
+
+- [ ] **Subagents in the savings report.** Found in Phase 21: the report compares the logged cost (with subagents)
+      against Opus prices for main-agent tokens only. Log subagent tokens per turn (by model) and count them in the
+      report, the CSV and the session summary
+- [ ] **Cost per agent in the agents panel.** The panel shows each subagent's status but not what it cost: price
+      its requests as they arrive and show it on its row
+- [ ] **Tip when subagents dominate.** A one-time token tip when subagents cost more than the main agent in a turn,
+      with how to keep them cheaper
+- [ ] **Subagent tokens in the footer.** The line under each answer says `· 2 agents`; add what they used, e.g.
+      `· 2 agents (31k tok)`
+
+---
+
 ## Working in Visual Studio — daily loop
 
 1. Core logic change → edit in `ClaudeVS.Core` → run tests (`ClaudeVS.Core.Tests` → Set as Startup → Ctrl+F5, or `dotnet run` in its folder).
