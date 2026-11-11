@@ -22,6 +22,9 @@ All notable changes to this project are listed here. The format follows
   a short answer with no tools and no subagents, with what the same tokens cost on Haiku.
 - **Cost by effort in the savings report**: each turn logs the effort it was sent with (routed or picked by hand), and
   the report lists turns, cost, cost per turn and thinking per effort. The usage CSV gets an `effort` column.
+- **What the Haiku router's own picks changed**: the savings report says, for prompts where it chose another model
+  than the local rules, how many went to a cheaper or a dearer model and what that changed (the same tokens at both
+  models' prices).
 
 ## [0.9.0] - 2026-11-11
 

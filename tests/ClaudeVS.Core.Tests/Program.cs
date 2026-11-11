@@ -343,6 +343,24 @@ namespace ClaudeVS.Core.Tests
             Eq(2666L, rep.RouterAverageMs);
             string text = rep.ToText();
             True(text.Contains("Haiku router:               2 prompts, same model as the local rules 50% of the time"), text);
+            Eq(0, rep.HaikuCheaper, "the second went to Haiku instead of Sonnet, but logged no tokens to price");
+            Eq(0, rep.HaikuDearer, "none dearer");
+
+            // With tokens: Sonnet instead of Haiku costs more, Haiku instead of Opus less
+            var priced = new[]
+            {
+                new UsageRecord { Router = "haiku", RouteModel = "sonnet", LocalModel = "haiku", ModelUsed = "claude-sonnet-5-5", InputTokens = 10_000, OutputTokens = 1_000 },
+                new UsageRecord { Router = "haiku", RouteModel = "haiku", LocalModel = "opus", ModelUsed = "claude-haiku-5-5", InputTokens = 10_000, OutputTokens = 1_000 },
+                new UsageRecord { Router = "haiku", RouteModel = "haiku", LocalModel = "opus", ModelUsed = null, InputTokens = 10_000, OutputTokens = 1_000 }, // no model reported: the routed one
+            };
+            var p = SavingsReport.Build(priced, new PriceTable());
+            Eq(1, p.HaikuDearer, "dearer");
+            // Sonnet 10k×2 + 1k×10 = $0.030; Haiku 10k×0.1 + 1k×0.5 = $0.0015; Opus 10k×4 + 1k×20 = $0.060
+            True(Math.Abs(p.HaikuDearerExtraUsd - 0.0285) < 1e-9, "Sonnet less Haiku: " + p.HaikuDearerExtraUsd);
+            Eq(2, p.HaikuCheaper, "cheaper");
+            True(Math.Abs(p.HaikuCheaperSavedUsd - 2 * 0.0585) < 1e-9, "Opus less Haiku, twice: " + p.HaikuCheaperSavedUsd);
+            True(p.ToText().Contains("where they differed: 2 to a cheaper model (≈ $0.12 less), 1 to a dearer one (≈ $0.03 more), at the same tokens"), p.ToText());
+            Eq(null, SavingsReport.Build(records.Take(1), new PriceTable()).HaikuDifferedLine(), "always agreed");
 
             var json = Newtonsoft.Json.JsonConvert.SerializeObject(new UsageRecord { Routed = true });
             True(!json.Contains("router") && !json.Contains("localModel"), "local-only records stay as before: " + json);
