@@ -2267,6 +2267,25 @@ namespace ClaudeVS.Core.Tests
             Eq("junk", PriceTable.UpgradeStored("junk"), "unreadable: left alone");
         }
 
+        private static void Test_TurnUsage_IsMainAgentOnly()
+        {
+            // The fork capture (2.1.319): the result's usage is the main agent's; modelUsage and the cost add the
+            // subagent. So a turn's long-context share must not take subagent requests (they are not in its tokens);
+            // their tier is priced where their tokens are counted: the sessions list, per request.
+            var result = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.319-fork.jsonl"))
+                .Select(l => l.Trim()).Where(l => l.StartsWith("{")).Select(JObject.Parse).Last(o => (string)o["type"] == "result");
+            var main = TokenUsage.From(result["usage"]);
+            var all = (JObject)((JObject)result["modelUsage"]).Properties().Single().Value;
+            True((long)all["cacheReadInputTokens"] > main.CacheRead, $"subagent reads not in the turn's usage: {main.CacheRead} < {all["cacheReadInputTokens"]}");
+            True((long)all["outputTokens"] > main.Output, "nor its output");
+
+            var m = new TokenMeter();
+            m.Observe(new ClaudeEvent { Kind = ClaudeEventKind.AssistantUsage, Model = "claude-haiku-5-5", MessageId = "main", Usage = new TokenUsage { CacheRead = 50_000, Output = 10 } });
+            m.Observe(new ClaudeEvent { Kind = ClaudeEventKind.AssistantUsage, Model = "claude-haiku-5-5", MessageId = "sub", IsSubagent = true, Usage = new TokenUsage { CacheRead = 150_000, Output = 10 } });
+            m.Observe(new ClaudeEvent { Kind = ClaudeEventKind.TurnCompleted, Usage = new TokenUsage { CacheRead = 50_000, Output = 10 } });
+            Eq(0L, m.LastTurn.LargeContextTokens, "a subagent request over 100k does not count in the main agent's turn");
+        }
+
         private static void Test_Prices_HaikuOver100k()
         {
             // Real turns with 2.1.322: a 74k-token prompt then a short one (under the tier), and the same with 111k

@@ -580,8 +580,16 @@ Picked on 2026-11-11.
       call with a reviewed note: it keeps it as that note's `Fallback`, which `TakeStrandedNotes` sends when the
       reviewed edit is not in the file ("was not applied: c.cs still has …"); when the file check cannot tell
       either, still nothing. Unit-tested only: in every live run so far the edit was written before Stop landed
-- [ ] **Subagents in the long-context count.** The meter counts requests over 100k only for the main agent; Haiku
-      subagents with big contexts are billed 5x too. Count their requests where the turn's tokens include them
+- [x] **Subagents in the long-context count.** The meter counts requests over 100k only for the main agent; Haiku
+      subagents with big contexts are billed 5x too. Count their requests where the turn's tokens include them.
+      Checked against the fork capture (2.1.319): the result's `usage` is the **main agent's only** (cache read
+      38,169) while `modelUsage` and `total_cost_usd` add the subagent (62,086). So the turn's tokens do not
+      include subagents, and counting their requests there would be wrong; main-agent-only is right. Their tier is
+      priced where their tokens are counted (the sessions list, per request; `AsRequest` since Phase 20), and the
+      logged cost is the CLI's own total, which bills them correctly. Now a test pins this down
+      (`Test_TurnUsage_IsMainAgentOnly`) and `UsageRecord` says so. Found on the way, for a later phase: the
+      savings report compares that cost (with subagents) against "the same tokens at Opus prices" from main-agent
+      tokens only, so routing savings come out low when subagents ran, and cache savings leave out subagent reads
 
 ---
 
