@@ -75,6 +75,9 @@ namespace ClaudeVS.Options
         [Category("Token saving"), DisplayName("Warn at daily cost (USD)"), Description("The chat says so once each time today's spend in Visual Studio, across all conversations and chat windows, passes another multiple of this amount (at API prices). Today's turns from before Visual Studio started are read from the usage log. 0 turns it off.")]
         public double DailyCostWarningUsd { get; set; } = 20;
 
+        [Category("Token saving"), DisplayName("Warn at agent cost (USD)"), Description("A subagent's row in the agents panel turns amber once its requests pass this amount (at API prices), so one that runs away can be stopped. 0 turns it off.")]
+        public double AgentCostWarningUsd { get; set; } = 0.5;
+
         [Category("Token saving"), DisplayName("Auto-approve quiet rewrites"), Description("When installing hooks: run rewritten dotnet build/test commands without asking.")]
         public bool AutoApproveHookRewrites { get; set; } = false;
 

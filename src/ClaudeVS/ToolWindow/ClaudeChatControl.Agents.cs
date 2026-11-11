@@ -71,14 +71,22 @@ namespace ClaudeVS.ToolWindow
             Announce($"{what.Replace('“', '"').Replace('”', '"')}; Claude continues.");
         }
 
+        /// <summary>Options → Warn at agent cost: a row past it turns amber (0: off).</summary>
+        private double AgentCostLimit => Options?.AgentCostWarningUsd ?? 0.5;
+
         /// <summary>A subagent's request: priced (at the meter's prices) onto its row.</summary>
         private void OnSubagentUsage(ClaudeEvent ev)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             var meter = _meterModel;
-            string modelBefore = _tasks.Tasks.FirstOrDefault(x => x.ToolUseId == ev.ParentToolUseId)?.Model;
+            var before = _tasks.Tasks.FirstOrDefault(x => x.ToolUseId == ev.ParentToolUseId);
+            string modelBefore = before?.Model;
+            bool overBefore = before?.CostsOver(AgentCostLimit) == true;
             if (meter == null || !_tasks.ObserveRequest(ev, meter.RequestCostUsd)) return;
-            if (_tasks.Tasks.FirstOrDefault(x => x.ToolUseId == ev.ParentToolUseId)?.Model != modelBefore) { RefreshAgentsPanel(); return; } // the tag names it
+            var t = _tasks.Tasks.FirstOrDefault(x => x.ToolUseId == ev.ParentToolUseId);
+            if (t != null && t.IsRunning && !overBefore && t.CostsOver(AgentCostLimit))
+                Announce($"Agent {t.Description} has cost {AgentTask.FormatCost(t.CostUsd)} so far."); // the row turns amber
+            if (t?.Model != modelBefore || t?.CostsOver(AgentCostLimit) != overBefore) { RefreshAgentsPanel(); return; } // the tag names the model; amber past the limit
             var now = DateTime.UtcNow;
             foreach (var (line, task) in _agentDetails) line.Text = AgentDetail(task, now); // running rows; a finished one is redrawn by its notification
         }
@@ -210,6 +218,8 @@ namespace ClaudeVS.ToolWindow
             var detail = new TextBlock { FontSize = 11, Margin = new Thickness(10, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
             ChatTheme.Muted(detail);
             detail.Text = AgentDetail(t, DateTime.UtcNow);
+            bool costly = t.CostsOver(AgentCostLimit);
+            if (costly) detail.Foreground = accents.Running; // amber: past Options → Warn at agent cost
             DockPanel.SetDock(detail, Dock.Right);
             row.Children.Add(detail);
             if (t.IsRunning) _agentDetails.Add((detail, t));
@@ -228,6 +238,7 @@ namespace ClaudeVS.ToolWindow
             string tip = StatusWord(t.Status);
             if (!string.IsNullOrWhiteSpace(t.Prompt)) tip += "\n\nTask:\n" + Shorten(t.Prompt, 600);
             if (!string.IsNullOrWhiteSpace(t.Summary)) tip += "\n\nResult:\n" + Shorten(t.Summary, 600);
+            if (costly) tip = t.CostWarning(AgentCostLimit) + "\n\n" + tip;
             row.ToolTip = tip;
             System.Windows.Automation.AutomationProperties.SetName(row, $"{t.Description}, {kind}, {StatusWord(t.Status)}");
             return row;
