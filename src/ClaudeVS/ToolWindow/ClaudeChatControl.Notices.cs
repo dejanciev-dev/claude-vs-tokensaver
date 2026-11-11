@@ -272,6 +272,20 @@ namespace ClaudeVS.ToolWindow
         /// <summary>The effort the last finished turn was sent with ("high" …), null for Claude Code's default.</summary>
         private string _lastTurnEffort;
         private bool _gaveHeavyThinkingTip;
+        /// <summary>The characters of the last finished turn's prompt (0 when it was not ours, e.g. a background task).</summary>
+        private int _lastTurnPromptChars;
+        private bool _gaveLongAnswerTip;
+
+        /// <summary>After a turn: once per conversation, a long written answer to a short prompt.</summary>
+        private void LongAnswerTip(string model)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (_gaveLongAnswerTip || _meterModel == null) return;
+            string tip = SessionNotices.LongAnswer(model ?? _meterModel.LastModel, _lastTurnPromptChars, _meterModel.LastTurn, _meterModel.LastTurnToolCalls, _meterModel.Prices);
+            if (tip == null) return;
+            _gaveLongAnswerTip = true;
+            Tip(tip);
+        }
 
         /// <summary>After a turn: once per conversation, thinking that was most of a short answer at high effort or above.</summary>
         private void HeavyThinkingTip(string model)
@@ -337,6 +351,7 @@ namespace ClaudeVS.ToolWindow
             _gavePriceyContextTip = false;
             _gaveOverkillTip = false;
             _gaveHeavyThinkingTip = false;
+            _gaveLongAnswerTip = false;
             _reads.Reset();
         }
     }

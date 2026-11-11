@@ -2797,6 +2797,16 @@ namespace ClaudeVS.Core.Tests
             toolMeter.Observe(new ClaudeEvent { Kind = ClaudeEventKind.TurnCompleted, Usage = new TokenUsage { Input = 10 } });
             Eq(0, toolMeter.LastTurnToolCalls, "counted per turn");
 
+            // A long written answer to a short prompt
+            var essay = new TokenUsage { Input = 300, Output = 5_500, Thinking = 300 };
+            Eq("That answer ran to ~5.2k tokens ($0.05) for a short question. Saying how much you need (\"in five lines\", \"just the code\") keeps answers shorter, and so does the Concise output style (/ → Output style…).",
+                SessionNotices.LongAnswer("claude-sonnet-5-5", 120, essay, 0, prices), "Sonnet: 5200 × $10 per Mtok");
+            Eq(null, SessionNotices.LongAnswer("claude-sonnet-5-5", 900, essay, 0, prices), "a long prompt asked for it");
+            Eq(null, SessionNotices.LongAnswer("claude-sonnet-5-5", 120, essay, 2, prices), "tool calls: edits are output too");
+            Eq(null, SessionNotices.LongAnswer("claude-sonnet-5-5", 0, essay, 0, prices), "not our prompt");
+            Eq(null, SessionNotices.LongAnswer("claude-haiku-5-5", 120, essay, 0, prices), "Haiku: $0.003");
+            Eq(null, SessionNotices.LongAnswer("claude-opus-5-5", 120, new TokenUsage { Output = 9_000, Thinking = 6_000 }, 0, prices), "mostly thinking: 3000 written");
+
             // Thinking that was most of a short answer at high effort or above
             var thought = new TokenUsage { Input = 500, Output = 6_400, Thinking = 6_000, CacheRead = 20_000 };
             Eq("Claude thought for ~6.0k tokens ($0.12) to write a short answer at high effort. For questions like this, a lower effort in the effort picker (Medium, or Auto) thinks less.",

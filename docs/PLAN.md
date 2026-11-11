@@ -822,7 +822,9 @@ Picked on 2026-11-11.
       context instead of reading it (expired or broken cache). A logged turn after the first of its session that wrote
       10k tokens or more, and more than it read; priced as the writes less the same tokens read from the cache. Turns
       without a session id are not judged. `Cache written again:` in the report; `SavingsReport.IsCacheRewrite`
-- [ ] **Long answer tip.** A one-time tip when a short prompt got a very long answer, with how to ask for less
+- [x] **Long answer tip.** A one-time tip when a short prompt got a very long answer, with how to ask for less. A
+      prompt of up to 300 characters, 4k output tokens or more besides thinking, $0.02 or more, and no tool calls (an
+      edit's new text is output too). Names the Concise output style. `SessionNotices.LongAnswer`
 - [ ] **MCP results per server.** Tool results from MCP tools grouped per server (`MCP github`) instead of one `MCP`
 
 ---

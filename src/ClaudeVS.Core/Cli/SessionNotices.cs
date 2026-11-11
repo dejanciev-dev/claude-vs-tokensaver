@@ -180,6 +180,29 @@ namespace ClaudeVS.Core.Cli
                 + "For quick questions, Auto in the model picker (or Haiku) is cheaper. A new model writes the conversation to its own cache once, so switch at the start of a task.";
         }
 
+        /// <summary>The long-answer tip: a prompt up to this many characters, an answer of at least this many tokens (thinking left out) and this cost.</summary>
+        public const int LongAnswerMaxPromptChars = 300;
+        public const long LongAnswerFromTokens = 4_000;
+        public const double LongAnswerFromUsd = 0.02;
+
+        /// <summary>
+        /// A token tip when a short prompt (at most <see cref="LongAnswerMaxPromptChars"/>) got a long written answer: at
+        /// least <see cref="LongAnswerFromTokens"/> output tokens besides thinking, costing <see cref="LongAnswerFromUsd"/>
+        /// or more, with no tool calls (an edit's new text is output too, and is the work asked for). Null otherwise.
+        /// </summary>
+        public static string LongAnswer(string model, int promptChars, TokenUsage turn, int toolCalls, Tokens.PriceTable prices)
+        {
+            long answer = turn.Output - turn.Thinking;
+            if (promptChars <= 0 || promptChars > LongAnswerMaxPromptChars || toolCalls > 0 || answer < LongAnswerFromTokens) return null;
+            prices = prices ?? new Tokens.PriceTable();
+            var p = prices.For(model) ?? prices.Sonnet;
+            double usd = answer * p.Output / 1_000_000.0 * Tokens.ModelPrice.SpeedMultiplier(turn.FastTokens, turn.Total);
+            if (usd < LongAnswerFromUsd) return null;
+            var c = System.Globalization.CultureInfo.InvariantCulture;
+            return $"That answer ran to ~{Tokens.TokenMeter.Format(answer)} tokens (${usd.ToString("0.00", c)}) for a short question. "
+                + "Saying how much you need (\"in five lines\", \"just the code\") keeps answers shorter, and so does the Concise output style (/ → Output style…).";
+        }
+
         /// <summary>The heavy-thinking tip: at least this much thinking, this share of the output, this cost, and an answer no longer than this.</summary>
         public const long HeavyThinkingFromTokens = 2_000;
         public const double HeavyThinkingShare = 0.7;

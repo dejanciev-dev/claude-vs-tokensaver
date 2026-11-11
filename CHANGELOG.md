@@ -48,6 +48,8 @@ All notable changes to this project are listed here. The format follows
   reads, cache writes and subagents, each in $, and the total.
 - **Cache written again, in the savings report**: what turns that wrote the conversation to the cache again (after
   the first turn of a conversation: an expired cache, a model switch, a changed CLAUDE.md) cost more than reading it.
+- **Token tip for a long answer to a short question**: once per conversation, when a prompt of up to 300 characters
+  got 4k written tokens or more with no tool calls, with how to ask for less.
 
 ## [0.9.0] - 2026-11-11
 
