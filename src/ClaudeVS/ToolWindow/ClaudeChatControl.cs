@@ -1903,6 +1903,8 @@ namespace ClaudeVS.ToolWindow
                         if (ev.TerminalReason != null && ev.TerminalReason != "completed") ClaudeOutputPane.WriteLine("Turn ended: " + ev.TerminalReason);
                         OnSignInExpiry(ev);
                         string used = _turnModel != null ? " · " + _turnModel : "";
+                        // The effort this turn was sent with: its record is next in line (RecordUsage takes it below)
+                        if (TurnFooter.Effort(_pendingUsages.Count > 0 ? _pendingUsages.Peek().Effort : null) is string effortSent) used += " · " + effortSent;
                         if (TurnFooter.Agents(ev.Subagents, _meterModel?.LastTurnSubagentTotal.Total ?? 0) is string agents) used += " · " + agents;
                         if (ev.Subagents?.Warning() is string agentTrouble)
                         {

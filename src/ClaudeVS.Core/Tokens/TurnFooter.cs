@@ -9,6 +9,10 @@ namespace ClaudeVS.Core.Tokens
     /// </summary>
     public static class TurnFooter
     {
+        /// <summary>"high effort" for the effort the turn was sent with ("low" … "max"); null for Claude Code's default.</summary>
+        public static string Effort(string effort) =>
+            string.IsNullOrWhiteSpace(effort) ? null : effort.Trim().ToLowerInvariant() + " effort";
+
         /// <summary>" · 1.2k thinking" and the like; "" when there is nothing to add.</summary>
         /// <param name="cacheSavedUsd">What the cache saved this turn (<see cref="TokenMeter.LastTurnCacheSavedUsd"/>); shown from $0.001.</param>
         public static string Extras(TokenUsage turn, double cacheSavedUsd = 0)
