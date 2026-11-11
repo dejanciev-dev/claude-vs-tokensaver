@@ -24,12 +24,19 @@ namespace ClaudeVS.Core.Tokens
 
         public SpendPeriod Period { get; }
 
+        /// <summary>Only this solution folder's turns count (its own conversations); null: all of them.</summary>
+        public string Solution { get; }
+
+        private bool InSolution(string folder) =>
+            Solution == null || string.Equals((folder ?? "").TrimEnd('\\', '/'), Solution.TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase);
+
         /// <summary>The amount; 0 or less turns the warning off.</summary>
         public double StepUsd { get; set; }
 
-        public SpendWatch(SpendPeriod period, double stepUsd, DateTime? createdUtc = null)
+        public SpendWatch(SpendPeriod period, double stepUsd, DateTime? createdUtc = null, string solution = null)
         {
             Period = period;
+            Solution = string.IsNullOrEmpty(solution) ? null : solution;
             StepUsd = stepUsd;
             _createdUtc = createdUtc ?? DateTime.UtcNow;
             _start = StartOf(_createdUtc);
@@ -80,7 +87,7 @@ namespace ClaudeVS.Core.Tokens
         {
             double before = 0;
             foreach (var r in records ?? new UsageRecord[0])
-                if (r.Timestamp < _createdUtc && StartOf(r.Timestamp) == StartOf(_createdUtc)) before += r.CostUsd + r.RouterCostUsd;
+                if (r.Timestamp < _createdUtc && StartOf(r.Timestamp) == StartOf(_createdUtc) && InSolution(r.Solution)) before += r.CostUsd + r.RouterCostUsd;
             lock (_gate)
             {
                 if (_start != StartOf(_createdUtc)) return; // a new period has started since: those turns belong to the last one
@@ -103,6 +110,9 @@ namespace ClaudeVS.Core.Tokens
                 if (steps <= _warnedSteps) return null;
                 _warnedSteps = steps;
                 string which = Period == SpendPeriod.Month ? "This month's" : "Today's";
+                if (Solution != null)
+                    return $"{which} Claude Code spend on {SolutionBreakdown.NameOf(Solution)} has passed ${(steps * StepUsd).ToString("0.00", c)} "
+                        + $"(${_spent.ToString("0.00", c)} so far in its conversations, at API prices). Tools → Claude Code → Show Savings Report lists the costliest turns.";
                 return $"{which} Claude Code spend in Visual Studio has passed ${(steps * StepUsd).ToString("0.00", c)} "
                     + $"(${_spent.ToString("0.00", c)} so far in all conversations, at API prices). Tools → Claude Code → Show Savings Report lists the costliest turns.";
             }

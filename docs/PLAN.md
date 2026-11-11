@@ -846,7 +846,9 @@ Picked on 2026-11-11.
       on, until the first turn redraws the advice. Compacting reads the conversation once at the input price and
       leaves a summary; without it the first prompt writes all of it to the cache again (2× input for a 1-hour cache).
       `CacheWindow.ResumeCompactAdvice`
-- [ ] **Per-solution monthly warning.** Optional: a warning when this solution's spend this month passes an amount
+- [x] **Per-solution monthly warning.** Optional: a warning when this solution's spend this month passes an amount.
+      *Warn at monthly cost per solution (USD)*, 0 by default; a `SpendWatch` with a solution folder per folder (any
+      case or trailing slash), made on its first turn, its earlier turns this month loaded in the background
 
 ---
 

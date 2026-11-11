@@ -3001,6 +3001,22 @@ namespace ClaudeVS.Core.Tests
             Eq(null, off.Add(1000, start), "0 turns it off");
         }
 
+        private static void Test_SolutionSpendWatch()
+        {
+            var start = new DateTime(2026, 11, 9, 12, 0, 0, DateTimeKind.Local).ToUniversalTime();
+            var w = new SpendWatch(SpendPeriod.Month, 50, start, solution: @"C:\src\shop");
+            w.Load(new[]
+            {
+                new UsageRecord { Timestamp = start.AddDays(-2), Solution = @"c:\SRC\shop\", CostUsd = 30 },  // any case, trailing slash
+                new UsageRecord { Timestamp = start.AddDays(-2), Solution = @"C:\src\blog", CostUsd = 500 },  // another solution
+                new UsageRecord { Timestamp = start.AddDays(-1), CostUsd = 500 },                              // no folder
+            });
+            True(Math.Abs(w.Spent - 30) < 1e-9, "only the shop's: " + w.Spent);
+            Eq("This month's Claude Code spend on shop has passed $50.00 ($52.00 so far in its conversations, at API prices). Tools → Claude Code → Show Savings Report lists the costliest turns.",
+                w.Add(22, start.AddMinutes(1)));
+            Eq(null, w.Add(1, start.AddMinutes(2)), "once per step");
+        }
+
         private static void Test_SpendHistory()
         {
             DateTime At(int day, int hour = 12) => new DateTime(2026, 11, day, hour, 0, 0, DateTimeKind.Local).ToUniversalTime();
