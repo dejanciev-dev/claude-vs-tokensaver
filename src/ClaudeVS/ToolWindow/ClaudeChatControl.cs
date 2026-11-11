@@ -1407,6 +1407,7 @@ namespace ClaudeVS.ToolWindow
             if (o?.ErrorListTool ?? true)
                 _session.Options.SdkMcpServers.Add(IdeMcpServer.Create(ReadErrorListAsync, () => dir));
             HaikuRouterIfOn(); // with Route with Haiku on: start its process now, so it is warm for the first prompt
+            if (_resumeId == null && _meterModel?.Turns == 0) _meterModel.FreshSession(); // its modelUsage starts at 0: subagents exact from the first turn
             _resumeId = null;
             _forkNext = false;
             _sessionDir = dir;

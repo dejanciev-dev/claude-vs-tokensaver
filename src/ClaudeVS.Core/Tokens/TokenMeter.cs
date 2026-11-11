@@ -63,6 +63,12 @@ namespace ClaudeVS.Core.Tokens
         public string LastModel { get; private set; }
         private static readonly PriceTable DefaultPrices = new PriceTable();
 
+        /// <summary>
+        /// The conversation is a new session (not <c>--resume</c>d): its <c>modelUsage</c> starts at 0, so the first
+        /// turn's subagents are exact too. Call before its first turn.
+        /// </summary>
+        public void FreshSession() => _subagents.StartsFromZero();
+
         /// <summary>One request's cost at <see cref="Prices"/> (Sonnet's when the model is unknown), its long-context tier included.</summary>
         public double RequestCostUsd(string model, TokenUsage request)
         {
