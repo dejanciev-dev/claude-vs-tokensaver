@@ -1977,6 +1977,7 @@ namespace ClaudeVS.ToolWindow
             var rec = _pendingUsages.Dequeue();
             if (Options?.KeepUsageLog == false) return;
             rec.Timestamp = DateTime.UtcNow;
+            rec.SessionId = ev.SessionId;
             rec.ModelUsed = modelUsed;
             rec.InputTokens = ev.Usage.Input;
             rec.OutputTokens = ev.Usage.Output;

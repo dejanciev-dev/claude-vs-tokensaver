@@ -11,6 +11,8 @@ namespace ClaudeVS.Core.Tokens
     {
         [JsonProperty("ts")] public DateTime Timestamp { get; set; } = DateTime.UtcNow;
         [JsonProperty("solution")] public string Solution { get; set; }
+        /// <summary>Claude Code's session id (the result's <c>session_id</c>): turns of one conversation share it; null in older lines.</summary>
+        [JsonProperty("session", NullValueHandling = NullValueHandling.Ignore)] public string SessionId { get; set; }
 
         // Routing
         [JsonProperty("routed")] public bool Routed { get; set; }

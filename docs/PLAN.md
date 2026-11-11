@@ -732,8 +732,10 @@ Picked on 2026-11-11.
 - [x] **Monthly cost warning.** *Warn at monthly cost (USD)*: like the daily warning, once per multiple of the amount,
       this calendar month's spend in all chat windows, the month's earlier turns read from the usage log. Default
       $200. The daily watch became `SpendWatch` with a `SpendPeriod` (Day, Month); one of each is shared by all windows
-- [ ] **Session id in the usage log.** Each turn logs its session id; the savings report lists the costliest
-      conversations (date, turns, cost, first prompt when logged) and the CSV gets a `session` column
+- [x] **Session id in the usage log.** Each turn logs its session id; the savings report lists the costliest
+      conversations (date, turns, cost, first prompt when logged) and the CSV gets a `session` column. From the
+      result's `session_id` (`session` in the log); five at most, with the folder in the all-solutions report; older
+      lines without an id are left out. The CSV column is the last one. `SavingsReport.CostliestConversations`
 - [ ] **Tool results in the report.** Each turn logs the tokens its main agent's tool results added, per tool; the
       report says which tools filled the context across conversations (Read, Shell, Search …)
 - [ ] **Pricey context tip.** A one-time tip when re-reading a large conversation from the cache costs most of a
