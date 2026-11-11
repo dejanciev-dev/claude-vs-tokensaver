@@ -23,10 +23,26 @@ namespace ClaudeVS.Core.Tokens
         // A new session: modelUsage counts from 0, so its first reading is all growth (exact, as in the fork capture)
         private bool _fromZero;
 
-        public void Reset() { _previous.Clear(); _streamed.Clear(); _fromZero = false; }
+        // A resumed session's saved reading (ModelUsageReadings): used for the next turn only when it agrees with the
+        // streamed messages, since the session may have run elsewhere since (the terminal) and grown past it
+        private bool _savedBaseline;
+
+        public void Reset() { _previous.Clear(); _streamed.Clear(); _fromZero = false; _savedBaseline = false; }
 
         /// <summary>The session is new (not resumed): take <c>modelUsage</c>'s growth from 0 on its first turn.</summary>
         public void StartsFromZero() { if (_previous.Count == 0) _fromZero = true; }
+
+        /// <summary>
+        /// The session is resumed and <paramref name="saved"/> is its last reading here: the first turn takes the growth
+        /// from it when that agrees with the subagents' streamed messages on input and cache (exact in both), so the
+        /// output is exact too; otherwise the streamed messages count, as without a reading.
+        /// </summary>
+        public void ResumeFrom(Dictionary<string, TokenUsage> saved)
+        {
+            if (_previous.Count > 0 || saved == null || saved.Count == 0) return;
+            foreach (var kv in saved) _previous[kv.Key] = kv.Value;
+            _savedBaseline = true;
+        }
 
         /// <summary>A subagent's AssistantUsage.</summary>
         public void ObserveSubagent(ClaudeEvent ev)
@@ -41,31 +57,42 @@ namespace ClaudeVS.Core.Tokens
         /// </summary>
         public Dictionary<string, TokenUsage> TurnCompleted(Dictionary<string, ModelUsageEntry> modelUsage, string mainModel, TokenUsage mainUsage)
         {
-            var result = new Dictionary<string, TokenUsage>(StringComparer.Ordinal);
-            bool exact = (_previous.Count > 0 || _fromZero) && modelUsage != null && modelUsage.Count > 0;
-            _fromZero = false;
-            if (exact)
+            var streamed = new Dictionary<string, TokenUsage>(StringComparer.Ordinal);
+            foreach (var g in _streamed.Values.GroupBy(s => s.Model))
             {
-                foreach (var kv in modelUsage)
-                {
-                    var now = kv.Value.Usage;
-                    var grew = _previous.TryGetValue(kv.Key, out var before) && !Lower(now, before) ? TokenUsage.Minus(now, before) : now; // lower: counting started again
-                    if (kv.Key == mainModel) grew = TokenUsage.Minus(grew, mainUsage);
-                    if (grew.Total > 0) result[kv.Key] = grew;
-                }
-            }
-            else
-            {
-                foreach (var g in _streamed.Values.GroupBy(s => s.Model))
-                {
-                    var sum = default(TokenUsage);
-                    foreach (var s in g) sum += s.Usage;
-                    if (sum.Total > 0) result[g.Key] = sum;
-                }
+                var sum = default(TokenUsage);
+                foreach (var s in g) sum += s.Usage;
+                if (sum.Total > 0) streamed[g.Key] = sum;
             }
             _streamed.Clear();
+
+            bool exact = (_previous.Count > 0 || _fromZero) && modelUsage != null && modelUsage.Count > 0;
+            bool check = _savedBaseline;
+            _fromZero = false; _savedBaseline = false;
+            var result = exact ? new Dictionary<string, TokenUsage>(StringComparer.Ordinal) : streamed;
+            if (exact) foreach (var kv in modelUsage)
+            {
+                var now = kv.Value.Usage;
+                var grew = _previous.TryGetValue(kv.Key, out var before) && !Lower(now, before) ? TokenUsage.Minus(now, before) : now; // lower: counting started again
+                if (kv.Key == mainModel) grew = TokenUsage.Minus(grew, mainUsage);
+                if (grew.Total > 0) result[kv.Key] = grew;
+            }
+            if (exact && check && !Agrees(result, streamed)) result = streamed; // the saved reading is out of date
             if (modelUsage != null) foreach (var kv in modelUsage) _previous[kv.Key] = kv.Value.Usage;
             return result;
+        }
+
+        /// <summary>The same models with the same input and cache counts (exact in both), and at least the streamed output.</summary>
+        private static bool Agrees(Dictionary<string, TokenUsage> grown, Dictionary<string, TokenUsage> streamed)
+        {
+            if (grown.Count != streamed.Count) return false;
+            foreach (var kv in grown)
+            {
+                if (!streamed.TryGetValue(kv.Key, out var s)) return false;
+                var g = kv.Value;
+                if (g.Input != s.Input || g.CacheRead != s.CacheRead || g.CacheCreation != s.CacheCreation || g.Output < s.Output) return false;
+            }
+            return true;
         }
 
         private static bool Lower(TokenUsage now, TokenUsage before) =>

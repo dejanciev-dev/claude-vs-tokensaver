@@ -2343,6 +2343,44 @@ namespace ClaudeVS.Core.Tests
             Eq(131L, exactFirst.Output, "output exact (the streamed copy said 2)");
             Eq(4L, exactFirst.Input); Eq(23_917L, exactFirst.CacheRead); Eq(462L, exactFirst.CacheCreation);
             True(first.Output < exactFirst.Output, "resumed: streamed, output low");
+            // Resumed, with the session's last reading kept here: the growth from it agrees with the streamed input and
+            // cache, so the output is exact too (the fork run's reading before the turn was 0)
+            var resumed = new TokenMeter();
+            resumed.ResumedSession(new Dictionary<string, TokenUsage> { ["claude-haiku-5-5"] = default });
+            foreach (var e in events) resumed.Observe(e);
+            Eq(131L, resumed.LastTurnSubagents["claude-haiku-5-5"].Output, "resumed with a reading: exact");
+
+            // A reading the session has outgrown elsewhere (the terminal): the growth takes that work too, so it does not
+            // agree with the streamed messages and they count instead
+            var stale = new SubagentUsageTracker();
+            var main = new TokenUsage { Input = 4, Output = 200, CacheRead = 30_000 };
+            stale.ResumeFrom(new Dictionary<string, TokenUsage> { ["m"] = new TokenUsage { Input = 100, Output = 1000, CacheRead = 50_000 } });
+            stale.ObserveSubagent(new ClaudeEvent { Kind = ClaudeEventKind.AssistantUsage, IsSubagent = true, MessageId = "s1", Model = "m", Usage = new TokenUsage { Input = 3, Output = 1, CacheRead = 9_000 } });
+            var elsewhere = stale.TurnCompleted(new Dictionary<string, ModelUsageEntry> { ["m"] = new ModelUsageEntry { Usage = new TokenUsage { Input = 100 + 4 + 3 + 50, Output = 1000 + 200 + 90 + 400, CacheRead = 50_000 + 30_000 + 9_000 + 20_000 } } }, "m", main);
+            Eq(1L, elsewhere["m"].Output, "streamed: the reading was out of date");
+            Eq(9_000L, elsewhere["m"].CacheRead);
+            var current = new SubagentUsageTracker();
+            current.ResumeFrom(new Dictionary<string, TokenUsage> { ["m"] = new TokenUsage { Input = 100, Output = 1000, CacheRead = 50_000 } });
+            current.ObserveSubagent(new ClaudeEvent { Kind = ClaudeEventKind.AssistantUsage, IsSubagent = true, MessageId = "s1", Model = "m", Usage = new TokenUsage { Input = 3, Output = 1, CacheRead = 9_000 } });
+            var agreed = current.TurnCompleted(new Dictionary<string, ModelUsageEntry> { ["m"] = new ModelUsageEntry { Usage = new TokenUsage { Input = 100 + 4 + 3, Output = 1000 + 200 + 90, CacheRead = 50_000 + 30_000 + 9_000 } } }, "m", main);
+            Eq(90L, agreed["m"].Output, "current reading: exact output");
+
+            // The readings file: kept per session, read back, the oldest dropped past the limit
+            string readingsPath = Path.Combine(Path.GetTempPath(), "cvs-model-usage-" + Guid.NewGuid().ToString("N") + ".json");
+            try
+            {
+                var store = new ModelUsageReadings(readingsPath);
+                Eq(null, store.Get("s"), "none yet");
+                store.Save("s", done.ModelUsage);
+                var back = store.Get("s")["claude-haiku-5-5"];
+                Eq(done.ModelUsage["claude-haiku-5-5"].Usage.Output, back.Output); Eq(done.ModelUsage["claude-haiku-5-5"].Usage.CacheCreation1h, back.CacheCreation1h);
+                var t0 = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                for (int i = 0; i < ModelUsageReadings.MaxSessions; i++) store.Save("x" + i, done.ModelUsage, t0.AddMinutes(i));
+                Eq(null, store.Get("x0"), "the oldest dropped");
+                True(store.Get("s") != null && store.Get("x1") != null, "the rest kept");
+            }
+            finally { try { File.Delete(readingsPath); } catch (IOException) { } }
+
             // task_notification's total_tokens is not the API's count: 24,649 against 24,514, so it cannot fix the output
             long reported = (long)events.Last(e => e.Kind == ClaudeEventKind.Task && (string)e.Payload["subtype"] == "task_notification").Payload["usage"]["total_tokens"];
             Eq(24_649L, reported); Eq(24_514L, exactFirst.Total);
