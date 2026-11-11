@@ -260,6 +260,7 @@ First run:
 | Show Savings Report | Tools → Claude Code | |
 | Save Savings Report as Markdown… | Tools → Claude Code | |
 | Export Usage as CSV… | Tools → Claude Code | |
+| Open Usage Log Folder | Tools → Claude Code | |
 | Generate Lean CLAUDE.md | Tools → Claude Code | |
 | Install Token-Saving Settings and Hooks | Tools → Claude Code | |
 

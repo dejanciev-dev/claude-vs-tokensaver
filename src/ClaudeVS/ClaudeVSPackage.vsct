@@ -82,6 +82,12 @@
           <ButtonText>Export Usage as CSV...</ButtonText>
         </Strings>
       </Button>
+      <Button guid="guidClaudeVSCmdSet" id="cmdidOpenUsageLogFolder" priority="0x0178" type="Button">
+        <Parent guid="guidClaudeVSCmdSet" id="ClaudeSubMenuGroup" />
+        <Strings>
+          <ButtonText>Open Usage Log Folder</ButtonText>
+        </Strings>
+      </Button>
       <Button guid="guidClaudeVSCmdSet" id="cmdidGenerateClaudeMd" priority="0x0200" type="Button">
         <Parent guid="guidClaudeVSCmdSet" id="ClaudeSubMenuGroup" />
         <Strings>
@@ -136,6 +142,7 @@
       <IDSymbol name="cmdidFocusLastMessage" value="0x0108" />
       <IDSymbol name="cmdidExportUsageCsv" value="0x0109" />
       <IDSymbol name="cmdidSaveSavingsReport" value="0x010A" />
+      <IDSymbol name="cmdidOpenUsageLogFolder" value="0x010B" />
     </GuidSymbol>
   </Symbols>
 </CommandTable>

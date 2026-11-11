@@ -66,6 +66,7 @@ namespace ClaudeVS.Commands
             Add(mcs, PackageIds.ShowSavingsReport, (s, e) => Run(ShowSavingsReportAsync));
             Add(mcs, PackageIds.ExportUsageCsv, (s, e) => Run(ExportUsageCsvAsync));
             Add(mcs, PackageIds.SaveSavingsReport, (s, e) => Run(SaveSavingsReportAsync));
+            Add(mcs, PackageIds.OpenUsageLogFolder, (s, e) => Run(OpenUsageLogFolderAsync));
             Add(mcs, PackageIds.NewChatWindow, (s, e) => Run(async () => await _package.NewChatWindowAsync()));
             Add(mcs, PackageIds.FocusLastMessage, (s, e) => Run(async () =>
             {
@@ -145,10 +146,23 @@ namespace ClaudeVS.Commands
             var log = ToolWindow.ClaudeChatControl.Usage;
 
             var period = _package.Options.SavingsReportPeriod;
-            string text = await Task.Run(() => SavingsReportText.Full(log.ReadAll(), prices, solution, DateTime.UtcNow, log.Folder, period));
+            log.KeepMonths = _package.Options.KeepUsageMonths;
+            string text = await Task.Run(() => SavingsReportText.Full(log.ReadAll(), prices, solution, DateTime.UtcNow, log.Describe(), period));
 
             ClaudeOutputPane.WriteBlock("\n" + new string('=', 60) + "\n" + text);
             ClaudeOutputPane.Activate();
+        }
+
+        /// <summary>Opens the usage log's folder in File Explorer, and says in the Output pane how big the log is.</summary>
+        private static async Task OpenUsageLogFolderAsync()
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            var log = ToolWindow.ClaudeChatControl.Usage;
+            log.KeepMonths = _package.Options.KeepUsageMonths;
+            string info = await Task.Run(() => { Directory.CreateDirectory(log.Folder); return log.Describe(); });
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            ClaudeOutputPane.WriteLine("Usage log: " + info + (_package.Options.KeepUsageLog ? "" : " (logging is off: Options → Diagnostics → Keep local usage log)"));
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo { FileName = log.Folder, UseShellExecute = true });
         }
 
         /// <summary>Saves the same report as a Markdown file, to attach to a ticket or share.</summary>

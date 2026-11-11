@@ -236,6 +236,24 @@ namespace ClaudeVS.Core.Tokens
 
         public bool HasAny => Files().Count > 0;
 
+        /// <summary>"C:\…\claude-vs-tokensaver: 3 files, 1.2 MB, the last 3 months kept"; for the report's last line and the Open Usage Log Folder command.</summary>
+        public string Describe()
+        {
+            int files = Files().Count;
+            string size = FormatBytes(SizeBytes());
+            string kept = KeepMonths > 0 ? $"the last {KeepMonths} {(KeepMonths == 1 ? "month" : "months")} kept" : "everything kept";
+            return $"{Folder}: {files} {(files == 1 ? "file" : "files")}, {size}, {kept}";
+        }
+
+        /// <summary>"512 B", "12.3 KB", "1.2 MB".</summary>
+        public static string FormatBytes(long bytes)
+        {
+            var c = System.Globalization.CultureInfo.InvariantCulture;
+            if (bytes < 1024) return bytes.ToString(c) + " B";
+            if (bytes < 1024 * 1024) return (bytes / 1024.0).ToString("0.0", c) + " KB";
+            return (bytes / (1024.0 * 1024)).ToString("0.0", c) + " MB";
+        }
+
         public void Append(UsageRecord record)
         {
             if (record == null) return;

@@ -884,7 +884,9 @@ Picked on 2026-11-11.
       As an Options dropdown (*Savings report period*), used by both report commands; a dialog would need its own
       theming. The title names the period; the month and week lines still compare up to today, and are left out for
       last month. `ReportPeriod`, `SavingsReportText.Range`
-- [ ] **Usage log size in Options.** Where the log is and how big; a command to open its folder
+- [x] **Usage log size in Options.** Where the log is and how big; a command to open its folder. An Options
+      description is fixed text, so it names the folder and points to the command; the size is in Tools → Claude Code
+      → *Open Usage Log Folder* (Output pane, then File Explorer) and on the report's last line. `UsageLog.Describe`
 
 ---
 

@@ -99,7 +99,7 @@ namespace ClaudeVS.Options
         [Category("Token saving"), DisplayName("Max attached errors"), Description("Attach Error List sends at most this many errors, one line each.")]
         public int MaxAttachedErrors { get; set; } = 20;
 
-        [Category("Diagnostics"), DisplayName("Keep local usage log"), Description("Append one line per turn (model, route, tokens, cost) to %LocalAppData%\\claude-vs-tokensaver\\usage-<year>-<month>.jsonl, one file per month. Stays on this machine; used for router tuning and the savings report.")]
+        [Category("Diagnostics"), DisplayName("Keep local usage log"), Description("Append one line per turn (model, route, tokens, cost) to %LocalAppData%\\claude-vs-tokensaver\\usage-<year>-<month>.jsonl, one file per month (Tools → Claude Code → Open Usage Log Folder opens it and says how big it is; the savings report's last line too). Stays on this machine; used for router tuning and the savings report.")]
         public bool KeepUsageLog { get; set; } = true;
 
         [Category("Diagnostics"), DisplayName("Keep usage history (months)"), Description("How many months of the usage log to keep, this one included; older monthly files are deleted when a new month starts. The savings report, the month and week comparisons and the spend warnings read what is kept. 0 keeps everything.")]
