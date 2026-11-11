@@ -272,6 +272,23 @@ namespace ClaudeVS.Core.Cli
         /// <summary>A fork subagent: starts with a copy of the conversation so far.</summary>
         public const string ForkType = "fork";
 
+        /// <summary>
+        /// The line under a finished agent's Agent row: "Done · 24.6k tok · $0.042 · 3 tools", so what it used stays in
+        /// the conversation after the agents panel is cleared. Null for a running task or a shell command.
+        /// </summary>
+        public static string AgentUsageLine(AgentTask t)
+        {
+            if (t == null || t.IsRunning || !t.IsAgent) return null;
+            var parts = new List<string>
+            {
+                t.Status == AgentTaskStatus.Completed ? "Done" : t.Status == AgentTaskStatus.Failed ? "Failed" : "Stopped",
+            };
+            if (t.TotalTokens > 0) parts.Add(Tokens.TokenMeter.Format(t.TotalTokens) + " tok");
+            if (AgentTask.FormatCost(t.CostUsd) is string cost) parts.Add(cost);
+            if (t.ToolUses > 0) parts.Add(t.ToolUses + (t.ToolUses == 1 ? " tool" : " tools"));
+            return string.Join(" · ", parts);
+        }
+
         /// <summary>What the ⎿ line says once the result is in.</summary>
         /// <param name="data">The CLI's structured result (<c>tool_use_result</c>, 2.1.319), when there is one: exact
         /// counts for Read, Glob and Grep instead of counting output lines.</param>

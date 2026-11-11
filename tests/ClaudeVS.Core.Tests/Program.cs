@@ -558,6 +558,13 @@ namespace ClaudeVS.Core.Tests
             Eq(0.5, early.Find("t1").CostUsd, "picked up at task_started");
             True(early.ObserveRequest(req, (m, u) => 0.7), "the same message again");
             Eq(0.7, early.Find("t1").CostUsd, "its last copy counts, once");
+            // The line under its Agent row once it finished: task_notification's usage (24,649 tokens, no tools) and its cost
+            var forkPriced = priced.Find("a3930c38f13bbef71");
+            Eq($"Done · 24.6k tok · {AgentTask.FormatCost(forkPriced.CostUsd)}", ToolCallView.AgentUsageLine(forkPriced), "under the Agent row");
+            Eq(null, ToolCallView.AgentUsageLine(new AgentTask { TaskType = "local_agent" }), "still running");
+            Eq(null, ToolCallView.AgentUsageLine(new AgentTask { TaskType = "local_bash", Status = AgentTaskStatus.Completed }), "a shell command");
+            Eq("Stopped · 1 tool", ToolCallView.AgentUsageLine(new AgentTask { TaskType = "local_agent", Status = AgentTaskStatus.Stopped, ToolUses = 1 }));
+
             Eq("$0.700", AgentTask.FormatCost(0.7)); Eq("$1.23", AgentTask.FormatCost(1.234)); Eq("<$0.001", AgentTask.FormatCost(0.0002)); Eq(null, AgentTask.FormatCost(0));
 
             var text = events.Where(e => e.Kind == ClaudeEventKind.AssistantText).Select(e => e.Text).ToList();

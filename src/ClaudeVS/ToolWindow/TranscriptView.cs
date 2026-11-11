@@ -437,6 +437,29 @@ namespace ClaudeVS.ToolWindow
             public Panel Expander;      // the row's stack: header, ⎿ lines, diff
             public Action OnDiff;
             public string OpenPath;
+            public TextBlock AgentUsage; // under an Agent row: what the agent used, once it finished
+        }
+
+        // Agent rows by tool_use_id, kept after their result (a background agent finishes long after it)
+        private readonly Dictionary<string, ToolRow> _agentRows = new Dictionary<string, ToolRow>();
+
+        /// <summary>
+        /// Under the Agent row that started a subagent: "Done · 24.6k tok · $0.042 · 3 tools" (see
+        /// <see cref="Core.Cli.ToolCallView.AgentUsageLine"/>). Replaces an earlier line for the same agent.
+        /// </summary>
+        public void ShowAgentUsage(string toolUseId, string text)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (string.IsNullOrEmpty(toolUseId) || string.IsNullOrEmpty(text) || !_agentRows.TryGetValue(toolUseId, out var row)) return;
+            if (row.AgentUsage == null)
+            {
+                row.AgentUsage = new TextBlock { FontSize = 11.5, Margin = new Thickness(18, 0, 0, 0) };
+                ChatTheme.Muted(row.AgentUsage);
+                int at = row.Expander.Children.IndexOf(row.Result);
+                if (at >= 0) row.Expander.Children.Insert(at + 1, row.AgentUsage);
+                else row.Expander.Children.Add(row.AgentUsage);
+            }
+            row.AgentUsage.Text = "    " + text; // under the ⎿ line, lined up with its text
         }
 
         /// <summary>
@@ -506,6 +529,7 @@ namespace ClaudeVS.ToolWindow
             }
             var toolRow = new ToolRow { Header = header, Dot = dot, ToolName = toolName, Diff = fileDiff, DiffElement = diffElement, Result = result, Body = bodyPanel,
                 Expander = expander, OnDiff = onDiff, OpenPath = openPath };
+            if ((toolName == "Agent" || toolName == "Task") && !string.IsNullOrEmpty(toolUseId)) _agentRows[toolUseId] = toolRow;
 
             if (FocusView())
             {
@@ -1359,6 +1383,7 @@ namespace ClaudeVS.ToolWindow
             _plain = null;
             _doc.Blocks.Clear();
             _tools.Clear();
+            _agentRows.Clear();
             _toolGroupOf.Clear();
             _toolGroup = null;
             _lookGroupOf.Clear();

@@ -630,8 +630,9 @@ Picked on 2026-11-11.
 - [x] **Agent cost in the footer.** The turn's cost includes its subagents: split it, e.g. `$0.020 ($0.012 agents)`,
       priced as the agents panel prices them. Shown from $0.001, never more than the turn, and not when the CLI sent
       no cost. `TurnFooter.Cost`
-- [ ] **Cost on the Agent tool row.** The `● Agent(…)` row in the conversation gets the agent's tokens and cost on its
-      ⎿ line when it finishes, so they stay after the panel is cleared
+- [x] **Cost on the Agent tool row.** The `● Agent(…)` row in the conversation gets the agent's tokens and cost on its
+      ⎿ line when it finishes, so they stay after the panel is cleared. On `task_notification`, under the row its
+      `tool_use_id` drew: `Done · 24.6k tok · $0.042 · 3 tools`. `ToolCallView.AgentUsageLine`
 - [ ] **Report by agent type.** Log each subagent's type (Explore, general-purpose, fork, a custom agent) with its
       tokens, and list the cost per type in the savings report, costliest first
 - [ ] **Exact first-turn agent output.** On a meter's first turn subagent output is counted low (a message streams
