@@ -698,6 +698,21 @@ Picked on 2026-11-11.
 
 ---
 
+## Phase 26 — A newer CLI, agents that stop, and the checks left to do
+
+Picked on 2026-11-11.
+
+- [ ] **Keep up with the CLI.** Check for a Claude Code release newer than the installed 2.1.322 and read its
+      changelog; add here what affects the extension, verified by running it
+- [ ] **Auto-stop runaway agents.** An optional hard limit (Options, off by default): an agent whose requests pass it
+      is stopped, and the chat says so
+- [ ] **Explore tip for read-only agents.** A one-time tip when a general-purpose agent on Opus or Sonnet only read,
+      searched and listed files: an Explore agent does that for less (check which model Explore runs on first)
+- [ ] **Manual check list.** The unchecked VS checks of Phases 1–5 on one short page (steps and what to look for), to
+      go through in the experimental instance in one sitting
+
+---
+
 ## Working in Visual Studio — daily loop
 
 1. Core logic change → edit in `ClaudeVS.Core` → run tests (`ClaudeVS.Core.Tests` → Set as Startup → Ctrl+F5, or `dotnet run` in its folder).
