@@ -559,6 +559,23 @@ Picked on 2026-11-10.
 
 ---
 
+## Phase 21 — Price checks and loose ends from Phase 20
+
+Picked on 2026-11-11.
+
+- [ ] **Live price check command.** Phases 18 and 20 checked prices against Claude Code's own costs with ad-hoc
+      shell probes. Make it `--live-prices`: two turns per model, compared with the prices in use (~$0.19), kept
+      out of `--live-all` because of its cost
+- [ ] **Long-context extra in the report.** The savings report shows what Fable and fast mode cost extra, but not
+      what Haiku requests over 100k tokens cost above the normal Haiku price. Add that line
+- [ ] **Stopped reviewed edit not written.** After Stop, a reviewed edit's note goes with the next prompt only if
+      the file holds what was approved; if it was not written, Claude hears nothing. Fall back to the plain file
+      check, so Claude is told it was not applied
+- [ ] **Subagents in the long-context count.** The meter counts requests over 100k only for the main agent; Haiku
+      subagents with big contexts are billed 5x too. Count their requests where the turn's tokens include them
+
+---
+
 ## Working in Visual Studio — daily loop
 
 1. Core logic change → edit in `ClaudeVS.Core` → run tests (`ClaudeVS.Core.Tests` → Set as Startup → Ctrl+F5, or `dotnet run` in its folder).
