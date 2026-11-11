@@ -2359,6 +2359,9 @@ namespace ClaudeVS.Core.Tests
             Eq(null, CacheWindow.ResumeNote(now.AddHours(-5), 4_000, now), "small context");
             Eq("This conversation was last active 5 hours ago, so its prompt cache has expired: the first prompt sends ~45.0k tokens at the full input price. For a new task, a New chat is cheaper.",
                 CacheWindow.ResumeNote(now.AddHours(-5), 45_000, now));
+            Eq("To go on here, /compact first: it reads the ~45.0k tokens once to summarize them, so the next prompts start small.", CacheWindow.ResumeCompactAdvice(now.AddHours(-5), 45_000, now), "the /compact button's line");
+            Eq(null, CacheWindow.ResumeCompactAdvice(now.AddMinutes(-40), 45_000, now), "no note: no button");
+            Eq(null, CacheWindow.ResumeCompactAdvice(now.AddHours(-5), 4_000, now), "small context: no button");
             True(CacheWindow.ResumeNote(now.AddDays(-3), 45_000, now).Contains("last active 3 days ago"), "days");
             True(CacheWindow.ResumeNote(now.AddMinutes(-70), 45_000, now).Contains("last active over an hour ago"), "just past the hour");
 

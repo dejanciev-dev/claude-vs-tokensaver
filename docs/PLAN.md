@@ -841,7 +841,11 @@ Picked on 2026-11-11.
 - [x] **Week vs last week.** The savings report adds this week's spend against last week's by the same day. Weeks
       start on Monday; under the month line; the comparison left out when nothing was logged then.
       `SavingsReport.WeekLine`
-- [ ] **Compact first on resume.** The note on resuming a conversation whose cache has expired gets a /compact button
+- [x] **Compact first on resume.** The note on resuming a conversation whose cache has expired gets a /compact button.
+      The button is the meter's advice button (the note itself is chat text), shown with the note while token tips are
+      on, until the first turn redraws the advice. Compacting reads the conversation once at the input price and
+      leaves a summary; without it the first prompt writes all of it to the cache again (2× input for a 1-hour cache).
+      `CacheWindow.ResumeCompactAdvice`
 - [ ] **Per-solution monthly warning.** Optional: a warning when this solution's spend this month passes an amount
 
 ---

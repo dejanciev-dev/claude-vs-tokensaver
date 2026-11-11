@@ -1714,7 +1714,17 @@ namespace ClaudeVS.ToolWindow
                 await Jtf.SwitchToMainThreadAsync();
                 if (generation != _resumeGeneration || _session != null) return; // another session was opened, or a prompt already sent
                 RenderTranscript(transcript);
-                Tip(CacheWindow.ResumeNote(s.LastWriteUtc, transcript.LastContextTokens, DateTime.UtcNow)); // a cold cache costs the first prompt
+                var now = DateTime.UtcNow;
+                Tip(CacheWindow.ResumeNote(s.LastWriteUtc, transcript.LastContextTokens, now)); // a cold cache costs the first prompt
+                // …and a /compact button by the meter, until the conversation's first turn redraws the advice
+                if (TipsOn && CacheWindow.ResumeCompactAdvice(s.LastWriteUtc, transcript.LastContextTokens, now) is string compact)
+                {
+                    _advice.Text = "💡 " + compact;
+                    _advice.ClearValue(TextBlock.ForegroundProperty);
+                    _adviceCommand = "/compact";
+                    _adviceAction.Content = _adviceCommand;
+                    _adviceAction.Visibility = Visibility.Visible;
+                }
             }).FileAndForget("ClaudeVS/ChatControl/Resume");
         }
 
