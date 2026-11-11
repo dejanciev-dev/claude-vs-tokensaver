@@ -185,7 +185,7 @@ namespace ClaudeVS.Commands
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             var log = ToolWindow.ClaudeChatControl.Usage;
-            if (!System.IO.File.Exists(log.Path) && !System.IO.File.Exists(log.ArchivePath))
+            if (!log.HasAny)
             {
                 Message("Claude Code", "No usage logged yet. Turn on Options > Diagnostics > Keep local usage log.", OLEMSGICON.OLEMSGICON_INFO);
                 return;

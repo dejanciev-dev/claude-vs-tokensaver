@@ -873,8 +873,10 @@ Picked on 2026-11-11. The version comes last, after Phase 34, so its notes cover
 
 Picked on 2026-11-11.
 
-- [ ] **Keep more usage history.** An option for how many months of usage to keep (default 3), as monthly files,
-      instead of one 5 MB archive
+- [x] **Keep more usage history.** An option for how many months of usage to keep (default 3), as monthly files,
+      instead of one 5 MB archive. `usage-2026-11.jsonl` per local month (by the turn's time), read after the old
+      `usage.1.jsonl` and `usage.jsonl`; *Keep usage history (months)* (0 = all) prunes on a new month's first turn:
+      monthly files before the first kept month, and the old two once last written before it. `UsageLog.Prune`
 - [ ] **Report as Markdown file.** Save the savings report as a Markdown file
 - [ ] **Report period picker.** Run the report for this month, last month or the last 30 days, not only everything
 - [ ] **Usage log size in Options.** Where the log is and how big; a command to open its folder

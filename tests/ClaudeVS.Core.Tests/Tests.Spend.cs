@@ -124,18 +124,21 @@ namespace ClaudeVS.Core.Tests
 
         private static void Test_UsageLog_RoundTripAndSummary()
         {
-            string path = Path.Combine(Path.GetTempPath(), "cvs-usage-" + Guid.NewGuid().ToString("N") + ".jsonl");
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-usage-" + Guid.NewGuid().ToString("N"));
+            string path = Path.Combine(dir, "usage.jsonl");
             try
             {
                 var log = new UsageLog(path);
+                Eq(false, log.HasAny, "nothing yet");
                 log.Append(new UsageRecord { Solution = @"C:\a", ModelUsed = "haiku", InputTokens = 100, CacheReadTokens = 900, OutputTokens = 50, CostUsd = 0.01, CharsAvoided = 4000, Routed = true, RouteScore = -2 });
                 log.Append(new UsageRecord { Solution = @"C:\a", ModelUsed = "opus", InputTokens = 1000, OutputTokens = 200, CostUsd = 0.10 });
                 log.Append(new UsageRecord { Solution = @"C:\b", ModelUsed = "sonnet", InputTokens = 10, CostUsd = 1 });
-                File.AppendAllText(path, "{ partial line\n");
+                File.AppendAllText(log.MonthPath(DateTime.UtcNow), "{ partial line\n");
 
                 var all = log.ReadAll();
                 Eq(3, all.Count, "malformed line skipped");
                 Eq(-2.0, all[0].RouteScore, "route score round-trips");
+                True(log.SizeBytes() > 0 && log.HasAny, "size");
 
                 var a = UsageSummary.From(all, @"c:\A");
                 Eq(2, a.Turns, "turns for solution a (case-insensitive)");
@@ -145,23 +148,43 @@ namespace ClaudeVS.Core.Tests
                 True(Math.Abs(a.CacheHitPercent - 45) < 0.01, "cache % " + a.CacheHitPercent); // 900 / 2000
                 Eq(3, UsageSummary.From(all).Turns, "all solutions");
             }
-            finally { File.Delete(path); }
+            finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
         }
 
-        private static void Test_UsageLog_RotatesAndReadsArchive()
+        private static void Test_UsageLog_MonthlyFilesAndKeepMonths()
         {
-            string path = Path.Combine(Path.GetTempPath(), "cvs-rot-" + Guid.NewGuid().ToString("N") + ".jsonl");
-            var log = new UsageLog(path, maxBytes: 300);
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-months-" + Guid.NewGuid().ToString("N"));
+            string path = Path.Combine(dir, "usage.jsonl");
+            DateTime At(int year, int month) => new DateTime(year, month, 15, 12, 0, 0, DateTimeKind.Local).ToUniversalTime();
             try
             {
-                for (int i = 0; i < 10; i++) log.Append(new UsageRecord { Solution = "s", ModelUsed = "sonnet", InputTokens = i });
-                True(File.Exists(log.ArchivePath), "archive created");
-                True(new FileInfo(path).Length < 300 + 200, "current file stays small");
-                int n = log.ReadAll().Count;
-                True(n > 1 && n <= 10, "reads archive + current: " + n); // older archives are dropped by design
-                Eq(9L, log.ReadAll().Last().InputTokens, "newest last");
+                var log = new UsageLog(path);
+                // What older versions left: the 5 MB archive and the current file, read first
+                Directory.CreateDirectory(dir);
+                File.WriteAllText(log.ArchivePath, "{\"ts\":\"2026-06-01T10:00:00Z\",\"cost\":1}\n");
+                File.WriteAllText(path, "{\"ts\":\"2026-08-01T10:00:00Z\",\"cost\":2}\n");
+                File.SetLastWriteTime(log.ArchivePath, new DateTime(2026, 6, 1));
+                File.SetLastWriteTime(path, new DateTime(2026, 9, 2));
+
+                log.Append(new UsageRecord { Timestamp = At(2026, 9), CostUsd = 3 });
+                log.Append(new UsageRecord { Timestamp = At(2026, 10), CostUsd = 4 });
+                log.Append(new UsageRecord { Timestamp = At(2026, 11), CostUsd = 5 });
+                Eq(Path.Combine(dir, "usage-2026-11.jsonl"), log.MonthPath(At(2026, 11)), "one file per month");
+                Eq("usage-2026-09.jsonl,usage-2026-10.jsonl,usage-2026-11.jsonl", string.Join(",", log.MonthFiles().Select(Path.GetFileName)), "oldest first");
+                Eq("1,2,3,4,5", string.Join(",", log.ReadAll().Select(r => r.CostUsd)), "the old two first, then the months");
+
+                log.KeepMonths = 2; // November and October
+                Eq(3, log.Prune(At(2026, 11)), "September's file, the archive (June) and the old file (last written Sep 2)");
+                Eq("4,5", string.Join(",", log.ReadAll().Select(r => r.CostUsd)));
+
+                // Appending in a new month prunes by itself
+                log.Append(new UsageRecord { Timestamp = At(2026, 12), CostUsd = 6 });
+                Eq("5,6", string.Join(",", log.ReadAll().Select(r => r.CostUsd)), "October went with December's first turn");
+
+                log.KeepMonths = 0;
+                Eq(0, log.Prune(At(2027, 6)), "0 keeps everything");
             }
-            finally { File.Delete(path); File.Delete(log.ArchivePath); }
+            finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
         }
 
         private static void Test_Savings_Thinking()
