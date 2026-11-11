@@ -183,6 +183,14 @@ namespace ClaudeVS.Core.Tests
 
                 log.KeepMonths = 0;
                 Eq(0, log.Prune(At(2027, 6)), "0 keeps everything");
+                long size = log.SizeBytes();
+                Eq($"{dir}: 2 files, {size} B, everything kept", log.Describe());
+                log.KeepMonths = 3;
+                True(log.Describe().EndsWith(", the last 3 months kept"), log.Describe());
+                Eq("512 B", UsageLog.FormatBytes(512));
+                Eq("12.3 KB", UsageLog.FormatBytes(12_600));
+                Eq("1.2 MB", UsageLog.FormatBytes(1_250_000));
+                Eq($"{Path.Combine(Path.GetTempPath(), "nothing-here")}: 0 files, 0 B, everything kept", new UsageLog(Path.Combine(Path.GetTempPath(), "nothing-here", "usage.jsonl")).Describe(), "no folder yet");
             }
             finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
         }

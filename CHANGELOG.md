@@ -69,6 +69,8 @@ All notable changes to this project are listed here. The format follows
 - **Save Savings Report as Markdown…** (Tools → Claude Code): the same report as a `.md` file, to attach or share.
 - **Savings report period** (Options → Diagnostics, default All): the report and its Markdown file can cover this
   month, last month or the last 30 days instead of everything logged.
+- **Open Usage Log Folder** (Tools → Claude Code): opens it in File Explorer and says in the Output pane how many
+  files and how much space it takes; the savings report's last line says the same.
 
 ### Changed
 - **Cost limits in their own Options category**: the cost warnings (conversation, daily, monthly, per solution, agent),

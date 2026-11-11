@@ -34,9 +34,9 @@ namespace ClaudeVS.Core.Tokens
         }
 
         /// <param name="solution">The open solution's folder; null for all solutions.</param>
-        /// <param name="logFolder">Where the usage log is, for the last line; null leaves it out.</param>
+        /// <param name="logInfo">Where the usage log is and how big (<see cref="UsageLog.Describe"/>), for the last line; null leaves it out.</param>
         /// <param name="period">The turns it covers; the month and week lines still compare up to now. The router replay uses the same turns.</param>
-        public static string Full(IReadOnlyList<UsageRecord> records, PriceTable prices, string solution, DateTime nowUtc, string logFolder = null, ReportPeriod period = ReportPeriod.All)
+        public static string Full(IReadOnlyList<UsageRecord> records, PriceTable prices, string solution, DateTime nowUtc, string logInfo = null, ReportPeriod period = ReportPeriod.All)
         {
             records = records ?? new UsageRecord[0];
             var (from, until, name) = Range(period, nowUtc);
@@ -68,7 +68,7 @@ namespace ClaudeVS.Core.Tokens
                     sb.AppendLine($"  {d.LoggedModel} → {d.NowModel}{d.CostChangeText()}: \"{Shorten(d.PromptPreview, 70)}\" ({d.NowReason})");
                 if (RouterReplay.CostSummary(diffs) is string replayCost) sb.AppendLine("  " + replayCost);
             }
-            if (logFolder != null) sb.AppendLine().AppendLine($"Log: {logFolder}");
+            if (logInfo != null) sb.AppendLine().AppendLine($"Log: {logInfo}");
             return sb.ToString();
         }
 
