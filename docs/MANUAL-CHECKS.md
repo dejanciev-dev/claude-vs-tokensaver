@@ -82,8 +82,12 @@ Most of these show only once spend passes an amount. Set the amounts low for the
 | Resume a conversation from **History** last used over an hour ago, with a large context | The ℹ note that the cache expired, and a **/compact** button by the meter. Clicking it compacts before the first prompt |
 | **Show Savings Report** | `This week:` under the month line (with last month and last week when logged), `Cache written again:` once a cache was rewritten, `Tool results:` with `MCP <server>` groups, `By effort:`, `Costliest conversations:`, and the router replay with costs |
 | **Export Usage as CSV…** | The last columns are `session`, `effort` and `tools` |
+| **Save Savings Report as Markdown…** | A save dialog, then the `.md` file opens with the report in a fixed-width block |
+| **Options → Diagnostics → Savings report period** set to `LastMonth`, then **Show Savings Report** | The title ends with last month's name, the period ends on its last day, and there is no `This month:` line |
+| **Open Usage Log Folder** | File Explorer at `%LocalAppData%\claude-vs-tokensaver`, with `usage-<year>-<month>.jsonl` files. The Output pane says how many files and how big |
+| **Tools → Options → Claude Code** | The cost warnings and limits under their own *Cost limits* category, with the values set before |
 
-Set the cost amounts back afterwards: daily `20`, monthly `200`, per solution `0`, ask before sending `0`.
+Set the cost amounts back afterwards: daily `20`, monthly `200`, per solution `0`, ask before sending `0`; and the report period to `All`.
 
 ## 7. Release (Phase 5)
 
