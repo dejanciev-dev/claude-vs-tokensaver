@@ -2382,6 +2382,33 @@ namespace ClaudeVS.Core.Tests
             Eq("shop", SolutionBreakdown.NameOf(@"C:\src\shop\"), "folder name");
         }
 
+        private static void Test_SavingsReport_LastMonth()
+        {
+            DateTime At(int month, int day) => new DateTime(2026, month, day, 12, 0, 0, DateTimeKind.Local).ToUniversalTime();
+            var recs = new[]
+            {
+                new UsageRecord { Timestamp = At(10, 3), CostUsd = 6, RouterCostUsd = 0.5 },
+                new UsageRecord { Timestamp = At(10, 11), CostUsd = 2.5 },
+                new UsageRecord { Timestamp = At(10, 12), CostUsd = 100 },   // after the same day: not compared
+                new UsageRecord { Timestamp = At(11, 2), CostUsd = 12.33 },
+            };
+            var rep = SavingsReport.Build(recs, new PriceTable(), nowUtc: At(11, 11));
+            Eq(new DateTime(2026, 10, 11), rep.LastMonthToDay, "Oct 1–11");
+            True(Math.Abs(rep.LastMonthToDateUsd - 9) < 1e-9, "router cost included: " + rep.LastMonthToDateUsd);
+            True(rep.LastMonthText().EndsWith(" 1–11: $9.00, +37%)"), rep.LastMonthText());
+            True(rep.MonthLine().EndsWith(rep.LastMonthText()) && rep.MonthLine().Contains("at this pace"), rep.MonthLine());
+
+            var lower = SavingsReport.Build(new[] { recs[0], new UsageRecord { Timestamp = At(11, 1), CostUsd = 3.25 } }, new PriceTable(), nowUtc: At(11, 11));
+            True(lower.LastMonthText().EndsWith("$6.50, −50%)"), lower.LastMonthText());
+            Eq(null, SavingsReport.Build(new[] { recs[3] }, new PriceTable(), nowUtc: At(11, 11)).LastMonthText(), "nothing last month");
+
+            // March 31 against February: its last day
+            var march = SavingsReport.Build(new[] { new UsageRecord { Timestamp = At(3, 30), CostUsd = 1 } }, new PriceTable(), nowUtc: At(3, 31));
+            Eq(new DateTime(2026, 2, 28), march.LastMonthToDay, "February is shorter");
+            // January against December of the year before
+            Eq(new DateTime(2025, 12, 15), SavingsReport.Build(recs, new PriceTable(), nowUtc: new DateTime(2026, 1, 15, 12, 0, 0, DateTimeKind.Local).ToUniversalTime()).LastMonthToDay, "across the year");
+        }
+
         private static void Test_SlashPicker_Matching()
         {
             var cmds = new List<SlashCommand>

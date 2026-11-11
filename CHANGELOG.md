@@ -30,6 +30,8 @@ All notable changes to this project are listed here. The format follows
 - **Daily hard limit** (Options → *Ask before sending past daily cost (USD)*, off by default): once today's spend
   has passed the amount, sending a prompt asks first. After a yes, it doesn't ask again that day until the next
   multiple. Commands such as /compact always go.
+- **This month against last month** in the savings report: the month line adds last month's cost up to the same
+  day and the change, e.g. `(Oct 1–11: $9.00, +37%)`.
 
 ## [0.9.0] - 2026-11-11
 

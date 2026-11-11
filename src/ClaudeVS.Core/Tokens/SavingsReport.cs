@@ -537,6 +537,10 @@ namespace ClaudeVS.Core.Tokens
             rep.MonthToDateUsd = list.Where(r => r.Timestamp.ToLocalTime().Date >= rep.Month && r.Timestamp.ToLocalTime().Date <= today).Sum(r => r.CostUsd + r.RouterCostUsd);
             if (today.Day >= ProjectFromDay && rep.MonthToDateUsd > 0)
                 rep.MonthProjectedUsd = rep.MonthToDateUsd / today.Day * DateTime.DaysInMonth(today.Year, today.Month);
+            // Last month up to the same day (its last day when it is shorter), to compare with
+            var lastMonth = rep.Month.AddMonths(-1);
+            rep.LastMonthToDay = lastMonth.AddDays(Math.Min(today.Day, DateTime.DaysInMonth(lastMonth.Year, lastMonth.Month)) - 1);
+            rep.LastMonthToDateUsd = list.Where(r => r.Timestamp.ToLocalTime().Date >= lastMonth && r.Timestamp.ToLocalTime().Date <= rep.LastMonthToDay).Sum(r => r.CostUsd + r.RouterCostUsd);
 
             if (solution == null)
                 rep.BySolution.AddRange(list
@@ -552,9 +556,21 @@ namespace ClaudeVS.Core.Tokens
             if (MonthToDateUsd <= 0) return null;
             var monthEnd = Month.AddDays(DateTime.DaysInMonth(Month.Year, Month.Month) - 1);
             string line = $"This month:                 ${MonthToDateUsd:0.00} so far";
-            return MonthProjectedUsd is double p
-                ? line + $", ~${p:0.00} at this pace by {monthEnd:MMM d}"
-                : line;
+            if (MonthProjectedUsd is double p) line += $", ~${p:0.00} at this pace by {monthEnd:MMM d}";
+            return LastMonthText() is string last ? line + " " + last : line;
+        }
+
+        /// <summary>Last month from its 1st up to <see cref="LastMonthToDay"/> (the same day as today, or its last day).</summary>
+        public DateTime LastMonthToDay { get; set; }
+        public double LastMonthToDateUsd { get; set; }
+
+        /// <summary>"(Oct 1–11: $9.00, +37%)"; null when nothing was logged then.</summary>
+        public string LastMonthText()
+        {
+            if (LastMonthToDateUsd <= 0) return null;
+            double change = 100.0 * (MonthToDateUsd - LastMonthToDateUsd) / LastMonthToDateUsd;
+            string sign = change >= 0.5 ? "+" : change <= -0.5 ? "−" : "±";
+            return $"({LastMonthToDay:MMM} 1–{LastMonthToDay.Day}: ${LastMonthToDateUsd:0.00}, {sign}{Math.Abs(change):0}%)";
         }
 
         /// <summary>"By solution:" lines for a report over all solutions; empty with fewer than two solutions.</summary>
