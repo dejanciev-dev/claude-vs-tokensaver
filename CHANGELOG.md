@@ -7,6 +7,7 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **The subagents' share of a turn's cost** in the line under each answer: `$0.020 ($0.012 agents)`, from $0.001.
 - **Subagent tokens in the line under each answer**: `· 2 agents (31.0k tok)`. The turn's own `tok` count is
   the main agent's; this is what its subagents used on top.
 - **A token tip when subagents cost more than Claude itself** in a turn (and at least $0.05): fewer agents, a
