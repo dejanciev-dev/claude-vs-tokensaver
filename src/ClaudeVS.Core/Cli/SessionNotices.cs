@@ -155,14 +155,15 @@ namespace ClaudeVS.Core.Cli
         /// A token tip when a fork (<c>subagent_type: "fork"</c>) finished and cost at least <see cref="ForkTipFromUsd"/>:
         /// it starts with a copy of the whole conversation (in Fixtures/cli-2.1.319-fork.jsonl its first request reads the
         /// same 23,917 cached tokens as the main agent's next one), so in a long conversation it costs far more than a
-        /// fresh agent. No switch is named: whether <c>CLAUDE_CODE_FORK_SUBAGENT=0</c> turns forks off is not settled.
-        /// Null otherwise; the text is fixed, so it is said once.
+        /// fresh agent. Options → No forks turns them off (<c>CLAUDE_CODE_FORK_SUBAGENT=0</c>, checked with 2.1.322:
+        /// Fixtures/cli-2.1.322-fork-off.jsonl). Null otherwise; the text is fixed, so it is said once.
         /// </summary>
         public static string ForkCost(AgentTask t)
         {
             if (t == null || t.IsRunning || t.SubagentType != ToolCallView.ForkType || t.CostUsd < ForkTipFromUsd) return null;
             return "A fork starts with a copy of this whole conversation, so in a long one it costs much more than a fresh agent. "
-                + "For a task that does not need the conversation, ask Claude for an Explore agent or a plain search instead of a fork.";
+                + "For a task that does not need the conversation, ask Claude for an Explore agent or a plain search instead; "
+                + "Tools → Options → Claude Code → No forks turns forks off for new sessions.";
         }
 
         /// <summary>A whole-file read this large (in tokens, from the result size) earns the tip.</summary>

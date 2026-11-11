@@ -1416,6 +1416,7 @@ namespace ClaudeVS.ToolWindow
                 ResumeSessionId = _resumeId,
                 ForkSession = _forkNext && _resumeId != null,
                 EnableFileCheckpointing = o?.FileCheckpoints ?? true,
+                NoForks = o?.NoForks ?? false,
                 SessionName = _sessionName,
                 EditNotesHook = true, // tells Claude which changes of an edit were rejected (review card)
             });

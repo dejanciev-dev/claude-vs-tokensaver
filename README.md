@@ -286,6 +286,7 @@ Editor commands go to the chat window you used last.
 | Chat | Screen reader announcements | On | Narrator, NVDA or JAWS announce finished answers (their start), permission requests, questions, plans, edits to review, stalls and usage limits. Nothing is sent without a screen reader. |
 | Chat | Show message timestamps | On | Time above each prompt and at the end of each answer line; a date line where the day changes. |
 | CLI | File checkpoints (rewind) | On | Claude Code keeps a copy of each file before Claude changes it, so prompts can be rewound. Applies to new sessions. |
+| CLI | No forks | Off | Claude can't start forks (subagents that start with a copy of the whole conversation). Sets `CLAUDE_CODE_FORK_SUBAGENT=0`. Applies to new sessions. |
 | CLI | Extra arguments | | Appended to the `claude` command line, e.g. `--add-dir ..\shared`. |
 | Token saving | Concise answers | On | One-line brevity prompt. |
 | Token saving | Default model | Auto | Auto = route each prompt. Fable (2× the Opus price) is only ever your own pick. |

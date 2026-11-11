@@ -7,6 +7,8 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Options → Claude Code → No forks**: Claude can't start forks, which copy the whole conversation
+  (`CLAUDE_CODE_FORK_SUBAGENT=0`, checked with Claude Code 2.1.322). The fork cost tip now points to it.
 - **A token tip when a fork cost $0.05 or more**: a fork starts with a copy of the whole conversation, so for a
   task that does not need it, an Explore agent or a plain search costs much less. Said once per conversation.
 - **Subagents by kind in the session summary** (`Subagents by kind: Explore $0.400 · Fork $0.030`) and an
