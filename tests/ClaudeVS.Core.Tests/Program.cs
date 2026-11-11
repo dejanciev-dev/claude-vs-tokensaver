@@ -2256,6 +2256,28 @@ namespace ClaudeVS.Core.Tests
             Eq(0, m.ResultTokensByTool().Count, "reset");
         }
 
+        private static void Test_TurnFooter_CostBreakdown()
+        {
+            var prices = new PriceTable();
+            var turn = new TokenUsage { Input = 500, Output = 400, Thinking = 300, CacheRead = 40_000, CacheCreation = 2_000, CacheCreation1h = 2_000 };
+            string tip = TurnFooter.CostBreakdown("claude-opus-5-5", turn, 0.012, 0.047, prices);
+            var lines = tip.Split('\n');
+            Eq("What this answer cost, at Opus prices:", lines[0]);
+            True(lines[1].StartsWith("Input") && lines[1].EndsWith("500 tok  $0.0020"), lines[1]);
+            True(lines[2].StartsWith("Output") && lines[2].EndsWith("400 tok  $0.0080"), lines[2]);
+            Eq("  of which thinking 300 tok  $0.0060", lines[3]);
+            True(lines[4].StartsWith("Cache reads") && lines[4].EndsWith("40.0k tok  $0.0080"), "40k × $0.20: " + lines[4]);
+            True(lines[5].StartsWith("Cache writes") && lines[5].EndsWith("tok  $0.016"), "1-hour writes at 2× input: " + lines[5]);
+            True(lines[6].StartsWith("Subagents") && lines[6].EndsWith("$0.012"), lines[6]);
+            Eq("Total $0.046", lines[7], "within a cent of Claude Code's: no note");
+
+            True(TurnFooter.CostBreakdown("claude-opus-5-5", turn, 0, 0.20, prices).EndsWith("(Claude Code counts $0.200; Options → Pricing may differ from its prices)"), "differs by a cent or more");
+            var fast = new TokenUsage { Input = 1_000, Output = 100, FastTokens = 1_100 };
+            True(TurnFooter.CostBreakdown("claude-opus-5-5", fast, 0, 0, prices).StartsWith("What this answer cost, at Opus prices ×2 (fast mode or long context):"), "fast mode");
+            Eq(null, TurnFooter.CostBreakdown("some-other-model", turn, 0, 0, prices), "price not known");
+            Eq(null, TurnFooter.CostBreakdown("claude-opus-5-5", default(TokenUsage), 0, 0, prices), "no tokens");
+        }
+
         private static void Test_SavingsReport_ByEffort()
         {
             var t = DateTime.UtcNow.AddDays(-1);

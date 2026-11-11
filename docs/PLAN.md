@@ -814,8 +814,10 @@ Picked on 2026-11-11.
 
 Picked on 2026-11-11.
 
-- [ ] **Cost breakdown tooltip.** The cost in the line under an answer gets a tooltip with what made it up: input,
-      output, thinking, cache reads, cache writes, subagents
+- [x] **Cost breakdown tooltip.** The cost in the line under an answer gets a tooltip with what made it up: input,
+      output, thinking, cache reads, cache writes, subagents. On the whole line; the main agent's tokens at the
+      answering model's price (1-hour writes at 2× input, fast mode and long context as a multiple), and Claude Code's
+      own figure when the sum is a cent or more off. `TurnFooter.CostBreakdown`
 - [ ] **Cache rewrites in the report.** What writing the conversation to the cache again cost: turns that wrote a big
       context instead of reading it (expired or broken cache)
 - [ ] **Long answer tip.** A one-time tip when a short prompt got a very long answer, with how to ask for less
