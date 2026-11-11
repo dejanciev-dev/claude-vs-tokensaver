@@ -662,9 +662,13 @@ Picked on 2026-11-11.
 - [x] **Kinds in summary and CSV.** The session summary gets a `Subagents by kind:` line, the usage CSV an
       `agent_types` column (e.g. `Explore:0.75;general-purpose:0.25`). The summary sums each turn's split of the exact
       subagent cost (`TokenMeter.SessionAgentCostByType`); the column has the shares, 4 decimals, after `agent_tokens`
-- [ ] **Fork cost tip.** A one-time tip when a fork (a subagent that starts with a copy of the whole conversation)
+- [x] **Fork cost tip.** A one-time tip when a fork (a subagent that starts with a copy of the whole conversation)
       costs much more than a fresh agent would, with how to avoid forks (check first whether Claude Code has a
-      switch for them; say only what is verified)
+      switch for them; say only what is verified). No switch is named: `CLAUDE_CODE_FORK_SUBAGENT=0` is reported to
+      turn forks off by some and not to by others, none of it official. What the capture shows is said instead: a fork's
+      first request reads the same 23,917 cached tokens as the main agent's next one. Once, when a finished fork cost
+      $0.05 or more: ask for an Explore agent or a plain search when the task does not need the conversation.
+      `SessionNotices.ForkCost`
 
 ---
 
