@@ -34,12 +34,15 @@ warm, and shows what every turn costs.
 ## See what you spend
 
 - **Live token meter:** context fill %, session tokens and cost, cache-hit rate, with `/compact` advice, plus
-  what the next prompt will cost while you type.
+  what the next prompt will cost while you type. Its tooltip shows today, this month and the last 7 days.
 - **A line under each answer** with its tokens, its cost (and its subagents' part), the model that actually answered,
-  thinking tokens and what the prompt cache saved.
-- **Cost warnings** per conversation, per day and per month, and one-time **token tips** when something costs more than it needs to.
+  its effort, thinking tokens and what the prompt cache saved. Hover it for what the cost was made of.
+- **Cost warnings** per conversation, per day, per month and per solution, an optional daily limit that asks before
+  sending, and one-time **token tips** when something costs more than it needs to.
 - **Savings report:** actual cost vs the same tokens at Opus prices, what the cache saved, this month with a
-  projection, spend per day, per solution and per model, the costliest turns and conversations, and a CSV export.
+  projection and last month, this week and last week, spend per day, per solution, per model and per effort, the
+  costliest turns and conversations, and what rewriting the cache cost. For one period if you like, saved as
+  Markdown, or exported as CSV.
 - **Agents panel** for subagents and background tasks, with Stop and Run in background. It shows each agent's
   model and cost, turns a row amber past a cost you set, and can stop an agent automatically.
 - **Sessions list** with each conversation's cost.
