@@ -109,6 +109,11 @@ namespace ClaudeVS.Core.Tokens
         /// </summary>
         public Dictionary<string, long> LastTurnResultTokensByTool { get; private set; }
 
+        private int _turnToolCalls;
+
+        /// <summary>The main agent's tool calls in the last turn (a subagent's are its own).</summary>
+        public int LastTurnToolCalls { get; private set; }
+
         /// <summary>
         /// Tokens the main agent's tool results added to the conversation, per tool (shell commands and searches
         /// grouped, MCP tools as "MCP"), largest first.
@@ -164,6 +169,7 @@ namespace ClaudeVS.Core.Tokens
             _toolNames.Clear();
             _resultCharsByTool.Clear();
             _turnResultCharsByTool.Clear(); LastTurnResultTokensByTool = null;
+            _turnToolCalls = 0; LastTurnToolCalls = 0;
             Cache.Reset();
             _breaks.Reset(); _pendingBreak = null;
             Learner.Reset();
@@ -199,6 +205,7 @@ namespace ClaudeVS.Core.Tokens
                     break;
                 case ClaudeEventKind.ToolUse:
                     if (ev.ToolUseId != null) _toolNames[ev.ToolUseId] = ev.ToolName;
+                    if (!ev.IsSubagent) _turnToolCalls++;
                     return;
                 case ClaudeEventKind.ToolResult:
                     if (!ev.IsSubagent && ev.ResultChars > 0 && ev.ToolUseId != null && _toolNames.TryGetValue(ev.ToolUseId, out var tool))
@@ -229,6 +236,7 @@ namespace ClaudeVS.Core.Tokens
                     LastTurnResultTokensByTool = _turnResultCharsByTool.Count == 0 ? null
                         : _turnResultCharsByTool.ToDictionary(kv => kv.Key, kv => (long)TokenEstimate.FromChars(kv.Value), StringComparer.Ordinal);
                     _turnResultCharsByTool.Clear();
+                    LastTurnToolCalls = _turnToolCalls; _turnToolCalls = 0;
                     LastTurn = turn;
                     LastTurnSubagents = _subagents.TurnCompleted(ev.ModelUsage, _turnModel, turn);
                     var pt = Prices ?? DefaultPrices;

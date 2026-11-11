@@ -751,8 +751,10 @@ Picked on 2026-11-11.
 
 Picked on 2026-11-11.
 
-- [ ] **Overkill-model tip.** A one-time tip when a model you picked (Opus or Fable) gave a short answer with no tools,
-      with what the same tokens cost on Haiku
+- [x] **Overkill-model tip.** A one-time tip when a model you picked (Opus or Fable) gave a short answer with no tools,
+      with what the same tokens cost on Haiku. Up to 600 output tokens, no main-agent tool call
+      (`TokenMeter.LastTurnToolCalls`) and no subagents, from $0.02, when Haiku would cost a third or less; not when
+      Auto picked the model. The tip says a new model writes the conversation to its cache once. `SessionNotices.OverkillModel`
 - [ ] **Effort in the report.** Log the effort each turn was sent with; the report lists turns, cost and thinking per
       effort
 - [ ] **Router accuracy line.** For prompts the Haiku router decided against the local rules: how often it chose a
