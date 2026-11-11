@@ -1883,7 +1883,7 @@ namespace ClaudeVS.ToolWindow
                         if (ev.TerminalReason != null && ev.TerminalReason != "completed") ClaudeOutputPane.WriteLine("Turn ended: " + ev.TerminalReason);
                         OnSignInExpiry(ev);
                         string used = _turnModel != null ? " · " + _turnModel : "";
-                        if (ev.Subagents?.FooterNote() is string agents) used += " · " + agents;
+                        if (TurnFooter.Agents(ev.Subagents, _meterModel?.LastTurnSubagentTotal.Total ?? 0) is string agents) used += " · " + agents;
                         if (ev.Subagents?.Warning() is string agentTrouble)
                         {
                             FlushText();

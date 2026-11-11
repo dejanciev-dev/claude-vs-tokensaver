@@ -24,6 +24,20 @@ namespace ClaudeVS.Core.Tokens
         }
 
         /// <summary>
+        /// "2 agents (31k tok)": the subagents the turn started (<paramref name="stats"/>, may be null) and the tokens
+        /// subagents used in it (<see cref="TokenMeter.LastTurnSubagentTotal"/>; not in the turn's own "tok", which is
+        /// the main agent's). A background agent started earlier that worked in this turn shows as "agents 31k tok".
+        /// Null when there is neither.
+        /// </summary>
+        public static string Agents(SubagentStats stats, long agentTokens)
+        {
+            string count = stats?.FooterNote();
+            string tokens = agentTokens > 0 ? TokenMeter.Format(agentTokens) + " tok" : null;
+            if (count == null) return tokens == null ? null : "agents " + tokens;
+            return tokens == null ? count : $"{count} ({tokens})";
+        }
+
+        /// <summary>
         /// The turn's input served from the prompt cache (cached input costs a tenth of the full price): a low number
         /// right after a model switch or a long pause explains a dearer answer. Null below 1,000 input tokens.
         /// </summary>
