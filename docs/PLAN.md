@@ -770,6 +770,31 @@ Picked on 2026-11-11.
 
 ---
 
+## Phase 29 — Limits you can rely on
+
+Picked on 2026-11-11.
+
+- [ ] **Daily hard limit.** Optional (off by default): once today's spend passes an amount, sending a prompt asks
+      first
+- [ ] **Month vs last month.** The report's month line adds last month's cost by the same day and the change
+- [ ] **Amber meter past a warning.** The meter's cost turns amber once today's spend passes the daily warning
+- [ ] **Tool results in the CSV.** One `tools` column (`Read:1200;Shell:400`), like `agent_types`
+
+---
+
+## Phase 30 — Thinking and effort that pay
+
+Picked on 2026-11-11.
+
+- [ ] **Heavy thinking tip.** A one-time tip when thinking was most of a short answer's output at high effort or
+      above, with what it cost and a lower effort to try
+- [ ] **Effort in the footer.** The line under each answer names the effort when one was set (`· high`)
+- [ ] **Router replay by cost.** The router replay in the savings report adds what the current rules' different
+      picks would have cost, at the logged tokens
+- [ ] **Effort in the session summary.** Copy session summary gets turns and cost per effort
+
+---
+
 ## Working in Visual Studio — daily loop
 
 1. Core logic change → edit in `ClaudeVS.Core` → run tests (`ClaudeVS.Core.Tests` → Set as Startup → Ctrl+F5, or `dotnet run` in its folder).
