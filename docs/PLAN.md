@@ -690,8 +690,11 @@ Picked on 2026-11-11.
 - [x] **Agent models in the report.** The savings report lists subagent cost per model (Haiku, Sonnet, Opus agents)
       and what the Opus agents would have cost on Sonnet. `  by model: opus $1.20 (≈ $0.72 on Sonnet) · sonnet $0.40`,
       costliest first, each agent at its own model's price from the logged `agents`. `SavingsReport.AgentByModelLine`
-- [ ] **Agent cost in the sessions list.** Each conversation shows its subagent cost next to its total, from the
-      usage log
+- [x] **Agent cost in the sessions list.** Each conversation shows its subagent cost next to its total, from the
+      usage log. Taken from the CLI's own session files instead: the cost was already read from them, subagents'
+      files (`<id>/subagents/*.jsonl`) included, while the usage log has no session ids. `$0.42 ($0.12 agents) · 3h`,
+      the agents' part from half a cent; a message marked `isSidechain` in the main file counts as theirs too.
+      `SessionCostInfo.AgentCostUsd`
 
 ---
 
