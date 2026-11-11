@@ -251,6 +251,9 @@ namespace ClaudeVS.Core.Tokens
         /// <summary>Turns with requests in fast mode, and what that cost more than standard speed (fast tokens at <see cref="ModelPrice.FastMultiplier"/>×).</summary>
         public int FastTurns { get; set; }
         public double FastExtraUsd { get; set; }
+        /// <summary>Turns with requests over a model's long-context tier (Haiku: 100k input tokens, 5×), and what that cost above the normal price.</summary>
+        public int LongContextTurns { get; set; }
+        public double LongContextExtraUsd { get; set; }
         public List<ModelBreakdown> ByModel { get; } = new List<ModelBreakdown>();
         /// <summary>Turns routed by the Haiku router, how many picked the same model as the local rules, its cost and time.</summary>
         public int HaikuRouted { get; set; }
@@ -320,6 +323,12 @@ namespace ClaudeVS.Core.Tokens
                 {
                     rep.FastTurns++;
                     rep.FastExtraUsd += own.Cost(r) - own.Cost(r) / r.SpeedMultiplier;
+                }
+                double tier = own.ContextMultiplier(r.LargeContextTokens, r.TotalTokens);
+                if (tier > 1)
+                {
+                    rep.LongContextTurns++;
+                    rep.LongContextExtraUsd += own.Cost(r) - own.Cost(r) / tier;
                 }
             }
             rep.CacheHitPercent = input > 0 ? 100.0 * cacheRead / input : 0;
@@ -412,6 +421,8 @@ namespace ClaudeVS.Core.Tokens
                 sb.AppendLine($"Paid extra for Fable:       ${FableExtraUsd:0.00}  ({FableTurns} {(FableTurns == 1 ? "turn" : "turns")}, above the same tokens on Opus)");
             if (FastTurns > 0)
                 sb.AppendLine($"Paid extra for fast mode:   ${FastExtraUsd:0.00}  ({FastTurns} {(FastTurns == 1 ? "turn" : "turns")}, above standard speed)");
+            if (LongContextTurns > 0)
+                sb.AppendLine($"Paid extra over 100k:       ${LongContextExtraUsd:0.00}  ({LongContextTurns} Haiku {(LongContextTurns == 1 ? "turn" : "turns")} over 100k tokens, above Haiku's normal price; /compact keeps it under)");
             if (HaikuRouted > 0 || RouterCostUsd > 0)
             {
                 sb.AppendLine($"Haiku router:               {HaikuRouted} prompts, same model as the local rules {(HaikuRouted > 0 ? 100.0 * HaikuAgreed / HaikuRouted : 0):0}% of the time");

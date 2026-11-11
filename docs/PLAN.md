@@ -569,8 +569,11 @@ Picked on 2026-11-11.
       router's flags, a ~4.5k-token system prompt), the first turn writes the cache and the second reads it; each
       turn's usage priced with `PriceTable` against the growth of `total_cost_usd`. With 2.1.322: all 8 turns
       matched to the last digit (Sonnet with its $0.10 cache read), $0.18
-- [ ] **Long-context extra in the report.** The savings report shows what Fable and fast mode cost extra, but not
-      what Haiku requests over 100k tokens cost above the normal Haiku price. Add that line
+- [x] **Long-context extra in the report.** The savings report shows what Fable and fast mode cost extra, but not
+      what Haiku requests over 100k tokens cost above the normal Haiku price. Add that line. `Paid extra over 100k:
+      $… (N Haiku turns over 100k tokens, above Haiku's normal price; /compact keeps it under)`, only when there
+      were such turns (`SavingsReport.LongContextExtraUsd`: each turn's cost less the same at the normal price, from
+      the logged `largeContextTokens`)
 - [ ] **Stopped reviewed edit not written.** After Stop, a reviewed edit's note goes with the next prompt only if
       the file holds what was approved; if it was not written, Claude hears nothing. Fall back to the plain file
       check, so Claude is told it was not applied
