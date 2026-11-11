@@ -926,6 +926,40 @@ namespace ClaudeVS.Core.Tests
             True(SavingsReportText.Markdown("a ``` b\n````", now).Contains("\n`````text\n"), "fenced past the longest backtick run");
         }
 
+        private static void Test_SavingsReportText_Period()
+        {
+            DateTime At(int month, int day) => new DateTime(2026, month, day, 12, 0, 0, DateTimeKind.Local).ToUniversalTime();
+            var now = At(11, 11);
+            var recs = new[]
+            {
+                new UsageRecord { Timestamp = At(9, 20), CostUsd = 7 },
+                new UsageRecord { Timestamp = At(10, 5), CostUsd = 2 },
+                new UsageRecord { Timestamp = At(10, 20), CostUsd = 3, Routed = true, RouteModel = "sonnet", ModelUsed = "claude-sonnet-5-5", PromptPreview = "fix the typo in this comment", InputTokens = 10_000 },
+                new UsageRecord { Timestamp = At(11, 2), CostUsd = 4 },
+            };
+            var (from, until, name) = SavingsReportText.Range(ReportPeriod.LastMonth, now);
+            Eq(new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Local).ToUniversalTime(), from, "from Oct 1");
+            Eq(new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Local).ToUniversalTime(), until, "until Nov 1");
+            Eq("October 2026", name);
+            Eq("November 2026", SavingsReportText.Range(ReportPeriod.ThisMonth, now).Name);
+            Eq(new DateTime(2026, 10, 13, 0, 0, 0, DateTimeKind.Local).ToUniversalTime(), SavingsReportText.Range(ReportPeriod.Last30Days, now).FromUtc, "30 days, today included");
+            Eq(null, SavingsReportText.Range(ReportPeriod.All, now).Name, "everything");
+
+            string last = SavingsReportText.Full(recs, new PriceTable(), null, now, period: ReportPeriod.LastMonth);
+            True(last.StartsWith("Claude Code — savings report (all solutions), October 2026"), last);
+            True(last.Contains("to 2026-10-31 · 2 turns") && last.Contains("Actual cost:                $5.00"), last);
+            True(!last.Contains("This month:") && !last.Contains("This week:"), "no 'so far' lines for a month that ended");
+            True(last.Contains("Router replay: 1 of 1"), "the replay over the same turns");
+
+            string month = SavingsReportText.Full(recs, new PriceTable(), null, now, period: ReportPeriod.ThisMonth);
+            True(month.Contains("Actual cost:                $4.00") && month.Contains("This month:                 $4.00 so far"), month);
+            True(month.Contains("(Oct 1–11: $2.00") || month.Contains("1–11: $2.00"), "last month still compared: " + month);
+            True(month.Contains("Router replay: no prompt previews logged"), "October's preview is outside");
+
+            True(SavingsReportText.Full(recs, new PriceTable(), null, At(12, 25), period: ReportPeriod.ThisMonth).Contains("No turns in this period."), "an empty period");
+            True(SavingsReportText.Full(recs, new PriceTable(), null, now).Contains("Actual cost:                $16.00"), "all");
+        }
+
         private static void Test_UsageCsv()
         {
             var t = new DateTime(2026, 11, 9, 9, 30, 0, DateTimeKind.Local).ToUniversalTime();

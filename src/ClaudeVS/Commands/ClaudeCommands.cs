@@ -144,7 +144,8 @@ namespace ClaudeVS.Commands
             var prices = _package.Options.ToPriceTable();
             var log = ToolWindow.ClaudeChatControl.Usage;
 
-            string text = await Task.Run(() => SavingsReportText.Full(log.ReadAll(), prices, solution, DateTime.UtcNow, log.Folder));
+            var period = _package.Options.SavingsReportPeriod;
+            string text = await Task.Run(() => SavingsReportText.Full(log.ReadAll(), prices, solution, DateTime.UtcNow, log.Folder, period));
 
             ClaudeOutputPane.WriteBlock("\n" + new string('=', 60) + "\n" + text);
             ClaudeOutputPane.Activate();
@@ -162,6 +163,7 @@ namespace ClaudeVS.Commands
             }
             string solution = VsContext.GetSolutionDirectory();
             var prices = _package.Options.ToPriceTable();
+            var period = _package.Options.SavingsReportPeriod;
             var dlg = new Microsoft.Win32.SaveFileDialog
             {
                 Title = "Save savings report as Markdown",
@@ -178,7 +180,7 @@ namespace ClaudeVS.Commands
                 {
                     var now = DateTime.UtcNow;
                     // The log's folder is left out: the file is for sharing
-                    File.WriteAllText(target, SavingsReportText.Markdown(SavingsReportText.Full(log.ReadAll(), prices, solution, now), now), new System.Text.UTF8Encoding(false));
+                    File.WriteAllText(target, SavingsReportText.Markdown(SavingsReportText.Full(log.ReadAll(), prices, solution, now, period: period), now), new System.Text.UTF8Encoding(false));
                 });
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                 ClaudeOutputPane.WriteLine("Saved the savings report to " + target);

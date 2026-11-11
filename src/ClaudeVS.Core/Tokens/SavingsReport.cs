@@ -252,6 +252,10 @@ namespace ClaudeVS.Core.Tokens
     {
         public string Solution { get; set; }
         public DateTime? Since { get; set; }
+        /// <summary>The end of a period that ended (exclusive, UTC); null for one up to now.</summary>
+        public DateTime? Until { get; set; }
+        /// <summary>"November 2026", "the last 30 days"; null for everything logged.</summary>
+        public string PeriodName { get; set; }
         public int Turns { get; set; }
         public int RoutedTurns { get; set; }
         public double ActualCostUsd { get; set; }
@@ -432,16 +436,22 @@ namespace ClaudeVS.Core.Tokens
             (prices.For(r.ModelUsed) ?? prices.Sonnet).CacheSavedUsd(r)
             + (r.Agents?.Sum(a => (prices.For(a.Model) ?? prices.Sonnet).CacheSavedUsd(a.ToUsage())) ?? 0);
 
-        public static SavingsReport Build(IEnumerable<UsageRecord> records, PriceTable prices, string solution = null, DateTime? sinceUtc = null, DateTime? nowUtc = null)
+        /// <param name="sinceUtc">Only turns from then; <paramref name="untilUtc"/>: only turns before then (a period that ended). The month and
+        /// week lines always compare up to now, from all turns.</param>
+        public static SavingsReport Build(IEnumerable<UsageRecord> records, PriceTable prices, string solution = null, DateTime? sinceUtc = null, DateTime? nowUtc = null, DateTime? untilUtc = null)
         {
             prices = prices ?? new PriceTable();
-            var list = (records ?? Enumerable.Empty<UsageRecord>())
+            var scoped = (records ?? Enumerable.Empty<UsageRecord>())
                 .Where(r => solution == null || string.Equals(r.Solution, solution, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(r => r.Timestamp)
+                .ToList();
+            var list = scoped
                 .Where(r => !sinceUtc.HasValue || r.Timestamp >= sinceUtc.Value)
+                .Where(r => !untilUtc.HasValue || r.Timestamp < untilUtc.Value)
                 .OrderBy(r => r.Timestamp)
                 .ToList();
 
-            var rep = new SavingsReport { Solution = solution, Turns = list.Count, Since = list.Count > 0 ? list[0].Timestamp : (DateTime?)null };
+            var rep = new SavingsReport { Solution = solution, Turns = list.Count, Since = list.Count > 0 ? list[0].Timestamp : (DateTime?)null, Until = untilUtc };
             long input = 0, cacheRead = 0;
             foreach (var r in list)
             {
@@ -572,18 +582,18 @@ namespace ClaudeVS.Core.Tokens
             }
             var today = (nowUtc ?? DateTime.UtcNow).ToLocalTime().Date;
             rep.Month = new DateTime(today.Year, today.Month, 1);
-            rep.MonthToDateUsd = list.Where(r => r.Timestamp.ToLocalTime().Date >= rep.Month && r.Timestamp.ToLocalTime().Date <= today).Sum(r => r.CostUsd + r.RouterCostUsd);
+            rep.MonthToDateUsd = scoped.Where(r => r.Timestamp.ToLocalTime().Date >= rep.Month && r.Timestamp.ToLocalTime().Date <= today).Sum(r => r.CostUsd + r.RouterCostUsd);
             if (today.Day >= ProjectFromDay && rep.MonthToDateUsd > 0)
                 rep.MonthProjectedUsd = rep.MonthToDateUsd / today.Day * DateTime.DaysInMonth(today.Year, today.Month);
             // This week from Monday, and last week up to the same weekday
             rep.WeekStart = today.AddDays(-(((int)today.DayOfWeek + 6) % 7));
-            rep.WeekToDateUsd = list.Where(r => r.Timestamp.ToLocalTime().Date >= rep.WeekStart && r.Timestamp.ToLocalTime().Date <= today).Sum(r => r.CostUsd + r.RouterCostUsd);
+            rep.WeekToDateUsd = scoped.Where(r => r.Timestamp.ToLocalTime().Date >= rep.WeekStart && r.Timestamp.ToLocalTime().Date <= today).Sum(r => r.CostUsd + r.RouterCostUsd);
             var lastWeek = rep.WeekStart.AddDays(-7);
-            rep.LastWeekToDateUsd = list.Where(r => r.Timestamp.ToLocalTime().Date >= lastWeek && r.Timestamp.ToLocalTime().Date <= lastWeek.AddDays((today - rep.WeekStart).Days)).Sum(r => r.CostUsd + r.RouterCostUsd);
+            rep.LastWeekToDateUsd = scoped.Where(r => r.Timestamp.ToLocalTime().Date >= lastWeek && r.Timestamp.ToLocalTime().Date <= lastWeek.AddDays((today - rep.WeekStart).Days)).Sum(r => r.CostUsd + r.RouterCostUsd);
             // Last month up to the same day (its last day when it is shorter), to compare with
             var lastMonth = rep.Month.AddMonths(-1);
             rep.LastMonthToDay = lastMonth.AddDays(Math.Min(today.Day, DateTime.DaysInMonth(lastMonth.Year, lastMonth.Month)) - 1);
-            rep.LastMonthToDateUsd = list.Where(r => r.Timestamp.ToLocalTime().Date >= lastMonth && r.Timestamp.ToLocalTime().Date <= rep.LastMonthToDay).Sum(r => r.CostUsd + r.RouterCostUsd);
+            rep.LastMonthToDateUsd = scoped.Where(r => r.Timestamp.ToLocalTime().Date >= lastMonth && r.Timestamp.ToLocalTime().Date <= rep.LastMonthToDay).Sum(r => r.CostUsd + r.RouterCostUsd);
 
             if (solution == null)
                 rep.BySolution.AddRange(list
@@ -662,14 +672,19 @@ namespace ClaudeVS.Core.Tokens
         public string ToText()
         {
             var sb = new StringBuilder();
-            sb.AppendLine("Claude Code — savings report" + (Solution != null ? " for " + Solution : " (all solutions)"));
-            if (Turns == 0) { sb.AppendLine("No turns recorded yet. Turn on Options > Diagnostics > Keep local usage log."); return sb.ToString(); }
+            sb.AppendLine("Claude Code — savings report" + (Solution != null ? " for " + Solution : " (all solutions)") + (PeriodName != null ? ", " + PeriodName : ""));
+            if (Turns == 0)
+            {
+                sb.AppendLine(PeriodName == null ? "No turns recorded yet. Turn on Options > Diagnostics > Keep local usage log." : "No turns in this period.");
+                return sb.ToString();
+            }
 
-            sb.AppendLine($"Period: {Since.Value.ToLocalTime():yyyy-MM-dd} to today · {Turns} turns ({RoutedTurns} auto-routed)");
+            string to = Until is DateTime until ? until.ToLocalTime().AddDays(-1).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) : "today";
+            sb.AppendLine($"Period: {Since.Value.ToLocalTime():yyyy-MM-dd} to {to} · {Turns} turns ({RoutedTurns} auto-routed)");
             sb.AppendLine();
             sb.AppendLine($"Actual cost:                ${ActualCostUsd:0.00}");
-            if (MonthLine() is string month) sb.AppendLine(month);
-            if (WeekLine() is string week) sb.AppendLine(week);
+            if (Until == null && MonthLine() is string month) sb.AppendLine(month); // "so far" lines: only for a period up to now
+            if (Until == null && WeekLine() is string week) sb.AppendLine(week);
             sb.AppendLine($"Same tokens at Opus prices: ${OpusEquivalentUsd:0.00}  (estimate)");
             sb.AppendLine($"Saved by model routing:     ${RoutingSavedUsd:0.00}  ({RoutingSavedPercent:0}%)");
             sb.AppendLine($"Saved by file references:   ~{TokenMeter.Format(TokensAvoided)} tokens ≈ ${ReferencesSavedUsd:0.00}");

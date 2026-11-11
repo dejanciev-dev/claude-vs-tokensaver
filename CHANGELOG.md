@@ -67,6 +67,8 @@ All notable changes to this project are listed here. The format follows
   instead of one 5 MB archive that could drop last month's turns. The old `usage.jsonl` and `usage.1.jsonl` are
   still read, and deleted once older than the months kept.
 - **Save Savings Report as Markdown…** (Tools → Claude Code): the same report as a `.md` file, to attach or share.
+- **Savings report period** (Options → Diagnostics, default All): the report and its Markdown file can cover this
+  month, last month or the last 30 days instead of everything logged.
 
 ### Changed
 - **Cost limits in their own Options category**: the cost warnings (conversation, daily, monthly, per solution, agent),
