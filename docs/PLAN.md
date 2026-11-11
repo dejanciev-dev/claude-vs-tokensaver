@@ -713,7 +713,9 @@ Picked on 2026-11-11.
       agent stopped once with the panel's Stop (`stop_task`): `⏹ Stopped “…” at $1.25: past your limit of $1.00 per
       agent …`. `SessionNotices.AgentAutoStop`
 - [ ] **Explore tip for read-only agents.** A one-time tip when a general-purpose agent on Opus or Sonnet only read,
-      searched and listed files: an Explore agent does that for less (check which model Explore runs on first)
+      searched and listed files: an Explore agent does that for less (check which model Explore runs on first).
+      Checked with 2.1.322 under a Sonnet main agent: Explore ran on Sonnet too (its messages and `modelUsage` show
+      only claude-sonnet-5-5; $0.10), so it is not cheaper by model, and the tip as planned would be wrong. Not built
 - [x] **Manual check list.** The unchecked VS checks of Phases 1–5 on one short page (steps and what to look for), to
       go through in the experimental instance in one sitting. [MANUAL-CHECKS.md](MANUAL-CHECKS.md), with the subagent
       features of Phases 22–26 too (not seen in VS yet)
