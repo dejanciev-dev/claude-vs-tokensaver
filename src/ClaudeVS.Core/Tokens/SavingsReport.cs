@@ -315,6 +315,22 @@ namespace ClaudeVS.Core.Tokens
             foreach (var p in parts)
                 byType[p.Type] = (byType.TryGetValue(p.Type, out var sofar) ? sofar : 0) + agentsCostUsd * p.Share;
         }
+        /// <summary>Tokens the main agents' tool results added, per tool group, from the turns that logged them.</summary>
+        public Dictionary<string, long> ToolResultTokens { get; } = new Dictionary<string, long>(StringComparer.Ordinal);
+        /// <summary>How many tool groups <see cref="ToolResultsLine"/> names before "other".</summary>
+        public const int ToolsShown = 5;
+
+        /// <summary>"Read 1.2M · Shell 410k · Search 120k · other 30k": largest first; null when no turn logged any.</summary>
+        public string ToolResultsLine()
+        {
+            var sorted = ToolResultTokens.Where(kv => kv.Value > 0).OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal).ToList();
+            if (sorted.Count == 0) return null;
+            var parts = sorted.Take(ToolsShown).Select(kv => $"{kv.Key} {TokenMeter.Format(kv.Value)}").ToList();
+            long rest = sorted.Skip(ToolsShown).Sum(kv => kv.Value);
+            if (rest > 0) parts.Add($"other {TokenMeter.Format(rest)}");
+            return string.Join(" · ", parts);
+        }
+
         public int LongContextTurns { get; set; }
         public double LongContextExtraUsd { get; set; }
         public List<ModelBreakdown> ByModel { get; } = new List<ModelBreakdown>();
@@ -389,6 +405,9 @@ namespace ClaudeVS.Core.Tokens
                     rep.AgentCostByModel[model] = (rep.AgentCostByModel.TryGetValue(model, out var had) ? had : 0) + agentCost;
                     if (model == "opus") rep.OpusAgentsOnSonnetUsd += prices.Sonnet.Cost(a.ToUsage());
                 }
+                foreach (var kv in r.ToolResultTokens ?? new Dictionary<string, long>())
+                    if (!string.IsNullOrEmpty(kv.Key) && kv.Value > 0)
+                        rep.ToolResultTokens[kv.Key] = (rep.ToolResultTokens.TryGetValue(kv.Key, out var t) ? t : 0) + kv.Value;
                 long avoided = TokenEstimate.FromChars(r.CharsAvoided);
                 rep.TokensAvoided += avoided;
                 rep.ReferencesSavedUsd += avoided * (prices.For(r.ModelUsed) ?? prices.Sonnet).Input / 1_000_000.0 * (prices.For(r.ModelUsed) ?? prices.Sonnet).Multiplier(r);
@@ -531,6 +550,8 @@ namespace ClaudeVS.Core.Tokens
                 sb.AppendLine($"  by kind of agent:         {byType}");
             if (AgentTurns > 0 && AgentByModelLine() is string byModel)
                 sb.AppendLine($"  by model:                 {byModel}");
+            if (ToolResultsLine() is string tools)
+                sb.AppendLine($"Tool results:               {tools} tokens  (into the context, read again by each later request until /compact)");
             if (LongContextTurns > 0)
                 sb.AppendLine($"Paid extra over 100k:       ${LongContextExtraUsd:0.00}  ({LongContextTurns} Haiku {(LongContextTurns == 1 ? "turn" : "turns")} over 100k tokens, above Haiku's normal price; /compact keeps it under)");
             if (HaikuRouted > 0 || RouterCostUsd > 0)

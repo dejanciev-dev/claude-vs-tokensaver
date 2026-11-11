@@ -2192,8 +2192,33 @@ namespace ClaudeVS.Core.Tests
             Eq("Read 13334|Shell 4000|MCP 134", string.Join("|", m.ResultTokensByTool().Select(kv => kv.Key + " " + kv.Value)));
             m.Observe(new ClaudeEvent { Kind = ClaudeEventKind.TurnCompleted, Usage = new TokenUsage { Input = 10 } });
             True(SessionSummary.Format(m).EndsWith("\nTool results: Read 13.3k · Shell 4.0k · MCP 134"), SessionSummary.Format(m));
+            Eq("MCP 134|Read 13334|Shell 4000", string.Join("|", m.LastTurnResultTokensByTool.OrderBy(kv => kv.Key).Select(kv => kv.Key + " " + kv.Value)), "the turn's, for the usage log");
+            Call("6", "Grep", 3_000);
+            m.Observe(new ClaudeEvent { Kind = ClaudeEventKind.TurnCompleted, Usage = new TokenUsage { Input = 10 } });
+            Eq("Search 1000", string.Join("|", m.LastTurnResultTokensByTool.Select(kv => kv.Key + " " + kv.Value)), "only the next turn's");
+            m.Observe(new ClaudeEvent { Kind = ClaudeEventKind.TurnCompleted, Usage = new TokenUsage { Input = 10 } });
+            Eq(null, m.LastTurnResultTokensByTool, "a turn without tools");
             m.Reset();
             Eq(0, m.ResultTokensByTool().Count, "reset");
+        }
+
+        private static void Test_SavingsReport_ToolResults()
+        {
+            var t = DateTime.UtcNow.AddDays(-1);
+            var recs = new[]
+            {
+                new UsageRecord { Timestamp = t, CostUsd = 0.1, ToolResultTokens = new Dictionary<string, long> { ["Read"] = 900_000, ["Shell"] = 50_000 } },
+                new UsageRecord { Timestamp = t, CostUsd = 0.1, ToolResultTokens = new Dictionary<string, long> { ["Read"] = 300_000, ["Search"] = 120_000, ["MCP"] = 4_000, ["WebFetch"] = 3_000, ["Agent"] = 2_000, ["Edit"] = 1_000 } },
+                new UsageRecord { Timestamp = t, CostUsd = 0.1 }, // an older line
+            };
+            var rep = SavingsReport.Build(recs, new PriceTable());
+            Eq("Read 1.2M · Search 120.0k · Shell 50.0k · MCP 4.0k · WebFetch 3.0k · other 3.0k", rep.ToolResultsLine());
+            True(rep.ToText().Contains("Tool results:               Read 1.2M"), rep.ToText());
+            Eq(null, SavingsReport.Build(new[] { recs[2] }, new PriceTable()).ToolResultsLine(), "none logged");
+
+            var json = Newtonsoft.Json.JsonConvert.SerializeObject(recs[0], new Newtonsoft.Json.JsonSerializerSettings { NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore });
+            True(json.Contains("\"tools\":{\"Read\":900000,\"Shell\":50000}"), json);
+            True(!Newtonsoft.Json.JsonConvert.SerializeObject(recs[2], new Newtonsoft.Json.JsonSerializerSettings { NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore }).Contains("tools"), "left out when none");
         }
 
         private static void Test_ResumeNote()

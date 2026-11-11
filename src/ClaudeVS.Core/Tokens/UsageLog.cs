@@ -70,6 +70,12 @@ namespace ClaudeVS.Core.Tokens
         [JsonIgnore] public long TotalTokens => InputTokens + OutputTokens + CacheReadTokens + CacheWriteTokens;
 
         /// <summary>
+        /// Tokens (estimated from characters) the main agent's tool results added to the conversation in this turn, per
+        /// tool group ("Read", "Shell", "Search", "MCP" …; <see cref="TokenMeter.ToolGroup"/>); null when none (and in older lines).
+        /// </summary>
+        [JsonProperty("tools", NullValueHandling = NullValueHandling.Ignore)] public Dictionary<string, long> ToolResultTokens { get; set; }
+
+        /// <summary>
         /// The turn's subagents, one entry per model (<see cref="SubagentUsageTracker"/>); null when none (and in
         /// older lines). Not in the token counts above, which are the main agent's; already in <see cref="CostUsd"/>.
         /// </summary>

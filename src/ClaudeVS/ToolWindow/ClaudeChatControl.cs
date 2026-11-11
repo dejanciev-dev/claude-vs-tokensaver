@@ -1989,6 +1989,7 @@ namespace ClaudeVS.ToolWindow
             rec.LargeContextTokens = _meterModel?.LastTurn.LargeContextTokens ?? 0; // per request: the meter counted it
             rec.Agents = AgentTokens.From(_meterModel?.LastTurnSubagents); // not in the counts above, which are the main agent's
             rec.AgentTypes = _meterModel?.LastTurnAgentTypes;
+            rec.ToolResultTokens = _meterModel?.LastTurnResultTokensByTool;
             rec.CostUsd = _meterModel?.LastTurnCostUsd ?? 0;
             rec.DurationMs = ev.DurationMs;
             rec.IsError = ev.IsError;
