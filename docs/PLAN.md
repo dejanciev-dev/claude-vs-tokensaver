@@ -782,7 +782,9 @@ Picked on 2026-11-11.
 - [x] **Month vs last month.** The report's month line adds last month's cost by the same day and the change.
       `(Oct 1–11: $9.00, +37%)`, up to last month's last day when it is shorter; left out when nothing was logged
       then. `SavingsReport.LastMonthText`
-- [ ] **Amber meter past a warning.** The meter's cost turns amber once today's spend passes the daily warning
+- [x] **Amber meter past a warning.** The meter's cost turns amber once today's spend passes the daily warning.
+      Also past the monthly warning; with a ⚠ in front, so it does not rely on color alone (amber is close to Claude
+      orange). Redrawn with the meter, after each turn. `SpendWatch.IsPastWarning`
 - [ ] **Tool results in the CSV.** One `tools` column (`Read:1200;Shell:400`), like `agent_types`
 
 ---

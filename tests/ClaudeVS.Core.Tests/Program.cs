@@ -2915,8 +2915,12 @@ namespace ClaudeVS.Core.Tests
             d.Add(20, start.AddMinutes(3));
             Eq("today $23.20 (next warning at $40.00)", d.Line(start.AddMinutes(3)), "past a step: the next one");
             Eq("today $0.00 (next warning at $20.00)", d.Line(start.AddDays(1)), "a new day before its first turn");
+            True(d.IsPastWarning(start.AddMinutes(3)), "$23.20 past $20: amber meter");
+            True(!m.IsPastWarning(start.AddMinutes(3)), "$61.20 of $200 this month");
+            True(!d.IsPastWarning(start.AddDays(1)), "a new day");
             d.StepUsd = 0;
             Eq("today $23.20", d.Line(start.AddMinutes(3)), "warning off");
+            True(!d.IsPastWarning(start.AddMinutes(3)), "warning off: never amber");
         }
 
         private static void Test_CostWatch()
