@@ -2379,6 +2379,39 @@ namespace ClaudeVS.Core.Tests
             Eq(1_000_000L, rec.AgentTokensTotal);
             True(Newtonsoft.Json.JsonConvert.SerializeObject(rec).Contains("\"agents\":[{\"model\":\"claude-sonnet-5-5\""), "logged");
             True(!Newtonsoft.Json.JsonConvert.SerializeObject(new UsageRecord()).Contains("agents"), "none: not written");
+            Eq(null, rep.AgentByTypeLine(), "no kinds logged: no line");
+
+            // By kind of agent: the fork run is all Fork, its share is the whole exact agent cost
+            var forkTypes = fresh.LastTurnAgentTypes;
+            Eq(1, forkTypes.Count); Eq("Fork", forkTypes[0].Type); Eq(1.0, forkTypes[0].Share);
+            True(Math.Abs(forkTypes[0].CostUsd - fresh.LastTurnSubagentCostUsd) < 1e-12, "the exact cost, not the streamed one");
+
+            // Two kinds in one turn: shares from their priced requests; a type from task_started when the call had none
+            var split = new AgentTypeSplit();
+            Func<string, TokenUsage, double> perToken = (model, u) => u.Total; // whole numbers: exact shares
+            split.Observe(new ClaudeEvent { Kind = ClaudeEventKind.ToolUse, ToolName = "Agent", ToolUseId = "a", ToolInput = new JObject { ["subagent_type"] = "Explore" } }, perToken);
+            split.Observe(new ClaudeEvent { Kind = ClaudeEventKind.ToolUse, ToolName = "Agent", ToolUseId = "b", ToolInput = new JObject() }, perToken);
+            split.Observe(new ClaudeEvent { Kind = ClaudeEventKind.Task, Payload = JObject.Parse("{\"type\":\"system\",\"subtype\":\"task_started\",\"tool_use_id\":\"b\",\"subagent_type\":\"general-purpose\"}") }, perToken);
+            ClaudeEvent Req(string call, string id, long tokens) => new ClaudeEvent { Kind = ClaudeEventKind.AssistantUsage, IsSubagent = true, ParentToolUseId = call, MessageId = id, Model = "claude-sonnet-5-5", Usage = new TokenUsage { CacheRead = tokens } };
+            split.Observe(Req("a", "m1", 100_000), perToken);
+            split.Observe(Req("a", "m1", 300_000), perToken); // the same message again: its last copy counts
+            split.Observe(Req("b", "m2", 100_000), perToken);
+            var kinds = split.TurnCompleted(0.80);
+            Eq("Explore", kinds[0].Type, "costliest first"); Eq(0.75, kinds[0].Share); True(Math.Abs(kinds[0].CostUsd - 0.60) < 1e-12, "Explore: $0.60");
+            Eq("Agent", ToolCallView.AgentLabel(null)); Eq("general-purpose", kinds[1].Type, "from task_started"); True(Math.Abs(kinds[1].CostUsd - 0.20) < 1e-12, "general-purpose: $0.20");
+            Eq(null, split.TurnCompleted(0.5), "the next turn: none ran");
+
+            // The report: each turn's agent cost at its prices, split by its shares; older turns under "not known"
+            var typed = new UsageRecord { ModelUsed = "claude-haiku-5-5", CostUsd = 0.1, AgentTypes = kinds,
+                Agents = new List<AgentTokens> { new AgentTokens { Model = "claude-sonnet-5-5", CacheReadTokens = 1_000_000 } } };
+            var both = SavingsReport.Build(new[] { rec, typed }, prices);
+            True(Math.Abs(both.AgentCostByType["Explore"] - 0.075) < 1e-12 && Math.Abs(both.AgentCostByType["general-purpose"] - 0.025) < 1e-12
+                && Math.Abs(both.AgentCostByType[SavingsReport.NotKnownType] - 0.10) < 1e-12, "split at the report's prices");
+            True(both.AgentByTypeLine().StartsWith("Explore $") && both.AgentByTypeLine().Contains(" · general-purpose $") && both.AgentByTypeLine().EndsWith(" · not known $" + 0.10.ToString("0.00")), both.AgentByTypeLine());
+            True(both.ToText().Contains("  by kind of agent:         Explore"), both.ToText());
+            var json = Newtonsoft.Json.JsonConvert.SerializeObject(typed);
+            True(json.Contains("\"agentTypes\":[{\"type\":\"Explore\",\"share\":0.75}"), json);
+            Eq(0.75, Newtonsoft.Json.JsonConvert.DeserializeObject<UsageRecord>(json).AgentTypes[0].Share, "read back");
         }
 
         private static void Test_TurnUsage_IsMainAgentOnly()

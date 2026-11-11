@@ -74,6 +74,12 @@ namespace ClaudeVS.Core.Tokens
         [JsonProperty("agents", NullValueHandling = NullValueHandling.Ignore)] public List<AgentTokens> Agents { get; set; }
 
         [JsonIgnore] public long AgentTokensTotal => Agents?.Sum(a => a.Total) ?? 0;
+
+        /// <summary>
+        /// How the turn's subagent cost split by kind of agent (<see cref="AgentTypeSplit"/>): shares, costliest first;
+        /// null when none ran (and in older lines).
+        /// </summary>
+        [JsonProperty("agentTypes", NullValueHandling = NullValueHandling.Ignore)] public List<AgentTypeCost> AgentTypes { get; set; }
     }
 
     /// <summary>One model's subagent tokens in a logged turn.</summary>

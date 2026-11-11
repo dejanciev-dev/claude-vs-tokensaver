@@ -256,6 +256,33 @@ namespace ClaudeVS.Core.Tokens
         public int AgentTurns { get; set; }
         public long AgentTokens { get; set; }
         public double AgentCostUsd { get; set; }
+        /// <summary>
+        /// <see cref="AgentCostUsd"/> by kind of agent (Explore, general-purpose, Fork, …), from each turn's logged shares;
+        /// turns logged before the shares were (or without them) under "not known". Empty when no turn has shares.
+        /// </summary>
+        public Dictionary<string, double> AgentCostByType { get; } = new Dictionary<string, double>(StringComparer.Ordinal);
+        public const string NotKnownType = "not known";
+
+        /// <summary>
+        /// "Explore $0.40 · general-purpose $0.25 · not known $0.10": costliest first, "not known" last; null when no
+        /// turn logged its kinds of agent.
+        /// </summary>
+        public string AgentByTypeLine()
+        {
+            if (!AgentCostByType.Keys.Any(k => k != NotKnownType)) return null;
+            return string.Join(" · ", AgentCostByType
+                .OrderBy(kv => kv.Key == NotKnownType).ThenByDescending(kv => kv.Value)
+                .Select(kv => $"{kv.Key} ${kv.Value:0.00}"));
+        }
+
+        /// <summary>A turn's subagent cost at the report's prices, split by its logged shares (all "not known" without them).</summary>
+        private static void AddAgentTypes(Dictionary<string, double> byType, List<AgentTypeCost> shares, double agentsCostUsd)
+        {
+            var parts = shares?.Where(s => s.Share > 0 && !string.IsNullOrEmpty(s.Type)).ToList();
+            if (parts == null || parts.Count == 0) parts = new List<AgentTypeCost> { new AgentTypeCost { Type = NotKnownType, Share = 1 } };
+            foreach (var p in parts)
+                byType[p.Type] = (byType.TryGetValue(p.Type, out var sofar) ? sofar : 0) + agentsCostUsd * p.Share;
+        }
         public int LongContextTurns { get; set; }
         public double LongContextExtraUsd { get; set; }
         public List<ModelBreakdown> ByModel { get; } = new List<ModelBreakdown>();
@@ -315,6 +342,7 @@ namespace ClaudeVS.Core.Tokens
                 rep.OpusEquivalentUsd += (PriceTable.Family(r.ModelUsed) == "opus" ? Math.Max(0, r.CostUsd - agentsOwn) : prices.Opus.Cost(r))
                     + (r.Agents?.Sum(a => prices.Opus.Cost(a.ToUsage())) ?? 0);
                 if (r.Agents != null && r.Agents.Count > 0) { rep.AgentTurns++; rep.AgentTokens += r.AgentTokensTotal; rep.AgentCostUsd += agentsOwn; }
+                if (agentsOwn > 0) AddAgentTypes(rep.AgentCostByType, r.AgentTypes, agentsOwn);
                 long avoided = TokenEstimate.FromChars(r.CharsAvoided);
                 rep.TokensAvoided += avoided;
                 rep.ReferencesSavedUsd += avoided * (prices.For(r.ModelUsed) ?? prices.Sonnet).Input / 1_000_000.0 * (prices.For(r.ModelUsed) ?? prices.Sonnet).Multiplier(r);
@@ -438,6 +466,8 @@ namespace ClaudeVS.Core.Tokens
                 sb.AppendLine($"Paid extra for fast mode:   ${FastExtraUsd:0.00}  ({FastTurns} {(FastTurns == 1 ? "turn" : "turns")}, above standard speed)");
             if (AgentTurns > 0)
                 sb.AppendLine($"Subagents:                  {TokenMeter.Format(AgentTokens)} tokens ≈ ${AgentCostUsd:0.00}  ({AgentTurns} {(AgentTurns == 1 ? "turn" : "turns")}; included above)");
+            if (AgentByTypeLine() is string byType)
+                sb.AppendLine($"  by kind of agent:         {byType}");
             if (LongContextTurns > 0)
                 sb.AppendLine($"Paid extra over 100k:       ${LongContextExtraUsd:0.00}  ({LongContextTurns} Haiku {(LongContextTurns == 1 ? "turn" : "turns")} over 100k tokens, above Haiku's normal price; /compact keeps it under)");
             if (HaikuRouted > 0 || RouterCostUsd > 0)

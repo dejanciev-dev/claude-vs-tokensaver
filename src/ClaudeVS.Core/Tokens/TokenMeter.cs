@@ -48,6 +48,9 @@ namespace ClaudeVS.Core.Tokens
         /// <summary>Subagent tokens in the whole conversation.</summary>
         public long SessionSubagentTokens { get; private set; }
         private readonly SubagentUsageTracker _subagents = new SubagentUsageTracker();
+        /// <summary>The last turn's subagent cost by kind of agent, costliest first; null when none ran.</summary>
+        public List<AgentTypeCost> LastTurnAgentTypes { get; private set; }
+        private readonly AgentTypeSplit _agentTypes = new AgentTypeSplit();
         public long ContextTokens { get; private set; }
         public long ContextWindow { get; private set; }
         public int Turns { get; private set; }
@@ -146,7 +149,7 @@ namespace ClaudeVS.Core.Tokens
             Cache.Reset();
             _breaks.Reset(); _pendingBreak = null;
             Learner.Reset();
-            _subagents.Reset(); LastTurnSubagents = new Dictionary<string, TokenUsage>(); LastTurnSubagentCostUsd = 0; SessionSubagentTokens = 0;
+            _subagents.Reset(); _agentTypes.Reset(); LastTurnAgentTypes = null; LastTurnSubagents = new Dictionary<string, TokenUsage>(); LastTurnSubagentCostUsd = 0; SessionSubagentTokens = 0;
             _turnLargeByMessage.Clear();
             LastTurnCacheSavedUsd = 0; SessionCacheSavedUsd = 0; _turnModel = null; LastModel = null;
             Changed?.Invoke(this, EventArgs.Empty);
@@ -161,6 +164,7 @@ namespace ClaudeVS.Core.Tokens
         public void Observe(ClaudeEvent ev)
         {
             Learner.Observe(ev);
+            _agentTypes.Observe(ev, RequestCostUsd);
             switch (ev.Kind)
             {
                 case ClaudeEventKind.AssistantUsage when ev.IsSubagent:
@@ -208,6 +212,7 @@ namespace ClaudeVS.Core.Tokens
                     var pt = Prices ?? DefaultPrices;
                     LastTurnSubagentCostUsd = LastTurnSubagents.Sum(kv => (pt.For(kv.Key) ?? pt.Sonnet).Cost(kv.Value)); // a sum of requests: no per-request tier
                     SessionSubagentTokens += LastTurnSubagentTotal.Total;
+                    LastTurnAgentTypes = _agentTypes.TurnCompleted(LastTurnSubagentCostUsd);
                     // Priced at the model that answered (Sonnet when unknown).
                     var prices = Prices ?? DefaultPrices;
                     LastTurnCacheSavedUsd = (prices.For(_turnModel) ?? prices.Sonnet).CacheSavedUsd(turn);
