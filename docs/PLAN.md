@@ -672,6 +672,22 @@ Picked on 2026-11-11.
 
 ---
 
+## Phase 25 — Keep subagent costs in check
+
+Picked on 2026-11-11.
+
+- [ ] **Settle the fork switch.** Run Claude Code 2.1.322 once with `CLAUDE_CODE_FORK_SUBAGENT=0` on a tiny Haiku
+      prompt and capture whether it still forks. If it works, the fork tip names it and Options gets a *No forks*
+      checkbox; if not, record that
+- [ ] **Live cost warning on a row.** An agent's row in the panel turns amber once it passes a set cost (Options,
+      default $0.50) while it runs, so a runaway agent can be stopped early
+- [ ] **Agent models in the report.** The savings report lists subagent cost per model (Haiku, Sonnet, Opus agents)
+      and what the Opus agents would have cost on Sonnet
+- [ ] **Agent cost in the sessions list.** Each conversation shows its subagent cost next to its total, from the
+      usage log
+
+---
+
 ## Working in Visual Studio — daily loop
 
 1. Core logic change → edit in `ClaudeVS.Core` → run tests (`ClaudeVS.Core.Tests` → Set as Startup → Ctrl+F5, or `dotnet run` in its folder).
