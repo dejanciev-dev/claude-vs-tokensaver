@@ -46,6 +46,7 @@ namespace ClaudeVS.ToolWindow
             {
                 var t = _tasks.Find((string)ev.Payload["task_id"]);
                 if (t != null && t.IsBackgrounded && t.ParentTaskId == null) _lastBackgroundDone = t.Description;
+                _view.ShowAgentUsage(t?.ToolUseId, Core.Cli.ToolCallView.AgentUsageLine(t)); // stays when the panel is cleared
             }
             RefreshAgentsPanel();
         }

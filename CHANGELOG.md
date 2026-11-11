@@ -7,6 +7,8 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **What a subagent used, under its Agent call in the conversation**: `Done · 24.6k tok · $0.042 · 3 tools` once
+  it finishes (background agents too), so it stays after the agents panel is cleared.
 - **The subagents' share of a turn's cost** in the line under each answer: `$0.020 ($0.012 agents)`, from $0.001.
 - **Subagent tokens in the line under each answer**: `· 2 agents (31.0k tok)`. The turn's own `tok` count is
   the main agent's; this is what its subagents used on top.
