@@ -794,8 +794,10 @@ Picked on 2026-11-11.
 
 Picked on 2026-11-11.
 
-- [ ] **Heavy thinking tip.** A one-time tip when thinking was most of a short answer's output at high effort or
-      above, with what it cost and a lower effort to try
+- [x] **Heavy thinking tip.** A one-time tip when thinking was most of a short answer's output at high effort or
+      above, with what it cost and a lower effort to try. At an effort we sent (high, xhigh, max; not Claude Code's
+      default): 2k thinking tokens or more, 70% of the output, $0.02 or more at the output price, at most 800 other
+      output tokens. Suggests Medium after high, else High. `SessionNotices.HeavyThinking`
 - [ ] **Effort in the footer.** The line under each answer names the effort when one was set (`· high`)
 - [ ] **Router replay by cost.** The router replay in the savings report adds what the current rules' different
       picks would have cost, at the logged tokens

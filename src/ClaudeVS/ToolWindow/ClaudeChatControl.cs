@@ -1918,6 +1918,7 @@ namespace ClaudeVS.ToolWindow
                         if (_meterModel != null) Tip(SessionNotices.SubagentsDominate(_meterModel.LastTurnSubagentCostUsd, _meterModel.LastTurnCostUsd));
                         PriceyContextTip(_turnModel);
                         OverkillModelTip(_turnModel);
+                        HeavyThinkingTip(_turnModel);
                         RefreshContextUsage(show: false); // control request, no model call
                         _turnModel = null;
                         var turn = _turnPrompts.Count > 0 ? _turnPrompts.Dequeue() : new TurnPrompt();
@@ -1977,8 +1978,10 @@ namespace ClaudeVS.ToolWindow
         private void RecordUsage(ClaudeEvent ev, string modelUsed)
         {
             // Prompts sent while Claude is still answering are queued by the CLI and finish in order.
+            _lastTurnEffort = null;
             if (_pendingUsages.Count == 0) return;
             var rec = _pendingUsages.Dequeue();
+            _lastTurnEffort = rec.Effort; // for the tips and the footer, kept also without the log
             if (Options?.KeepUsageLog == false) return;
             rec.Timestamp = DateTime.UtcNow;
             rec.SessionId = ev.SessionId;

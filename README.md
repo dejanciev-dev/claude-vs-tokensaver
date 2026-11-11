@@ -294,7 +294,7 @@ Editor commands go to the chat window you used last.
 | Token saving | Inline selection up to (lines) | 60 | Larger selections become references. |
 | Token saving | Keep model above context (tokens) | 30000 | Cache-aware routing threshold. |
 | Token saving | Suggest / Urge /compact at (%) | 60 / 85 | Meter advice. |
-| Token saving | Token tips | On | One-time tips when something costs more than it needs to (large or repeated reads, output floods, heavy MCP tools, cold or rebuilt cache, Haiku near 100k, subagents costing more than Claude itself, a costly fork, a big conversation read back for a small question, a short answer from Opus or Fable picked by hand). Off: Output pane only. |
+| Token saving | Token tips | On | One-time tips when something costs more than it needs to (large or repeated reads, output floods, heavy MCP tools, cold or rebuilt cache, Haiku near 100k, subagents costing more than Claude itself, a costly fork, a big conversation read back for a small question, a short answer from Opus or Fable picked by hand, heavy thinking for a short answer at high effort). Off: Output pane only. |
 | Token saving | Warn at conversation cost (USD) | 5 | Said once each time a conversation passes another multiple ($5, $10…). 0 = off. |
 | Token saving | Warn at daily cost (USD) | 20 | Said once each time today's spend in Visual Studio, all conversations together, passes another multiple ($20, $40…). Earlier turns today come from the usage log. 0 = off. |
 | Token saving | Warn at monthly cost (USD) | 200 | The same for this calendar month's spend ($200, $400…). Earlier turns this month come from the usage log. 0 = off. |
