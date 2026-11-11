@@ -1699,6 +1699,9 @@ namespace ClaudeVS.Core.Tests
             True(meter.LastTurnSubagentTotal.Total > 24_383, "the fork's tokens: " + meter.LastTurnSubagentTotal.Total);
             Eq($"1 agent ({TokenMeter.Format(meter.LastTurnSubagentTotal.Total)} tok)", TurnFooter.Agents(fork.Subagents, meter.LastTurnSubagentTotal.Total), "footer with tokens");
             Eq("2 agents (31.0k tok)", TurnFooter.Agents(SubagentStats.Parse(JObject.Parse("{\"spawned\":2}")), 31_000));
+            Eq("high effort", TurnFooter.Effort("high"), "effort sent");
+            Eq("xhigh effort", TurnFooter.Effort(" XHigh "), "any case");
+            Eq(null, TurnFooter.Effort(null), "Claude Code's default: nothing");
             Eq("1 agent", TurnFooter.Agents(fork.Subagents, 0), "tokens not known");
             Eq("agents 1.2k tok", TurnFooter.Agents(null, 1_234), "a background agent from an earlier turn, or no subagent_stats");
             Eq(null, TurnFooter.Agents(null, 0));

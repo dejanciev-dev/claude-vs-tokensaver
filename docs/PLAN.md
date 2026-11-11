@@ -798,7 +798,8 @@ Picked on 2026-11-11.
       above, with what it cost and a lower effort to try. At an effort we sent (high, xhigh, max; not Claude Code's
       default): 2k thinking tokens or more, 70% of the output, $0.02 or more at the output price, at most 800 other
       output tokens. Suggests Medium after high, else High. `SessionNotices.HeavyThinking`
-- [ ] **Effort in the footer.** The line under each answer names the effort when one was set (`· high`)
+- [x] **Effort in the footer.** The line under each answer names the effort when one was set (`· high`). As
+      `· high effort` after the model (a bare "high" read unclear), from the turn's usage record. `TurnFooter.Effort`
 - [ ] **Router replay by cost.** The router replay in the savings report adds what the current rules' different
       picks would have cost, at the logged tokens
 - [ ] **Effort in the session summary.** Copy session summary gets turns and cost per effort

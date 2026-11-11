@@ -37,6 +37,8 @@ All notable changes to this project are listed here. The format follows
 - **Tool results in the usage CSV**: a `tools` column, e.g. `Read:1200;Shell:400`, in the style of `agent_types`.
 - **Token tip for heavy thinking**: once per conversation, when at high effort or above thinking was most of a short
   answer's output, with what it cost and a lower effort to try.
+- **Effort in the line under each answer**: `· high effort` after the model, when the turn was sent with an effort
+  (routed or picked); nothing for Claude Code's default.
 
 ## [0.9.0] - 2026-11-11
 
