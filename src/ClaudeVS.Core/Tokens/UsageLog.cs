@@ -41,7 +41,9 @@ namespace ClaudeVS.Core.Tokens
             return p.Length <= PromptPreviewLength ? p : p.Substring(0, PromptPreviewLength);
         }
 
-        // Outcome
+        // Outcome. The token counts are the main agent's (the result's usage); subagents' requests are not in them,
+        // while CostUsd (the CLI's total_cost_usd) includes them at what they were billed, long-context tier and all
+        // (seen in Fixtures/cli-2.1.319-fork.jsonl). So LargeContextTokens counts main-agent requests only, on purpose.
         [JsonProperty("model")] public string ModelUsed { get; set; }
         [JsonProperty("in")] public long InputTokens { get; set; }
         [JsonProperty("out")] public long OutputTokens { get; set; }
