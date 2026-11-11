@@ -66,6 +66,7 @@ All notable changes to this project are listed here. The format follows
   now one file per month (`usage-2026-11.jsonl`), and months older than that are deleted when a new month starts,
   instead of one 5 MB archive that could drop last month's turns. The old `usage.jsonl` and `usage.1.jsonl` are
   still read, and deleted once older than the months kept.
+- **Save Savings Report as Markdown…** (Tools → Claude Code): the same report as a `.md` file, to attach or share.
 
 ### Changed
 - **Cost limits in their own Options category**: the cost warnings (conversation, daily, monthly, per solution, agent),

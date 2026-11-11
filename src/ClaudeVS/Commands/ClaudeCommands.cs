@@ -65,6 +65,7 @@ namespace ClaudeVS.Commands
 
             Add(mcs, PackageIds.ShowSavingsReport, (s, e) => Run(ShowSavingsReportAsync));
             Add(mcs, PackageIds.ExportUsageCsv, (s, e) => Run(ExportUsageCsvAsync));
+            Add(mcs, PackageIds.SaveSavingsReport, (s, e) => Run(SaveSavingsReportAsync));
             Add(mcs, PackageIds.NewChatWindow, (s, e) => Run(async () => await _package.NewChatWindowAsync()));
             Add(mcs, PackageIds.FocusLastMessage, (s, e) => Run(async () =>
             {
@@ -143,41 +144,51 @@ namespace ClaudeVS.Commands
             var prices = _package.Options.ToPriceTable();
             var log = ToolWindow.ClaudeChatControl.Usage;
 
-            string text = await Task.Run(() =>
-            {
-                var records = log.ReadAll();
-                var sb = new System.Text.StringBuilder();
-                sb.AppendLine().AppendLine(new string('=', 60));
-                sb.Append(SavingsReport.Build(records, prices, solution).ToText());
-                if (solution != null)
-                {
-                    var all = SavingsReport.Build(records, prices);
-                    if (all.Turns > 0)
-                    {
-                        sb.AppendLine().AppendLine($"All solutions: {all.Turns} turns, ${all.ActualCostUsd:0.00} actual, ~${all.RoutingSavedUsd:0.00} saved by routing.");
-                        if (all.MonthLine() is string month) sb.AppendLine(month);
-                        string solutions = all.SolutionsText();
-                        if (solutions.Length > 0) sb.Append(solutions);
-                    }
-                }
+            string text = await Task.Run(() => SavingsReportText.Full(log.ReadAll(), prices, solution, DateTime.UtcNow, log.Folder));
 
-                var diffs = RouterReplay.Compare(records, new ModelRouter(), prices, out int replayed);
-                sb.AppendLine();
-                if (replayed == 0)
-                    sb.AppendLine("Router replay: no prompt previews logged (Options > Diagnostics > Log prompt preview).");
-                else
-                {
-                    sb.AppendLine($"Router replay: {diffs.Count} of {replayed} logged prompts would route differently with the current rules.");
-                    foreach (var d in diffs.Take(15))
-                        sb.AppendLine($"  {d.LoggedModel} → {d.NowModel}{d.CostChangeText()}: \"{Shorten(d.PromptPreview, 70)}\" ({d.NowReason})");
-                    if (RouterReplay.CostSummary(diffs) is string replayCost) sb.AppendLine("  " + replayCost);
-                }
-                sb.AppendLine().AppendLine($"Log: {log.Path}");
-                return sb.ToString();
-            });
-
-            ClaudeOutputPane.WriteBlock(text);
+            ClaudeOutputPane.WriteBlock("\n" + new string('=', 60) + "\n" + text);
             ClaudeOutputPane.Activate();
+        }
+
+        /// <summary>Saves the same report as a Markdown file, to attach to a ticket or share.</summary>
+        private static async Task SaveSavingsReportAsync()
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            var log = ToolWindow.ClaudeChatControl.Usage;
+            if (!log.HasAny)
+            {
+                Message("Claude Code", "No usage logged yet. Turn on Options > Diagnostics > Keep local usage log.", OLEMSGICON.OLEMSGICON_INFO);
+                return;
+            }
+            string solution = VsContext.GetSolutionDirectory();
+            var prices = _package.Options.ToPriceTable();
+            var dlg = new Microsoft.Win32.SaveFileDialog
+            {
+                Title = "Save savings report as Markdown",
+                FileName = "claude-savings-" + DateTime.Now.ToString("yyyyMMdd") + ".md",
+                DefaultExt = ".md",
+                Filter = "Markdown (*.md)|*.md|All files (*.*)|*.*",
+                InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+            };
+            if (dlg.ShowDialog() != true) return;
+            string target = dlg.FileName;
+            try
+            {
+                await Task.Run(() =>
+                {
+                    var now = DateTime.UtcNow;
+                    // The log's folder is left out: the file is for sharing
+                    File.WriteAllText(target, SavingsReportText.Markdown(SavingsReportText.Full(log.ReadAll(), prices, solution, now), now), new System.Text.UTF8Encoding(false));
+                });
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                ClaudeOutputPane.WriteLine("Saved the savings report to " + target);
+                OpenFile(target);
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                Message("Claude Code", "Could not save the report: " + ex.Message, OLEMSGICON.OLEMSGICON_WARNING);
+            }
         }
 
         /// <summary>Saves the usage log (all solutions) as CSV, one row per turn, for a spreadsheet.</summary>
@@ -217,12 +228,6 @@ namespace ClaudeVS.Commands
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                 Message("Claude Code", "Could not export usage: " + ex.Message, OLEMSGICON.OLEMSGICON_WARNING);
             }
-        }
-
-        private static string Shorten(string s, int max)
-        {
-            s = (s ?? "").Replace("\r", " ").Replace("\n", " ");
-            return s.Length <= max ? s : s.Substring(0, max - 1) + "…";
         }
 
         private static void OpenFile(string path)
