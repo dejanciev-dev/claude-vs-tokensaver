@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 
 namespace ClaudeVS.Core.Cli
@@ -80,6 +82,52 @@ namespace ClaudeVS.Core.Cli
             FastTokens = a.FastTokens + b.FastTokens,
             LargeContextTokens = a.LargeContextTokens + b.LargeContextTokens,
         };
+
+        /// <summary>a − b per field, never below 0 (a cumulative count's growth).</summary>
+        public static TokenUsage Minus(TokenUsage a, TokenUsage b) => new TokenUsage
+        {
+            Input = Math.Max(0, a.Input - b.Input),
+            Output = Math.Max(0, a.Output - b.Output),
+            CacheRead = Math.Max(0, a.CacheRead - b.CacheRead),
+            CacheCreation = Math.Max(0, a.CacheCreation - b.CacheCreation),
+            CacheCreation1h = Math.Max(0, a.CacheCreation1h - b.CacheCreation1h),
+            CacheCreation5m = Math.Max(0, a.CacheCreation5m - b.CacheCreation5m),
+            Thinking = Math.Max(0, a.Thinking - b.Thinking),
+        };
+    }
+
+    /// <summary>
+    /// One model's line of the result's <c>modelUsage</c>: everything the process has used on that model so far,
+    /// subagents included (the result's <c>usage</c> is the main agent's turn only; seen in
+    /// Fixtures/cli-2.1.319-fork.jsonl), with the CLI's own cost.
+    /// </summary>
+    public sealed class ModelUsageEntry
+    {
+        public TokenUsage Usage;
+        public double CostUsd;
+
+        /// <summary>Model id → its cumulative usage; empty when the result has no modelUsage.</summary>
+        public static Dictionary<string, ModelUsageEntry> Parse(JToken modelUsage)
+        {
+            var d = new Dictionary<string, ModelUsageEntry>(StringComparer.Ordinal);
+            if (!(modelUsage is JObject o)) return d;
+            foreach (var p in o.Properties())
+            {
+                if (!(p.Value is JObject m)) continue;
+                long L(string k) => m[k]?.Type == JTokenType.Integer || m[k]?.Type == JTokenType.Float ? (long)(double)m[k] : 0;
+                d[p.Name] = new ModelUsageEntry
+                {
+                    Usage = new TokenUsage
+                    {
+                        Input = L("inputTokens"), Output = L("outputTokens"), CacheRead = L("cacheReadInputTokens"),
+                        CacheCreation = L("cacheCreationInputTokens"), CacheCreation1h = L("cacheCreationEphemeral1hInputTokens"),
+                        CacheCreation5m = L("cacheCreationEphemeral5mInputTokens"), Thinking = L("thinkingTokens"),
+                    },
+                    CostUsd = m["costUSD"]?.Type == JTokenType.Float || m["costUSD"]?.Type == JTokenType.Integer ? (double)m["costUSD"] : 0,
+                };
+            }
+            return d;
+        }
     }
 
     public enum ClaudeEventKind
@@ -189,6 +237,10 @@ namespace ClaudeVS.Core.Cli
         public string TerminalReason { get; set; }
         /// <summary>The turn's subagents (<c>subagent_stats</c>, 2.1.319); null when not sent.</summary>
         public SubagentStats Subagents { get; set; }
+        /// <summary>TurnCompleted: the result's <c>modelUsage</c>, cumulative per model for the process (subagents included).</summary>
+        public Dictionary<string, ModelUsageEntry> ModelUsage { get; set; }
+        /// <summary>AssistantUsage of a subagent: the Agent call it runs under (<c>parent_tool_use_id</c>).</summary>
+        public string ParentToolUseId { get; set; }
 
         // SessionStarted
         /// <summary>The CLI's <c>claude_code_version</c> from <c>init</c>, e.g. "2.1.318".</summary>

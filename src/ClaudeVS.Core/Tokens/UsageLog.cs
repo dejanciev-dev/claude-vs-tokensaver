@@ -66,6 +66,40 @@ namespace ClaudeVS.Core.Tokens
         [JsonProperty("charsAvoided")] public long CharsAvoided { get; set; }
 
         [JsonIgnore] public long TotalTokens => InputTokens + OutputTokens + CacheReadTokens + CacheWriteTokens;
+
+        /// <summary>
+        /// The turn's subagents, one entry per model (<see cref="SubagentUsageTracker"/>); null when none (and in
+        /// older lines). Not in the token counts above, which are the main agent's; already in <see cref="CostUsd"/>.
+        /// </summary>
+        [JsonProperty("agents", NullValueHandling = NullValueHandling.Ignore)] public List<AgentTokens> Agents { get; set; }
+
+        [JsonIgnore] public long AgentTokensTotal => Agents?.Sum(a => a.Total) ?? 0;
+    }
+
+    /// <summary>One model's subagent tokens in a logged turn.</summary>
+    public sealed class AgentTokens
+    {
+        [JsonProperty("model")] public string Model { get; set; }
+        [JsonProperty("in")] public long InputTokens { get; set; }
+        [JsonProperty("out")] public long OutputTokens { get; set; }
+        [JsonProperty("cacheRead")] public long CacheReadTokens { get; set; }
+        [JsonProperty("cacheWrite")] public long CacheWriteTokens { get; set; }
+        [JsonProperty("cacheWrite1h", DefaultValueHandling = DefaultValueHandling.Ignore)] public long CacheWrite1hTokens { get; set; }
+
+        [JsonIgnore] public long Total => InputTokens + OutputTokens + CacheReadTokens + CacheWriteTokens;
+
+        public Cli.TokenUsage ToUsage() => new Cli.TokenUsage
+        {
+            Input = InputTokens, Output = OutputTokens, CacheRead = CacheReadTokens, CacheCreation = CacheWriteTokens, CacheCreation1h = CacheWrite1hTokens,
+        };
+
+        /// <summary>Null when there were none.</summary>
+        public static List<AgentTokens> From(IReadOnlyDictionary<string, Cli.TokenUsage> perModel) =>
+            perModel == null || perModel.Count == 0 ? null : perModel.Select(kv => new AgentTokens
+            {
+                Model = kv.Key, InputTokens = kv.Value.Input, OutputTokens = kv.Value.Output, CacheReadTokens = kv.Value.CacheRead,
+                CacheWriteTokens = kv.Value.CacheCreation, CacheWrite1hTokens = kv.Value.CacheCreation1h,
+            }).ToList();
     }
 
     public sealed class UsageSummary

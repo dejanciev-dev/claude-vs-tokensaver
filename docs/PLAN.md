@@ -597,9 +597,18 @@ Picked on 2026-11-11.
 
 Picked on 2026-11-11.
 
-- [ ] **Subagents in the savings report.** Found in Phase 21: the report compares the logged cost (with subagents)
+- [x] **Subagents in the savings report.** Found in Phase 21: the report compares the logged cost (with subagents)
       against Opus prices for main-agent tokens only. Log subagent tokens per turn (by model) and count them in the
-      report, the CSV and the session summary
+      report, the CSV and the session summary. The result's `modelUsage` (now parsed: `ModelUsageEntry`) is
+      cumulative per model, subagents included; `SubagentUsageTracker` takes its growth over a turn less the main
+      agent's usage (exact). After `--resume` the CLI carries `modelUsage` on (checked with 2.1.322: cache writes
+      728 → 785 for a 57-token turn), so on a meter's first turn, with no earlier reading, it adds up the
+      subagents' streamed messages instead (they carry `parent_tool_use_id`, now on the event; input and cache
+      exact, output low: the message streams before it ends, 2 of 131 in the fork capture). The usage log keeps
+      `agents: [{model, in, out, cacheRead, cacheWrite, cacheWrite1h}]` per turn; the report adds them to "same
+      tokens at Opus prices" (an Opus main turn's own cost less its agents), to cache savings and the hit rate,
+      and says `Subagents: … tokens ≈ $… (N turns; included above)`; the CSV has `agent_tokens`; the session
+      summary a `Subagents:` line. Replayed from the real fork capture in `Test_SubagentUsage_FromRealFork`
 - [ ] **Cost per agent in the agents panel.** The panel shows each subagent's status but not what it cost: price
       its requests as they arrive and show it on its row
 - [ ] **Tip when subagents dominate.** A one-time token tip when subagents cost more than the main agent in a turn,

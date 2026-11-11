@@ -358,6 +358,10 @@ All notable changes to this project are listed here. The format follows
 - `dotnet test` runs the Core test runner instead of silently reporting zero tests.
 
 ### Fixed
+- The savings report counts subagents. Their cost was in the actual cost, but their tokens were missing from "same
+  tokens at Opus prices" and from the cache savings, so routing savings came out low when agents ran. Each turn now
+  logs its subagents' tokens per model; the report shows a `Subagents:` line, the CSV an `agent_tokens` column and
+  the session summary the conversation's subagent tokens.
 - Haiku requests with more than 100k tokens of input are priced at 5x, as Claude Code bills them (cache reads too),
   and a token tip says so once when a Haiku conversation nears 100k. The usage CSV gets `large_context_tokens`.
 - Sonnet's cache reads are priced at $0.10 per million tokens, as Claude Code bills them, not $0.20. Costs and cache

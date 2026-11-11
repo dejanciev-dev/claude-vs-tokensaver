@@ -39,6 +39,15 @@ namespace ClaudeVS.Core.Tokens
 
         public TokenUsage SessionTotal { get; private set; }
         public TokenUsage LastTurn { get; private set; }
+        /// <summary>What the last turn's subagents used, per model (empty when none); see <see cref="SubagentUsageTracker"/>.</summary>
+        public IReadOnlyDictionary<string, TokenUsage> LastTurnSubagents { get; private set; } = new Dictionary<string, TokenUsage>();
+        /// <summary>All the last turn's subagent tokens together.</summary>
+        public TokenUsage LastTurnSubagentTotal => LastTurnSubagents.Values.Aggregate(default(TokenUsage), (a, b) => a + b);
+        /// <summary>The last turn's subagents at <see cref="Prices"/>, each at its own model's price.</summary>
+        public double LastTurnSubagentCostUsd { get; private set; }
+        /// <summary>Subagent tokens in the whole conversation.</summary>
+        public long SessionSubagentTokens { get; private set; }
+        private readonly SubagentUsageTracker _subagents = new SubagentUsageTracker();
         public long ContextTokens { get; private set; }
         public long ContextWindow { get; private set; }
         public int Turns { get; private set; }
@@ -124,6 +133,7 @@ namespace ClaudeVS.Core.Tokens
             Cache.Reset();
             _breaks.Reset(); _pendingBreak = null;
             Learner.Reset();
+            _subagents.Reset(); LastTurnSubagents = new Dictionary<string, TokenUsage>(); LastTurnSubagentCostUsd = 0; SessionSubagentTokens = 0;
             _turnLargeByMessage.Clear();
             LastTurnCacheSavedUsd = 0; SessionCacheSavedUsd = 0; _turnModel = null; LastModel = null;
             Changed?.Invoke(this, EventArgs.Empty);
@@ -140,6 +150,9 @@ namespace ClaudeVS.Core.Tokens
             Learner.Observe(ev);
             switch (ev.Kind)
             {
+                case ClaudeEventKind.AssistantUsage when ev.IsSubagent:
+                    _subagents.ObserveSubagent(ev);
+                    return;
                 case ClaudeEventKind.AssistantUsage when !ev.IsSubagent:
                     // A request over the long-context tier: its tokens, by message (the last copy of a message's usage is final)
                     var req = ev.Usage.AsRequest();
@@ -178,6 +191,10 @@ namespace ClaudeVS.Core.Tokens
                     turn.LargeContextTokens = Math.Min(turn.Total, _turnLargeByMessage.Values.Sum());
                     _turnLargeByMessage.Clear();
                     LastTurn = turn;
+                    LastTurnSubagents = _subagents.TurnCompleted(ev.ModelUsage, _turnModel, turn);
+                    var pt = Prices ?? DefaultPrices;
+                    LastTurnSubagentCostUsd = LastTurnSubagents.Sum(kv => (pt.For(kv.Key) ?? pt.Sonnet).Cost(kv.Value)); // a sum of requests: no per-request tier
+                    SessionSubagentTokens += LastTurnSubagentTotal.Total;
                     // Priced at the model that answered (Sonnet when unknown).
                     var prices = Prices ?? DefaultPrices;
                     LastTurnCacheSavedUsd = (prices.For(_turnModel) ?? prices.Sonnet).CacheSavedUsd(turn);

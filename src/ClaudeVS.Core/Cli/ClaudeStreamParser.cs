@@ -170,7 +170,7 @@ namespace ClaudeVS.Core.Cli
             if (!usage.IsEmpty)
             {
                 if (!isSub) _lastMainUsage = usage;
-                events.Add(new ClaudeEvent { Kind = ClaudeEventKind.AssistantUsage, Usage = usage, IsSubagent = isSub, Model = (string)msg["model"], MessageId = (string)msg["id"] });
+                events.Add(new ClaudeEvent { Kind = ClaudeEventKind.AssistantUsage, Usage = usage, IsSubagent = isSub, Model = (string)msg["model"], MessageId = (string)msg["id"], ParentToolUseId = isSub ? (string)json["parent_tool_use_id"] : null });
             }
             return events;
         }
@@ -278,6 +278,7 @@ namespace ClaudeVS.Core.Cli
                 CredentialExpiresUtc = SignInExpiry.Parse(json["credential_expires_at"]),
                 TerminalReason = (string)json["terminal_reason"],
                 Subagents = SubagentStats.Parse(json["subagent_stats"]),
+                ModelUsage = ModelUsageEntry.Parse(json["modelUsage"]),
             } };
         }
 

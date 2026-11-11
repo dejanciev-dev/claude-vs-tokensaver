@@ -252,6 +252,10 @@ namespace ClaudeVS.Core.Tokens
         public int FastTurns { get; set; }
         public double FastExtraUsd { get; set; }
         /// <summary>Turns with requests over a model's long-context tier (Haiku: 100k input tokens, 5×), and what that cost above the normal price.</summary>
+        /// <summary>Turns with subagents, their tokens and what they cost at their own models' prices (already in <see cref="ActualCostUsd"/>).</summary>
+        public int AgentTurns { get; set; }
+        public long AgentTokens { get; set; }
+        public double AgentCostUsd { get; set; }
         public int LongContextTurns { get; set; }
         public double LongContextExtraUsd { get; set; }
         public List<ModelBreakdown> ByModel { get; } = new List<ModelBreakdown>();
@@ -279,6 +283,11 @@ namespace ClaudeVS.Core.Tokens
         public List<SolutionBreakdown> BySolution { get; } = new List<SolutionBreakdown>();
         public const int SolutionsShown = 10;
 
+        /// <summary>What the prompt cache saved in a logged turn: the main agent's and each subagent model's, at its own price.</summary>
+        private static double CacheSaved(UsageRecord r, PriceTable prices) =>
+            (prices.For(r.ModelUsed) ?? prices.Sonnet).CacheSavedUsd(r)
+            + (r.Agents?.Sum(a => (prices.For(a.Model) ?? prices.Sonnet).CacheSavedUsd(a.ToUsage())) ?? 0);
+
         public static SavingsReport Build(IEnumerable<UsageRecord> records, PriceTable prices, string solution = null, DateTime? sinceUtc = null, DateTime? nowUtc = null)
         {
             prices = prices ?? new PriceTable();
@@ -300,14 +309,20 @@ namespace ClaudeVS.Core.Tokens
                     rep.HaikuRouted++;
                     if (r.LocalModel != null && string.Equals(r.LocalModel, r.RouteModel, StringComparison.OrdinalIgnoreCase)) rep.HaikuAgreed++;
                 }
-                rep.OpusEquivalentUsd += PriceTable.Family(r.ModelUsed) == "opus" ? r.CostUsd : prices.Opus.Cost(r);
+                // The logged cost includes the turn's subagents; their tokens are logged apart (r.Agents), so both sides
+                // of "same tokens at Opus prices" take them: main at Opus (or its own cost on Opus), plus each agent at Opus
+                double agentsOwn = r.Agents?.Sum(a => (prices.For(a.Model) ?? prices.Sonnet).Cost(a.ToUsage())) ?? 0;
+                rep.OpusEquivalentUsd += (PriceTable.Family(r.ModelUsed) == "opus" ? Math.Max(0, r.CostUsd - agentsOwn) : prices.Opus.Cost(r))
+                    + (r.Agents?.Sum(a => prices.Opus.Cost(a.ToUsage())) ?? 0);
+                if (r.Agents != null && r.Agents.Count > 0) { rep.AgentTurns++; rep.AgentTokens += r.AgentTokensTotal; rep.AgentCostUsd += agentsOwn; }
                 long avoided = TokenEstimate.FromChars(r.CharsAvoided);
                 rep.TokensAvoided += avoided;
                 rep.ReferencesSavedUsd += avoided * (prices.For(r.ModelUsed) ?? prices.Sonnet).Input / 1_000_000.0 * (prices.For(r.ModelUsed) ?? prices.Sonnet).Multiplier(r);
-                input += r.InputTokens + r.CacheReadTokens + r.CacheWriteTokens;
-                cacheRead += r.CacheReadTokens;
-                rep.CacheReadTokens += r.CacheReadTokens;
-                rep.CacheSavedUsd += (prices.For(r.ModelUsed) ?? prices.Sonnet).CacheSavedUsd(r);
+                input += r.InputTokens + r.CacheReadTokens + r.CacheWriteTokens + (r.Agents?.Sum(a => a.InputTokens + a.CacheReadTokens + a.CacheWriteTokens) ?? 0);
+                long reads = r.CacheReadTokens + (r.Agents?.Sum(a => a.CacheReadTokens) ?? 0);
+                cacheRead += reads;
+                rep.CacheReadTokens += reads;
+                rep.CacheSavedUsd += CacheSaved(r, prices);
                 rep.OutputTokens += r.OutputTokens;
                 rep.ThinkingTokens += r.ThinkingTokens;
                 rep.ThinkingCostUsd += r.ThinkingTokens * (prices.For(r.ModelUsed) ?? prices.Sonnet).Output / 1_000_000.0 * (prices.For(r.ModelUsed) ?? prices.Sonnet).Multiplier(r);
@@ -344,15 +359,15 @@ namespace ClaudeVS.Core.Tokens
 
             foreach (var day in list.GroupBy(r => r.Timestamp.ToLocalTime().Date))
             {
-                long dIn = day.Sum(r => r.InputTokens + r.CacheReadTokens + r.CacheWriteTokens);
-                long dRead = day.Sum(r => r.CacheReadTokens);
+                long dIn = day.Sum(r => r.InputTokens + r.CacheReadTokens + r.CacheWriteTokens + (r.Agents?.Sum(a => a.InputTokens + a.CacheReadTokens + a.CacheWriteTokens) ?? 0));
+                long dRead = day.Sum(r => r.CacheReadTokens + (r.Agents?.Sum(a => a.CacheReadTokens) ?? 0));
                 rep.ByDay.Add(new DayBreakdown
                 {
                     Day = day.Key,
                     Turns = day.Count(),
                     Tokens = day.Sum(r => r.TotalTokens),
                     CostUsd = day.Sum(r => r.CostUsd + r.RouterCostUsd),
-                    CacheSavedUsd = day.Sum(r => (prices.For(r.ModelUsed) ?? prices.Sonnet).CacheSavedUsd(r)),
+                    CacheSavedUsd = day.Sum(r => CacheSaved(r, prices)),
                     CacheHitPercent = dIn > 0 ? 100.0 * dRead / dIn : 0,
                 });
             }
@@ -421,6 +436,8 @@ namespace ClaudeVS.Core.Tokens
                 sb.AppendLine($"Paid extra for Fable:       ${FableExtraUsd:0.00}  ({FableTurns} {(FableTurns == 1 ? "turn" : "turns")}, above the same tokens on Opus)");
             if (FastTurns > 0)
                 sb.AppendLine($"Paid extra for fast mode:   ${FastExtraUsd:0.00}  ({FastTurns} {(FastTurns == 1 ? "turn" : "turns")}, above standard speed)");
+            if (AgentTurns > 0)
+                sb.AppendLine($"Subagents:                  {TokenMeter.Format(AgentTokens)} tokens ≈ ${AgentCostUsd:0.00}  ({AgentTurns} {(AgentTurns == 1 ? "turn" : "turns")}; included above)");
             if (LongContextTurns > 0)
                 sb.AppendLine($"Paid extra over 100k:       ${LongContextExtraUsd:0.00}  ({LongContextTurns} Haiku {(LongContextTurns == 1 ? "turn" : "turns")} over 100k tokens, above Haiku's normal price; /compact keeps it under)");
             if (HaikuRouted > 0 || RouterCostUsd > 0)

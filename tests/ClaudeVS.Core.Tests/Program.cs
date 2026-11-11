@@ -2267,6 +2267,61 @@ namespace ClaudeVS.Core.Tests
             Eq("junk", PriceTable.UpgradeStored("junk"), "unreadable: left alone");
         }
 
+        private static void Test_SubagentUsage_FromRealFork()
+        {
+            // Replay the fork capture (2.1.319) through the parser and the meter
+            var parser = new ClaudeStreamParser();
+            var events = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.319-fork.jsonl"))
+                .SelectMany(l => parser.Parse(l)).ToList();
+            var sub = events.First(e => e.Kind == ClaudeEventKind.AssistantUsage && e.IsSubagent);
+            True(sub.ParentToolUseId != null && sub.ParentToolUseId.StartsWith("toolu"), "the subagent's Agent call: " + sub.ParentToolUseId);
+            var done = events.Last(e => e.Kind == ClaudeEventKind.TurnCompleted);
+            True(done.ModelUsage.ContainsKey("claude-haiku-5-5") && done.ModelUsage["claude-haiku-5-5"].CostUsd > 0, "modelUsage parsed");
+
+            // First turn this meter sees: from the subagent's streamed message (input and cache exact)
+            var m = new TokenMeter();
+            foreach (var e in events) m.Observe(e);
+            var first = m.LastTurnSubagents["claude-haiku-5-5"];
+            Eq(23_917L, first.CacheRead, "subagent cache reads");
+            Eq(462L, first.CacheCreation, "subagent cache writes");
+            Eq(4L, first.Input, "subagent input");
+            True(m.LastTurnSubagentCostUsd > 0, "priced");
+            Eq(first.Total, m.SessionSubagentTokens, "conversation total");
+
+            // A later turn: modelUsage's growth less the main agent's usage, exact (output too)
+            var tr = new SubagentUsageTracker();
+            var u1 = new Dictionary<string, ModelUsageEntry> { ["claude-haiku-5-5"] = new ModelUsageEntry { Usage = new TokenUsage { Input = 4, Output = 204, CacheRead = 38_169, CacheCreation = 12_175 } } };
+            Eq(0, tr.TurnCompleted(u1, "claude-haiku-5-5", new TokenUsage { Input = 4, Output = 204, CacheRead = 38_169, CacheCreation = 12_175 }).Count, "a turn without agents");
+            var u2 = new Dictionary<string, ModelUsageEntry> { ["claude-haiku-5-5"] = new ModelUsageEntry { Usage = new TokenUsage { Input = 12, Output = 539, CacheRead = 100_255, CacheCreation = 24_812 } } };
+            var agents = tr.TurnCompleted(u2, "claude-haiku-5-5", new TokenUsage { Input = 4, Output = 204, CacheRead = 38_169, CacheCreation = 12_175 });
+            var a = agents["claude-haiku-5-5"];
+            Eq(4L, a.Input); Eq(131L, a.Output, "output exact"); Eq(23_917L, a.CacheRead); Eq(462L, a.CacheCreation);
+
+            // A subagent on another model, and a fresh process whose counts start again
+            var u3 = new Dictionary<string, ModelUsageEntry>
+            {
+                ["claude-haiku-5-5"] = u2["claude-haiku-5-5"],
+                ["claude-sonnet-5-5"] = new ModelUsageEntry { Usage = new TokenUsage { Input = 10, Output = 50, CacheRead = 5_000 } },
+            };
+            var other = tr.TurnCompleted(u3, "claude-haiku-5-5", default);
+            Eq(1, other.Count, "only the Sonnet agent grew");
+            Eq(5_060L, other["claude-sonnet-5-5"].Total);
+
+            // The report: Opus equivalent and cache savings take the agents too
+            var prices = new PriceTable();
+            var rec = new UsageRecord { ModelUsed = "claude-haiku-5-5", CacheReadTokens = 1_000_000, CostUsd = 0.01 + 0.1,
+                Agents = new List<AgentTokens> { new AgentTokens { Model = "claude-sonnet-5-5", CacheReadTokens = 1_000_000 } } };
+            var rep = SavingsReport.Build(new[] { rec }, prices);
+            True(Math.Abs(rep.OpusEquivalentUsd - (0.2 + 0.2)) < 1e-9, "main 1M reads at Opus + agent 1M reads at Opus: " + rep.OpusEquivalentUsd);
+            True(Math.Abs(rep.CacheSavedUsd - ((0.1 - 0.01) + (2.0 - 0.1))) < 1e-9, "both agents' cache savings: " + rep.CacheSavedUsd);
+            Eq(2_000_000L, rep.CacheReadTokens, "reads of both");
+            Eq(1, rep.AgentTurns);
+            True(rep.ToText().Contains("Subagents:                  1.0M tokens ≈ $0.10  (1 turn; included above)"), rep.ToText());
+            Eq(1_000_000L, rec.AgentTokensTotal);
+            True(Newtonsoft.Json.JsonConvert.SerializeObject(rec).Contains("\"agents\":[{\"model\":\"claude-sonnet-5-5\""), "logged");
+            True(!Newtonsoft.Json.JsonConvert.SerializeObject(new UsageRecord()).Contains("agents"), "none: not written");
+        }
+
         private static void Test_TurnUsage_IsMainAgentOnly()
         {
             // The fork capture (2.1.319): the result's usage is the main agent's; modelUsage and the cost add the
@@ -2379,7 +2434,7 @@ namespace ClaudeVS.Core.Tests
             Eq(2, UsageCsv.Write(recs, sw), "rows");
             var lines = sw.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None);
             Eq(string.Join(",", UsageCsv.Columns), lines[0], "header");
-            Eq(t.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") + @",C:\src\a\,claude-opus-5-5,1,,,,5,1200,300,9000,100,100,10405,0,0.25,0.0001,4200,0,134,multi-file,", lines[1], "oldest first, invariant numbers; fast_tokens and large_context_tokens after the cache columns");
+            Eq(t.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") + @",C:\src\a\,claude-opus-5-5,1,,,,5,1200,300,9000,100,100,10405,0,0,0.25,0.0001,4200,0,134,multi-file,", lines[1], "oldest first, invariant numbers; fast_tokens, large_context_tokens and agent_tokens after the cache columns");
             True(lines[2].EndsWith(",0,0.001235,0,0,0,0,,\"'=SUM(A1) say \"\"hi\"\", ok\""), "quoted, formula-guarded prompt: " + lines[2]);
             Eq("", lines[3], "ends with a line break");
 
