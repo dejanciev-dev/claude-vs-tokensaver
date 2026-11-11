@@ -163,11 +163,14 @@ namespace ClaudeVS.ToolWindow
             _costWatch.StepUsd = Options?.CostWarningUsd ?? 5;
             CostWarning(_costWatch.Check(_meterModel.SessionCostUsd));
             DailyCost.StepUsd = Options?.DailyCostWarningUsd ?? 20;
-            LoadDailyCost();
+            MonthlyCost.StepUsd = Options?.MonthlyCostWarningUsd ?? 200;
+            LoadSpend();
             // The change in the conversation's total: a result without a cost adds nothing.
             double total = _meterModel.SessionCostUsd, added = Math.Max(0, total - _dailyCounted);
             _dailyCounted = total;
-            CostWarning(DailyCost.Add(added, DateTime.UtcNow));
+            var now = DateTime.UtcNow;
+            CostWarning(DailyCost.Add(added, now));
+            CostWarning(MonthlyCost.Add(added, now));
         }
 
         private void CostWarning(string warning)
@@ -180,19 +183,20 @@ namespace ClaudeVS.ToolWindow
             Announce(warning);
         }
 
-        /// <summary>Today's spend in all chat windows (Options → Warn at daily cost).</summary>
-        private static readonly Core.Tokens.DailyCostWatch DailyCost = new Core.Tokens.DailyCostWatch();
-        private static bool _dailyCostLoaded;
-        private double _dailyCounted; // of this meter's SessionCostUsd, already added to DailyCost
+        /// <summary>Today's and this month's spend in all chat windows (Options → Warn at daily / monthly cost).</summary>
+        private static readonly Core.Tokens.SpendWatch DailyCost = new Core.Tokens.SpendWatch(Core.Tokens.SpendPeriod.Day, 20);
+        private static readonly Core.Tokens.SpendWatch MonthlyCost = new Core.Tokens.SpendWatch(Core.Tokens.SpendPeriod.Month, 200);
+        private static bool _spendLoaded;
+        private double _dailyCounted; // of this meter's SessionCostUsd, already added to DailyCost and MonthlyCost
 
-        /// <summary>Once per Visual Studio session: today's earlier turns from the usage log (in the background).</summary>
-        private static void LoadDailyCost()
+        /// <summary>Once per Visual Studio session: this month's earlier turns from the usage log (in the background).</summary>
+        private static void LoadSpend()
         {
-            if (_dailyCostLoaded || Options?.KeepUsageLog == false) return;
-            _dailyCostLoaded = true;
+            if (_spendLoaded || Options?.KeepUsageLog == false) return;
+            _spendLoaded = true;
             _ = System.Threading.Tasks.Task.Run(() =>
             {
-                try { DailyCost.Load(Usage.ReadAll()); }
+                try { var all = Usage.ReadAll(); DailyCost.Load(all); MonthlyCost.Load(all); }
                 catch (Exception ex) { ClaudeOutputPane.WriteLine("Could not read usage log: " + ex.Message); }
             });
         }

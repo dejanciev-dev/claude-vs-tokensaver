@@ -6,6 +6,11 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+- **Monthly cost warning** (Options → *Warn at monthly cost (USD)*, default 200): said once each time this calendar
+  month's spend in Visual Studio, all conversations together, passes another multiple. The month's earlier turns
+  come from the usage log.
+
 ## [0.9.0] - 2026-11-11
 
 The first release on the Visual Studio Marketplace, as a **preview**. It runs Claude Code 2.1.318 or newer (checked

@@ -2679,18 +2679,18 @@ namespace ClaudeVS.Core.Tests
             True(!SavingsReport.Build(recs.Take(1), new PriceTable()).ToText().Contains("By day"), "no table for a single day");
         }
 
-        private static void Test_DailyCostWatch()
+        private static void Test_DailySpendWatch()
         {
             // Local noon, so "today" is the same day in any time zone's local view of these instants.
             var start = new DateTime(2026, 11, 9, 12, 0, 0, DateTimeKind.Local).ToUniversalTime();
-            var w = new DailyCostWatch(20, start);
+            var w = new SpendWatch(SpendPeriod.Day, 20, start);
             w.Load(new[]
             {
                 new UsageRecord { Timestamp = start.AddHours(-1), CostUsd = 21, RouterCostUsd = 0.5 },
                 new UsageRecord { Timestamp = start.AddDays(-1), CostUsd = 100 },          // yesterday
                 new UsageRecord { Timestamp = start.AddMinutes(1), CostUsd = 3 },           // added by Add already
             });
-            True(Math.Abs(w.SpentToday - 21.5) < 1e-9, "today's turns before the watch, with router cost: " + w.SpentToday);
+            True(Math.Abs(w.Spent - 21.5) < 1e-9, "today's turns before the watch, with router cost: " + w.Spent);
             Eq(null, w.Add(1, start.AddMinutes(1)), "$20 was passed before loading: no warning again");
             string warn = w.Add(18, start.AddMinutes(2));
             True(warn != null && warn.Contains("passed $40.00") && warn.Contains("($40.50 so far"), warn);
@@ -2698,11 +2698,35 @@ namespace ClaudeVS.Core.Tests
             Eq(null, w.Add(double.NaN, start.AddMinutes(4)), "NaN adds nothing");
 
             Eq(null, w.Add(5, start.AddDays(1)), "a new day starts from 0");
-            True(Math.Abs(w.SpentToday - 5) < 1e-9, "new day: " + w.SpentToday);
+            True(Math.Abs(w.Spent - 5) < 1e-9, "new day: " + w.Spent);
             True(w.Add(15, start.AddDays(1).AddMinutes(1))?.Contains("passed $20.00") == true, "first step of the new day");
 
-            var off = new DailyCostWatch(0, start);
+            var off = new SpendWatch(SpendPeriod.Day, 0, start);
             Eq(null, off.Add(1000, start), "0 turns it off");
+        }
+
+        private static void Test_MonthlySpendWatch()
+        {
+            // Local noon on the 9th: the 1st and the 30th of the month before are in other months in any time zone.
+            var start = new DateTime(2026, 11, 9, 12, 0, 0, DateTimeKind.Local).ToUniversalTime();
+            var w = new SpendWatch(SpendPeriod.Month, 200, start);
+            w.Load(new[]
+            {
+                new UsageRecord { Timestamp = new DateTime(2026, 11, 1, 12, 0, 0, DateTimeKind.Local).ToUniversalTime(), CostUsd = 150 },
+                new UsageRecord { Timestamp = start.AddDays(-1), CostUsd = 60, RouterCostUsd = 0.25 },
+                new UsageRecord { Timestamp = new DateTime(2026, 10, 30, 12, 0, 0, DateTimeKind.Local).ToUniversalTime(), CostUsd = 500 }, // last month
+            });
+            True(Math.Abs(w.Spent - 210.25) < 1e-9, "this month's turns before the watch: " + w.Spent);
+            Eq(null, w.Add(5, start.AddMinutes(1)), "$200 was passed before loading");
+            string warn = w.Add(190, start.AddDays(3));
+            True(warn != null && warn.StartsWith("This month's Claude Code spend") && warn.Contains("passed $400.00") && warn.Contains("($405.25 so far"), warn);
+            Eq(null, w.Add(1, start.AddDays(4)), "once per step");
+            var december = new DateTime(2026, 12, 1, 12, 0, 0, DateTimeKind.Local).ToUniversalTime();
+            Eq(null, w.Add(10, december), "a new month starts from 0");
+            True(Math.Abs(w.Spent - 10) < 1e-9, "new month: " + w.Spent);
+            True(w.Add(195, december.AddDays(1))?.Contains("passed $200.00") == true, "first step of the new month");
+
+            True(new SpendWatch(SpendPeriod.Day, 20, start).Add(25, start)?.StartsWith("Today's") == true, "the daily text");
         }
 
         private static void Test_CostWatch()
