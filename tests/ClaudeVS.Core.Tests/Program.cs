@@ -136,6 +136,21 @@ namespace ClaudeVS.Core.Tests
             s.MarkNotesStranded();
             string reviewed = s.TakeStrandedNotes();
             True(reviewed.Contains("Rejected: line 4.") && !reviewed.Contains("its change is in the file"), reviewed);
+
+            // A reviewed edit that Stop caught before it was written: the reviewed note does not apply, the file check
+            // says "not applied", and that is what Claude hears (before, nothing)
+            s.SetToolResultNote("toolu_3", "Rejected: line 9.", "c.cs", () => false);
+            s.AddNextPromptNote("toolu_3", StoppedEdit.Note("Edit", "c.cs", StoppedEdit.State.NotWritten, JObject.Parse("{\"old_string\":\"a\",\"new_string\":\"b\"}")));
+            s.MarkNotesStranded();
+            string notWritten = s.TakeStrandedNotes();
+            True(notWritten != null && notWritten.Contains("was not applied: c.cs still has \"a\"") && !notWritten.Contains("Rejected: line 9."), notWritten);
+            Eq(null, s.TakeStrandedNotes(), "given once");
+
+            // Not written and the file says nothing either (Unknown): still nothing, rather than a guess
+            s.SetToolResultNote("toolu_4", "Rejected: line 2.", "d.cs", () => false);
+            s.AddNextPromptNote("toolu_4", StoppedEdit.Note("Edit", "d.cs", StoppedEdit.State.Unknown));
+            s.MarkNotesStranded();
+            Eq(null, s.TakeStrandedNotes(), "unknown: nothing");
         }
 
         private static void Test_EditNote_AfterStop_GoesWithNextPrompt()
