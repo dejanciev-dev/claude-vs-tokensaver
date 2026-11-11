@@ -24,6 +24,18 @@ namespace ClaudeVS.Core.Tokens
         }
 
         /// <summary>
+        /// "$0.020 ($0.012 agents)": the turn's cost (the CLI's, subagents included) and, from $0.001, its subagents'
+        /// share (<see cref="TokenMeter.LastTurnSubagentCostUsd"/>, never more than the turn). "$0.020" without agents.
+        /// </summary>
+        public static string Cost(double turnUsd, double agentsUsd)
+        {
+            var c = System.Globalization.CultureInfo.InvariantCulture;
+            string cost = "$" + turnUsd.ToString("0.000", c);
+            if (agentsUsd < 0.0005 || turnUsd <= 0) return cost; // no cost from the CLI: no share of it either
+            return cost + " ($" + System.Math.Min(agentsUsd, turnUsd).ToString("0.000", c) + " agents)";
+        }
+
+        /// <summary>
         /// "2 agents (31k tok)": the subagents the turn started (<paramref name="stats"/>, may be null) and the tokens
         /// subagents used in it (<see cref="TokenMeter.LastTurnSubagentTotal"/>; not in the turn's own "tok", which is
         /// the main agent's). A background agent started earlier that worked in this turn shows as "agents 31k tok".

@@ -627,8 +627,9 @@ Picked on 2026-11-11.
 
 Picked on 2026-11-11.
 
-- [ ] **Agent cost in the footer.** The turn's cost includes its subagents: split it, e.g. `$0.020 ($0.012 agents)`,
-      priced as the agents panel prices them
+- [x] **Agent cost in the footer.** The turn's cost includes its subagents: split it, e.g. `$0.020 ($0.012 agents)`,
+      priced as the agents panel prices them. Shown from $0.001, never more than the turn, and not when the CLI sent
+      no cost. `TurnFooter.Cost`
 - [ ] **Cost on the Agent tool row.** The `● Agent(…)` row in the conversation gets the agent's tokens and cost on its
       ⎿ line when it finishes, so they stay after the panel is cleared
 - [ ] **Report by agent type.** Log each subagent's type (Explore, general-purpose, fork, a custom agent) with its

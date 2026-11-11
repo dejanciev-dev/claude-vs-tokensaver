@@ -1656,6 +1656,15 @@ namespace ClaudeVS.Core.Tests
             Eq("agents 1.2k tok", TurnFooter.Agents(null, 1_234), "a background agent from an earlier turn, or no subagent_stats");
             Eq(null, TurnFooter.Agents(null, 0));
 
+            // The footer's cost, with the agents' share
+            Eq("$0.020 ($0.012 agents)", TurnFooter.Cost(0.020, 0.012));
+            Eq("$0.020", TurnFooter.Cost(0.020, 0.0002), "too small to show");
+            Eq("$0.010 ($0.010 agents)", TurnFooter.Cost(0.010, 0.013), "never more than the turn");
+            Eq("$0.000", TurnFooter.Cost(0, 0.013), "the CLI sent no cost");
+            // The fork run: a Haiku fork reading 24k cached tokens costs well under $0.001, so no share is shown
+            True(meter.LastTurnSubagentCostUsd > 0 && meter.LastTurnSubagentCostUsd < 0.0005, "the fork's cost: " + meter.LastTurnSubagentCostUsd);
+            Eq("$0.003", TurnFooter.Cost(meter.LastTurnCostUsd, meter.LastTurnSubagentCostUsd), "the fork run");
+
             // A turn without agents (2.1.319 thinking capture): no footer note.
             var plain = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.319-thinking-duration.jsonl"))
                 .SelectMany(l => new ClaudeStreamParser().Parse(l)).Single(e => e.Kind == ClaudeEventKind.TurnCompleted);
