@@ -20,6 +20,8 @@ All notable changes to this project are listed here. The format follows
   start small (a New chat for a new topic, or /compact).
 - **Token tip for a short answer from a dear model**: once per conversation, when Opus or Fable, picked by hand, gave
   a short answer with no tools and no subagents, with what the same tokens cost on Haiku.
+- **Cost by effort in the savings report**: each turn logs the effort it was sent with (routed or picked by hand), and
+  the report lists turns, cost, cost per turn and thinking per effort. The usage CSV gets an `effort` column.
 
 ## [0.9.0] - 2026-11-11
 

@@ -2202,6 +2202,31 @@ namespace ClaudeVS.Core.Tests
             Eq(0, m.ResultTokensByTool().Count, "reset");
         }
 
+        private static void Test_SavingsReport_ByEffort()
+        {
+            var t = DateTime.UtcNow.AddDays(-1);
+            var recs = new[]
+            {
+                new UsageRecord { Timestamp = t, Effort = "high", CostUsd = 0.30, ThinkingTokens = 12_000 },
+                new UsageRecord { Timestamp = t, Effort = "high", CostUsd = 0.10, RouterCostUsd = 0.001, ThinkingTokens = 3_000 },
+                new UsageRecord { Timestamp = t, Effort = "low", CostUsd = 0.02 },
+                new UsageRecord { Timestamp = t, RouteEffort = "medium", CostUsd = 0.05 }, // older routed line: its route effort
+                new UsageRecord { Timestamp = t, CostUsd = 0.07 },                         // Claude Code's default
+                new UsageRecord { Timestamp = t, Effort = "max", CostUsd = 1.00, ThinkingTokens = 40_000 },
+            };
+            var rep = SavingsReport.Build(recs, new PriceTable());
+            Eq("low,medium,high,max,default", string.Join(",", rep.ByEffort.Select(b => b.Effort)), "low to max, then the default");
+            var high = rep.ByEffort[2];
+            Eq(2, high.Turns, "turns");
+            True(Math.Abs(high.CostUsd - 0.401) < 1e-9, "router cost included: " + high.CostUsd);
+            Eq(15_000L, high.ThinkingTokens, "thinking");
+            string text = rep.ToText();
+            True(text.Contains("By effort:\r\n") || text.Contains("By effort:\n"), text);
+            True(text.Contains("  high        2 turns  $    0.40  ($0.201 per turn)  15.0k thinking"), text);
+            True(text.Contains("  default     1 turns  $    0.07  ($0.070 per turn)\r\n") || text.Contains("  default     1 turns  $    0.07  ($0.070 per turn)\n"), text);
+            Eq(0, SavingsReport.Build(new[] { recs[4] }, new PriceTable()).ByEffort.Count, "no effort known: no list");
+        }
+
         private static void Test_SavingsReport_ToolResults()
         {
             var t = DateTime.UtcNow.AddDays(-1);
@@ -2720,13 +2745,13 @@ namespace ClaudeVS.Core.Tests
             Eq(2, UsageCsv.Write(recs, sw), "rows");
             var lines = sw.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None);
             Eq(string.Join(",", UsageCsv.Columns), lines[0], "header");
-            Eq(t.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") + @",C:\src\a\,claude-opus-5-5,1,,,,5,1200,300,9000,100,100,10405,0,0,,0.25,0.0001,4200,0,134,multi-file,,", lines[1], "oldest first, invariant numbers; fast_tokens, large_context_tokens, agent_tokens and agent_types after the cache columns");
-            True(lines[2].EndsWith(",0,,0.001235,0,0,0,0,,\"'=SUM(A1) say \"\"hi\"\", ok\","), "quoted, formula-guarded prompt: " + lines[2]);
+            Eq(t.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") + @",C:\src\a\,claude-opus-5-5,1,,,,5,1200,300,9000,100,100,10405,0,0,,0.25,0.0001,4200,0,134,multi-file,,,", lines[1], "oldest first, invariant numbers; fast_tokens, large_context_tokens, agent_tokens and agent_types after the cache columns");
+            True(lines[2].EndsWith(",0,,0.001235,0,0,0,0,,\"'=SUM(A1) say \"\"hi\"\", ok\",,"), "quoted, formula-guarded prompt: " + lines[2]);
             Eq("", lines[3], "ends with a line break");
-            Eq("session", UsageCsv.Columns.Last(), "session id last");
+            Eq("session,effort", string.Join(",", UsageCsv.Columns.Skip(UsageCsv.Columns.Length - 2)), "session id and effort last");
             var withSession = new StringWriter();
-            UsageCsv.Write(new[] { new UsageRecord { Timestamp = t, SessionId = "abc-123" } }, withSession);
-            True(withSession.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",,abc-123"), "after the prompt: " + withSession);
+            UsageCsv.Write(new[] { new UsageRecord { Timestamp = t, SessionId = "abc-123", Effort = "high" } }, withSession);
+            True(withSession.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",,abc-123,high"), "after the prompt: " + withSession);
 
             var one = new StringWriter();
             Eq(1, UsageCsv.Write(recs, one, solution: @"c:\SRC\a"), "one solution, any case or trailing slash");

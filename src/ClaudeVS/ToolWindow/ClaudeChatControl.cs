@@ -1251,6 +1251,7 @@ namespace ClaudeVS.ToolWindow
                     Routed = decision != null,
                     RouteModel = decision != null ? model.ToCli() : null,
                     RouteEffort = decision != null ? effort.ToCli() : null,
+                    Effort = effort.ToCli(),
                     RouteScore = decision?.Score,
                     RouteReason = decision?.Reason,
                     PromptChars = userText.Length,

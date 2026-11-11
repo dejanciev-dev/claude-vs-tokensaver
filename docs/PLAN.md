@@ -755,8 +755,10 @@ Picked on 2026-11-11.
       with what the same tokens cost on Haiku. Up to 600 output tokens, no main-agent tool call
       (`TokenMeter.LastTurnToolCalls`) and no subagents, from $0.02, when Haiku would cost a third or less; not when
       Auto picked the model. The tip says a new model writes the conversation to its cache once. `SessionNotices.OverkillModel`
-- [ ] **Effort in the report.** Log the effort each turn was sent with; the report lists turns, cost and thinking per
-      effort
+- [x] **Effort in the report.** Log the effort each turn was sent with; the report lists turns, cost and thinking per
+      effort. `effort` in the log (null for Claude Code's default; older routed lines fall back to `routeEffort`);
+      `By effort:` from low to max, then "default", with the cost per turn; an `effort` column ends the CSV.
+      `SavingsReport.ByEffort`
 - [ ] **Router accuracy line.** For prompts the Haiku router decided against the local rules: how often it chose a
       cheaper or a dearer model, and what that changed (the same tokens at the other model's prices)
 - [ ] **Budget left in the meter.** The meter's tooltip shows today's and this month's spend against the warnings,

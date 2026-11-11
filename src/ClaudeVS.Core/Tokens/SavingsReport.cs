@@ -225,6 +225,16 @@ namespace ClaudeVS.Core.Tokens
         public string FirstPrompt { get; set; }
     }
 
+    /// <summary>The turns sent with one effort, in the savings report.</summary>
+    public sealed class EffortBreakdown
+    {
+        /// <summary>"low" … "max", or <see cref="SavingsReport.DefaultEffort"/>.</summary>
+        public string Effort { get; set; }
+        public int Turns { get; set; }
+        public double CostUsd { get; set; }
+        public long ThinkingTokens { get; set; }
+    }
+
     public sealed class ModelBreakdown
     {
         public string Family { get; set; }
@@ -334,6 +344,14 @@ namespace ClaudeVS.Core.Tokens
         public int LongContextTurns { get; set; }
         public double LongContextExtraUsd { get; set; }
         public List<ModelBreakdown> ByModel { get; } = new List<ModelBreakdown>();
+
+        /// <summary>
+        /// Turns, cost and thinking per effort, from low to max, then turns without a known effort (Claude Code's
+        /// default, or logged before efforts were). Empty when no turn has a known effort.
+        /// </summary>
+        public List<EffortBreakdown> ByEffort { get; } = new List<EffortBreakdown>();
+        public const string DefaultEffort = "default";
+        private static readonly string[] EffortOrder = { "low", "medium", "high", "xhigh", "max" };
         /// <summary>Turns routed by the Haiku router, how many picked the same model as the local rules, its cost and time.</summary>
         public int HaikuRouted { get; set; }
         public int HaikuAgreed { get; set; }
@@ -447,6 +465,13 @@ namespace ClaudeVS.Core.Tokens
                 .GroupBy(r => PriceTable.Family(r.ModelUsed) ?? "other")
                 .Select(g => new ModelBreakdown { Family = g.Key, Turns = g.Count(), CostUsd = g.Sum(r => r.CostUsd) })
                 .OrderByDescending(b => b.Turns));
+
+            if (list.Any(r => (r.Effort ?? r.RouteEffort) != null))
+                rep.ByEffort.AddRange(list
+                    .GroupBy(r => (r.Effort ?? r.RouteEffort)?.ToLowerInvariant() ?? DefaultEffort, StringComparer.Ordinal)
+                    .Select(g => new EffortBreakdown { Effort = g.Key, Turns = g.Count(), CostUsd = g.Sum(r => r.CostUsd + r.RouterCostUsd), ThinkingTokens = g.Sum(r => r.ThinkingTokens) })
+                    .OrderBy(b => Array.IndexOf(EffortOrder, b.Effort) is int i && i >= 0 ? i : EffortOrder.Length + (b.Effort == DefaultEffort ? 1 : 0))
+                    .ThenBy(b => b.Effort, StringComparer.Ordinal));
 
             rep.Costliest.AddRange(list.Where(r => r.CostUsd > 0).OrderByDescending(r => r.CostUsd).Take(CostliestCount));
             rep.CostliestConversations.AddRange(list
@@ -563,6 +588,16 @@ namespace ClaudeVS.Core.Tokens
             sb.AppendLine("By model:");
             foreach (var b in ByModel)
                 sb.AppendLine($"  {b.Family,-7} {b.Turns,5} turns  ${b.CostUsd,8:0.00}  ({100.0 * b.Turns / Turns:0}% of turns)");
+            if (ByEffort.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("By effort:");
+                foreach (var b in ByEffort)
+                {
+                    string thinking = b.ThinkingTokens > 0 ? $"  {TokenMeter.Format(b.ThinkingTokens)} thinking" : "";
+                    sb.AppendLine($"  {b.Effort,-7} {b.Turns,5} turns  ${b.CostUsd,8:0.00}  (${(b.Turns > 0 ? b.CostUsd / b.Turns : 0):0.000} per turn){thinking}");
+                }
+            }
             if (Solution == null && SolutionsText() is string solutions && solutions.Length > 0) sb.AppendLine().Append(solutions);
             if (Costliest.Count > 1)
             {
