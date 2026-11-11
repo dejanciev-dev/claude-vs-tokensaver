@@ -52,6 +52,8 @@ All notable changes to this project are listed here. The format follows
   got 4k written tokens or more with no tool calls, with how to ask for less.
 - **MCP tool results per server**: the session summary, the savings report and the CSV group MCP tool results by
   server (`MCP github`) instead of one `MCP`.
+- **Last 7 days in the meter's tooltip**: `Last 7 days: Thu $3.10 · Fri – · … · today $2.00 ($6.30 in all)`, all
+  conversations, from the usage log and the turns since.
 
 ## [0.9.0] - 2026-11-11
 

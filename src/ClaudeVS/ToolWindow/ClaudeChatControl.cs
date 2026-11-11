@@ -2100,6 +2100,7 @@ namespace ClaudeVS.ToolWindow
             MonthlyCost.StepUsd = Options?.MonthlyCostWarningUsd ?? 200;
             LoadSpend(); // the month's earlier turns, once; the line shows them from the next refresh
             if (Core.Tokens.SpendWatch.BudgetLine(DailyCost, MonthlyCost, DateTime.UtcNow) is string spend) tip += "\n\n" + spend;
+            if (RecentSpend.LastDaysLine(DateTime.UtcNow) is string days) tip += "\n" + days;
             _meterArea.ToolTip = tip;
         }
 
