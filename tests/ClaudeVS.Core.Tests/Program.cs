@@ -983,6 +983,24 @@ namespace ClaudeVS.Core.Tests
             Eq(1, diffs.Count, "one changed");
             Eq("haiku", diffs[0].NowModel, "now haiku");
             Eq(200, UsageRecord.Preview(new string('x', 500)).Length, "preview capped");
+            Eq(null, diffs[0].CostChangeUsd, "no prices: not priced");
+            Eq("", diffs[0].CostChangeText(), "no text");
+
+            // Priced: Sonnet 10k in + 1k out = $0.030, the same on Haiku $0.0015
+            var priced = new[]
+            {
+                new UsageRecord { Routed = true, RouteModel = "sonnet", ModelUsed = "claude-sonnet-5-5", PromptPreview = "fix the typo in this comment", InputTokens = 10_000, OutputTokens = 1_000 },
+                new UsageRecord { Routed = true, RouteModel = "sonnet", PromptPreview = "fix the typo in this comment", InputTokens = 10_000, OutputTokens = 1_000 }, // no model: the routed one
+            };
+            var p = RouterReplay.Compare(priced, R, new PriceTable(), out _);
+            Eq(2, p.Count, "both now Haiku");
+            True(Math.Abs(p[0].CostChangeUsd.Value + 0.0285) < 1e-9, "cheaper: " + p[0].CostChangeUsd);
+            Eq(" (≈ −$0.029)", p[0].CostChangeText());
+            Eq("At the logged tokens: 2 cheaper (≈ $0.06 less), net ≈ $0.06 less.", RouterReplay.CostSummary(p));
+            var mixed = new List<ReplayDiff> { new ReplayDiff { CostChangeUsd = -0.40 }, new ReplayDiff { CostChangeUsd = 0.10 }, new ReplayDiff { CostChangeUsd = null } };
+            Eq("At the logged tokens: 1 cheaper (≈ $0.40 less), 1 dearer (≈ $0.10 more), net ≈ $0.30 less.", RouterReplay.CostSummary(mixed));
+            Eq(" (≈ +$0.100)", mixed[1].CostChangeText());
+            Eq(null, RouterReplay.CostSummary(diffs), "none priced");
         }
 
         // ---------- Markdown ----------

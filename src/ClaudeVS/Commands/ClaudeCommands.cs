@@ -161,7 +161,7 @@ namespace ClaudeVS.Commands
                     }
                 }
 
-                var diffs = RouterReplay.Compare(records, new ModelRouter(), out int replayed);
+                var diffs = RouterReplay.Compare(records, new ModelRouter(), prices, out int replayed);
                 sb.AppendLine();
                 if (replayed == 0)
                     sb.AppendLine("Router replay: no prompt previews logged (Options > Diagnostics > Log prompt preview).");
@@ -169,7 +169,8 @@ namespace ClaudeVS.Commands
                 {
                     sb.AppendLine($"Router replay: {diffs.Count} of {replayed} logged prompts would route differently with the current rules.");
                     foreach (var d in diffs.Take(15))
-                        sb.AppendLine($"  {d.LoggedModel} → {d.NowModel}: \"{Shorten(d.PromptPreview, 70)}\" ({d.NowReason})");
+                        sb.AppendLine($"  {d.LoggedModel} → {d.NowModel}{d.CostChangeText()}: \"{Shorten(d.PromptPreview, 70)}\" ({d.NowReason})");
+                    if (RouterReplay.CostSummary(diffs) is string replayCost) sb.AppendLine("  " + replayCost);
                 }
                 sb.AppendLine().AppendLine($"Log: {log.Path}");
                 return sb.ToString();
