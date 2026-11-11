@@ -676,9 +676,13 @@ Picked on 2026-11-11.
 
 Picked on 2026-11-11.
 
-- [ ] **Settle the fork switch.** Run Claude Code 2.1.322 once with `CLAUDE_CODE_FORK_SUBAGENT=0` on a tiny Haiku
+- [x] **Settle the fork switch.** Run Claude Code 2.1.322 once with `CLAUDE_CODE_FORK_SUBAGENT=0` on a tiny Haiku
       prompt and capture whether it still forks. If it works, the fork tip names it and Options gets a *No forks*
-      checkbox; if not, record that
+      checkbox; if not, record that. It works: asked for a fork, the Agent call fails ("Agent type 'fork' not found.
+      Available agents: claude, Explore, general-purpose, …") and Claude answers without one; with the default the
+      same prompt ran a fork (Fixtures/cli-2.1.322-fork-off.jsonl, scrubbed). Also seen: in 2.1.322 an Agent call
+      without `subagent_type` runs as general-purpose, not as a fork, and "fork" is not in `init`'s agent list.
+      `ClaudeLaunchOptions.NoForks`, `Environment()`
 - [ ] **Live cost warning on a row.** An agent's row in the panel turns amber once it passes a set cost (Options,
       default $0.50) while it runs, so a runaway agent can be stopped early
 - [ ] **Agent models in the report.** The savings report lists subagent cost per model (Haiku, Sonnet, Opus agents)

@@ -2535,7 +2535,20 @@ namespace ClaudeVS.Core.Tests
             // A costly fork, once finished: the tip, without naming a switch that is not settled
             var costlyFork = new AgentTask { TaskType = "local_agent", SubagentType = ToolCallView.ForkType, Status = AgentTaskStatus.Completed, CostUsd = 0.08 };
             string forkTip = SessionNotices.ForkCost(costlyFork);
-            True(forkTip?.Contains("Explore agent") == true && !forkTip.Contains("CLAUDE_CODE_FORK_SUBAGENT"), forkTip);
+            True(forkTip?.Contains("Explore agent") == true && forkTip.Contains("No forks"), forkTip);
+
+            // No forks: CLAUDE_CODE_FORK_SUBAGENT=0. Captured with 2.1.322: asked for a fork, the Agent call fails and
+            // Claude answers without one (with the default, the same prompt ran a fork)
+            Eq("0", new ClaudeLaunchOptions { NoForks = true }.Environment()["CLAUDE_CODE_FORK_SUBAGENT"]);
+            Eq(0, new ClaudeLaunchOptions().Environment().Count, "nothing set by default");
+            Eq("1", new ClaudeLaunchOptions { EnableFileCheckpointing = true }.Environment()["CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING"]);
+            var offEvents = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.322-fork-off.jsonl")).SelectMany(l => new ClaudeStreamParser().Parse(l)).ToList();
+            var forkCall = offEvents.Single(e => e.Kind == ClaudeEventKind.ToolUse);
+            Eq(ToolCallView.ForkType, (string)forkCall.ToolInput["subagent_type"], "Claude asked for a fork");
+            var refused = offEvents.Single(e => e.Kind == ClaudeEventKind.ToolResult);
+            True(refused.IsError && refused.ResultText.StartsWith("Agent type 'fork' not found"), refused.ResultText);
+            True(!offEvents.Any(e => e.Kind == ClaudeEventKind.AssistantUsage && e.IsSubagent), "no subagent ran");
+            True(offEvents.Last().Kind == ClaudeEventKind.TurnCompleted && !offEvents.Last().IsError, "the turn still finished");
             Eq(null, SessionNotices.ForkCost(new AgentTask { TaskType = "local_agent", SubagentType = ToolCallView.ForkType, CostUsd = 0.08 }), "still running");
             Eq(null, SessionNotices.ForkCost(new AgentTask { TaskType = "local_agent", SubagentType = ToolCallView.ForkType, Status = AgentTaskStatus.Completed, CostUsd = 0.02 }), "cheap");
             Eq(null, SessionNotices.ForkCost(new AgentTask { TaskType = "local_agent", SubagentType = "Explore", Status = AgentTaskStatus.Completed, CostUsd = 0.08 }), "not a fork");

@@ -70,8 +70,7 @@ namespace ClaudeVS.Core.Cli
                     StandardOutputEncoding = new UTF8Encoding(false),
                     StandardErrorEncoding = new UTF8Encoding(false),
                 };
-                // File checkpoints for rewind: off by default in headless mode, turned on by this variable (2.1.317).
-                if (Options.EnableFileCheckpointing) psi.EnvironmentVariables[ClaudeLaunchOptions.FileCheckpointingVariable] = "1";
+                foreach (var kv in Options.Environment()) psi.EnvironmentVariables[kv.Key] = kv.Value; // file checkpoints, no forks
 
                 // npm installs a .cmd shim on Windows, which cannot be started directly without a shell.
                 if (exe.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase) || exe.EndsWith(".bat", StringComparison.OrdinalIgnoreCase))

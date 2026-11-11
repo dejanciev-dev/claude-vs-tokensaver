@@ -39,6 +39,9 @@ namespace ClaudeVS.Options
         [Category("CLI"), DisplayName("File checkpoints (rewind)"), Description("Lets Claude Code keep a copy of each file before Claude changes it, so you can rewind a prompt's file changes (hover your message → Rewind). Applies to new sessions.")]
         public bool FileCheckpoints { get; set; } = true;
 
+        [Category("CLI"), DisplayName("No forks"), Description("Claude can't start forks: subagents that start with a copy of the whole conversation, which costs much more in a long one than a fresh agent. Sets CLAUDE_CODE_FORK_SUBAGENT=0. Applies to new sessions.")]
+        public bool NoForks { get; set; }
+
         [Category("CLI"), DisplayName("Extra arguments"), Description("Appended to the claude command line, e.g. --add-dir ..\\shared")]
         public string ExtraArguments { get; set; } = "";
 

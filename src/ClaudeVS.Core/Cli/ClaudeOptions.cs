@@ -123,6 +123,24 @@ namespace ClaudeVS.Core.Cli
         public bool EnableFileCheckpointing { get; set; }
         public const string FileCheckpointingVariable = "CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING";
 
+        /// <summary>
+        /// No fork subagents: with <see cref="ForkSubagentVariable"/>=0 Claude Code 2.1.322 has no "fork" agent type
+        /// (asked for one, the Agent call fails with "Agent type 'fork' not found" and Claude carries on without it;
+        /// Fixtures/cli-2.1.322-fork-off.jsonl). A fork starts with a copy of the whole conversation.
+        /// </summary>
+        public bool NoForks { get; set; }
+        public const string ForkSubagentVariable = "CLAUDE_CODE_FORK_SUBAGENT";
+
+        /// <summary>The environment variables the CLI process gets for these options (none set means none).</summary>
+        public Dictionary<string, string> Environment()
+        {
+            var env = new Dictionary<string, string>(StringComparer.Ordinal);
+            // File checkpoints for rewind: off by default in headless mode, turned on by this variable (2.1.317).
+            if (EnableFileCheckpointing) env[FileCheckpointingVariable] = "1";
+            if (NoForks) env[ForkSubagentVariable] = "0";
+            return env;
+        }
+
         /// <summary>Display name (<c>--name</c>): the CLI stores it as the session's title, shown in its /resume picker.</summary>
         public string SessionName { get; set; }
         /// <summary>Short extra system prompt (kept tiny on purpose — it is paid on every request).</summary>
