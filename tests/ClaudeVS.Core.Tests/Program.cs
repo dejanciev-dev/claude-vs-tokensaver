@@ -2837,6 +2837,24 @@ namespace ClaudeVS.Core.Tests
             Eq(null, off.Add(1000, start), "0 turns it off");
         }
 
+        private static void Test_SpendLimit()
+        {
+            var now = new DateTime(2026, 11, 9, 12, 0, 0, DateTimeKind.Local).ToUniversalTime();
+            var l = new SpendLimit(50);
+            Eq(null, l.Ask(49.99, now), "below the limit");
+            string q = l.Ask(52.3, now);
+            Eq("Today's Claude Code spend in Visual Studio is $52.30, past your daily limit of $50.00 (at API prices; Tools → Options → Claude Code → Ask before sending past daily cost).\n\n"
+                + "Send this prompt anyway? You won't be asked again today until $100.00.", q);
+            Eq(q, l.Ask(52.3, now.AddMinutes(1)), "asked again until you say yes");
+            l.Allow(52.3, now);
+            Eq(null, l.Ask(80, now.AddMinutes(2)), "allowed up to the next multiple");
+            True(l.Ask(101, now.AddMinutes(3))?.Contains("until $150.00") == true, "past $100: asked again");
+            l.Allow(101, now.AddMinutes(3));
+            True(l.Ask(60, now.AddDays(1)) != null, "a new day: asked again");
+            Eq(null, new SpendLimit(0).Ask(1000, now), "0: never asks");
+            Eq(null, l.Ask(double.NaN, now), "no spend known");
+        }
+
         private static void Test_MonthlySpendWatch()
         {
             // Local noon on the 9th: the 1st and the 30th of the month before are in other months in any time zone.

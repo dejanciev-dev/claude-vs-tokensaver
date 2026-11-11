@@ -78,6 +78,9 @@ namespace ClaudeVS.Options
         [Category("Token saving"), DisplayName("Warn at monthly cost (USD)"), Description("The chat says so once each time this calendar month's spend in Visual Studio, across all conversations and chat windows, passes another multiple of this amount (at API prices). The month's turns from before Visual Studio started are read from the usage log. 0 turns it off.")]
         public double MonthlyCostWarningUsd { get; set; } = 200;
 
+        [Category("Token saving"), DisplayName("Ask before sending past daily cost (USD)"), Description("Once today's spend in Visual Studio, across all conversations and chat windows, has passed this amount (at API prices), sending a prompt asks first; after you say yes, not again today until the next multiple. Commands such as /compact always go. 0 (the default) never asks.")]
+        public double DailyCostLimitUsd { get; set; } = 0;
+
         [Category("Token saving"), DisplayName("Warn at agent cost (USD)"), Description("A subagent's row in the agents panel turns amber once its requests pass this amount (at API prices), so one that runs away can be stopped. 0 turns it off.")]
         public double AgentCostWarningUsd { get; set; } = 0.5;
 

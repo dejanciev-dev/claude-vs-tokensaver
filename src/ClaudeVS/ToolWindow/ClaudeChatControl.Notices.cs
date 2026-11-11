@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using ClaudeVS.Core.Cli;
 using ClaudeVS.Diagnostics;
 using Microsoft.VisualStudio.Shell;
@@ -187,6 +188,7 @@ namespace ClaudeVS.ToolWindow
         private static readonly Core.Tokens.SpendWatch DailyCost = new Core.Tokens.SpendWatch(Core.Tokens.SpendPeriod.Day, 20);
         private static readonly Core.Tokens.SpendWatch MonthlyCost = new Core.Tokens.SpendWatch(Core.Tokens.SpendPeriod.Month, 200);
         private static bool _spendLoaded;
+        private static volatile bool _spendLoadDone;
         private double _dailyCounted; // of this meter's SessionCostUsd, already added to DailyCost and MonthlyCost
 
         /// <summary>Once per Visual Studio session: this month's earlier turns from the usage log (in the background).</summary>
@@ -196,9 +198,46 @@ namespace ClaudeVS.ToolWindow
             _spendLoaded = true;
             _ = System.Threading.Tasks.Task.Run(() =>
             {
-                try { var all = Usage.ReadAll(); DailyCost.Load(all); MonthlyCost.Load(all); }
+                try { var all = Usage.ReadAll(); DailyCost.Load(all); MonthlyCost.Load(all); _spendLoadDone = true; }
                 catch (Exception ex) { ClaudeOutputPane.WriteLine("Could not read usage log: " + ex.Message); }
             });
+        }
+
+        /// <summary>Options → Ask before sending past daily cost, shared by all chat windows.</summary>
+        private static readonly Core.Tokens.SpendLimit DailyLimit = new Core.Tokens.SpendLimit();
+
+        /// <summary>
+        /// Before a typed prompt (commands such as /compact always go): true when it may be sent, asking first once
+        /// today's spend has passed the daily limit.
+        /// </summary>
+        private bool PastDailyLimitConfirmed()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            DailyLimit.LimitUsd = Options?.DailyCostLimitUsd ?? 0;
+            if (DailyLimit.LimitUsd <= 0) return true;
+            LoadSpend();
+            var now = DateTime.UtcNow;
+            double spent = DailyCost.SpentAt(now);
+            // Right after Visual Studio starts the log may still be loading: today's earlier turns must count all the same
+            if (!_spendLoadDone && Options?.KeepUsageLog != false)
+            {
+                try
+                {
+                    var today = now.ToLocalTime().Date;
+                    spent = Math.Max(spent, Usage.ReadAll().Where(r => r.Timestamp.ToLocalTime().Date == today).Sum(r => r.CostUsd + r.RouterCostUsd));
+                }
+                catch (Exception ex) { ClaudeOutputPane.WriteLine("Could not read usage log: " + ex.Message); }
+            }
+            string question = DailyLimit.Ask(spent, now);
+            if (question == null) return true;
+            int answer = VsShellUtilities.ShowMessageBox(ClaudeVSPackage.Instance ?? (IServiceProvider)ServiceProvider.GlobalProvider,
+                question, "Daily limit passed",
+                Microsoft.VisualStudio.Shell.Interop.OLEMSGICON.OLEMSGICON_WARNING,
+                Microsoft.VisualStudio.Shell.Interop.OLEMSGBUTTON.OLEMSGBUTTON_OKCANCEL,
+                Microsoft.VisualStudio.Shell.Interop.OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_SECOND);
+            if (answer != 1 /* IDOK */) { ClaudeOutputPane.WriteLine("Prompt not sent: past the daily limit."); return false; }
+            DailyLimit.Allow(spent, now);
+            return true;
         }
 
         // ---------------- Pricey context ----------------
