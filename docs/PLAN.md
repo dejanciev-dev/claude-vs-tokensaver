@@ -861,7 +861,10 @@ Picked on 2026-11-11. The version comes last, after Phase 34, so its notes cover
       the warnings and the values to set back
 - [x] **Cost options grouped.** The cost warnings and limits in their own *Cost limits* category in Options. Seven
       options; only the category changed, and the page stores values by property name, so they are kept
-- [ ] **Split the big test file.** `tests/ClaudeVS.Core.Tests/Program.cs` into one file per area, no behavior change
+- [x] **Split the big test file.** `tests/ClaudeVS.Core.Tests/Program.cs` into one file per area, no behavior change.
+      `Program` is a partial class: `Program.cs` keeps the runner (80 lines), each test and helper moved unchanged
+      into `Tests.Spend / Meter / Router / Notices / Cli / Chat / Context.cs` by a script, in its old order; the
+      section marker comments are gone. The same 181 tests pass; a sorted line comparison shows only the new headers
 - [ ] **Version 0.10.0.** Version bump; the Unreleased changelog becomes the 0.10.0 notes
 
 ---
