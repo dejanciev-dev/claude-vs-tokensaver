@@ -7,6 +7,8 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **What subagents cost, per conversation in the sessions list**: `$0.42 ($0.12 agents) · 3h`, read from Claude
+  Code's own session files and their subagents' files.
 - **Subagent cost by model in the savings report**: `by model: opus $1.20 (≈ $0.72 on Sonnet) · sonnet $0.40`,
   showing what Opus agents would have cost on Sonnet.
 - **A subagent that passes a set cost turns amber** in the agents panel (Options → *Warn at agent cost*, default

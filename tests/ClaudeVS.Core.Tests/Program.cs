@@ -1982,15 +1982,19 @@ namespace ClaudeVS.Core.Tests
                 Asst("m1", "claude-opus-5-5", big),
                 Asst("m2", "<synthetic>", "{\"input_tokens\":0,\"output_tokens\":0}"),
                 "not json",
+                // A subagent's message (isSidechain) in the main file, should one be there: Haiku, 100k input, not over the tier: $0.01
+                Asst("m4", "claude-haiku-5-5", "{\"input_tokens\":100000,\"output_tokens\":0}").Replace("{\"type\":\"assistant\",", "{\"type\":\"assistant\",\"isSidechain\":true,"),
             });
             // A subagent on Haiku: one request with 1M input, over the 100k tier: 5x (-e.50 per Mtok).
             File.WriteAllLines(Path.Combine(root, "s1", "subagents", "agent-a.jsonl"), new[] { Asst("m3", "claude-haiku-5-5", "{\"input_tokens\":1000000,\"output_tokens\":0}") });
             try
             {
                 var info = SessionCost.Read(file, new PriceTable());
-                Eq(2, info.Requests, "each message once; synthetic skipped; subagent counted");
-                True(Math.Abs(info.CostUsd - (0.2 + 8 + 20 + 0.5)) < 1e-9, "opus read 0.2 + 1h write 2x4 + output 20, haiku input 0.5 (over 100k): " + info.CostUsd);
-                Eq("$28.70", info.Short(), "short");
+                Eq(3, info.Requests, "each message once; synthetic skipped; subagents counted");
+                True(Math.Abs(info.CostUsd - (0.2 + 8 + 20 + 0.5 + 0.01)) < 1e-9, "opus read 0.2 + 1h write 2x4 + output 20, haiku input 0.5 (over 100k), sidechain 0.01: " + info.CostUsd);
+                True(Math.Abs(info.AgentCostUsd - 0.51) < 1e-9, "the subagents: their file and the sidechain line: " + info.AgentCostUsd);
+                Eq("$28.71 ($0.51 agents)", info.Short(), "short, with the agents' part");
+                Eq("$0.42", new SessionCostInfo { CostUsd = 0.42, AgentCostUsd = 0.004 }.Short(), "agents under half a cent: not shown");
                 Eq(null, new SessionCostInfo { CostUsd = 0.004 }.Short(), "under half a cent");
                 Eq("$123", new SessionCostInfo { CostUsd = 123.4 }.Short(), "no cents from $100");
 
@@ -2002,7 +2006,7 @@ namespace ClaudeVS.Core.Tests
 
                 var listed = new SessionInfo { FilePath = file, LastWriteUtc = f.LastWriteTimeUtc, SizeBytes = f.Length };
                 var unread = new SessionInfo { FilePath = Path.Combine(root, "s2.jsonl"), LastWriteUtc = f.LastWriteTimeUtc, SizeBytes = 1 };
-                Eq("1 session, $28.70 in total (API prices)", SessionCost.TotalLine(new[] { listed }), "footer");
+                Eq("1 session, $28.71 in total (API prices)", SessionCost.TotalLine(new[] { listed }), "footer");
                 Eq("Reading what the sessions cost…", SessionCost.TotalLine(new[] { listed, unread }), "one not read yet");
                 Eq(null, SessionCost.TotalLine(new SessionInfo[0]), "no sessions");
             }

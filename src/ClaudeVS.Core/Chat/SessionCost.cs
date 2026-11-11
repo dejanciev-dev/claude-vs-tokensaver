@@ -14,9 +14,13 @@ namespace ClaudeVS.Core.Chat
         public int Requests { get; set; }
         public TokenUsage Usage { get; set; }
         public double CostUsd { get; set; }
+        /// <summary>The part of <see cref="CostUsd"/> its subagents used (their files under &lt;id&gt;/subagents).</summary>
+        public double AgentCostUsd { get; set; }
 
-        /// <summary>"$0.42" for the sessions list; null under half a cent.</summary>
-        public string Short() => CostUsd >= 0.005 ? "$" + CostUsd.ToString(CostUsd >= 100 ? "0" : "0.00", CultureInfo.InvariantCulture) : null;
+        /// <summary>"$0.42", or "$0.42 ($0.12 agents)" with subagents from half a cent, for the sessions list; null under half a cent.</summary>
+        public string Short() => CostUsd < 0.005 ? null : Usd(CostUsd) + (AgentCostUsd >= 0.005 ? " (" + Usd(AgentCostUsd) + " agents)" : "");
+
+        private static string Usd(double v) => "$" + v.ToString(v >= 100 ? "0" : "0.00", CultureInfo.InvariantCulture);
     }
 
     /// <summary>
@@ -74,19 +78,19 @@ namespace ClaudeVS.Core.Chat
             prices = prices ?? new PriceTable();
             var info = new SessionCostInfo();
             var seen = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
-            AddFile(file, prices, info, seen);
+            AddFile(file, prices, info, seen, subagent: false);
             try
             {
                 string sub = Path.Combine(Path.ChangeExtension(file, null), "subagents");
                 if (Directory.Exists(sub))
-                    foreach (var s in Directory.GetFiles(sub, "*.jsonl")) AddFile(s, prices, info, seen);
+                    foreach (var s in Directory.GetFiles(sub, "*.jsonl")) AddFile(s, prices, info, seen, subagent: true);
             }
             catch (IOException) { }
             catch (UnauthorizedAccessException) { }
             return info;
         }
 
-        private static void AddFile(string file, PriceTable prices, SessionCostInfo info, System.Collections.Generic.HashSet<string> seen)
+        private static void AddFile(string file, PriceTable prices, SessionCostInfo info, System.Collections.Generic.HashSet<string> seen, bool subagent)
         {
             try
             {
@@ -107,7 +111,9 @@ namespace ClaudeVS.Core.Chat
                         if (u.IsEmpty) continue; // "<synthetic>" messages (errors, interruptions) cost nothing
                         info.Requests++;
                         info.Usage += u;
-                        info.CostUsd += (prices.For(model) ?? prices.Sonnet).Cost(u);
+                        double cost = (prices.For(model) ?? prices.Sonnet).Cost(u);
+                        info.CostUsd += cost;
+                        if (subagent || o.Value<bool?>("isSidechain") == true) info.AgentCostUsd += cost; // a subagent's message in the main file, should one be there
                     }
                 }
             }
