@@ -880,7 +880,10 @@ Picked on 2026-11-11.
 - [x] **Report as Markdown file.** Save the savings report as a Markdown file. Tools → Claude Code → *Save Savings
       Report as Markdown…*: a heading, the time, and the report in a fenced block (its columns are space-aligned);
       the log's folder left out. The report text moved to Core for both commands (`SavingsReportText`)
-- [ ] **Report period picker.** Run the report for this month, last month or the last 30 days, not only everything
+- [x] **Report period picker.** Run the report for this month, last month or the last 30 days, not only everything.
+      As an Options dropdown (*Savings report period*), used by both report commands; a dialog would need its own
+      theming. The title names the period; the month and week lines still compare up to today, and are left out for
+      last month. `ReportPeriod`, `SavingsReportText.Range`
 - [ ] **Usage log size in Options.** Where the log is and how big; a command to open its folder
 
 ---

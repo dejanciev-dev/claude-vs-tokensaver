@@ -310,6 +310,7 @@ Editor commands go to the chat window you used last.
 | Pricing | Opus / Sonnet / Haiku / Fable price | 2026-11 list prices | `input, output, cache write, cache read` in USD per million tokens. Used only for the savings estimate. |
 | Diagnostics | Keep local usage log | On | See Privacy. |
 | Diagnostics | Keep usage history (months) | 3 | How many months of the usage log to keep, this one included; older monthly files are deleted when a new month starts. 0 = all. |
+| Diagnostics | Savings report period | All | What the savings report covers: All, ThisMonth, LastMonth or Last30Days. The month and week lines always compare up to today. |
 | Diagnostics | Log prompt preview (for router tuning) | Off | Stores the first 200 characters of each prompt locally. |
 | Diagnostics | Log raw CLI traffic | Off | Every JSON line in Output → Claude Code. Large; for debugging. |
 

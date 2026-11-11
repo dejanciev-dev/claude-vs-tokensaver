@@ -105,6 +105,9 @@ namespace ClaudeVS.Options
         [Category("Diagnostics"), DisplayName("Keep usage history (months)"), Description("How many months of the usage log to keep, this one included; older monthly files are deleted when a new month starts. The savings report, the month and week comparisons and the spend warnings read what is kept. 0 keeps everything.")]
         public int KeepUsageMonths { get; set; } = 3;
 
+        [Category("Diagnostics"), DisplayName("Savings report period"), Description("What Show Savings Report and Save Savings Report as Markdown cover: All (everything logged), ThisMonth, LastMonth or Last30Days. The month and week lines always compare up to today.")]
+        public ReportPeriod SavingsReportPeriod { get; set; } = ReportPeriod.All;
+
         [Category("Diagnostics"), DisplayName("Log prompt preview (for router tuning)"), Description("Also store the first 200 characters of each prompt in the usage log, so the savings report can replay real prompts through the router. Off by default because prompts may contain code or secrets.")]
         public bool LogPromptPreview { get; set; } = false;
 
