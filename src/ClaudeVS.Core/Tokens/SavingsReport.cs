@@ -575,6 +575,11 @@ namespace ClaudeVS.Core.Tokens
             rep.MonthToDateUsd = list.Where(r => r.Timestamp.ToLocalTime().Date >= rep.Month && r.Timestamp.ToLocalTime().Date <= today).Sum(r => r.CostUsd + r.RouterCostUsd);
             if (today.Day >= ProjectFromDay && rep.MonthToDateUsd > 0)
                 rep.MonthProjectedUsd = rep.MonthToDateUsd / today.Day * DateTime.DaysInMonth(today.Year, today.Month);
+            // This week from Monday, and last week up to the same weekday
+            rep.WeekStart = today.AddDays(-(((int)today.DayOfWeek + 6) % 7));
+            rep.WeekToDateUsd = list.Where(r => r.Timestamp.ToLocalTime().Date >= rep.WeekStart && r.Timestamp.ToLocalTime().Date <= today).Sum(r => r.CostUsd + r.RouterCostUsd);
+            var lastWeek = rep.WeekStart.AddDays(-7);
+            rep.LastWeekToDateUsd = list.Where(r => r.Timestamp.ToLocalTime().Date >= lastWeek && r.Timestamp.ToLocalTime().Date <= lastWeek.AddDays((today - rep.WeekStart).Days)).Sum(r => r.CostUsd + r.RouterCostUsd);
             // Last month up to the same day (its last day when it is shorter), to compare with
             var lastMonth = rep.Month.AddMonths(-1);
             rep.LastMonthToDay = lastMonth.AddDays(Math.Min(today.Day, DateTime.DaysInMonth(lastMonth.Year, lastMonth.Month)) - 1);
@@ -598,6 +603,32 @@ namespace ClaudeVS.Core.Tokens
             return LastMonthText() is string last ? line + " " + last : line;
         }
 
+        /// <summary>This week's Monday, what was spent since, and last week from its Monday up to the same weekday.</summary>
+        public DateTime WeekStart { get; set; }
+        public double WeekToDateUsd { get; set; }
+        public double LastWeekToDateUsd { get; set; }
+
+        /// <summary>
+        /// "This week:                  $14.20 since Monday (last week by the same day: $11.00, +29%)"; the comparison left out
+        /// when nothing was logged then; null with nothing spent this week.
+        /// </summary>
+        public string WeekLine()
+        {
+            if (WeekToDateUsd <= 0) return null;
+            var c = CultureInfo.InvariantCulture;
+            string line = $"This week:                  ${WeekToDateUsd.ToString("0.00", c)} since Monday";
+            if (LastWeekToDateUsd <= 0) return line;
+            return line + $" (last week by the same day: ${LastWeekToDateUsd.ToString("0.00", c)}, {Change(WeekToDateUsd, LastWeekToDateUsd)})";
+        }
+
+        /// <summary>"+37%", "−50%", "±0%".</summary>
+        private static string Change(double now, double before)
+        {
+            double change = 100.0 * (now - before) / before;
+            string sign = change >= 0.5 ? "+" : change <= -0.5 ? "−" : "±";
+            return sign + Math.Abs(change).ToString("0", CultureInfo.InvariantCulture) + "%";
+        }
+
         /// <summary>Last month from its 1st up to <see cref="LastMonthToDay"/> (the same day as today, or its last day).</summary>
         public DateTime LastMonthToDay { get; set; }
         public double LastMonthToDateUsd { get; set; }
@@ -606,9 +637,7 @@ namespace ClaudeVS.Core.Tokens
         public string LastMonthText()
         {
             if (LastMonthToDateUsd <= 0) return null;
-            double change = 100.0 * (MonthToDateUsd - LastMonthToDateUsd) / LastMonthToDateUsd;
-            string sign = change >= 0.5 ? "+" : change <= -0.5 ? "−" : "±";
-            return $"({LastMonthToDay:MMM} 1–{LastMonthToDay.Day}: ${LastMonthToDateUsd:0.00}, {sign}{Math.Abs(change):0}%)";
+            return $"({LastMonthToDay:MMM} 1–{LastMonthToDay.Day}: ${LastMonthToDateUsd:0.00}, {Change(MonthToDateUsd, LastMonthToDateUsd)})";
         }
 
         /// <summary>"By solution:" lines for a report over all solutions; empty with fewer than two solutions.</summary>
@@ -640,6 +669,7 @@ namespace ClaudeVS.Core.Tokens
             sb.AppendLine();
             sb.AppendLine($"Actual cost:                ${ActualCostUsd:0.00}");
             if (MonthLine() is string month) sb.AppendLine(month);
+            if (WeekLine() is string week) sb.AppendLine(week);
             sb.AppendLine($"Same tokens at Opus prices: ${OpusEquivalentUsd:0.00}  (estimate)");
             sb.AppendLine($"Saved by model routing:     ${RoutingSavedUsd:0.00}  ({RoutingSavedPercent:0}%)");
             sb.AppendLine($"Saved by file references:   ~{TokenMeter.Format(TokensAvoided)} tokens ≈ ${ReferencesSavedUsd:0.00}");

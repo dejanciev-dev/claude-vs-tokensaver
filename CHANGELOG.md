@@ -54,6 +54,8 @@ All notable changes to this project are listed here. The format follows
   server (`MCP github`) instead of one `MCP`.
 - **Last 7 days in the meter's tooltip**: `Last 7 days: Thu $3.10 · Fri – · … · today $2.00 ($6.30 in all)`, all
   conversations, from the usage log and the turns since.
+- **This week against last week** in the savings report: `This week: $14.20 since Monday (last week by the same day:
+  $11.00, +29%)`.
 
 ## [0.9.0] - 2026-11-11
 
