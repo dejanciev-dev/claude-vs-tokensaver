@@ -7,6 +7,9 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Subagents by kind in the session summary** (`Subagents by kind: Explore $0.400 · Fork $0.030`) and an
+  `agent_types` column in the usage CSV, after `agent_tokens`: each kind's share of the turn's subagent cost
+  (`Explore:0.75;general-purpose:0.25`).
 - **Which model each subagent ran on**, in the agents panel (`Explore · haiku`) and under its Agent call
   (`Done · haiku · 24.6k tok · $0.042`).
 - **Subagent cost by kind of agent in the savings report**: `by kind of agent: Explore $0.40 · general-purpose

@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using ClaudeVS.Core.Cli;
 
 namespace ClaudeVS.Core.Tokens
 {
@@ -22,6 +23,9 @@ namespace ClaudeVS.Core.Tokens
             if (s.Thinking > 0) sb.Append($" of which thinking {TokenMeter.Format(s.Thinking)}");
             sb.Append($", cache read {TokenMeter.Format(s.CacheRead)}, cache write {TokenMeter.Format(s.CacheCreation)})\n");
             if (m.SessionSubagentTokens > 0) sb.Append($"Subagents: {TokenMeter.Format(m.SessionSubagentTokens)} tokens more (not in the line above; in the cost)\n");
+            var kinds = m.SessionAgentCostByType.Where(kv => kv.Value > 0).OrderByDescending(kv => kv.Value).ToList();
+            if (kinds.Count > 0)
+                sb.Append("Subagents by kind: ").Append(string.Join(" · ", kinds.Select(kv => $"{kv.Key} {AgentTask.FormatCost(kv.Value)}"))).Append('\n');
             sb.Append($"Cache hits: {m.CacheHitPercent.ToString("0", c)}%");
             if (m.SessionCacheSavedUsd >= 0.005) sb.Append($" (saved ${m.SessionCacheSavedUsd.ToString("0.00", c)})");
             if (m.ContextTokens > 0)

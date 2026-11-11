@@ -15,7 +15,7 @@ namespace ClaudeVS.Core.Tokens
         public static readonly string[] Columns =
         {
             "time", "solution", "model", "routed", "route_model", "route_effort", "router",
-            "input", "output", "thinking", "cache_read", "cache_write", "cache_write_1h", "fast_tokens", "large_context_tokens", "agent_tokens",
+            "input", "output", "thinking", "cache_read", "cache_write", "cache_write_1h", "fast_tokens", "large_context_tokens", "agent_tokens", "agent_types",
             "cost_usd", "router_cost_usd", "duration_ms", "error", "tokens_avoided", "route_reason", "prompt",
         };
 
@@ -35,7 +35,7 @@ namespace ClaudeVS.Core.Tokens
                     r.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss", c),
                     Text(r.Solution), Text(r.ModelUsed), r.Routed ? "1" : "0", Text(r.RouteModel), Text(r.RouteEffort), Text(r.Router),
                     r.InputTokens.ToString(c), r.OutputTokens.ToString(c), r.ThinkingTokens.ToString(c),
-                    r.CacheReadTokens.ToString(c), r.CacheWriteTokens.ToString(c), r.CacheWrite1hTokens.ToString(c), r.FastTokens.ToString(c), r.LargeContextTokens.ToString(c), r.AgentTokensTotal.ToString(c),
+                    r.CacheReadTokens.ToString(c), r.CacheWriteTokens.ToString(c), r.CacheWrite1hTokens.ToString(c), r.FastTokens.ToString(c), r.LargeContextTokens.ToString(c), r.AgentTokensTotal.ToString(c), Text(AgentTypes(r.AgentTypes)),
                     r.CostUsd.ToString("0.######", c), r.RouterCostUsd.ToString("0.######", c), r.DurationMs.ToString(c),
                     r.IsError ? "1" : "0", TokenEstimate.FromChars(r.CharsAvoided).ToString(c), Text(r.RouteReason), Text(r.PromptPreview),
                 };
@@ -45,6 +45,14 @@ namespace ClaudeVS.Core.Tokens
             }
             return rows;
         }
+
+        /// <summary>
+        /// "Explore:0.75;general-purpose:0.25": each kind of agent's share of the turn's subagent cost (see
+        /// <see cref="UsageRecord.AgentTypes"/>), at most 4 decimals; "" when none.
+        /// </summary>
+        public static string AgentTypes(List<AgentTypeCost> types) =>
+            types == null ? "" : string.Join(";", types.Where(t => !string.IsNullOrEmpty(t.Type) && t.Share > 0)
+                .Select(t => t.Type + ":" + t.Share.ToString("0.####", CultureInfo.InvariantCulture)));
 
         /// <summary>A text cell: quoted when needed, guarded against formulas.</summary>
         public static string Text(string s)

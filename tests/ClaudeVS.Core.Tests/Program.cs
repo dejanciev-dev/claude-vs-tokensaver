@@ -1674,6 +1674,12 @@ namespace ClaudeVS.Core.Tests
             // The fork run: a Haiku fork reading 24k cached tokens costs well under $0.001, so no share is shown
             True(meter.LastTurnSubagentCostUsd > 0 && meter.LastTurnSubagentCostUsd < 0.0005, "the fork's cost: " + meter.LastTurnSubagentCostUsd);
             Eq("$0.003", TurnFooter.Cost(meter.LastTurnCostUsd, meter.LastTurnSubagentCostUsd), "the fork run");
+            // The session summary names the kinds (a FreshSession meter: the fork's exact cost, all Fork)
+            var kindMeter = new TokenMeter();
+            kindMeter.FreshSession();
+            foreach (var e in File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.319-fork.jsonl")).SelectMany(l => new ClaudeStreamParser().Parse(l))) kindMeter.Observe(e);
+            True(SessionSummary.Format(kindMeter).Contains("\nSubagents by kind: Fork " + AgentTask.FormatCost(kindMeter.LastTurnSubagentCostUsd) + "\n"), SessionSummary.Format(kindMeter));
+            Eq(1, kindMeter.SessionAgentCostByType.Count);
 
             // A turn without agents (2.1.319 thinking capture): no footer note.
             var plain = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.319-thinking-duration.jsonl"))
@@ -2574,12 +2580,15 @@ namespace ClaudeVS.Core.Tests
             Eq(2, UsageCsv.Write(recs, sw), "rows");
             var lines = sw.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None);
             Eq(string.Join(",", UsageCsv.Columns), lines[0], "header");
-            Eq(t.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") + @",C:\src\a\,claude-opus-5-5,1,,,,5,1200,300,9000,100,100,10405,0,0,0.25,0.0001,4200,0,134,multi-file,", lines[1], "oldest first, invariant numbers; fast_tokens, large_context_tokens and agent_tokens after the cache columns");
-            True(lines[2].EndsWith(",0,0.001235,0,0,0,0,,\"'=SUM(A1) say \"\"hi\"\", ok\""), "quoted, formula-guarded prompt: " + lines[2]);
+            Eq(t.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") + @",C:\src\a\,claude-opus-5-5,1,,,,5,1200,300,9000,100,100,10405,0,0,,0.25,0.0001,4200,0,134,multi-file,", lines[1], "oldest first, invariant numbers; fast_tokens, large_context_tokens, agent_tokens and agent_types after the cache columns");
+            True(lines[2].EndsWith(",0,,0.001235,0,0,0,0,,\"'=SUM(A1) say \"\"hi\"\", ok\""), "quoted, formula-guarded prompt: " + lines[2]);
             Eq("", lines[3], "ends with a line break");
 
             var one = new StringWriter();
             Eq(1, UsageCsv.Write(recs, one, solution: @"c:\SRC\a"), "one solution, any case or trailing slash");
+            Eq("Explore:0.75;general-purpose:0.25", UsageCsv.AgentTypes(new List<AgentTypeCost> { new AgentTypeCost { Type = "Explore", Share = 0.75 }, new AgentTypeCost { Type = "general-purpose", Share = 0.25 } }), "agent_types");
+            Eq("Fork:0.3333", UsageCsv.AgentTypes(new List<AgentTypeCost> { new AgentTypeCost { Type = "Fork", Share = 1.0 / 3 } }), "4 decimals");
+            Eq("", UsageCsv.AgentTypes(null), "none");
             Eq("plain", UsageCsv.Text("plain"), "no quotes needed");
             Eq("\" padded\"", UsageCsv.Text(" padded"), "leading space kept by quoting");
             Eq("'-1", UsageCsv.Text("-1"), "minus guarded");
