@@ -273,6 +273,33 @@ namespace ClaudeVS.Core.Tests
                 True(args.Contains(flag), "has " + flag);
         }
 
+        private static void Test_Router_PlanModeSaysSonnet()
+        {
+            // Claude Code answers with Sonnet in plan mode when Haiku is asked for (2.1.316-2.1.322)
+            var router = new ModelRouter();
+            var simple = new RouteRequest { Prompt = "rename x to count" };
+            Eq(ModelChoice.Haiku, router.Route(simple).Model, "outside plan mode: Haiku");
+            simple.PlanMode = true;
+            var d = router.Route(simple);
+            Eq(ModelChoice.Sonnet, d.Model, "plan mode: Sonnet, what answers");
+            True(d.Reason.EndsWith(ModelRouter.PlanModeNote), d.Reason);
+
+            // The Haiku router's answer goes through the same step
+            var fromHaiku = router.ApplyCacheStickiness(new RouteDecision { Model = ModelChoice.Haiku, Effort = EffortChoice.Low, Reason = "Haiku router: rename" }, new RouteRequest { PlanMode = true }, clearlyHard: false);
+            Eq(ModelChoice.Sonnet, fromHaiku.Model, "Haiku router in plan mode");
+            Eq(ModelChoice.Opus, router.ApplyCacheStickiness(new RouteDecision { Model = ModelChoice.Opus, Reason = "r" }, new RouteRequest { PlanMode = true }, false).Model, "other models unchanged");
+
+            // In a big Sonnet conversation it stays Sonnet without a second note
+            var big = router.Route(new RouteRequest { Prompt = "rename x to count", PlanMode = true, CurrentModel = ModelChoice.Sonnet, ContextTokens = 80_000 });
+            Eq(ModelChoice.Sonnet, big.Model, "big conversation");
+            True(!big.Reason.Contains("kept"), "no cache note needed: " + big.Reason);
+
+            // A manual pick
+            Eq(ModelChoice.Sonnet, ModelRouter.AnsweredBy(ModelChoice.Haiku, planMode: true), "Haiku by hand in plan mode");
+            Eq(null, ModelRouter.AnsweredBy(ModelChoice.Haiku, planMode: false), "not in plan mode");
+            Eq(null, ModelRouter.AnsweredBy(ModelChoice.Opus, planMode: true), "Opus");
+        }
+
         private static void Test_Router_StickinessAppliesToHaikuAnswers()
         {
             var router = new ModelRouter { StickyContextTokens = 30000 };

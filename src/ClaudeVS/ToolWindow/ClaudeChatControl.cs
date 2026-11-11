@@ -922,6 +922,7 @@ namespace ClaudeVS.ToolWindow
             if (m == _mode) return;
             _mode = m;
             UpdateChips();
+            UpdateRouteHint(); // plan mode changes which model answers (Haiku → Sonnet)
             var s = _session;
             if (s != null) Fire(() => s.SetPermissionModeAsync(m));
             ClaudeOutputPane.WriteLine("Mode: " + m.ToControl());
@@ -1294,6 +1295,7 @@ namespace ClaudeVS.ToolWindow
                 AttachedFiles = attachedFiles,
                 CurrentModel = _session?.IsRunning == true ? _session.CurrentModel : ModelChoice.Auto,
                 ContextTokens = _meterModel?.ContextTokens ?? 0,
+                PlanMode = _mode == PermissionModeChoice.Plan,
             };
         }
 
@@ -1355,7 +1357,14 @@ namespace ClaudeVS.ToolWindow
                 string send = _modelChoice != ModelChoice.Auto ? _modelChoice.ToCli() : null;
                 string dearer = send != null && !string.IsNullOrWhiteSpace(_prompt.Text) ? (Options?.ToPriceTable() ?? new PriceTable()).VersusOpus(send) : null;
                 if (dearer != null) dearer = _modelChoice + ": " + dearer; // "Fable: 2× the Opus price"
-                _route.Text = string.Join("   ·   ", new[] { dearer, size, PriceNote(send) }.Where(s => s != null));
+                // Haiku picked by hand in plan mode: Sonnet answers, so say so and price the prompt at Sonnet
+                string answeredBy = null;
+                if (ModelRouter.AnsweredBy(_modelChoice, _mode == PermissionModeChoice.Plan) is ModelChoice real)
+                {
+                    answeredBy = $"Plan mode: {real} answers, not {_modelChoice}";
+                    send = real.ToCli();
+                }
+                _route.Text = string.Join("   ·   ", new[] { answeredBy, dearer, size, PriceNote(send) }.Where(s => s != null));
                 return;
             }
             int lines = _selection == null ? 0 : _selection.EndLine - _selection.StartLine + 1;
