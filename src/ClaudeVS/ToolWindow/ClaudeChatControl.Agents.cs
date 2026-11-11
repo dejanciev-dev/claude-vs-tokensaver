@@ -75,7 +75,9 @@ namespace ClaudeVS.ToolWindow
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             var meter = _meterModel;
+            string modelBefore = _tasks.Tasks.FirstOrDefault(x => x.ToolUseId == ev.ParentToolUseId)?.Model;
             if (meter == null || !_tasks.ObserveRequest(ev, meter.RequestCostUsd)) return;
+            if (_tasks.Tasks.FirstOrDefault(x => x.ToolUseId == ev.ParentToolUseId)?.Model != modelBefore) { RefreshAgentsPanel(); return; } // the tag names it
             var now = DateTime.UtcNow;
             foreach (var (line, task) in _agentDetails) line.Text = AgentDetail(task, now); // running rows; a finished one is redrawn by its notification
         }
@@ -216,7 +218,8 @@ namespace ClaudeVS.ToolWindow
             name.Inlines.Add(new System.Windows.Documents.Run(described ?? (t.IsAgent ? "Agent" : "Command")) { FontWeight = FontWeights.SemiBold });
             // Commands are most of the list: only agents (and background runs) say what kind they are.
             string kind = t.IsAgent ? Core.Cli.ToolCallView.AgentKind(t.SubagentType) : "command";
-            string tag = t.IsAgent ? kind + (t.IsBackgrounded ? " · background" : "") : t.IsBackgrounded ? "background" : null;
+            // "Explore · haiku": the model decides most of what an agent costs
+            string tag = t.IsAgent ? kind + (t.ModelShort != null ? " · " + t.ModelShort : "") + (t.IsBackgrounded ? " · background" : "") : t.IsBackgrounded ? "background" : null;
             if (tag != null) name.Inlines.Add(new System.Windows.Documents.Run("  " + tag) { Foreground = Brushes.Gray });
             ChatTheme.Text(name);
             row.Children.Add(name);

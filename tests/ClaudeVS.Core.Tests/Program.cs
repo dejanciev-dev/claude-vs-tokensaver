@@ -556,11 +556,14 @@ namespace ClaudeVS.Core.Tests
             True(!early.ObserveRequest(req, (m, u) => 0.5), "no task yet");
             early.Apply(JObject.Parse("{\"type\":\"system\",\"subtype\":\"task_started\",\"task_id\":\"t1\",\"tool_use_id\":\"toolu_x\",\"task_type\":\"local_agent\"}"));
             Eq(0.5, early.Find("t1").CostUsd, "picked up at task_started");
+            Eq("sonnet", early.Find("t1").ModelShort, "its model too, from the earlier request");
+            Eq("my-model", new AgentTask { Model = "my-model" }.ModelShort, "an unknown family: the id"); Eq(null, new AgentTask().ModelShort);
             True(early.ObserveRequest(req, (m, u) => 0.7), "the same message again");
             Eq(0.7, early.Find("t1").CostUsd, "its last copy counts, once");
             // The line under its Agent row once it finished: task_notification's usage (24,649 tokens, no tools) and its cost
             var forkPriced = priced.Find("a3930c38f13bbef71");
-            Eq($"Done · 24.6k tok · {AgentTask.FormatCost(forkPriced.CostUsd)}", ToolCallView.AgentUsageLine(forkPriced), "under the Agent row");
+            Eq("claude-haiku-5-5", forkPriced.Model, "the model its requests ran on"); Eq("haiku", forkPriced.ModelShort);
+            Eq($"Done · haiku · 24.6k tok · {AgentTask.FormatCost(forkPriced.CostUsd)}", ToolCallView.AgentUsageLine(forkPriced), "under the Agent row");
             Eq(null, ToolCallView.AgentUsageLine(new AgentTask { TaskType = "local_agent" }), "still running");
             Eq(null, ToolCallView.AgentUsageLine(new AgentTask { TaskType = "local_bash", Status = AgentTaskStatus.Completed }), "a shell command");
             Eq("Stopped · 1 tool", ToolCallView.AgentUsageLine(new AgentTask { TaskType = "local_agent", Status = AgentTaskStatus.Stopped, ToolUses = 1 }));

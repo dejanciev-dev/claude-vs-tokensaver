@@ -38,6 +38,10 @@ namespace ClaudeVS.Core.Cli
         public long? ReportedDurationMs { get; set; }
         /// <summary>What its own requests cost so far (USD at API prices; 0 for shell commands or when none were seen).</summary>
         public double CostUsd { get; set; }
+        /// <summary>The model its requests ran on (the last one seen), e.g. "claude-haiku-5-5"; null before the first.</summary>
+        public string Model { get; set; }
+        /// <summary>"haiku", "sonnet", "opus", "fable", or the model id when it is none of those; null when not known.</summary>
+        public string ModelShort => Model == null ? null : Tokens.PriceTable.Family(Model) ?? Model;
 
         /// <summary>"$0.042", "$1.23" or "&lt;$0.001"; null when nothing was priced.</summary>
         public static string FormatCost(double usd)
@@ -67,6 +71,7 @@ namespace ClaudeVS.Core.Cli
     public sealed class AgentRequestCosts
     {
         private readonly Dictionary<string, Dictionary<string, double>> _byCall = new Dictionary<string, Dictionary<string, double>>(StringComparer.Ordinal);
+        private readonly Dictionary<string, string> _modelOf = new Dictionary<string, string>(StringComparer.Ordinal);
 
         /// <summary>The Agent calls priced so far.</summary>
         public IEnumerable<string> Calls => _byCall.Keys;
@@ -81,14 +86,18 @@ namespace ClaudeVS.Core.Cli
             if (!_byCall.TryGetValue(ev.ParentToolUseId, out var byMessage))
                 _byCall[ev.ParentToolUseId] = byMessage = new Dictionary<string, double>(StringComparer.Ordinal);
             byMessage[ev.MessageId ?? "m" + byMessage.Count] = price(ev.Model, ev.Usage.AsRequest());
+            if (!string.IsNullOrEmpty(ev.Model)) _modelOf[ev.ParentToolUseId] = ev.Model;
             return true;
         }
 
         /// <summary>What one Agent call's requests cost so far; 0 when none were seen.</summary>
         public double Of(string toolUseId) => toolUseId != null && _byCall.TryGetValue(toolUseId, out var m) ? m.Values.Sum() : 0;
 
-        public void Remove(string toolUseId) { if (toolUseId != null) _byCall.Remove(toolUseId); }
-        public void Clear() => _byCall.Clear();
+        /// <summary>The model of one Agent call's last request; null when none was seen.</summary>
+        public string ModelOf(string toolUseId) => toolUseId != null && _modelOf.TryGetValue(toolUseId, out var m) ? m : null;
+
+        public void Remove(string toolUseId) { if (toolUseId != null) { _byCall.Remove(toolUseId); _modelOf.Remove(toolUseId); } }
+        public void Clear() { _byCall.Clear(); _modelOf.Clear(); }
     }
 
     /// <summary>
@@ -119,6 +128,7 @@ namespace ClaudeVS.Core.Cli
             var t = _tasks.FirstOrDefault(x => x.ToolUseId == ev.ParentToolUseId);
             if (t == null) return false;
             t.CostUsd = _costs.Of(t.ToolUseId);
+            t.Model = _costs.ModelOf(t.ToolUseId) ?? t.Model;
             return true;
         }
 
@@ -150,6 +160,7 @@ namespace ClaudeVS.Core.Cli
             }
             Fill(t, json);
             if (t.ToolUseId != null && _costs.Of(t.ToolUseId) is double priced && priced > 0) t.CostUsd = priced;
+            t.Model = _costs.ModelOf(t.ToolUseId) ?? t.Model;
             switch (subtype)
             {
                 case "task_started":

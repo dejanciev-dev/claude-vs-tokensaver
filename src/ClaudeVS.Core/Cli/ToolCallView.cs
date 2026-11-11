@@ -273,7 +273,7 @@ namespace ClaudeVS.Core.Cli
         public const string ForkType = "fork";
 
         /// <summary>
-        /// The line under a finished agent's Agent row: "Done · 24.6k tok · $0.042 · 3 tools", so what it used stays in
+        /// The line under a finished agent's Agent row: "Done · haiku · 24.6k tok · $0.042 · 3 tools", so what it used stays in
         /// the conversation after the agents panel is cleared. Null for a running task or a shell command.
         /// </summary>
         public static string AgentUsageLine(AgentTask t)
@@ -283,6 +283,7 @@ namespace ClaudeVS.Core.Cli
             {
                 t.Status == AgentTaskStatus.Completed ? "Done" : t.Status == AgentTaskStatus.Failed ? "Failed" : "Stopped",
             };
+            if (t.ModelShort != null) parts.Add(t.ModelShort); // decides most of what it cost
             if (t.TotalTokens > 0) parts.Add(Tokens.TokenMeter.Format(t.TotalTokens) + " tok");
             if (AgentTask.FormatCost(t.CostUsd) is string cost) parts.Add(cost);
             if (t.ToolUses > 0) parts.Add(t.ToolUses + (t.ToolUses == 1 ? " tool" : " tools"));
