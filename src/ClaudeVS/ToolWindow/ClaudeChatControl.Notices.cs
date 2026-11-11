@@ -173,6 +173,7 @@ namespace ClaudeVS.ToolWindow
             CostWarning(DailyCost.Add(added, now));
             CostWarning(MonthlyCost.Add(added, now));
             RecentSpend.Add(added, now);
+            if (SolutionMonthlyCost(_sessionDir) is Core.Tokens.SpendWatch solution) CostWarning(solution.Add(added, now));
         }
 
         private void CostWarning(string warning)
@@ -203,6 +204,30 @@ namespace ClaudeVS.ToolWindow
                 try { var all = Usage.ReadAll(); DailyCost.Load(all); MonthlyCost.Load(all); RecentSpend.Load(all); _spendLoadDone = true; }
                 catch (Exception ex) { ClaudeOutputPane.WriteLine("Could not read usage log: " + ex.Message); }
             });
+        }
+
+        /// <summary>This month's spend per solution folder (Options → Warn at monthly cost per solution), shared by all chat windows.</summary>
+        private static readonly Dictionary<string, Core.Tokens.SpendWatch> SolutionMonthly = new Dictionary<string, Core.Tokens.SpendWatch>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>The folder's watch, made on first use with its earlier turns this month loaded in the background; null when the warning is off.</summary>
+        private static Core.Tokens.SpendWatch SolutionMonthlyCost(string folder)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            double step = Options?.SolutionMonthlyCostWarningUsd ?? 0;
+            if (step <= 0 || string.IsNullOrEmpty(folder)) return null;
+            string key = folder.TrimEnd('\\', '/');
+            if (!SolutionMonthly.TryGetValue(key, out var watch))
+            {
+                SolutionMonthly[key] = watch = new Core.Tokens.SpendWatch(Core.Tokens.SpendPeriod.Month, step, solution: key);
+                if (Options?.KeepUsageLog != false)
+                    _ = System.Threading.Tasks.Task.Run(() =>
+                    {
+                        try { watch.Load(Usage.ReadAll()); }
+                        catch (Exception ex) { ClaudeOutputPane.WriteLine("Could not read usage log: " + ex.Message); }
+                    });
+            }
+            watch.StepUsd = step;
+            return watch;
         }
 
         /// <summary>Options → Ask before sending past daily cost, shared by all chat windows.</summary>

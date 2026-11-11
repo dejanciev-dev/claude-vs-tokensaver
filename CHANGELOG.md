@@ -59,6 +59,9 @@ All notable changes to this project are listed here. The format follows
 - **/compact first, on resume**: when a resumed conversation's cache has expired, a /compact button appears by the
   meter. Compacting reads the conversation once to summarize it, instead of the first prompt writing all of it to
   the cache again.
+- **Monthly cost warning per solution** (Options → *Warn at monthly cost per solution (USD)*, off by default): said
+  once each time this month's spend on the open solution passes another multiple, from the usage log and the turns
+  since.
 
 ## [0.9.0] - 2026-11-11
 
