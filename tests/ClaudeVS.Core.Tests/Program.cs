@@ -2465,6 +2465,16 @@ namespace ClaudeVS.Core.Tests
                 && Math.Abs(both.AgentCostByType[SavingsReport.NotKnownType] - 0.10) < 1e-12, "split at the report's prices");
             True(both.AgentByTypeLine().StartsWith("Explore $") && both.AgentByTypeLine().Contains(" · general-purpose $") && both.AgentByTypeLine().EndsWith(" · not known $" + 0.10.ToString("0.00")), both.AgentByTypeLine());
             True(both.ToText().Contains("  by kind of agent:         Explore"), both.ToText());
+            // By model: each agent at its own model's price; the Opus ones also at Sonnet's
+            var opusAgent = new UsageRecord { ModelUsed = "claude-haiku-5-5", CostUsd = 0.2,
+                Agents = new List<AgentTokens> { new AgentTokens { Model = "claude-opus-5-5", CacheReadTokens = 1_000_000 } } };
+            var byModel = SavingsReport.Build(new[] { rec, opusAgent }, prices);
+            True(Math.Abs(byModel.AgentCostByModel["opus"] - 0.2) < 1e-12 && Math.Abs(byModel.AgentCostByModel["sonnet"] - 0.1) < 1e-12, "opus $0.20, sonnet $0.10");
+            True(Math.Abs(byModel.OpusAgentsOnSonnetUsd - 0.1) < 1e-12, "the Opus agent's reads at Sonnet prices");
+            True(byModel.AgentByModelLine().StartsWith("opus $") && byModel.AgentByModelLine().Contains(" on Sonnet) · sonnet $"), byModel.AgentByModelLine());
+            True(byModel.ToText().Contains("  by model:                 opus $"), byModel.ToText());
+            Eq(null, SavingsReport.Build(new[] { new UsageRecord { ModelUsed = "claude-haiku-5-5", CostUsd = 0.01 } }, prices).AgentByModelLine(), "no agents");
+
             var json = Newtonsoft.Json.JsonConvert.SerializeObject(typed);
             True(json.Contains("\"agentTypes\":[{\"type\":\"Explore\",\"share\":0.75}"), json);
             Eq(0.75, Newtonsoft.Json.JsonConvert.DeserializeObject<UsageRecord>(json).AgentTypes[0].Share, "read back");

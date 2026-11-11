@@ -687,8 +687,9 @@ Picked on 2026-11-11.
       default $0.50) while it runs, so a runaway agent can be stopped early. *Warn at agent cost (USD)*; the row's
       details turn amber (the meter's amber), its tooltip says `Cost $0.620 so far, past your warning at $0.50: Stop
       ends it.`, and screen readers hear it once as it passes. `AgentTask.CostsOver`, `CostWarning`
-- [ ] **Agent models in the report.** The savings report lists subagent cost per model (Haiku, Sonnet, Opus agents)
-      and what the Opus agents would have cost on Sonnet
+- [x] **Agent models in the report.** The savings report lists subagent cost per model (Haiku, Sonnet, Opus agents)
+      and what the Opus agents would have cost on Sonnet. `  by model: opus $1.20 (≈ $0.72 on Sonnet) · sonnet $0.40`,
+      costliest first, each agent at its own model's price from the logged `agents`. `SavingsReport.AgentByModelLine`
 - [ ] **Agent cost in the sessions list.** Each conversation shows its subagent cost next to its total, from the
       usage log
 

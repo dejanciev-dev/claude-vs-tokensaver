@@ -7,6 +7,8 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Subagent cost by model in the savings report**: `by model: opus $1.20 (≈ $0.72 on Sonnet) · sonnet $0.40`,
+  showing what Opus agents would have cost on Sonnet.
 - **A subagent that passes a set cost turns amber** in the agents panel (Options → *Warn at agent cost*, default
   $0.50), so a runaway agent can be stopped early. Its tooltip says what it cost so far.
 - **Options → Claude Code → No forks**: Claude can't start forks, which copy the whole conversation
