@@ -334,6 +334,55 @@ namespace ClaudeVS.Core.Tests
         }
 
         /// <summary>
+        /// `--live-prices`: are the default prices what Claude Code bills? Per model (Haiku, Sonnet, Opus, Fable) two
+        /// turns in a trimmed process (no tools, no settings, a ~4.5k-token system prompt cached for 1 hour): the
+        /// first writes the cache, the second reads it. Each turn is one request, so its usage priced with
+        /// <see cref="Tokens.PriceTable"/> must equal the growth of the CLI's total_cost_usd. About $0.19 (Opus and
+        /// Fable cache writes), so not part of --live-all. Checked by hand this way in Phases 18 and 20.
+        /// </summary>
+        public static int RunPrices()
+        {
+            if (ClaudeCliLocator.Resolve("") == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }
+            var sys = new StringBuilder("You answer in one word.");
+            for (int i = 1; i <= 260; i++) sys.Append($" Rule {i}: keep answers short and plain, with no extra words.");
+            string args = string.Join(" ", "--system-prompt", ClaudeArgsBuilder.Quote(sys.ToString()), "--tools", "\"\"",
+                "--strict-mcp-config", "--disable-slash-commands", "--setting-sources", "\"\"", "--no-session-persistence");
+            var prices = new Tokens.PriceTable();
+            int failed = 0;
+            foreach (var model in new[] { ModelChoice.Haiku, ModelChoice.Sonnet, ModelChoice.Opus, ModelChoice.Fable })
+            {
+                string dir = Path.Combine(Path.GetTempPath(), "cvs-live-" + Guid.NewGuid().ToString("N"));
+                Directory.CreateDirectory(dir);
+                var turns = new BlockingCollection<ClaudeEvent>();
+                try
+                {
+                    using (var session = NewSession(new ClaudeLaunchOptions { WorkingDirectory = dir, Model = model, PermissionMode = PermissionModeChoice.Default, ExtraArguments = args }))
+                    {
+                        session.EventReceived += (s, ev) => { if (ev.Kind == ClaudeEventKind.TurnCompleted) turns.Add(ev); };
+                        double before = 0;
+                        foreach (var prompt in new[] { "Say one.", "Say two." })
+                        {
+                            session.SendPromptAsync(prompt).Wait();
+                            if (!turns.TryTake(out var t, TimeSpan.FromSeconds(120))) { Console.WriteLine($"  FAIL {model}: no answer"); failed++; break; }
+                            double cli = (t.TotalCostUsd ?? 0) - before;
+                            before = t.TotalCostUsd ?? before;
+                            var u = t.Usage.AsRequest(); // one request per turn here
+                            var price = prices.For(t.Model ?? model.ToCli()) ?? prices.For(model.ToCli());
+                            double ours = price.Cost(u);
+                            bool ok = Math.Abs(ours - cli) <= 1e-9 + cli * 1e-6;
+                            if (!ok) failed++;
+                            Console.WriteLine($"  {(ok ? "ok  " : "FAIL")} {model,-6} {prompt,-9} in {u.Input,3} · out {u.Output,3} · read {u.CacheRead,5:N0} · write {u.CacheCreation,5:N0} (1h {u.CacheCreation1h:N0})"
+                                + $"   ours ${ours:0.0000000} · CLI ${cli:0.0000000}" + (ok ? "" : $"   off by ${ours - cli:0.0000000}"));
+                        }
+                    }
+                }
+                finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
+            }
+            Console.WriteLine(failed == 0 ? "PASS live prices: every default price matches Claude Code's bill" : $"FAIL live prices: {failed} turn(s) priced differently; update PriceTable (and Options → Pricing)");
+            return failed == 0 ? 0 : 1;
+        }
+
+        /// <summary>
         /// `--live-prompt-tokens`: how many tokens prompts of known size really take, next to the chars / 4 estimate.
         /// One session (Haiku, Accept Edits); per prompt: the growth of the first request's context over the last
         /// request of the previous turn, less that request's output, and the growth of the CLI's userMessageTokens
