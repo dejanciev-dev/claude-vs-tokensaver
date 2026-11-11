@@ -2974,6 +2974,26 @@ namespace ClaudeVS.Core.Tests
             Eq(null, off.Add(1000, start), "0 turns it off");
         }
 
+        private static void Test_SpendHistory()
+        {
+            DateTime At(int day, int hour = 12) => new DateTime(2026, 11, day, hour, 0, 0, DateTimeKind.Local).ToUniversalTime();
+            var h = new SpendHistory(At(11, 9)); // made on Wednesday Nov 11
+            Eq(null, h.LastDaysLine(At(11)), "nothing spent");
+            h.Load(new[]
+            {
+                new UsageRecord { Timestamp = At(5), CostUsd = 3.1 },                       // Thursday
+                new UsageRecord { Timestamp = At(9), CostUsd = 1, RouterCostUsd = 0.2 },    // Monday
+                new UsageRecord { Timestamp = At(11, 8), CostUsd = 0.5 },                   // today, before the history
+                new UsageRecord { Timestamp = At(11, 10), CostUsd = 99 },                   // after: added by Add already
+                new UsageRecord { Timestamp = At(4), CostUsd = 50 },                        // 7 days ago: not shown
+            });
+            h.Add(1.5, At(11, 10));
+            h.Add(double.NaN, At(11, 11));
+            Eq("Last 7 days: Thu $3.10 · Fri – · Sat – · Sun – · Mon $1.20 · Tue – · today $2.00 ($6.30 in all)", h.LastDaysLine(At(11, 13)));
+            True(h.LastDaysLine(At(12)).EndsWith("Wed $2.00 · today – ($3.20 in all)"), "the next day, Thursday out of the window: " + h.LastDaysLine(At(12)));
+            True(Math.Abs(h.On(new DateTime(2026, 11, 4)) - 50) < 1e-9, "kept, just not shown");
+        }
+
         private static void Test_SpendLimit()
         {
             var now = new DateTime(2026, 11, 9, 12, 0, 0, DateTimeKind.Local).ToUniversalTime();

@@ -172,6 +172,7 @@ namespace ClaudeVS.ToolWindow
             var now = DateTime.UtcNow;
             CostWarning(DailyCost.Add(added, now));
             CostWarning(MonthlyCost.Add(added, now));
+            RecentSpend.Add(added, now);
         }
 
         private void CostWarning(string warning)
@@ -187,6 +188,7 @@ namespace ClaudeVS.ToolWindow
         /// <summary>Today's and this month's spend in all chat windows (Options → Warn at daily / monthly cost).</summary>
         private static readonly Core.Tokens.SpendWatch DailyCost = new Core.Tokens.SpendWatch(Core.Tokens.SpendPeriod.Day, 20);
         private static readonly Core.Tokens.SpendWatch MonthlyCost = new Core.Tokens.SpendWatch(Core.Tokens.SpendPeriod.Month, 200);
+        private static readonly Core.Tokens.SpendHistory RecentSpend = new Core.Tokens.SpendHistory();
         private static bool _spendLoaded;
         private static volatile bool _spendLoadDone;
         private double _dailyCounted; // of this meter's SessionCostUsd, already added to DailyCost and MonthlyCost
@@ -198,7 +200,7 @@ namespace ClaudeVS.ToolWindow
             _spendLoaded = true;
             _ = System.Threading.Tasks.Task.Run(() =>
             {
-                try { var all = Usage.ReadAll(); DailyCost.Load(all); MonthlyCost.Load(all); _spendLoadDone = true; }
+                try { var all = Usage.ReadAll(); DailyCost.Load(all); MonthlyCost.Load(all); RecentSpend.Load(all); _spendLoadDone = true; }
                 catch (Exception ex) { ClaudeOutputPane.WriteLine("Could not read usage log: " + ex.Message); }
             });
         }
