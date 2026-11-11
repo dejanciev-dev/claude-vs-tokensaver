@@ -44,6 +44,8 @@ All notable changes to this project are listed here. The format follows
   dearer picks.
 - **Effort in the session summary**: Copy session summary adds turns and cost per effort, e.g. `By effort: low 1 turn
   $0.02 · high 2 turns $0.40 · default 1 turn $0.05`.
+- **What a turn's cost was made of**: hovering the line under an answer shows its input, output, thinking, cache
+  reads, cache writes and subagents, each in $, and the total.
 
 ## [0.9.0] - 2026-11-11
 

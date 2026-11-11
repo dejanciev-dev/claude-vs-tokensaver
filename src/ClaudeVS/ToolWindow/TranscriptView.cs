@@ -216,7 +216,7 @@ namespace ClaudeVS.ToolWindow
         /// The muted "✓ 3.2s · 12k tok · $0.004" line after an answer, with a star that bookmarks the answer.
         /// <paramref name="toggleBookmark"/> returns whether the answer is bookmarked now; null hides the star.
         /// </summary>
-        public void AppendTurnFooter(string text, Func<bool> toggleBookmark, string answerToCopy = null, DateTime? timeUtc = null)
+        public void AppendTurnFooter(string text, Func<bool> toggleBookmark, string answerToCopy = null, DateTime? timeUtc = null, string tooltip = null)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             EndAnswer();
@@ -236,6 +236,7 @@ namespace ClaudeVS.ToolWindow
                 label.Inlines.Add(new Run(text.Substring(1)));
             }
             else label.Text = text;
+            if (!string.IsNullOrEmpty(tooltip)) label.ToolTip = tooltip;
             var row = new DockPanel();
             if (toggleBookmark != null)
             {
