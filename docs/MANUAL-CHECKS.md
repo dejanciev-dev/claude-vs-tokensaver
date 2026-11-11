@@ -63,7 +63,29 @@ Ask: *use two Explore agents to list the .cs files and the .json files*.
 
 Set the two agent cost options back to `0.50` and `0` afterwards.
 
-## 6. Release (Phase 5)
+## 6. Spend and tips (Phases 27–32)
+
+Most of these show only once spend passes an amount. Set the amounts low for the check, and set them back afterwards.
+
+| Do | Expect |
+|---|---|
+| Hover the line under any answer | A tooltip with input, output (and thinking), cache reads, cache writes, subagents and the total, in $ |
+| The same line after a prompt sent at **High** effort | `· high effort` after the model |
+| Hover the meter | `Spent in Visual Studio: today $… (next warning at $…) · this month $…`, then `Last 7 days: … · today $…` |
+| **Options → Warn at daily cost** set to `0.01`, then any prompt | `💲 Today's … spend … has passed $0.01`, and the meter's cost turns amber with a ⚠ |
+| **Options → Warn at monthly cost** and **… per solution** set to `0.01`, then any prompt | One warning for the month and one naming the solution |
+| **Options → Ask before sending past daily cost** set to `0.01`, then type a prompt and send | A *Daily limit passed* box. Cancel leaves the prompt in the box; OK sends it, and the next prompt goes without asking |
+| The same, but send `/compact` | No box: commands always go |
+| On **Opus**, picked by hand, ask *what is 2+2?* | A one-time tip with what the same answer would have cost on Haiku |
+| At **High** effort on Opus, ask a short question Claude thinks hard about | Possibly the heavy thinking tip (only when thinking was most of the answer) |
+| Ask *explain async/await in depth* (a short prompt) | Possibly the long answer tip, once 4k written tokens come back |
+| Resume a conversation from **History** last used over an hour ago, with a large context | The ℹ note that the cache expired, and a **/compact** button by the meter. Clicking it compacts before the first prompt |
+| **Show Savings Report** | `This week:` under the month line (with last month and last week when logged), `Cache written again:` once a cache was rewritten, `Tool results:` with `MCP <server>` groups, `By effort:`, `Costliest conversations:`, and the router replay with costs |
+| **Export Usage as CSV…** | The last columns are `session`, `effort` and `tools` |
+
+Set the cost amounts back afterwards: daily `20`, monthly `200`, per solution `0`, ask before sending `0`.
+
+## 7. Release (Phase 5)
 
 These need you rather than a check list:
 
