@@ -2319,6 +2319,17 @@ namespace ClaudeVS.Core.Tests
 
             var plain = SavingsReport.Build(recs.Skip(2), prices).ToText();
             True(!plain.Contains("Paid extra"), "no Fable or fast turns: no lines");
+
+            // Haiku over 100k tokens: 1M cache-read tokens, all from requests over the tier: $0.05 instead of $0.01
+            var big = new UsageRecord { Timestamp = t, ModelUsed = "claude-haiku-5-5", CacheReadTokens = 1_000_000, LargeContextTokens = 1_000_000, CostUsd = 0.05 };
+            var small = new UsageRecord { Timestamp = t, ModelUsed = "claude-haiku-5-5", CacheReadTokens = 50_000, CostUsd = 0.0005 };
+            var lr = SavingsReport.Build(new[] { big, small }, prices);
+            Eq(1, lr.LongContextTurns, "only the turn over 100k");
+            True(Math.Abs(lr.LongContextExtraUsd - 0.04) < 1e-9, "5x - 1x on $0.01: " + lr.LongContextExtraUsd);
+            True(lr.ToText().Contains("Paid extra over 100k:       $0.04  (1 Haiku turn over 100k tokens, above Haiku's normal price; /compact keeps it under)"), lr.ToText());
+            True(!SavingsReport.Build(new[] { small }, prices).ToText().Contains("over 100k"), "none over 100k: no line");
+            var sonnetBig = new UsageRecord { Timestamp = t, ModelUsed = "claude-sonnet-5-5", CacheReadTokens = 1_000_000, LargeContextTokens = 1_000_000 };
+            Eq(0, SavingsReport.Build(new[] { sonnetBig }, prices).LongContextTurns, "Sonnet has no such tier");
         }
 
         private static void Test_UsageCsv()

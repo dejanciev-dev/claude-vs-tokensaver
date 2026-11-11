@@ -9,7 +9,8 @@ All notable changes to this project are listed here. The format follows
 ### Added
 - **Fable and fast mode in the savings report**: what Fable turns cost above the same tokens on Opus, and what fast
   mode cost above standard speed, each with its number of turns (shown only when there were any). The usage CSV
-  gets a `fast_tokens` column after `cache_write_1h`.
+  gets a `fast_tokens` column after `cache_write_1h`. Also what Haiku turns over 100k tokens cost above Haiku's
+  normal price.
 - **More billing notes**, from Claude Code's /status at the start of each session (no model call): when an
   `ANTHROPIC_AUTH_TOKEN` signs Claude Code in instead of your claude.ai login (Claude Code's own session data
   does not show this), when both it and `ANTHROPIC_API_KEY` are set, and when a Claude Console organization pays
