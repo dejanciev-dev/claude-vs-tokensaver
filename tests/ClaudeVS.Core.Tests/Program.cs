@@ -2228,10 +2228,14 @@ namespace ClaudeVS.Core.Tests
             }
             Call("1", "Read", 40_000); Call("2", "Bash", 8_000); Call("3", "PowerShell", 4_000); Call("4", "mcp__visualstudio__get_error_list", 400);
             Call("5", "Read", 99_000, sub: true); // a subagent's own context
-            Eq("Read 13334|Shell 4000|MCP 134", string.Join("|", m.ResultTokensByTool().Select(kv => kv.Key + " " + kv.Value)));
+            Eq("Read 13334|Shell 4000|MCP visualstudio 134", string.Join("|", m.ResultTokensByTool().Select(kv => kv.Key + " " + kv.Value)));
             m.Observe(new ClaudeEvent { Kind = ClaudeEventKind.TurnCompleted, Usage = new TokenUsage { Input = 10 } });
-            True(SessionSummary.Format(m).EndsWith("\nTool results: Read 13.3k · Shell 4.0k · MCP 134"), SessionSummary.Format(m));
-            Eq("MCP 134|Read 13334|Shell 4000", string.Join("|", m.LastTurnResultTokensByTool.OrderBy(kv => kv.Key).Select(kv => kv.Key + " " + kv.Value)), "the turn's, for the usage log");
+            True(SessionSummary.Format(m).EndsWith("\nTool results: Read 13.3k · Shell 4.0k · MCP visualstudio 134"), SessionSummary.Format(m));
+            Eq("MCP visualstudio 134|Read 13334|Shell 4000", string.Join("|", m.LastTurnResultTokensByTool.OrderBy(kv => kv.Key).Select(kv => kv.Key + " " + kv.Value)), "the turn's, for the usage log");
+            Eq("MCP github", TokenMeter.ToolGroup("mcp__github__create_issue"), "per server");
+            Eq("MCP claude_ai_Claude_Docs", TokenMeter.ToolGroup("mcp__claude_ai_Claude_Docs__batch"), "a connector");
+            Eq("MCP", TokenMeter.ToolGroup("mcp__"), "no server name");
+            Eq("MCP", TokenMeter.ToolGroup("mcp__oddtool"), "no tool part");
             Call("6", "Grep", 3_000);
             m.Observe(new ClaudeEvent { Kind = ClaudeEventKind.TurnCompleted, Usage = new TokenUsage { Input = 10 } });
             Eq("Search 1000", string.Join("|", m.LastTurnResultTokensByTool.Select(kv => kv.Key + " " + kv.Value)), "only the next turn's");

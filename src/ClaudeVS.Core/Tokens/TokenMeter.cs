@@ -127,7 +127,7 @@ namespace ClaudeVS.Core.Tokens
 
         /// <summary>
         /// Tokens the main agent's tool results added to the conversation, per tool (shell commands and searches
-        /// grouped, MCP tools as "MCP"), largest first.
+        /// grouped, MCP tools per server as "MCP github"), largest first.
         /// </summary>
         public IReadOnlyList<KeyValuePair<string, long>> ResultTokensByTool() =>
             _resultCharsByTool.OrderByDescending(kv => kv.Value).Select(kv => new KeyValuePair<string, long>(kv.Key, TokenEstimate.FromChars(kv.Value))).ToList();
@@ -146,7 +146,7 @@ namespace ClaudeVS.Core.Tokens
                 : share + $"writing it cost ${(-SessionCacheSavedUsd).ToString("0.00", c)} more than it saved so far (it pays off on the next prompts).";
         }
 
-        /// <summary>"Shell" for Bash / PowerShell, "Search" for Grep / Glob, "MCP" for mcp__ tools, else the tool name.</summary>
+        /// <summary>"Shell" for Bash / PowerShell, "Search" for Grep / Glob, "MCP github" for mcp__github__… tools ("MCP" when the server is not named), else the tool name.</summary>
         public static string ToolGroup(string tool)
         {
             switch (tool)
@@ -154,8 +154,17 @@ namespace ClaudeVS.Core.Tokens
                 case "Bash": case "PowerShell": return "Shell";
                 case "Grep": case "Glob": return "Search";
                 case "Task": return "Agent";
-                default: return tool != null && tool.StartsWith("mcp__", StringComparison.Ordinal) ? "MCP" : tool ?? "tool";
+                default: return tool != null && tool.StartsWith("mcp__", StringComparison.Ordinal) ? McpGroup(tool) : tool ?? "tool";
             }
+        }
+
+        /// <summary>"MCP github" for "mcp__github__create_issue" (Claude Code's mcp__&lt;server&gt;__&lt;tool&gt;); "MCP" without a server name.</summary>
+        private static string McpGroup(string tool)
+        {
+            string rest = tool.Substring("mcp__".Length);
+            int end = rest.IndexOf("__", StringComparison.Ordinal);
+            string server = end > 0 ? rest.Substring(0, end) : "";
+            return server.Length == 0 ? "MCP" : "MCP " + server;
         }
 
         public double ContextPercent => (ContextWindow > 0 ? ContextWindow : _s.DefaultContextWindow) == 0 ? 0

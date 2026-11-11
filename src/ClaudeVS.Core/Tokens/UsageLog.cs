@@ -76,7 +76,7 @@ namespace ClaudeVS.Core.Tokens
 
         /// <summary>
         /// Tokens (estimated from characters) the main agent's tool results added to the conversation in this turn, per
-        /// tool group ("Read", "Shell", "Search", "MCP" …; <see cref="TokenMeter.ToolGroup"/>); null when none (and in older lines).
+        /// tool group ("Read", "Shell", "Search", "MCP github" …; <see cref="TokenMeter.ToolGroup"/>); null when none (and in older lines).
         /// </summary>
         [JsonProperty("tools", NullValueHandling = NullValueHandling.Ignore)] public Dictionary<string, long> ToolResultTokens { get; set; }
 

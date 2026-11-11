@@ -825,7 +825,9 @@ Picked on 2026-11-11.
 - [x] **Long answer tip.** A one-time tip when a short prompt got a very long answer, with how to ask for less. A
       prompt of up to 300 characters, 4k output tokens or more besides thinking, $0.02 or more, and no tool calls (an
       edit's new text is output too). Names the Concise output style. `SessionNotices.LongAnswer`
-- [ ] **MCP results per server.** Tool results from MCP tools grouped per server (`MCP github`) instead of one `MCP`
+- [x] **MCP results per server.** Tool results from MCP tools grouped per server (`MCP github`) instead of one `MCP`.
+      From Claude Code's `mcp__<server>__<tool>` names (the extension's Error List tool is `MCP visualstudio`); older
+      log lines keep `MCP`. `TokenMeter.ToolGroup`
 
 ---
 
