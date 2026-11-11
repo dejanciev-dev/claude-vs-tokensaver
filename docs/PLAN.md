@@ -865,7 +865,9 @@ Picked on 2026-11-11. The version comes last, after Phase 34, so its notes cover
       `Program` is a partial class: `Program.cs` keeps the runner (80 lines), each test and helper moved unchanged
       into `Tests.Spend / Meter / Router / Notices / Cli / Chat / Context.cs` by a script, in its old order; the
       section marker comments are gone. The same 181 tests pass; a sorted line comparison shows only the new headers
-- [ ] **Version 0.10.0.** Version bump; the Unreleased changelog becomes the 0.10.0 notes
+- [x] **Version 0.10.0.** Version bump; the Unreleased changelog becomes the 0.10.0 notes. Manifest, assembly and
+      package registration at 0.10.0, still a preview; `## [0.10.0]` with highlights (the Release workflow takes the
+      notes from there) and the Marketplace overview updated. After merging: `git tag v0.10.0 && git push origin v0.10.0`
 
 ---
 

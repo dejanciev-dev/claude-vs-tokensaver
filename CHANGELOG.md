@@ -6,6 +6,26 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-11
+
+Still a **preview**, for Claude Code 2.1.318 or newer (checked up to 2.1.322). This release is about knowing where the
+money goes and keeping it in check.
+
+### Highlights
+
+- **Limits you can set:** cost warnings per month and per solution as well as per conversation and day, an optional
+  daily limit that asks before sending, and an amber meter once a warning has been passed. The cost options now
+  have their own *Cost limits* category.
+- **Why a turn cost what it did:** hover the line under an answer for its input, output, thinking, cache and
+  subagent costs. New one-time tips cover a big conversation re-read for a small question, a short answer from Opus
+  or Fable, heavy thinking at high effort, and a long answer to a short question.
+- **Spend over time:** today, this month and the last 7 days in the meter's tooltip. The savings report adds this
+  month against last month and this week against last week, the costliest conversations, cost by effort, tool
+  results by tool, and what rewriting the cache cost. It can cover one period and be saved as Markdown.
+- **History you keep:** the usage log is now one file per month, keeping 3 months by default.
+
+The full list follows.
+
 ### Added
 - **Monthly cost warning** (Options → *Warn at monthly cost (USD)*, default 200): said once each time this calendar
   month's spend in Visual Studio, all conversations together, passes another multiple. The month's earlier turns
