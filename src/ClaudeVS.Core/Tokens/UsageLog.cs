@@ -20,6 +20,11 @@ namespace ClaudeVS.Core.Tokens
         [JsonProperty("routeEffort")] public string RouteEffort { get; set; }
         [JsonProperty("routeScore")] public double? RouteScore { get; set; }
         [JsonProperty("routeReason")] public string RouteReason { get; set; }
+        /// <summary>
+        /// The effort the turn was sent with ("low" … "max"), routed or picked by hand; null when Claude Code's own
+        /// default applied (and in older lines, where <see cref="RouteEffort"/> may say it for routed turns).
+        /// </summary>
+        [JsonProperty("effort", NullValueHandling = NullValueHandling.Ignore)] public string Effort { get; set; }
         [JsonProperty("promptChars")] public int PromptChars { get; set; }
         [JsonProperty("attachedLines")] public int AttachedLines { get; set; }
         [JsonProperty("attachedFiles")] public int AttachedFiles { get; set; }
