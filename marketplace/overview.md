@@ -37,7 +37,7 @@ warm, and shows what every turn costs.
   what the next prompt will cost while you type.
 - **A line under each answer** with its tokens, its cost (and its subagents' part), the model that actually answered,
   thinking tokens and what the prompt cache saved.
-- **Cost warnings** per conversation and per day, and one-time **token tips** when something costs more than it needs to.
+- **Cost warnings** per conversation, per day and per month, and one-time **token tips** when something costs more than it needs to.
 - **Savings report:** actual cost vs the same tokens at Opus prices, what the cache saved, this month with a
   projection, spend per day, per solution and per model, the costliest turns, and a CSV export.
 - **Agents panel** for subagents and background tasks, with Stop and Run in background. It shows each agent's
