@@ -263,6 +263,21 @@ namespace ClaudeVS.Core.Tokens
         public Dictionary<string, double> AgentCostByType { get; } = new Dictionary<string, double>(StringComparer.Ordinal);
         public const string NotKnownType = "not known";
 
+        /// <summary><see cref="AgentCostUsd"/> by the model the agents ran on ("haiku", "sonnet", "opus", "fable", or the id).</summary>
+        public Dictionary<string, double> AgentCostByModel { get; } = new Dictionary<string, double>(StringComparer.Ordinal);
+        /// <summary>What the Opus agents' tokens would have cost at Sonnet prices (0 when none ran on Opus).</summary>
+        public double OpusAgentsOnSonnetUsd { get; set; }
+
+        /// <summary>
+        /// "sonnet $0.40 · opus $1.20 (≈ $0.72 on Sonnet) · haiku $0.03": costliest first; null when no agent ran.
+        /// </summary>
+        public string AgentByModelLine()
+        {
+            if (AgentCostByModel.Count == 0) return null;
+            return string.Join(" · ", AgentCostByModel.OrderByDescending(kv => kv.Value)
+                .Select(kv => $"{kv.Key} ${kv.Value:0.00}" + (kv.Key == "opus" && OpusAgentsOnSonnetUsd > 0 ? $" (≈ ${OpusAgentsOnSonnetUsd:0.00} on Sonnet)" : "")));
+        }
+
         /// <summary>
         /// "Explore $0.40 · general-purpose $0.25 · not known $0.10": costliest first, "not known" last; null when no
         /// turn logged its kinds of agent.
@@ -343,6 +358,14 @@ namespace ClaudeVS.Core.Tokens
                     + (r.Agents?.Sum(a => prices.Opus.Cost(a.ToUsage())) ?? 0);
                 if (r.Agents != null && r.Agents.Count > 0) { rep.AgentTurns++; rep.AgentTokens += r.AgentTokensTotal; rep.AgentCostUsd += agentsOwn; }
                 if (agentsOwn > 0) AddAgentTypes(rep.AgentCostByType, r.AgentTypes, agentsOwn);
+                foreach (var a in r.Agents ?? Enumerable.Empty<AgentTokens>())
+                {
+                    string model = PriceTable.Family(a.Model) ?? a.Model ?? "not known";
+                    double agentCost = (prices.For(a.Model) ?? prices.Sonnet).Cost(a.ToUsage());
+                    if (agentCost <= 0) continue;
+                    rep.AgentCostByModel[model] = (rep.AgentCostByModel.TryGetValue(model, out var had) ? had : 0) + agentCost;
+                    if (model == "opus") rep.OpusAgentsOnSonnetUsd += prices.Sonnet.Cost(a.ToUsage());
+                }
                 long avoided = TokenEstimate.FromChars(r.CharsAvoided);
                 rep.TokensAvoided += avoided;
                 rep.ReferencesSavedUsd += avoided * (prices.For(r.ModelUsed) ?? prices.Sonnet).Input / 1_000_000.0 * (prices.For(r.ModelUsed) ?? prices.Sonnet).Multiplier(r);
@@ -468,6 +491,8 @@ namespace ClaudeVS.Core.Tokens
                 sb.AppendLine($"Subagents:                  {TokenMeter.Format(AgentTokens)} tokens ≈ ${AgentCostUsd:0.00}  ({AgentTurns} {(AgentTurns == 1 ? "turn" : "turns")}; included above)");
             if (AgentByTypeLine() is string byType)
                 sb.AppendLine($"  by kind of agent:         {byType}");
+            if (AgentTurns > 0 && AgentByModelLine() is string byModel)
+                sb.AppendLine($"  by model:                 {byModel}");
             if (LongContextTurns > 0)
                 sb.AppendLine($"Paid extra over 100k:       ${LongContextExtraUsd:0.00}  ({LongContextTurns} Haiku {(LongContextTurns == 1 ? "turn" : "turns")} over 100k tokens, above Haiku's normal price; /compact keeps it under)");
             if (HaikuRouted > 0 || RouterCostUsd > 0)
