@@ -2406,6 +2406,13 @@ namespace ClaudeVS.Core.Tests
             Eq(null, SessionNotices.HaikuLongContext("claude-haiku-5-5", 89_999), "below 90k: no tip");
             True(SessionNotices.HaikuLongContext("claude-haiku-5-5", 92_000)?.Contains("5x its prices") == true, "near 100k: tip");
             Eq(null, SessionNotices.HaikuLongContext("claude-sonnet-5-5", 150_000), "not Haiku: no tip");
+
+            // Subagents costing more than the main agent: the turn's cost includes them
+            True(SessionNotices.SubagentsDominate(0.30, 0.50)?.Contains("model: haiku") == true, "agents $0.30 of $0.50: tip");
+            Eq(null, SessionNotices.SubagentsDominate(0.20, 0.50), "agents $0.20 of $0.50: the main agent cost more");
+            Eq(null, SessionNotices.SubagentsDominate(0.04, 0.045), "too little to matter");
+            Eq(null, SessionNotices.SubagentsDominate(0, 1), "no agents");
+            Eq(null, SessionNotices.SubagentsDominate(0.30, 0), "no cost from the CLI");
         }
 
         private static void Test_SavingsReport_FableAndFastExtra()

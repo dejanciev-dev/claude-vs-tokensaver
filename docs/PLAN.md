@@ -613,8 +613,10 @@ Picked on 2026-11-11.
       its requests as they arrive and show it on its row. Each subagent message (`parent_tool_use_id` = its Agent
       call) is priced as one request at Options → Pricing, the last copy of a message kept; the row adds it after
       its tokens (`· $0.042`, `<$0.001` when tiny). Replayed from the fork capture in `Test_AgentTasks_Fork_RealCli_2_1_319`
-- [ ] **Tip when subagents dominate.** A one-time token tip when subagents cost more than the main agent in a turn,
-      with how to keep them cheaper
+- [x] **Tip when subagents dominate.** A one-time token tip when subagents cost more than the main agent in a turn,
+      with how to keep them cheaper. After a turn whose subagents cost at least $0.05 and more than the rest of
+      the turn (`total_cost_usd` less their price): one agent instead of several, a plain search, `model: haiku`
+      in `.claude/agents`. `SessionNotices.SubagentsDominate`
 - [ ] **Subagent tokens in the footer.** The line under each answer says `· 2 agents`; add what they used, e.g.
       `· 2 agents (31k tok)`
 
