@@ -932,6 +932,29 @@ Planned on 2026-11-12.
 
 ---
 
+## Phase 37 — Weeks and long chats
+
+Planned on 2026-11-12.
+
+- [ ] **Weekly cost warning.** Optional (off by default): like the daily and monthly warnings, once per multiple of
+      an amount, this week's spend from Monday
+- [ ] **Long conversation tip.** A one-time tip once a conversation runs past 30 turns with a big context: what a
+      turn costs now against its average, and /compact or a New chat
+- [ ] **Turn number in the CSV.** A `turn` column: the turn's number in its conversation, from the logged session ids
+
+---
+
+## Phase 38 — Your conversation against the others
+
+Planned on 2026-11-12.
+
+- [ ] **Conversation against your median.** The meter's tooltip puts this conversation's cost next to the median
+      logged conversation
+- [ ] **This month per solution.** The report's *By solution* rows add this month's spend
+- [ ] **Manual checks for Phases 37–38.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
+
+---
+
 ## Working in Visual Studio — daily loop
 
 1. Core logic change → edit in `ClaudeVS.Core` → run tests (`ClaudeVS.Core.Tests` → Set as Startup → Ctrl+F5, or `dotnet run` in its folder).
