@@ -6,6 +6,10 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+- **Month pace in the meter**: from the 3rd, the meter's tooltip says where this month's spend is heading at its pace
+  so far (`this month $41.20, ~$137.33 by Nov 30 at this pace`), as the savings report's month line does.
+
 ## [0.10.0] - 2026-11-11
 
 Still a **preview**, for Claude Code 2.1.318 or newer (checked up to 2.1.322). This release is about knowing where the

@@ -59,7 +59,29 @@ namespace ClaudeVS.Core.Tokens
         public bool IsPastWarning(DateTime nowUtc) => StepUsd > 0 && SpentAt(nowUtc) >= StepUsd;
 
         /// <summary>
-        /// "today $3.20 (next warning at $20.00)", "this month $41.00" without a warning amount; the next warning is the
+        /// The month's total at the pace of its days so far (local days, today included), from the
+        /// <see cref="SavingsReport.ProjectFromDay"/>rd as the report does; null for a daily watch, earlier in the month
+        /// or with nothing spent.
+        /// </summary>
+        public double? PaceUsd(DateTime nowUtc)
+        {
+            if (Period != SpendPeriod.Month) return null;
+            var today = nowUtc.ToLocalTime().Date;
+            double spent = SpentAt(nowUtc);
+            if (today.Day < SavingsReport.ProjectFromDay || spent <= 0) return null;
+            return spent / today.Day * DateTime.DaysInMonth(today.Year, today.Month);
+        }
+
+        /// <summary>The last day of the local month <paramref name="nowUtc"/> falls in.</summary>
+        private static DateTime MonthEnd(DateTime nowUtc)
+        {
+            var today = nowUtc.ToLocalTime().Date;
+            return new DateTime(today.Year, today.Month, DateTime.DaysInMonth(today.Year, today.Month));
+        }
+
+        /// <summary>
+        /// "today $3.20 (next warning at $20.00)", "this month $41.00, ~$137.33 by Nov 30 at this pace" without a warning
+        /// amount (the pace from the 3rd, <see cref="PaceUsd"/>); the next warning is the
         /// next multiple of <see cref="StepUsd"/> above what was spent.
         /// </summary>
         public string Line(DateTime nowUtc)
@@ -67,6 +89,8 @@ namespace ClaudeVS.Core.Tokens
             var c = CultureInfo.InvariantCulture;
             double spent = SpentAt(nowUtc);
             string line = (Period == SpendPeriod.Month ? "this month $" : "today $") + spent.ToString("0.00", c);
+            if (PaceUsd(nowUtc) is double pace)
+                line += ", ~$" + pace.ToString("0.00", c) + " by " + MonthEnd(nowUtc).ToString("MMM d", c) + " at this pace";
             if (StepUsd <= 0) return line;
             double next = (Math.Floor(spent / StepUsd + 1e-9) + 1) * StepUsd;
             return line + " (next warning at $" + next.ToString("0.00", c) + ")";
