@@ -2112,6 +2112,7 @@ namespace ClaudeVS.ToolWindow
             LoadSpend(); // the month's earlier turns, once; the line shows them from the next refresh
             if (Core.Tokens.SpendWatch.BudgetLine(DailyCost, MonthlyCost, DateTime.UtcNow, WeeklyCost) is string spend) tip += "\n\n" + spend;
             if (RecentSpend.LastDaysLine(DateTime.UtcNow) is string days) tip += "\n" + days;
+            if (_meterModel != null && PastConversations.Line(_meterModel.SessionCostUsd, _session?.SessionId ?? _resumeId) is string against) tip += "\n" + against;
             _meterArea.ToolTip = tip;
         }
 

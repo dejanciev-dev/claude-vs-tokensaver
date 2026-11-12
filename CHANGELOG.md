@@ -20,6 +20,9 @@ All notable changes to this project are listed here. The format follows
   topic. Given instead of the big-conversation tip on the same turn.
 - **Turn number in the usage CSV**: a last `turn` column, the turn's number in its conversation (empty for turns
   logged without a session id), so a spreadsheet can see how cost grows as a conversation goes on.
+- **This conversation against your others**: the meter's tooltip sets the open conversation's cost against the
+  median conversation in the usage log (`This conversation $2.40 · 12× the median logged conversation ($0.20 of
+  32)`), once three or more are logged.
 - **Conversation limit** (Options → Cost limits → *Ask before sending past conversation cost (USD)*, off by
   default): once a chat window's conversation has cost the amount, sending a prompt asks first, like the daily limit.
   After a yes, not again in that conversation until the next multiple; a new chat starts again.

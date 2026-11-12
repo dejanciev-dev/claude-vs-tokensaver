@@ -1217,6 +1217,33 @@ namespace ClaudeVS.Core.Tests
             True(!SpendWatch.BudgetLine(d, m, Nov(16), w).Contains("this week"), "weekly warning off: left out");
         }
 
+        private static void Test_ConversationStats()
+        {
+            var t = DateTime.UtcNow.AddDays(-1);
+            var s = new ConversationStats();
+            Eq(null, s.Line(1, "open"), "nothing loaded");
+            s.Load(new[]
+            {
+                new UsageRecord { Timestamp = t, SessionId = "a", CostUsd = 0.10 },
+                new UsageRecord { Timestamp = t, SessionId = "a", CostUsd = 0.02, RouterCostUsd = 0.001 },
+                new UsageRecord { Timestamp = t, SessionId = "b", CostUsd = 0.20 },
+                new UsageRecord { Timestamp = t, SessionId = "c", CostUsd = 3.00 },
+                new UsageRecord { Timestamp = t, SessionId = "d", CostUsd = 0 },     // cost nothing
+                new UsageRecord { Timestamp = t, CostUsd = 9 },                      // no session id
+                new UsageRecord { Timestamp = t, SessionId = "open", CostUsd = 5 },  // the open one's earlier turns
+            });
+            var (median, count) = s.Median("open");
+            Eq(3, count, "a, b, c");
+            True(Math.Abs(median - 0.20) < 1e-9, "median: " + median);
+            Eq("This conversation $2.40 · 12× the median logged conversation ($0.20 of 3)", s.Line(2.40, "open"));
+            Eq("This conversation $0.50 · 2.5× the median logged conversation ($0.20 of 3)", s.Line(0.50, "open"));
+            Eq("This conversation $0.30 · the median logged conversation $0.20 (of 3)", s.Line(0.30, "open"), "under twice");
+            Eq(null, s.Line(0, "open"), "nothing spent yet");
+            Eq(4, s.Median(null).Count, "a new chat has no id yet: all of them");
+            s.Load(new[] { new UsageRecord { Timestamp = t, SessionId = "a", CostUsd = 1 }, new UsageRecord { Timestamp = t, SessionId = "b", CostUsd = 1 } });
+            Eq(null, s.Line(2, "open"), "two others: too few");
+        }
+
         private static void Test_PaceWarning()
         {
             DateTime Nov(int day) => new DateTime(2026, 11, day, 12, 0, 0, DateTimeKind.Local).ToUniversalTime();

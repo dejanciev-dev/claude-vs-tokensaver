@@ -954,8 +954,10 @@ Planned on 2026-11-12.
 
 Planned on 2026-11-12.
 
-- [ ] **Conversation against your median.** The meter's tooltip puts this conversation's cost next to the median
-      logged conversation
+- [x] **Conversation against your median.** The meter's tooltip puts this conversation's cost next to the median
+      logged conversation. Under the last 7 days; `12× the median …` from twice the median, else the median itself;
+      from 3 other logged conversations (the open one left out by its id), read with the spend watches once per
+      Visual Studio session. `ConversationStats`
 - [ ] **This month per solution.** The report's *By solution* rows add this month's spend
 - [ ] **Manual checks for Phases 37–38.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
 
