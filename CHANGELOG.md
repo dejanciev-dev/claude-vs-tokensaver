@@ -16,6 +16,9 @@ All notable changes to this project are listed here. The format follows
 ### Changed
 - **More per model in the savings report**: each *By model* row adds the cost per turn and the cache hit rate (the
   main agent's tokens; subagents may run on other models).
+- **Average conversation in the savings report**: above the costliest conversations, how many there were, what one
+  cost on average and the median, and how many turns one ran (`Conversations: 32, $0.40 on average (median $0.12),
+  6.2 turns on average`). A median well under the average means a few long conversations cost most.
 
 ## [0.10.0] - 2026-11-11
 
