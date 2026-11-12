@@ -204,6 +204,8 @@ namespace ClaudeVS.Core.Tokens
         public int Turns { get; set; }
         /// <summary>Including what asking the Haiku router cost.</summary>
         public double CostUsd { get; set; }
+        /// <summary>Spent this calendar month up to the report, whatever the period, router included.</summary>
+        public double MonthUsd { get; set; }
         /// <summary>The folder's name ("linq-samples"), or "(no folder)".</summary>
         public string Name => NameOf(Solution);
 
@@ -677,10 +679,20 @@ namespace ClaudeVS.Core.Tokens
             rep.LastMonthToDateUsd = scoped.Where(r => r.Timestamp.ToLocalTime().Date >= lastMonth && r.Timestamp.ToLocalTime().Date <= rep.LastMonthToDay).Sum(r => r.CostUsd + r.RouterCostUsd);
 
             if (solution == null)
+            {
+                string Key(UsageRecord r) => (r.Solution ?? "").TrimEnd('\\', '/');
+                // This month's spend per folder, whatever the period (as the month line)
+                var month = scoped.Where(r => r.Timestamp.ToLocalTime().Date >= rep.Month && r.Timestamp.ToLocalTime().Date <= today)
+                    .GroupBy(Key, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Sum(r => r.CostUsd + r.RouterCostUsd), StringComparer.OrdinalIgnoreCase);
                 rep.BySolution.AddRange(list
-                    .GroupBy(r => (r.Solution ?? "").TrimEnd('\\', '/'), StringComparer.OrdinalIgnoreCase)
-                    .Select(g => new SolutionBreakdown { Solution = g.Key.Length == 0 ? null : g.First().Solution, Turns = g.Count(), CostUsd = g.Sum(r => r.CostUsd + r.RouterCostUsd) })
+                    .GroupBy(Key, StringComparer.OrdinalIgnoreCase)
+                    .Select(g => new SolutionBreakdown
+                    {
+                        Solution = g.Key.Length == 0 ? null : g.First().Solution, Turns = g.Count(), CostUsd = g.Sum(r => r.CostUsd + r.RouterCostUsd),
+                        MonthUsd = month.TryGetValue(g.Key, out var m) ? m : 0,
+                    })
                     .OrderByDescending(b => b.CostUsd).ThenByDescending(b => b.Turns));
+            }
             return rep;
         }
 
@@ -737,8 +749,11 @@ namespace ClaudeVS.Core.Tokens
             if (BySolution.Count < 2) return "";
             var sb = new StringBuilder();
             sb.AppendLine("By solution:");
+            // This month's part, when the period reaches today and is more than this month
+            bool month = Until == null && Since.HasValue && Since.Value.ToLocalTime().Date < Month && BySolution.Any(b => b.MonthUsd > 0);
             foreach (var b in BySolution.Take(SolutionsShown))
-                sb.AppendLine($"  {OneLine(b.Name, 30),-30} {b.Turns,5} turns  ${b.CostUsd,8:0.00}");
+                sb.AppendLine(($"  {OneLine(b.Name, 30),-30} {b.Turns,5} turns  ${b.CostUsd,8:0.00}"
+                    + (month && b.MonthUsd > 0 ? $"  (${b.MonthUsd:0.00} this month)" : "")).TrimEnd());
             if (BySolution.Count > SolutionsShown)
                 sb.AppendLine($"  … {BySolution.Count - SolutionsShown} more, ${BySolution.Skip(SolutionsShown).Sum(b => b.CostUsd):0.00}");
             return sb.ToString();

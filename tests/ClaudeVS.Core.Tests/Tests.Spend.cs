@@ -504,6 +504,12 @@ namespace ClaudeVS.Core.Tests
             Eq(3, rep.BySolution.Sum(b => b.Turns) - 1, "all turns: 4");
             Eq("(no folder)", rep.BySolution[2].Name, "no folder");
             True(rep.ToText().Contains("By solution:"), "in the all-solutions report");
+            True(Math.Abs(rep.BySolution[1].MonthUsd - 9) < 1e-9, "shop this month, router included: " + rep.BySolution[1].MonthUsd);
+            string solutions = rep.SolutionsText();
+            True(solutions.Contains("    2 turns  $    9.00  ($9.00 this month)"), solutions);
+            True(solutions.Contains("old                                1 turns  $   50.00\r\n") || solutions.Contains("old                                1 turns  $   50.00\n"), "nothing this month: no part — " + solutions);
+            var novemberOnly = SavingsReport.Build(recs, new PriceTable(), nowUtc: At(11, 10), sinceUtc: At(11, 1).AddHours(-12));
+            True(!novemberOnly.SolutionsText().Contains("this month"), "a period within this month: the same figure, left out");
             True(!SavingsReport.Build(recs, new PriceTable(), solution: @"C:\src\old", nowUtc: At(11, 10)).ToText().Contains("By solution:"), "not in one solution's report");
 
             var early = SavingsReport.Build(recs, new PriceTable(), nowUtc: At(11, 2));

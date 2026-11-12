@@ -23,6 +23,8 @@ All notable changes to this project are listed here. The format follows
 - **This conversation against your others**: the meter's tooltip sets the open conversation's cost against the
   median conversation in the usage log (`This conversation $2.40 · 12× the median logged conversation ($0.20 of
   32)`), once three or more are logged.
+- **This month per solution**: in a savings report for all solutions that reaches back before this month, each
+  *By solution* row adds what that solution has cost this month (`($9.00 this month)`).
 - **Conversation limit** (Options → Cost limits → *Ask before sending past conversation cost (USD)*, off by
   default): once a chat window's conversation has cost the amount, sending a prompt asks first, like the daily limit.
   After a yes, not again in that conversation until the next multiple; a new chat starts again.
