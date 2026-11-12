@@ -89,7 +89,22 @@ Most of these show only once spend passes an amount. Set the amounts low for the
 
 Set the cost amounts back afterwards: daily `20`, monthly `200`, per solution `0`, ask before sending `0`; and the report period to `All`.
 
-## 7. Release (Phase 5)
+## 7. Pace and long conversations (Phases 35–36)
+
+The pace shows from the 3rd of the month and the pace warning from the 7th, with 3 days or more left.
+
+| Do | Expect |
+|---|---|
+| Hover the meter (from the 3rd, with spend this month) | `this month $…, ~$… by <month end> at this pace (next warning at $…)` |
+| **Options → Warn at monthly cost** set to a little above this month's spend (from the 7th), then a prompt | `💲 At this pace, this month's … spend … will reach ~$… by …, past your monthly warning at $…`, once. A prompt that passes the amount itself gives the usual warning instead. Restart Visual Studio and send again: no repeat |
+| **Options → Ask before sending past conversation cost** set to `0.01`, then two prompts in one chat | The second asks in a *Conversation limit passed* box. Cancel leaves the prompt in the box; OK sends it, and the next goes without asking |
+| The same, then **New chat** and two prompts | The second asks again (each conversation starts over) |
+| The same, with **Ask before sending past daily cost** at `0.01` too | The daily box first; the conversation box only after OK |
+| **Show Savings Report** | `By model:` rows with `$… per turn, cache …%`; `Conversations: …, $… on average (median $…)` above `Costliest conversations:`; `Past a conversation's 30th:` once a logged conversation has run past 30 turns |
+
+Set the amounts back afterwards: monthly `200`, ask before sending past conversation cost `0`, past daily cost `0`.
+
+## 8. Release (Phase 5)
 
 These need you rather than a check list:
 
