@@ -104,7 +104,20 @@ The pace shows from the 3rd of the month and the pace warning from the 7th, with
 
 Set the amounts back afterwards: monthly `200`, ask before sending past conversation cost `0`, past daily cost `0`.
 
-## 8. Release (Phase 5)
+## 8. Weeks and your conversations (Phases 37–38)
+
+| Do | Expect |
+|---|---|
+| **Options → Warn at weekly cost** set to `0.01`, then a prompt | `💲 This week's Claude Code spend in Visual Studio has passed $0.01 …`, the meter's cost amber with a ⚠, and `this week $…` between today and this month in the meter's tooltip |
+| The same option back at `0` | No `this week` in the tooltip |
+| A conversation of more than 30 turns with a big context (e.g. resume a long one and keep going) | Once, the long conversation tip: its length, the turn's cost against its average, and /compact or New chat. Not on the same turn as the big-conversation tip |
+| Hover the meter in a chat that has cost something (with 3 or more conversations in the usage log) | `This conversation $… · …× the median logged conversation ($… of …)`, or the median itself when under twice it |
+| **Show Savings Report** (all solutions, period *All*, with turns before this month) | `By solution:` rows end with `($… this month)` where a solution was used this month |
+| **Export Usage as CSV…** | A last `turn` column: 1, 2, 3 … within each conversation |
+
+Set the weekly warning back to `0` afterwards.
+
+## 9. Release (Phase 5)
 
 These need you rather than a check list:
 
