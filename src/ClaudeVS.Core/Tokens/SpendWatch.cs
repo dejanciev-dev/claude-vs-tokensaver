@@ -72,6 +72,47 @@ namespace ClaudeVS.Core.Tokens
             return spent / today.Day * DateTime.DaysInMonth(today.Year, today.Month);
         }
 
+        /// <summary>The pace warning waits for this day of the month (a few days are too few to go by)…</summary>
+        public const int PaceWarnFromDay = 7;
+        /// <summary>…and is not given with fewer days than this left in the month (too late to slow down).</summary>
+        public const int PaceWarnDaysLeft = 3;
+        private DateTime _paceWarned; // the month (its 1st) of the last pace warning
+
+        /// <summary>The next multiple of <see cref="StepUsd"/> above <paramref name="spent"/>.</summary>
+        private double NextStep(double spent) => (Math.Floor(spent / StepUsd + 1e-9) + 1) * StepUsd;
+
+        /// <summary>The month's pace at <paramref name="nowUtc"/> passes the next warning amount before the month ends.</summary>
+        private bool PaceIsPastNext(DateTime nowUtc)
+        {
+            if (Period != SpendPeriod.Month || StepUsd <= 0) return false;
+            var today = nowUtc.ToLocalTime().Date;
+            if (today.Day < PaceWarnFromDay || DateTime.DaysInMonth(today.Year, today.Month) - today.Day < PaceWarnDaysLeft) return false;
+            return PaceUsd(nowUtc) is double pace && pace >= NextStep(SpentAt(nowUtc));
+        }
+
+        /// <summary>
+        /// After a turn: once a month, from the <see cref="PaceWarnFromDay"/>th and while there are
+        /// <see cref="PaceWarnDaysLeft"/> days or more left, the note that this month's pace would pass the next warning
+        /// amount by its end; else null. Not when the pace had passed it already when the usage log was loaded (so
+        /// restarting Visual Studio does not repeat it).
+        /// </summary>
+        public string PaceWarning(DateTime nowUtc)
+        {
+            var c = CultureInfo.InvariantCulture;
+            if (!PaceIsPastNext(nowUtc)) return null;
+            double spent = SpentAt(nowUtc), pace = PaceUsd(nowUtc) ?? 0;
+            lock (_gate)
+            {
+                if (_paceWarned == StartOf(nowUtc)) return null;
+                _paceWarned = StartOf(nowUtc);
+            }
+            string where = Solution != null ? "on " + SolutionBreakdown.NameOf(Solution) : "in Visual Studio";
+            string which = Solution != null ? "monthly warning per solution" : "monthly warning";
+            return $"At this pace, this month's Claude Code spend {where} will reach ~${pace.ToString("0.00", c)} by "
+                + $"{MonthEnd(nowUtc).ToString("MMM d", c)}, past your {which} at ${NextStep(spent).ToString("0.00", c)} "
+                + $"(${spent.ToString("0.00", c)} so far, at API prices). Tools → Claude Code → Show Savings Report lists the costliest turns and conversations.";
+        }
+
         /// <summary>The last day of the local month <paramref name="nowUtc"/> falls in.</summary>
         private static DateTime MonthEnd(DateTime nowUtc)
         {
@@ -92,8 +133,7 @@ namespace ClaudeVS.Core.Tokens
             if (PaceUsd(nowUtc) is double pace)
                 line += ", ~$" + pace.ToString("0.00", c) + " by " + MonthEnd(nowUtc).ToString("MMM d", c) + " at this pace";
             if (StepUsd <= 0) return line;
-            double next = (Math.Floor(spent / StepUsd + 1e-9) + 1) * StepUsd;
-            return line + " (next warning at $" + next.ToString("0.00", c) + ")";
+            return line + " (next warning at $" + NextStep(spent).ToString("0.00", c) + ")";
         }
 
         /// <summary>
@@ -118,6 +158,7 @@ namespace ClaudeVS.Core.Tokens
                 _spent += before;
                 if (StepUsd > 0) _warnedSteps = Math.Max(_warnedSteps, (int)Math.Floor(_spent / StepUsd + 1e-9));
             }
+            if (PaceIsPastNext(_createdUtc)) lock (_gate) _paceWarned = StartOf(_createdUtc); // said before the restart
         }
 
         /// <summary>A turn finished at <paramref name="nowUtc"/>: the warning when the period's spend passed a new step, else null.</summary>
