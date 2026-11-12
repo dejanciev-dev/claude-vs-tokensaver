@@ -240,6 +240,9 @@ namespace ClaudeVS.Core.Tokens
         public string Family { get; set; }
         public int Turns { get; set; }
         public double CostUsd { get; set; }
+        public double CostPerTurnUsd => Turns > 0 ? CostUsd / Turns : 0;
+        /// <summary>The main agent's input tokens read from the cache, in percent (subagents may run other models).</summary>
+        public double CacheHitPercent { get; set; }
     }
 
     /// <summary>
@@ -539,7 +542,15 @@ namespace ClaudeVS.Core.Tokens
 
             rep.ByModel.AddRange(list
                 .GroupBy(r => PriceTable.Family(r.ModelUsed) ?? "other")
-                .Select(g => new ModelBreakdown { Family = g.Key, Turns = g.Count(), CostUsd = g.Sum(r => r.CostUsd) })
+                .Select(g =>
+                {
+                    long mIn = g.Sum(r => r.InputTokens + r.CacheReadTokens + r.CacheWriteTokens);
+                    return new ModelBreakdown
+                    {
+                        Family = g.Key, Turns = g.Count(), CostUsd = g.Sum(r => r.CostUsd),
+                        CacheHitPercent = mIn > 0 ? 100.0 * g.Sum(r => r.CacheReadTokens) / mIn : 0,
+                    };
+                })
                 .OrderByDescending(b => b.Turns));
 
             if (list.Any(r => (r.Effort ?? r.RouteEffort) != null))
@@ -718,7 +729,7 @@ namespace ClaudeVS.Core.Tokens
             sb.AppendLine();
             sb.AppendLine("By model:");
             foreach (var b in ByModel)
-                sb.AppendLine($"  {b.Family,-7} {b.Turns,5} turns  ${b.CostUsd,8:0.00}  ({100.0 * b.Turns / Turns:0}% of turns)");
+                sb.AppendLine($"  {b.Family,-7} {b.Turns,5} turns  ${b.CostUsd,8:0.00}  ({100.0 * b.Turns / Turns:0}% of turns, ${b.CostPerTurnUsd:0.000} per turn, cache {b.CacheHitPercent:0}%)");
             if (ByEffort.Count > 0)
             {
                 sb.AppendLine();

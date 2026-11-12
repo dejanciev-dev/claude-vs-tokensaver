@@ -13,6 +13,10 @@ All notable changes to this project are listed here. The format follows
   pace would pass the monthly cost warning (or the one per solution) by the month's end, while there is still time
   to slow down. Not repeated after restarting Visual Studio.
 
+### Changed
+- **More per model in the savings report**: each *By model* row adds the cost per turn and the cache hit rate (the
+  main agent's tokens; subagents may run on other models).
+
 ## [0.10.0] - 2026-11-11
 
 Still a **preview**, for Claude Code 2.1.318 or newer (checked up to 2.1.322). This release is about knowing where the

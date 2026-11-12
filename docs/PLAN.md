@@ -903,7 +903,9 @@ Planned on 2026-11-12.
       month ends, while there is still time to slow down. From the 7th, with 3 days or more left; against the next
       multiple of the warning, for the per-solution watch too; not after a turn that passed an amount (that warning
       says more). Already past when the usage log loads counts as said. `SpendWatch.PaceWarning`
-- [ ] **More per model in the report.** The *By model* rows add the cost per turn and the cache hit rate
+- [x] **More per model in the report.** The *By model* rows add the cost per turn and the cache hit rate.
+      `opus  2 turns  $0.80  (67% of turns, $0.400 per turn, cache 90%)`; the hit rate from the main agent's tokens,
+      as the family is the main agent's model. `ModelBreakdown.CostPerTurnUsd`, `CacheHitPercent`
 - [ ] **Average conversation.** The report says how many conversations there were and what one costs on average
       (and the median), above the costliest ones
 
