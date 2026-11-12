@@ -921,8 +921,11 @@ Planned on 2026-11-12.
       a prompt asks first, like the daily limit. *Ask before sending past conversation cost (USD)* in *Cost limits*;
       the meter's conversation cost, one limit per chat window, reset with the notices on a new conversation; the
       daily limit is asked first. `SpendLimit` with `perConversation`
-- [ ] **Long conversations in the report.** What the turns past the 30th of a conversation cost, and per turn
-      against the earlier ones: the price of not starting anew or compacting
+- [x] **Long conversations in the report.** What the turns past the 30th of a conversation cost, and per turn
+      against the earlier ones: the price of not starting anew or compacting. `Past a conversation's 30th:` under the
+      cache lines, with the share of the period's spend; turns counted per logged session id (a /compact keeps the
+      count, as the report cannot see it), the first 30 of all conversations to compare with.
+      `SavingsReport.LongConversationsLine`
 - [ ] **Manual checks for Phases 35–36.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
 
 ---

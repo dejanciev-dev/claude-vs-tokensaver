@@ -372,6 +372,31 @@ namespace ClaudeVS.Core.Tokens
             return (write5m * (p.CacheWrite - p.CacheRead) + write1h * (2 * p.Input - p.CacheRead)) / 1_000_000.0 * p.Multiplier(r);
         }
 
+        /// <summary>Turns past this one in their conversation each send a long history again.</summary>
+        public const int LongConversationFromTurn = 30;
+        /// <summary>Turns past the 30th of their conversation (logged session ids only), their cost and conversations.</summary>
+        public int LongConversationTurns { get; set; }
+        public double LongConversationUsd { get; set; }
+        public int LongConversations { get; set; }
+        /// <summary>Percent of the period's spend.</summary>
+        public double LongConversationShare { get; set; }
+        /// <summary>The cost per turn of turns up to the 30th of their conversation, to compare with.</summary>
+        public double EarlierTurnUsd { get; set; }
+
+        /// <summary>
+        /// "$4.20 in 35 turns of 2 conversations (12% of the spend), $0.120 per turn against $0.040 in the first 30"; null
+        /// with no turn past the 30th.
+        /// </summary>
+        public string LongConversationsLine()
+        {
+            if (LongConversationTurns == 0) return null;
+            var c = CultureInfo.InvariantCulture;
+            string line = $"${LongConversationUsd.ToString("0.00", c)} in {LongConversationTurns} {(LongConversationTurns == 1 ? "turn" : "turns")} of "
+                + $"{LongConversations} {(LongConversations == 1 ? "conversation" : "conversations")} ({LongConversationShare.ToString("0", c)}% of the spend), "
+                + $"${(LongConversationUsd / LongConversationTurns).ToString("0.000", c)} per turn";
+            return EarlierTurnUsd > 0 ? line + $" against ${EarlierTurnUsd.ToString("0.000", c)} in the first {LongConversationFromTurn}" : line;
+        }
+
         public int LongContextTurns { get; set; }
         public double LongContextExtraUsd { get; set; }
         public List<ModelBreakdown> ByModel { get; } = new List<ModelBreakdown>();
@@ -555,6 +580,23 @@ namespace ClaudeVS.Core.Tokens
                     first = false;
                 }
             }
+            // Long conversations: the turns past the 30th of their conversation, against the earlier ones
+            double earlierUsd = 0; int earlierTurns = 0;
+            foreach (var session in list.Where(r => !string.IsNullOrEmpty(r.SessionId)).GroupBy(r => r.SessionId, StringComparer.Ordinal))
+            {
+                int n = 0; bool counted = false;
+                foreach (var r in session) // oldest first
+                {
+                    double cost = r.CostUsd + r.RouterCostUsd;
+                    if (++n <= LongConversationFromTurn) { earlierUsd += cost; earlierTurns++; continue; }
+                    rep.LongConversationTurns++;
+                    rep.LongConversationUsd += cost;
+                    if (!counted) { rep.LongConversations++; counted = true; }
+                }
+            }
+            rep.EarlierTurnUsd = earlierTurns > 0 ? earlierUsd / earlierTurns : 0;
+            rep.LongConversationShare = rep.LongConversationTurns > 0 && list.Sum(r => r.CostUsd + r.RouterCostUsd) is double all && all > 0
+                ? 100.0 * rep.LongConversationUsd / all : 0;
             var timed = list.Where(r => r.RouterMs > 0).ToList();
             rep.RouterAverageMs = timed.Count > 0 ? (long)timed.Average(r => r.RouterMs) : 0;
 
@@ -731,6 +773,8 @@ namespace ClaudeVS.Core.Tokens
             sb.AppendLine($"Cache hit rate:             {CacheHitPercent:0}%");
             if (CacheRewriteTurns > 0)
                 sb.AppendLine($"Cache written again:        ${CacheRewriteExtraUsd:0.00} more than reading it  ({CacheRewriteTurns} {(CacheRewriteTurns == 1 ? "turn" : "turns")}, {TokenMeter.Format(CacheRewriteTokens)} tokens: an expired cache, a model switch or a changed CLAUDE.md, MCP tools or settings)");
+            if (LongConversationsLine() is string longOnes)
+                sb.AppendLine($"Past a conversation's 30th: {longOnes}  (each turn sends the whole conversation again; /compact or a new chat starts small)");
             if (ThinkingTokens > 0)
                 sb.AppendLine($"Thinking:                   {TokenMeter.Format(ThinkingTokens)} tokens ≈ ${ThinkingCostUsd:0.00}  ({(OutputTokens > 0 ? 100.0 * ThinkingTokens / OutputTokens : 0):0}% of output tokens; Thinking off or lower effort cuts it)");
             if (FableTurns > 0)
