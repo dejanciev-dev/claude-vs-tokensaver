@@ -962,7 +962,9 @@ Planned on 2026-11-12.
       the period's cost, router included; only when the period reaches today and starts before this month (else
       it is the same figure, or not this month at all), and not on rows with nothing this month.
       `SolutionBreakdown.MonthUsd`
-- [ ] **Manual checks for Phases 37–38.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
+- [x] **Manual checks for Phases 37–38.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md). Section 8,
+      *Weeks and your conversations*: the weekly warning (amber, tooltip), the long conversation tip, the median line,
+      the per-solution month and the CSV's `turn`; Release is now 9
 
 ---
 
