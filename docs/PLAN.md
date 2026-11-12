@@ -926,7 +926,9 @@ Planned on 2026-11-12.
       cache lines, with the share of the period's spend; turns counted per logged session id (a /compact keeps the
       count, as the report cannot see it), the first 30 of all conversations to compare with.
       `SavingsReport.LongConversationsLine`
-- [ ] **Manual checks for Phases 35–36.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
+- [x] **Manual checks for Phases 35–36.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md). Section 7,
+      *Pace and long conversations*: the pace in the tooltip, the pace warning and its no-repeat after a restart, the
+      conversation limit box (with New chat and with the daily limit), and the new report lines; Release is now 8
 
 ---
 
