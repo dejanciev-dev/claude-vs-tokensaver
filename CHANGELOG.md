@@ -15,6 +15,9 @@ All notable changes to this project are listed here. The format follows
 - **Conversation limit** (Options → Cost limits → *Ask before sending past conversation cost (USD)*, off by
   default): once a chat window's conversation has cost the amount, sending a prompt asks first, like the daily limit.
   After a yes, not again in that conversation until the next multiple; a new chat starts again.
+- **Long conversations in the savings report**: what the turns past a conversation's 30th cost, their share of the
+  spend, and their cost per turn against the first 30 (`Past a conversation's 30th: $4.20 in 35 turns of 2
+  conversations (12% of the spend), $0.120 per turn against $0.040 in the first 30`).
 
 ### Changed
 - **More per model in the savings report**: each *By model* row adds the cost per turn and the cache hit rate (the

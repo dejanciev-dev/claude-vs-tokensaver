@@ -425,6 +425,26 @@ namespace ClaudeVS.Core.Tests
             Eq(0, SavingsReport.Build(new[] { recs[4] }, new PriceTable()).ByEffort.Count, "no effort known: no list");
         }
 
+        private static void Test_SavingsReport_LongConversations()
+        {
+            var t = DateTime.UtcNow.AddDays(-2);
+            var recs = new List<UsageRecord>();
+            for (int i = 0; i < 34; i++) // a: 30 turns at $0.04, then 4 at $0.12
+                recs.Add(new UsageRecord { Timestamp = t.AddMinutes(i), SessionId = "a", CostUsd = i < 30 ? 0.04 : 0.12 });
+            for (int i = 0; i < 31; i++) // b: one turn past the 30th, its router cost too
+                recs.Add(new UsageRecord { Timestamp = t.AddMinutes(100 + i), SessionId = "b", CostUsd = i < 30 ? 0.04 : 0.10, RouterCostUsd = i < 30 ? 0 : 0.02 });
+            recs.Add(new UsageRecord { Timestamp = t.AddMinutes(200), CostUsd = 5 }); // no session id: not judged, but in the spend
+            var rep = SavingsReport.Build(recs, new PriceTable());
+            Eq(5, rep.LongConversationTurns, "4 + 1");
+            Eq(2, rep.LongConversations, "conversations");
+            True(Math.Abs(rep.LongConversationUsd - 0.60) < 1e-9, "router cost included: " + rep.LongConversationUsd);
+            True(Math.Abs(rep.EarlierTurnUsd - 0.04) < 1e-9, "the first 30 of each: " + rep.EarlierTurnUsd);
+            // spend: 60 × 0.04 + 0.60 + 5 = 8.00 → 7.5%
+            Eq("$0.60 in 5 turns of 2 conversations (8% of the spend), $0.120 per turn against $0.040 in the first 30", rep.LongConversationsLine());
+            True(rep.ToText().Contains("Past a conversation's 30th: $0.60 in 5 turns"), rep.ToText());
+            Eq(null, SavingsReport.Build(recs.Take(30).ToList(), new PriceTable()).LongConversationsLine(), "30 turns: none past");
+        }
+
         private static void Test_SavingsReport_ByModelDetail()
         {
             var t = DateTime.UtcNow.AddDays(-1);
