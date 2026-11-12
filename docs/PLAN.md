@@ -896,8 +896,9 @@ Picked on 2026-11-11.
 
 Planned on 2026-11-12.
 
-- [ ] **Month pace in the meter.** The meter's tooltip adds where this month is heading at its pace so far, as the
-      report's month line does (from the 3rd)
+- [x] **Month pace in the meter.** The meter's tooltip adds where this month is heading at its pace so far, as the
+      report's month line does (from the 3rd). In the spend line: `this month $41.20, ~$137.33 by Nov 30 at this pace
+      (next warning at $200.00)`; the month's spend over its local days, today included. `SpendWatch.PaceUsd`
 - [ ] **Pace warning.** Once a month, a note when this month's pace would pass the monthly cost warning before the
       month ends, while there is still time to slow down
 - [ ] **More per model in the report.** The *By model* rows add the cost per turn and the cache hit rate

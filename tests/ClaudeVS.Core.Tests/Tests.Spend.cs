@@ -1138,7 +1138,15 @@ namespace ClaudeVS.Core.Tests
             Eq(null, SpendWatch.BudgetLine(d, m, start), "nothing spent yet");
             m.Load(new[] { new UsageRecord { Timestamp = start.AddDays(-2), CostUsd = 38 } });
             d.Add(3.2, start.AddMinutes(1)); m.Add(3.2, start.AddMinutes(1));
-            Eq("Spent in Visual Studio: today $3.20 (next warning at $20.00) · this month $41.20 (next warning at $200.00), at API prices.", SpendWatch.BudgetLine(d, m, start.AddMinutes(2)));
+            Eq("Spent in Visual Studio: today $3.20 (next warning at $20.00) · this month $41.20, ~$137.33 by Nov 30 at this pace (next warning at $200.00), at API prices.", SpendWatch.BudgetLine(d, m, start.AddMinutes(2)));
+            Eq(null, d.PaceUsd(start), "no pace for a day");
+            // On the 2nd there is too little of the month to go by
+            var second = new DateTime(2026, 12, 2, 12, 0, 0, DateTimeKind.Local).ToUniversalTime();
+            var early = new SpendWatch(SpendPeriod.Month, 0, second);
+            early.Add(5, second);
+            Eq("this month $5.00", early.Line(second), "no pace before the 3rd");
+            var third = second.AddDays(1);
+            Eq("this month $6.00, ~$62.00 by Dec 31 at this pace", (early.Add(1, third) ?? early.Line(third)), "pace from the 3rd, warning off");
             d.Add(20, start.AddMinutes(3));
             Eq("today $23.20 (next warning at $40.00)", d.Line(start.AddMinutes(3)), "past a step: the next one");
             Eq("today $0.00 (next warning at $20.00)", d.Line(start.AddDays(1)), "a new day before its first turn");
