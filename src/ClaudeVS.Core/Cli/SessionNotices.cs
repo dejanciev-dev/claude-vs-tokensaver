@@ -180,6 +180,29 @@ namespace ClaudeVS.Core.Cli
                 + "For quick questions, Auto in the model picker (or Haiku) is cheaper. A new model writes the conversation to its own cache once, so switch at the start of a task.";
         }
 
+        /// <summary>The long-conversation tip: past this many turns, with a context of <see cref="PriceyContextFromTokens"/> or more…</summary>
+        public const int LongConversationFromTurns = 30;
+        /// <summary>…when the last turn cost this much and this many times the conversation's average turn.</summary>
+        public const double LongConversationFromUsd = 0.02;
+        public const double LongConversationFactor = 1.5;
+
+        /// <summary>
+        /// A token tip once a conversation has run past <see cref="LongConversationFromTurns"/> turns with a big context
+        /// and its turns have grown dear: the last one cost <see cref="LongConversationFromUsd"/> or more and
+        /// <see cref="LongConversationFactor"/> times its average turn. <paramref name="turns"/> and
+        /// <paramref name="conversationUsd"/> are the chat window's (a resumed conversation counts from the resume). Null otherwise.
+        /// </summary>
+        public static string LongConversation(int turns, long contextTokens, double lastTurnUsd, double conversationUsd)
+        {
+            if (turns <= LongConversationFromTurns || contextTokens < PriceyContextFromTokens || conversationUsd <= 0) return null;
+            double average = conversationUsd / turns;
+            if (lastTurnUsd < LongConversationFromUsd || lastTurnUsd < LongConversationFactor * average) return null;
+            var c = System.Globalization.CultureInfo.InvariantCulture;
+            return $"This conversation is {turns} turns long (~{Tokens.TokenMeter.Format(contextTokens)} tokens of context), and each prompt sends all of it again: "
+                + $"that turn cost ${lastTurnUsd.ToString("0.00", c)}, against ${average.ToString("0.00", c)} per turn on average. "
+                + "/compact keeps a summary and carries on smaller; for a new topic, a New chat starts from nothing.";
+        }
+
         /// <summary>The long-answer tip: a prompt up to this many characters, an answer of at least this many tokens (thinking left out) and this cost.</summary>
         public const int LongAnswerMaxPromptChars = 300;
         public const long LongAnswerFromTokens = 4_000;

@@ -66,7 +66,7 @@ namespace ClaudeVS.Options
         [Category("Token saving"), DisplayName("Urge /compact at (%)")]
         public int CompactUrgentPercent { get; set; } = 85;
 
-        [Category("Token saving"), DisplayName("Token tips"), Description("One-time tips in the chat when something costs more tokens than it needs to: a large file read whole or twice, a flood of command output, heavy MCP tools or memory files, a costly output style, a cold or rebuilt prompt cache, a big conversation read back for a small question, a short answer from Opus or Fable picked by hand, heavy thinking for a short answer at high effort, a long answer to a short question. Billing, MCP server and permission mode notes are always shown.")]
+        [Category("Token saving"), DisplayName("Token tips"), Description("One-time tips in the chat when something costs more tokens than it needs to: a large file read whole or twice, a flood of command output, heavy MCP tools or memory files, a costly output style, a cold or rebuilt prompt cache, a big conversation read back for a small question, a conversation past 30 turns whose turns have grown dear, a short answer from Opus or Fable picked by hand, heavy thinking for a short answer at high effort, a long answer to a short question. Billing, MCP server and permission mode notes are always shown.")]
         public bool TokenTips { get; set; } = true;
 
         [Category("Cost limits"), DisplayName("Warn at conversation cost (USD)"), Description("The chat says so once each time a conversation passes another multiple of this amount (at API prices, as Claude Code reports them). 0 turns it off.")]

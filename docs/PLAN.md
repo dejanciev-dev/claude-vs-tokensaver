@@ -940,8 +940,10 @@ Planned on 2026-11-12.
       an amount, this week's spend from Monday. *Warn at weekly cost (USD)*, 0 by default; `SpendPeriod.Week`, the
       week's earlier turns from the usage log; while on, `this week $…` in the meter's tooltip and the amber meter
       past it. `SpendWatch.BudgetLine` takes the week
-- [ ] **Long conversation tip.** A one-time tip once a conversation runs past 30 turns with a big context: what a
-      turn costs now against its average, and /compact or a New chat
+- [x] **Long conversation tip.** A one-time tip once a conversation runs past 30 turns with a big context: what a
+      turn costs now against its average, and /compact or a New chat. From 50k tokens of context, a turn of $0.02 or
+      more and 1.5× the average; the chat window's turns (a resumed conversation counts from the resume). The
+      pricey-context tip waits a turn when this one is given. `SessionNotices.LongConversation`
 - [ ] **Turn number in the CSV.** A `turn` column: the turn's number in its conversation, from the logged session ids
 
 ---

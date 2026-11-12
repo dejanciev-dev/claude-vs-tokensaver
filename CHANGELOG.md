@@ -15,6 +15,9 @@ All notable changes to this project are listed here. The format follows
 - **Weekly cost warning** (Options → Cost limits → *Warn at weekly cost (USD)*, off by default): said once each
   time this week's spend from Monday, all conversations together, passes another multiple. While it is on, the
   meter's tooltip shows the week's spend and the meter turns amber past it too.
+- **Token tip for a long conversation**: once per conversation, past 30 turns with 50k tokens of context or more,
+  when a turn cost $0.02 or more and 1.5 times the conversation's average turn: /compact, or a New chat for a new
+  topic. Given instead of the big-conversation tip on the same turn.
 - **Conversation limit** (Options → Cost limits → *Ask before sending past conversation cost (USD)*, off by
   default): once a chat window's conversation has cost the amount, sending a prompt asks first, like the daily limit.
   After a yes, not again in that conversation until the next multiple; a new chat starts again.

@@ -310,6 +310,20 @@ namespace ClaudeVS.ToolWindow
             Tip(tip);
         }
 
+        private bool _gaveLongConversationTip;
+
+        /// <summary>After a turn: once per conversation, when it has run past 30 turns and its turns have grown dear. True when given now.</summary>
+        private bool LongConversationTip()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (_gaveLongConversationTip || _meterModel == null) return false;
+            string tip = SessionNotices.LongConversation(_meterModel.Turns, _meterModel.ContextTokens, _meterModel.LastTurnCostUsd, _meterModel.SessionCostUsd);
+            if (tip == null) return false;
+            _gaveLongConversationTip = true;
+            Tip(tip);
+            return true;
+        }
+
         private bool _gaveOverkillTip;
 
         /// <summary>After a turn: once per conversation, a short tool-free answer from Opus or Fable picked by hand.</summary>
@@ -405,6 +419,7 @@ namespace ClaudeVS.ToolWindow
             _gaveBaseContextTip = false;
             _gaveCacheBreakTip = false;
             _gavePriceyContextTip = false;
+            _gaveLongConversationTip = false;
             _gaveOverkillTip = false;
             _gaveHeavyThinkingTip = false;
             _gaveLongAnswerTip = false;
