@@ -917,8 +917,10 @@ Planned on 2026-11-12.
 
 Planned on 2026-11-12.
 
-- [ ] **Conversation hard limit.** Optional (off by default): once this conversation's cost passes an amount, sending
-      a prompt asks first, like the daily limit
+- [x] **Conversation hard limit.** Optional (off by default): once this conversation's cost passes an amount, sending
+      a prompt asks first, like the daily limit. *Ask before sending past conversation cost (USD)* in *Cost limits*;
+      the meter's conversation cost, one limit per chat window, reset with the notices on a new conversation; the
+      daily limit is asked first. `SpendLimit` with `perConversation`
 - [ ] **Long conversations in the report.** What the turns past the 30th of a conversation cost, and per turn
       against the earlier ones: the price of not starting anew or compacting
 - [ ] **Manual checks for Phases 35–36.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)

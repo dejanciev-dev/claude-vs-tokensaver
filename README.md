@@ -303,6 +303,7 @@ Editor commands go to the chat window you used last.
 | Cost limits | Warn at monthly cost (USD) | 200 | The same for this calendar month's spend ($200, $400…). Earlier turns this month come from the usage log. 0 = off. |
 | Cost limits | Warn at monthly cost per solution (USD) | 0 | The same for this month's spend on the open solution alone (its folder's conversations). 0 = off. |
 | Cost limits | Ask before sending past daily cost (USD) | 0 | Once today's spend in Visual Studio has passed this amount, sending a prompt asks first; after a yes, not again today until the next multiple. Commands such as `/compact` always go. 0 = never asks. |
+| Cost limits | Ask before sending past conversation cost (USD) | 0 | Once the chat window's conversation has cost this amount, sending a prompt asks first; after a yes, not again in that conversation until the next multiple. A new chat starts again. 0 = never asks. |
 | Cost limits | Warn at agent cost (USD) | 0.50 | A subagent's row in the agents panel turns amber once its requests pass this amount, with a screen-reader note, so a runaway agent can be stopped. 0 = off. |
 | Cost limits | Stop agents at cost (USD) | 0 | A subagent whose requests pass this amount is stopped, and the chat says so; Claude carries on without its result. 0 = never. |
 | Token saving | Auto-approve quiet rewrites | Off | Hook installer: run rewritten build/test commands without asking. |

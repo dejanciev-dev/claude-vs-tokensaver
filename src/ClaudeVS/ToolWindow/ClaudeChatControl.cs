@@ -1164,7 +1164,7 @@ namespace ClaudeVS.ToolWindow
             ThreadHelper.ThrowIfNotOnUIThread();
             string text = _prompt.Text.Trim();
             if (text.Length == 0 && _images.Count == 0) return; // an image alone is a valid prompt
-            if (!SlashCommands.IsCommand(text) && !PastDailyLimitConfirmed()) return; // the prompt stays in the box
+            if (!SlashCommands.IsCommand(text) && (!PastDailyLimitConfirmed() || !PastConversationLimitConfirmed())) return; // the prompt stays in the box
             _promptHistory.Add(text);
             _prompt.Clear();
             // Long pastes are marked only in what Claude gets; your message shows the text as you typed it.
