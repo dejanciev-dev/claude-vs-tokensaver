@@ -4,8 +4,8 @@ using System.Globalization;
 
 namespace ClaudeVS.Core.Tokens
 {
-    /// <summary>The span a <see cref="SpendWatch"/> adds up: a local calendar day or month.</summary>
-    public enum SpendPeriod { Day, Month }
+    /// <summary>The span a <see cref="SpendWatch"/> adds up: a local calendar day, month, or week from Monday.</summary>
+    public enum SpendPeriod { Day, Month, Week }
 
     /// <summary>
     /// Says when the spend across all conversations in a day or a month passes another multiple of a set amount ($20,
@@ -46,6 +46,7 @@ namespace ClaudeVS.Core.Tokens
         private DateTime StartOf(DateTime utc)
         {
             var d = utc.ToLocalTime().Date;
+            if (Period == SpendPeriod.Week) return d.AddDays(-(((int)d.DayOfWeek + 6) % 7)); // Monday, as the report's week
             return Period == SpendPeriod.Month ? new DateTime(d.Year, d.Month, 1) : d;
         }
 
@@ -129,7 +130,7 @@ namespace ClaudeVS.Core.Tokens
         {
             var c = CultureInfo.InvariantCulture;
             double spent = SpentAt(nowUtc);
-            string line = (Period == SpendPeriod.Month ? "this month $" : "today $") + spent.ToString("0.00", c);
+            string line = (Period == SpendPeriod.Month ? "this month $" : Period == SpendPeriod.Week ? "this week $" : "today $") + spent.ToString("0.00", c);
             if (PaceUsd(nowUtc) is double pace)
                 line += ", ~$" + pace.ToString("0.00", c) + " by " + MonthEnd(nowUtc).ToString("MMM d", c) + " at this pace";
             if (StepUsd <= 0) return line;
@@ -138,12 +139,14 @@ namespace ClaudeVS.Core.Tokens
 
         /// <summary>
         /// For the meter's tooltip: "Spent in Visual Studio: today $3.20 (next warning at $20.00) · this month $41.00
-        /// (next warning at $200.00), at API prices."; null while nothing was spent this month.
+        /// (next warning at $200.00), at API prices."; null while nothing was spent this month. This week's spend comes
+        /// between them while <paramref name="week"/> has a warning amount.
         /// </summary>
-        public static string BudgetLine(SpendWatch day, SpendWatch month, DateTime nowUtc)
+        public static string BudgetLine(SpendWatch day, SpendWatch month, DateTime nowUtc, SpendWatch week = null)
         {
             if (day == null || month == null || month.SpentAt(nowUtc) <= 0 && day.SpentAt(nowUtc) <= 0) return null;
-            return "Spent in Visual Studio: " + day.Line(nowUtc) + " · " + month.Line(nowUtc) + ", at API prices.";
+            string weekly = week != null && week.StepUsd > 0 ? " · " + week.Line(nowUtc) : "";
+            return "Spent in Visual Studio: " + day.Line(nowUtc) + weekly + " · " + month.Line(nowUtc) + ", at API prices.";
         }
 
         /// <summary>Adds the logged turns of this period from before this watch was made, without warning about them.</summary>
@@ -174,7 +177,7 @@ namespace ClaudeVS.Core.Tokens
                 int steps = (int)Math.Floor(_spent / StepUsd + 1e-9);
                 if (steps <= _warnedSteps) return null;
                 _warnedSteps = steps;
-                string which = Period == SpendPeriod.Month ? "This month's" : "Today's";
+                string which = Period == SpendPeriod.Month ? "This month's" : Period == SpendPeriod.Week ? "This week's" : "Today's";
                 if (Solution != null)
                     return $"{which} Claude Code spend on {SolutionBreakdown.NameOf(Solution)} has passed ${(steps * StepUsd).ToString("0.00", c)} "
                         + $"(${_spent.ToString("0.00", c)} so far in its conversations, at API prices). Tools → Claude Code → Show Savings Report lists the costliest turns.";

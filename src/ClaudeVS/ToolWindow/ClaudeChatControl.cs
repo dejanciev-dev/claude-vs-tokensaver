@@ -2108,8 +2108,9 @@ namespace ClaudeVS.ToolWindow
             if (_meterModel?.CacheSavedLine() is string cache) tip += "\n\n" + cache;
             DailyCost.StepUsd = Options?.DailyCostWarningUsd ?? 20;
             MonthlyCost.StepUsd = Options?.MonthlyCostWarningUsd ?? 200;
+            WeeklyCost.StepUsd = Options?.WeeklyCostWarningUsd ?? 0;
             LoadSpend(); // the month's earlier turns, once; the line shows them from the next refresh
-            if (Core.Tokens.SpendWatch.BudgetLine(DailyCost, MonthlyCost, DateTime.UtcNow) is string spend) tip += "\n\n" + spend;
+            if (Core.Tokens.SpendWatch.BudgetLine(DailyCost, MonthlyCost, DateTime.UtcNow, WeeklyCost) is string spend) tip += "\n\n" + spend;
             if (RecentSpend.LastDaysLine(DateTime.UtcNow) is string days) tip += "\n" + days;
             _meterArea.ToolTip = tip;
         }

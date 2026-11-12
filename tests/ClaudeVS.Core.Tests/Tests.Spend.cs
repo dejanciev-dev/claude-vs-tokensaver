@@ -1172,6 +1172,34 @@ namespace ClaudeVS.Core.Tests
             True(conv.Ask(21, now.AddDays(1)) != null, "a new conversation: asked again");
         }
 
+        private static void Test_WeeklySpendWatch()
+        {
+            DateTime Nov(int day) => new DateTime(2026, 11, day, 12, 0, 0, DateTimeKind.Local).ToUniversalTime();
+            // Thursday the 12th: the week began on Monday the 9th
+            var w = new SpendWatch(SpendPeriod.Week, 50, Nov(12));
+            w.Load(new[]
+            {
+                new UsageRecord { Timestamp = Nov(9), CostUsd = 30 },
+                new UsageRecord { Timestamp = Nov(8), CostUsd = 100 }, // Sunday: last week
+            });
+            True(Math.Abs(w.Spent - 30) < 1e-9, "from Monday: " + w.Spent);
+            Eq("this week $30.00 (next warning at $50.00)", w.Line(Nov(12)));
+            string warn = w.Add(25, Nov(12));
+            True(warn != null && warn.StartsWith("This week's Claude Code spend in Visual Studio has passed $50.00") && warn.Contains("($55.00 so far"), warn);
+            Eq(null, w.Add(1, Nov(15)), "Sunday: the same week, once per step");
+            Eq(null, w.Add(10, Nov(16)), "Monday: a new week from 0");
+            True(Math.Abs(w.Spent - 10) < 1e-9, "new week: " + w.Spent);
+            Eq(null, w.PaceUsd(Nov(16)), "no month pace for a week");
+
+            // In the meter's tooltip while the weekly warning is on
+            var d = new SpendWatch(SpendPeriod.Day, 20, Nov(16));
+            var m = new SpendWatch(SpendPeriod.Month, 0, Nov(16));
+            d.Add(10, Nov(16)); m.Add(10, Nov(16));
+            True(SpendWatch.BudgetLine(d, m, Nov(16), w).Contains("today $10.00 (next warning at $20.00) · this week $10.00 (next warning at $50.00) · this month $10.00"), SpendWatch.BudgetLine(d, m, Nov(16), w));
+            w.StepUsd = 0;
+            True(!SpendWatch.BudgetLine(d, m, Nov(16), w).Contains("this week"), "weekly warning off: left out");
+        }
+
         private static void Test_PaceWarning()
         {
             DateTime Nov(int day) => new DateTime(2026, 11, day, 12, 0, 0, DateTimeKind.Local).ToUniversalTime();
