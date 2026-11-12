@@ -944,7 +944,9 @@ Planned on 2026-11-12.
       turn costs now against its average, and /compact or a New chat. From 50k tokens of context, a turn of $0.02 or
       more and 1.5× the average; the chat window's turns (a resumed conversation counts from the resume). The
       pricey-context tip waits a turn when this one is given. `SessionNotices.LongConversation`
-- [ ] **Turn number in the CSV.** A `turn` column: the turn's number in its conversation, from the logged session ids
+- [x] **Turn number in the CSV.** A `turn` column: the turn's number in its conversation, from the logged session ids.
+      The last column; counted over the exported rows by time (a conversation stays in one solution, so exporting
+      one solution keeps the numbers); empty without an id. `UsageCsv.Columns`
 
 ---
 
