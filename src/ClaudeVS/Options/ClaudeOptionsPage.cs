@@ -75,6 +75,9 @@ namespace ClaudeVS.Options
         [Category("Cost limits"), DisplayName("Warn at daily cost (USD)"), Description("The chat says so once each time today's spend in Visual Studio, across all conversations and chat windows, passes another multiple of this amount (at API prices). Today's turns from before Visual Studio started are read from the usage log. 0 turns it off.")]
         public double DailyCostWarningUsd { get; set; } = 20;
 
+        [Category("Cost limits"), DisplayName("Warn at weekly cost (USD)"), Description("The chat says so once each time this week's spend in Visual Studio (from Monday), across all conversations and chat windows, passes another multiple of this amount (at API prices). The week's turns from before Visual Studio started are read from the usage log. 0 (the default) turns it off.")]
+        public double WeeklyCostWarningUsd { get; set; } = 0;
+
         [Category("Cost limits"), DisplayName("Warn at monthly cost (USD)"), Description("The chat says so once each time this calendar month's spend in Visual Studio, across all conversations and chat windows, passes another multiple of this amount (at API prices). The month's turns from before Visual Studio started are read from the usage log. 0 turns it off.")]
         public double MonthlyCostWarningUsd { get; set; } = 200;
 

@@ -12,6 +12,9 @@ All notable changes to this project are listed here. The format follows
 - **Pace warning**: once a month, from the 7th and while 3 days or more are left, the chat says when this month's
   pace would pass the monthly cost warning (or the one per solution) by the month's end, while there is still time
   to slow down. Not repeated after restarting Visual Studio.
+- **Weekly cost warning** (Options → Cost limits → *Warn at weekly cost (USD)*, off by default): said once each
+  time this week's spend from Monday, all conversations together, passes another multiple. While it is on, the
+  meter's tooltip shows the week's spend and the meter turns amber past it too.
 - **Conversation limit** (Options → Cost limits → *Ask before sending past conversation cost (USD)*, off by
   default): once a chat window's conversation has cost the amount, sending a prompt asks first, like the daily limit.
   After a yes, not again in that conversation until the next multiple; a new chat starts again.

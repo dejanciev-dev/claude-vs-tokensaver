@@ -334,11 +334,12 @@ namespace ClaudeVS.ToolWindow
             Label($" ({TokenMeter.Format(m.ContextTokens)}/{TokenMeter.Format(window)})  ·  Session ");
             Value($"{TokenMeter.Format(m.SessionTotal.Total)} tok", null);
             Label(", ");
-            // Amber once today's (or this month's) spend in all windows has passed its warning; the tooltip says how much
+            // Amber once today's (this week's, this month's) spend in all windows has passed its warning; the tooltip says how much
             DailyCost.StepUsd = Options?.DailyCostWarningUsd ?? 20;
+            WeeklyCost.StepUsd = Options?.WeeklyCostWarningUsd ?? 0;
             MonthlyCost.StepUsd = Options?.MonthlyCostWarningUsd ?? 200;
             var now = DateTime.UtcNow;
-            bool pastWarning = DailyCost.IsPastWarning(now) || MonthlyCost.IsPastWarning(now);
+            bool pastWarning = DailyCost.IsPastWarning(now) || WeeklyCost.IsPastWarning(now) || MonthlyCost.IsPastWarning(now);
             Value((pastWarning ? "⚠ " : "") + $"${m.SessionCostUsd:0.00}", pastWarning ? a.Running : a.Brand);
             Label("  ·  Cache ");
             Value($"{cache:0}%", cacheBrush);

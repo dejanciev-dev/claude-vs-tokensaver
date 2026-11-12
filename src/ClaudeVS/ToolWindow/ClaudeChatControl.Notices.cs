@@ -165,12 +165,14 @@ namespace ClaudeVS.ToolWindow
             CostWarning(_costWatch.Check(_meterModel.SessionCostUsd));
             DailyCost.StepUsd = Options?.DailyCostWarningUsd ?? 20;
             MonthlyCost.StepUsd = Options?.MonthlyCostWarningUsd ?? 200;
+            WeeklyCost.StepUsd = Options?.WeeklyCostWarningUsd ?? 0;
             LoadSpend();
             // The change in the conversation's total: a result without a cost adds nothing.
             double total = _meterModel.SessionCostUsd, added = Math.Max(0, total - _dailyCounted);
             _dailyCounted = total;
             var now = DateTime.UtcNow;
             CostWarning(DailyCost.Add(added, now));
+            CostWarning(WeeklyCost.Add(added, now));
             // A passed amount says more than a pace: the pace note waits for the next turn then
             CostWarning(MonthlyCost.Add(added, now) ?? MonthlyCost.PaceWarning(now));
             RecentSpend.Add(added, now);
@@ -190,6 +192,8 @@ namespace ClaudeVS.ToolWindow
         /// <summary>Today's and this month's spend in all chat windows (Options → Warn at daily / monthly cost).</summary>
         private static readonly Core.Tokens.SpendWatch DailyCost = new Core.Tokens.SpendWatch(Core.Tokens.SpendPeriod.Day, 20);
         private static readonly Core.Tokens.SpendWatch MonthlyCost = new Core.Tokens.SpendWatch(Core.Tokens.SpendPeriod.Month, 200);
+        /// <summary>This week's spend from Monday (Options → Warn at weekly cost, off by default).</summary>
+        private static readonly Core.Tokens.SpendWatch WeeklyCost = new Core.Tokens.SpendWatch(Core.Tokens.SpendPeriod.Week, 0);
         private static readonly Core.Tokens.SpendHistory RecentSpend = new Core.Tokens.SpendHistory();
         private static bool _spendLoaded;
         private static volatile bool _spendLoadDone;
@@ -202,7 +206,7 @@ namespace ClaudeVS.ToolWindow
             _spendLoaded = true;
             _ = System.Threading.Tasks.Task.Run(() =>
             {
-                try { var all = Usage.ReadAll(); DailyCost.Load(all); MonthlyCost.Load(all); RecentSpend.Load(all); _spendLoadDone = true; }
+                try { var all = Usage.ReadAll(); DailyCost.Load(all); WeeklyCost.Load(all); MonthlyCost.Load(all); RecentSpend.Load(all); _spendLoadDone = true; }
                 catch (Exception ex) { ClaudeOutputPane.WriteLine("Could not read usage log: " + ex.Message); }
             });
         }
