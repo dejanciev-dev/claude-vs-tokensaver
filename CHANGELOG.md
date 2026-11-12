@@ -9,6 +9,9 @@ All notable changes to this project are listed here. The format follows
 ### Added
 - **Month pace in the meter**: from the 3rd, the meter's tooltip says where this month's spend is heading at its pace
   so far (`this month $41.20, ~$137.33 by Nov 30 at this pace`), as the savings report's month line does.
+- **Pace warning**: once a month, from the 7th and while 3 days or more are left, the chat says when this month's
+  pace would pass the monthly cost warning (or the one per solution) by the month's end, while there is still time
+  to slow down. Not repeated after restarting Visual Studio.
 
 ## [0.10.0] - 2026-11-11
 

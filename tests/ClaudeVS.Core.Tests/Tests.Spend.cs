@@ -1109,6 +1109,42 @@ namespace ClaudeVS.Core.Tests
             Eq(null, l.Ask(double.NaN, now), "no spend known");
         }
 
+        private static void Test_PaceWarning()
+        {
+            DateTime Nov(int day) => new DateTime(2026, 11, day, 12, 0, 0, DateTimeKind.Local).ToUniversalTime();
+            var w = new SpendWatch(SpendPeriod.Month, 200, Nov(9));
+            w.Load(new[] { new UsageRecord { Timestamp = Nov(2), CostUsd = 40 } });
+            Eq(null, w.PaceWarning(Nov(9)), "$40 by the 9th: ~$133 by the 30th");
+            w.Add(30, Nov(9));
+            Eq("At this pace, this month's Claude Code spend in Visual Studio will reach ~$233.33 by Nov 30, past your monthly warning at $200.00 ($70.00 so far, at API prices). Tools → Claude Code → Show Savings Report lists the costliest turns and conversations.",
+                w.PaceWarning(Nov(9)));
+            w.Add(50, Nov(10));
+            Eq(null, w.PaceWarning(Nov(10)), "once a month");
+            var dec = new DateTime(2026, 12, 8, 12, 0, 0, DateTimeKind.Local).ToUniversalTime();
+            w.Add(80, dec);
+            True(w.PaceWarning(dec)?.Contains("~$310.00 by Dec 31") == true, "a new month: " + w.PaceWarning(dec));
+
+            var early = new SpendWatch(SpendPeriod.Month, 200, Nov(5));
+            early.Add(100, Nov(5));
+            Eq(null, early.PaceWarning(Nov(5)), "before the 7th");
+            var late = new SpendWatch(SpendPeriod.Month, 200, Nov(28));
+            late.Add(195, Nov(28));
+            Eq(null, late.PaceWarning(Nov(28)), "2 days left: too late");
+            var past = new SpendWatch(SpendPeriod.Month, 200, Nov(9));
+            past.Add(250, Nov(9));
+            True(past.PaceWarning(Nov(9))?.Contains("past your monthly warning at $400.00") == true, "past $200 already: the next amount");
+            var restarted = new SpendWatch(SpendPeriod.Month, 200, Nov(9));
+            restarted.Load(new[] { new UsageRecord { Timestamp = Nov(3), CostUsd = 70 } });
+            restarted.Add(1, Nov(9));
+            Eq(null, restarted.PaceWarning(Nov(9)), "past already when loaded: said before the restart");
+            var day = new SpendWatch(SpendPeriod.Day, 20, Nov(9));
+            day.Add(19, Nov(9));
+            Eq(null, day.PaceWarning(Nov(9)), "a daily watch has no pace");
+            var solution = new SpendWatch(SpendPeriod.Month, 50, Nov(9), solution: @"C:\src\shop");
+            solution.Add(20, Nov(9));
+            True(solution.PaceWarning(Nov(9))?.Contains("spend on shop will reach ~$66.67") == true, "per solution: " + solution.PaceWarning(Nov(9)));
+        }
+
         private static void Test_MonthlySpendWatch()
         {
             // Local noon on the 9th: the 1st and the 30th of the month before are in other months in any time zone.

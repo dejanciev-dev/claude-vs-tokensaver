@@ -171,9 +171,10 @@ namespace ClaudeVS.ToolWindow
             _dailyCounted = total;
             var now = DateTime.UtcNow;
             CostWarning(DailyCost.Add(added, now));
-            CostWarning(MonthlyCost.Add(added, now));
+            // A passed amount says more than a pace: the pace note waits for the next turn then
+            CostWarning(MonthlyCost.Add(added, now) ?? MonthlyCost.PaceWarning(now));
             RecentSpend.Add(added, now);
-            if (SolutionMonthlyCost(_sessionDir) is Core.Tokens.SpendWatch solution) CostWarning(solution.Add(added, now));
+            if (SolutionMonthlyCost(_sessionDir) is Core.Tokens.SpendWatch solution) CostWarning(solution.Add(added, now) ?? solution.PaceWarning(now));
         }
 
         private void CostWarning(string warning)
