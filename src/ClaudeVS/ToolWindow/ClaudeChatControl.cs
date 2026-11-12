@@ -1929,7 +1929,7 @@ namespace ClaudeVS.ToolWindow
                         CheckCost();
                         CacheBreakTip();
                         if (_meterModel != null) Tip(SessionNotices.SubagentsDominate(_meterModel.LastTurnSubagentCostUsd, _meterModel.LastTurnCostUsd));
-                        PriceyContextTip(_turnModel);
+                        if (!LongConversationTip()) PriceyContextTip(_turnModel); // both say "the conversation is big": one per turn
                         OverkillModelTip(_turnModel);
                         HeavyThinkingTip(_turnModel);
                         LongAnswerTip(_turnModel);

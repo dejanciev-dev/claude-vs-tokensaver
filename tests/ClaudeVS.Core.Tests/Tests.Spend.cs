@@ -886,6 +886,15 @@ namespace ClaudeVS.Core.Tests
             Eq(null, SessionNotices.LongAnswer("claude-haiku-5-5", 120, essay, 0, prices), "Haiku: $0.003");
             Eq(null, SessionNotices.LongAnswer("claude-opus-5-5", 120, new TokenUsage { Output = 9_000, Thinking = 6_000 }, 0, prices), "mostly thinking: 3000 written");
 
+            // A conversation past 30 turns whose turns have grown dear
+            Eq("This conversation is 31 turns long (~120.0k tokens of context), and each prompt sends all of it again: that turn cost $0.12, against $0.05 per turn on average. "
+                + "/compact keeps a summary and carries on smaller; for a new topic, a New chat starts from nothing.",
+                SessionNotices.LongConversation(31, 120_000, 0.12, 1.55));
+            Eq(null, SessionNotices.LongConversation(30, 120_000, 0.12, 1.50), "30 turns: not yet");
+            Eq(null, SessionNotices.LongConversation(31, 40_000, 0.12, 1.55), "a small context");
+            Eq(null, SessionNotices.LongConversation(31, 120_000, 0.06, 1.55), "not dearer than 1.5× the average ($0.05)");
+            Eq(null, SessionNotices.LongConversation(31, 120_000, 0.015, 0.31), "too cheap to matter");
+
             // Thinking that was most of a short answer at high effort or above
             var thought = new TokenUsage { Input = 500, Output = 6_400, Thinking = 6_000, CacheRead = 20_000 };
             Eq("Claude thought for ~6.0k tokens ($0.12) to write a short answer at high effort. For questions like this, a lower effort in the effort picker (Medium, or Auto) thinks less.",
