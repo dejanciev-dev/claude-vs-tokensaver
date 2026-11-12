@@ -892,6 +892,32 @@ Picked on 2026-11-11.
 
 ---
 
+## Phase 35 — Where the month is heading
+
+Planned on 2026-11-12.
+
+- [ ] **Month pace in the meter.** The meter's tooltip adds where this month is heading at its pace so far, as the
+      report's month line does (from the 3rd)
+- [ ] **Pace warning.** Once a month, a note when this month's pace would pass the monthly cost warning before the
+      month ends, while there is still time to slow down
+- [ ] **More per model in the report.** The *By model* rows add the cost per turn and the cache hit rate
+- [ ] **Average conversation.** The report says how many conversations there were and what one costs on average
+      (and the median), above the costliest ones
+
+---
+
+## Phase 36 — Conversations that grow
+
+Planned on 2026-11-12.
+
+- [ ] **Conversation hard limit.** Optional (off by default): once this conversation's cost passes an amount, sending
+      a prompt asks first, like the daily limit
+- [ ] **Long conversations in the report.** What the turns past the 30th of a conversation cost, and per turn
+      against the earlier ones: the price of not starting anew or compacting
+- [ ] **Manual checks for Phases 35–36.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
+
+---
+
 ## Working in Visual Studio — daily loop
 
 1. Core logic change → edit in `ClaudeVS.Core` → run tests (`ClaudeVS.Core.Tests` → Set as Startup → Ctrl+F5, or `dotnet run` in its folder).
