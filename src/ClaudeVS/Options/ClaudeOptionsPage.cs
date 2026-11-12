@@ -84,6 +84,9 @@ namespace ClaudeVS.Options
         [Category("Cost limits"), DisplayName("Ask before sending past daily cost (USD)"), Description("Once today's spend in Visual Studio, across all conversations and chat windows, has passed this amount (at API prices), sending a prompt asks first; after you say yes, not again today until the next multiple. Commands such as /compact always go. 0 (the default) never asks.")]
         public double DailyCostLimitUsd { get; set; } = 0;
 
+        [Category("Cost limits"), DisplayName("Ask before sending past conversation cost (USD)"), Description("Once this chat window's conversation has cost this amount (at API prices), sending a prompt asks first; after you say yes, not again in this conversation until the next multiple. A new chat starts again. Commands such as /compact always go. 0 (the default) never asks.")]
+        public double ConversationCostLimitUsd { get; set; } = 0;
+
         [Category("Cost limits"), DisplayName("Warn at agent cost (USD)"), Description("A subagent's row in the agents panel turns amber once its requests pass this amount (at API prices), so one that runs away can be stopped. 0 turns it off.")]
         public double AgentCostWarningUsd { get; set; } = 0.5;
 

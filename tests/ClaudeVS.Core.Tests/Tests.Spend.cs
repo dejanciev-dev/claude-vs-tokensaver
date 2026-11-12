@@ -1136,6 +1136,20 @@ namespace ClaudeVS.Core.Tests
             True(l.Ask(60, now.AddDays(1)) != null, "a new day: asked again");
             Eq(null, new SpendLimit(0).Ask(1000, now), "0: never asks");
             Eq(null, l.Ask(double.NaN, now), "no spend known");
+
+            // One conversation's cost: no new start at midnight, a new conversation starts again
+            var conv = new SpendLimit(10, perConversation: true);
+            Eq(null, conv.Ask(9.5, now), "below the limit");
+            string cq = conv.Ask(12, now);
+            Eq("This conversation has cost $12.00, past your conversation limit of $10.00 (at API prices; Tools → Options → Claude Code → Ask before sending past conversation cost). "
+                + "Each prompt sends the whole conversation again; New chat or /compact starts small.\n\n"
+                + "Send this prompt anyway? You won't be asked again in this conversation until $20.00.", cq);
+            conv.Allow(12, now);
+            Eq(null, conv.Ask(15, now.AddDays(1)), "the next day: still allowed up to $20");
+            True(conv.Ask(21, now.AddDays(1))?.Contains("until $30.00") == true, "past $20: asked again");
+            conv.Allow(21, now.AddDays(1));
+            conv.Reset();
+            True(conv.Ask(21, now.AddDays(1)) != null, "a new conversation: asked again");
         }
 
         private static void Test_PaceWarning()

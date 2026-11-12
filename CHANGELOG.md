@@ -12,6 +12,9 @@ All notable changes to this project are listed here. The format follows
 - **Pace warning**: once a month, from the 7th and while 3 days or more are left, the chat says when this month's
   pace would pass the monthly cost warning (or the one per solution) by the month's end, while there is still time
   to slow down. Not repeated after restarting Visual Studio.
+- **Conversation limit** (Options → Cost limits → *Ask before sending past conversation cost (USD)*, off by
+  default): once a chat window's conversation has cost the amount, sending a prompt asks first, like the daily limit.
+  After a yes, not again in that conversation until the next multiple; a new chat starts again.
 
 ### Changed
 - **More per model in the savings report**: each *By model* row adds the cost per turn and the cache hit rate (the

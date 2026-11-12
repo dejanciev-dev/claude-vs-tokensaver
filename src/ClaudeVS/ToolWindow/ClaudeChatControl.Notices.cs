@@ -268,6 +268,29 @@ namespace ClaudeVS.ToolWindow
             return true;
         }
 
+        /// <summary>Options → Ask before sending past conversation cost, for this chat window's conversation.</summary>
+        private readonly Core.Tokens.SpendLimit _conversationLimit = new Core.Tokens.SpendLimit(perConversation: true);
+
+        /// <summary>Before a typed prompt: true when it may be sent, asking first once this conversation has passed its limit.</summary>
+        private bool PastConversationLimitConfirmed()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            _conversationLimit.LimitUsd = Options?.ConversationCostLimitUsd ?? 0;
+            if (_conversationLimit.LimitUsd <= 0 || _meterModel == null) return true;
+            var now = DateTime.UtcNow;
+            double spent = _meterModel.SessionCostUsd;
+            string question = _conversationLimit.Ask(spent, now);
+            if (question == null) return true;
+            int answer = VsShellUtilities.ShowMessageBox(ClaudeVSPackage.Instance ?? (IServiceProvider)ServiceProvider.GlobalProvider,
+                question, "Conversation limit passed",
+                Microsoft.VisualStudio.Shell.Interop.OLEMSGICON.OLEMSGICON_WARNING,
+                Microsoft.VisualStudio.Shell.Interop.OLEMSGBUTTON.OLEMSGBUTTON_OKCANCEL,
+                Microsoft.VisualStudio.Shell.Interop.OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_SECOND);
+            if (answer != 1 /* IDOK */) { ClaudeOutputPane.WriteLine("Prompt not sent: past the conversation limit."); return false; }
+            _conversationLimit.Allow(spent, now);
+            return true;
+        }
+
         // ---------------- Pricey context ----------------
 
         private bool _gavePriceyContextTip;
@@ -374,6 +397,7 @@ namespace ClaudeVS.ToolWindow
             _gaveLargeOutputTip = false;
             _shellCalls.Clear();
             _costWatch.Reset();
+            _conversationLimit.Reset();
             _gaveBaseContextTip = false;
             _gaveCacheBreakTip = false;
             _gavePriceyContextTip = false;
