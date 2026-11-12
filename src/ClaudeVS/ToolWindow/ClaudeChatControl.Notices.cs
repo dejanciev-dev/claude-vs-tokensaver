@@ -195,6 +195,8 @@ namespace ClaudeVS.ToolWindow
         /// <summary>This week's spend from Monday (Options → Warn at weekly cost, off by default).</summary>
         private static readonly Core.Tokens.SpendWatch WeeklyCost = new Core.Tokens.SpendWatch(Core.Tokens.SpendPeriod.Week, 0);
         private static readonly Core.Tokens.SpendHistory RecentSpend = new Core.Tokens.SpendHistory();
+        /// <summary>What the conversations logged before Visual Studio started cost, for the meter's tooltip.</summary>
+        private static readonly Core.Tokens.ConversationStats PastConversations = new Core.Tokens.ConversationStats();
         private static bool _spendLoaded;
         private static volatile bool _spendLoadDone;
         private double _dailyCounted; // of this meter's SessionCostUsd, already added to DailyCost and MonthlyCost
@@ -206,7 +208,7 @@ namespace ClaudeVS.ToolWindow
             _spendLoaded = true;
             _ = System.Threading.Tasks.Task.Run(() =>
             {
-                try { var all = Usage.ReadAll(); DailyCost.Load(all); WeeklyCost.Load(all); MonthlyCost.Load(all); RecentSpend.Load(all); _spendLoadDone = true; }
+                try { var all = Usage.ReadAll(); DailyCost.Load(all); WeeklyCost.Load(all); MonthlyCost.Load(all); RecentSpend.Load(all); PastConversations.Load(all); _spendLoadDone = true; }
                 catch (Exception ex) { ClaudeOutputPane.WriteLine("Could not read usage log: " + ex.Message); }
             });
         }
