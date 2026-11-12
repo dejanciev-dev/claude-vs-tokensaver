@@ -514,6 +514,16 @@ namespace ClaudeVS.Core.Tests
             True(text.Contains("Costliest conversations:"), text);
             True(text.Contains("$  1.00     2 turns  shop  “fix the cart total”"), text);
             True(text.Contains("$  0.70     1 turn   blog"), text);
+            True(text.Contains("Conversations: 2, $0.85 on average (median $0.85), 1.5 turns on average\r\nCostliest conversations:")
+                || text.Contains("Conversations: 2, $0.85 on average (median $0.85), 1.5 turns on average\nCostliest conversations:"), "above the list, $0 left out: " + text);
+            var more = recs.Concat(new[]
+            {
+                new UsageRecord { Timestamp = t.AddMinutes(6), SessionId = "d", CostUsd = 0.10 },
+                new UsageRecord { Timestamp = t.AddMinutes(7), SessionId = "d", CostUsd = 0 },
+                new UsageRecord { Timestamp = t.AddMinutes(8), SessionId = "e", CostUsd = 4.20 },
+            }).ToArray();
+            Eq("Conversations: 4, $1.50 on average (median $0.85), 1.5 turns on average", SavingsReport.Build(more, new PriceTable()).ConversationsLine(), "even count: the middle two");
+            Eq(null, SavingsReport.Build(recs.Take(2).ToArray(), new PriceTable()).ConversationsLine(), "one conversation: no line");
             True(!SavingsReport.Build(recs, new PriceTable(), solution: @"C:\src\shop").ToText().Contains("Costliest conversations:"), "one conversation: no list");
             Eq("shop", SolutionBreakdown.NameOf(@"C:\src\shop\"), "folder name");
         }

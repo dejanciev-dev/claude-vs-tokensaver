@@ -906,8 +906,10 @@ Planned on 2026-11-12.
 - [x] **More per model in the report.** The *By model* rows add the cost per turn and the cache hit rate.
       `opus  2 turns  $0.80  (67% of turns, $0.400 per turn, cache 90%)`; the hit rate from the main agent's tokens,
       as the family is the main agent's model. `ModelBreakdown.CostPerTurnUsd`, `CacheHitPercent`
-- [ ] **Average conversation.** The report says how many conversations there were and what one costs on average
-      (and the median), above the costliest ones
+- [x] **Average conversation.** The report says how many conversations there were and what one costs on average
+      (and the median), above the costliest ones. `Conversations: 32, $0.40 on average (median $0.12), 6.2 turns on
+      average`, from the logged session ids (conversations that cost nothing left out, as in the list); shown with two
+      or more. `SavingsReport.ConversationsLine`
 
 ---
 

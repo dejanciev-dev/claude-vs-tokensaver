@@ -419,6 +419,24 @@ namespace ClaudeVS.Core.Tokens
         /// </summary>
         public List<ConversationBreakdown> CostliestConversations { get; } = new List<ConversationBreakdown>();
 
+        /// <summary>Conversations with a logged session id that cost something, and what one cost and how long it ran.</summary>
+        public int Conversations { get; set; }
+        public double ConversationAverageUsd { get; set; }
+        public double ConversationMedianUsd { get; set; }
+        public double ConversationAverageTurns { get; set; }
+
+        /// <summary>
+        /// "Conversations: 32, $0.40 on average (median $0.12), 6.2 turns on average"; null with fewer than two. A median
+        /// well under the average: a few long conversations cost most.
+        /// </summary>
+        public string ConversationsLine()
+        {
+            if (Conversations < 2) return null;
+            var c = CultureInfo.InvariantCulture;
+            return $"Conversations: {Conversations}, ${ConversationAverageUsd.ToString("0.00", c)} on average (median ${ConversationMedianUsd.ToString("0.00", c)}), "
+                + $"{ConversationAverageTurns.ToString("0.#", c)} turns on average";
+        }
+
         /// <summary>Turns, tokens, cost and cache per local day, oldest first.</summary>
         public List<DayBreakdown> ByDay { get; } = new List<DayBreakdown>();
         /// <summary>How many days the text shows (the latest).</summary>
@@ -561,7 +579,7 @@ namespace ClaudeVS.Core.Tokens
                     .ThenBy(b => b.Effort, StringComparer.Ordinal));
 
             rep.Costliest.AddRange(list.Where(r => r.CostUsd > 0).OrderByDescending(r => r.CostUsd).Take(CostliestCount));
-            rep.CostliestConversations.AddRange(list
+            var conversations = list
                 .Where(r => !string.IsNullOrEmpty(r.SessionId))
                 .GroupBy(r => r.SessionId, StringComparer.Ordinal)
                 .Select(g => new ConversationBreakdown
@@ -575,7 +593,17 @@ namespace ClaudeVS.Core.Tokens
                 })
                 .Where(b => b.CostUsd > 0)
                 .OrderByDescending(b => b.CostUsd)
-                .Take(CostliestCount));
+                .ToList();
+            rep.CostliestConversations.AddRange(conversations.Take(CostliestCount));
+            rep.Conversations = conversations.Count;
+            if (conversations.Count > 0)
+            {
+                rep.ConversationAverageUsd = conversations.Average(b => b.CostUsd);
+                rep.ConversationAverageTurns = conversations.Average(b => b.Turns);
+                var costs = conversations.Select(b => b.CostUsd).OrderBy(c => c).ToList();
+                int mid = costs.Count / 2;
+                rep.ConversationMedianUsd = costs.Count % 2 == 1 ? costs[mid] : (costs[mid - 1] + costs[mid]) / 2;
+            }
 
             foreach (var day in list.GroupBy(r => r.Timestamp.ToLocalTime().Date))
             {
@@ -757,6 +785,7 @@ namespace ClaudeVS.Core.Tokens
             {
                 // Whole conversations: a long one of cheap turns can cost more than any single turn shows.
                 sb.AppendLine();
+                if (ConversationsLine() is string conversations) sb.AppendLine(conversations);
                 sb.AppendLine("Costliest conversations:");
                 foreach (var b in CostliestConversations)
                 {
