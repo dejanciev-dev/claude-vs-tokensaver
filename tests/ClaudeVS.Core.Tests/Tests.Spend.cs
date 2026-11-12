@@ -425,6 +425,25 @@ namespace ClaudeVS.Core.Tests
             Eq(0, SavingsReport.Build(new[] { recs[4] }, new PriceTable()).ByEffort.Count, "no effort known: no list");
         }
 
+        private static void Test_SavingsReport_ByModelDetail()
+        {
+            var t = DateTime.UtcNow.AddDays(-1);
+            var recs = new[]
+            {
+                new UsageRecord { Timestamp = t, ModelUsed = "claude-opus-5-5", CostUsd = 0.50, InputTokens = 1_000, CacheReadTokens = 90_000, CacheWriteTokens = 9_000,
+                    Agents = new List<AgentTokens> { new AgentTokens { Model = "claude-haiku-5-5", InputTokens = 50_000 } } }, // not the main agent's cache
+                new UsageRecord { Timestamp = t, ModelUsed = "claude-opus-5-5", CostUsd = 0.30, InputTokens = 0, CacheReadTokens = 0, CacheWriteTokens = 0 },
+                new UsageRecord { Timestamp = t, ModelUsed = "claude-haiku-5-5", CostUsd = 0.01 },
+            };
+            var rep = SavingsReport.Build(recs, new PriceTable());
+            var opus = rep.ByModel.Single(b => b.Family == "opus");
+            True(Math.Abs(opus.CostPerTurnUsd - 0.40) < 1e-9, "per turn: " + opus.CostPerTurnUsd);
+            True(Math.Abs(opus.CacheHitPercent - 90) < 1e-9, "the main agent's tokens only: " + opus.CacheHitPercent);
+            string text = rep.ToText();
+            True(text.Contains("  opus        2 turns  $    0.80  (67% of turns, $0.400 per turn, cache 90%)"), text);
+            True(text.Contains("(33% of turns, $0.010 per turn, cache 0%)"), "no input tokens: 0% — " + text);
+        }
+
         private static void Test_SavingsReport_ToolResults()
         {
             var t = DateTime.UtcNow.AddDays(-1);
