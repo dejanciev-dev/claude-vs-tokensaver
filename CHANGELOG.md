@@ -46,6 +46,8 @@ All notable changes to this project are listed here. The format follows
   (`after a pause: 3 ($0.20), model switch: 1 ($0.05), other: 1 ($0.04)`).
 - **Cache rewrites in the usage CSV**: a last `cache_rewrite` column with the likely cause (`pause`, `model` or
   `other`) on the turns the savings report counts as having written the cache again, empty on the others.
+- **End reason in the usage CSV**: a last `end_reason` column, why a turn that ended in an error ended, as Claude
+  Code said it (`aborted_streaming` for a Stop, `api_error` …); empty on turns that finished.
 - **Failed turns in the savings report**: what the turns that ended in an error cost (interrupted, a limit or an API
   error), and their share of the spend (`Ended in an error: 3 turns, $0.40 (1% of the spend)`), when they cost
   anything. The usage log now keeps why such a turn ended (`end`), and the line says it: `(1% of the spend; 2
