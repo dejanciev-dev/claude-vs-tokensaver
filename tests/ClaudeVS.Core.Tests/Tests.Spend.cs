@@ -620,6 +620,20 @@ namespace ClaudeVS.Core.Tests
             True(text.Contains("$  1.00     3 turns  shop  (1 cache rewrite, 1 error)  “go on”"), text);
             True(text.Contains("$  0.70     1 turn   blog\r\n") || text.Contains("$  0.70     1 turn   blog\n"), text);
             Eq("(2 cache rewrites, 3 errors)", new ConversationBreakdown { CacheRewrites = 2, Errors = 3 }.DetailsText(), "plural");
+
+            // Models, when more than one: by turns, most first
+            var mixed = recs.Concat(new[]
+            {
+                new UsageRecord { Timestamp = t.AddMinutes(2), SessionId = "b", ModelUsed = "claude-haiku-5-5", CostUsd = 0.01 },
+                new UsageRecord { Timestamp = t.AddMinutes(3), SessionId = "b", ModelUsed = "claude-haiku-5-5", CostUsd = 0.01 },
+                new UsageRecord { Timestamp = t.AddMinutes(4), SessionId = "b", CostUsd = 0.01 },
+            });
+            var b = SavingsReport.Build(mixed, new PriceTable()).CostliestConversations[1];
+            Eq("haiku 2, other 1, sonnet 1", string.Join(", ", b.Models.Select(m => m.Key + " " + m.Value)), "ties by name");
+            Eq("(haiku 2, other 1, sonnet 1)", b.DetailsText());
+            Eq(1, a.Models.Count, "one model");
+            var both = new ConversationBreakdown { Errors = 1 }.WithModels(new[] { new UsageRecord { ModelUsed = "claude-opus-5-5" }, new UsageRecord { ModelUsed = "claude-haiku-5-5" } });
+            Eq("(haiku 1, opus 1; 1 error)", both.DetailsText(), "models first");
         }
 
         private static void Test_SavingsReport_CostliestConversations()
