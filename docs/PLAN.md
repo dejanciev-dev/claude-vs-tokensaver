@@ -1060,7 +1060,7 @@ Planned on 2026-11-13. Probed with 2.1.323: a Stop ends the turn with `terminal_
 
 Planned on 2026-11-13.
 
-- [ ] **Rewrites and errors per conversation.** Each *Costliest conversations* row adds its cache rewrites and the
+- [x] **Rewrites and errors per conversation.** Each *Costliest conversations* row adds its cache rewrites and the
       turns that ended in an error, when there are any: `(2 cache rewrites, 1 error)`. From
       `SavingsReport.CacheRewriteCauses` and the logged errors. `ConversationBreakdown.CacheRewrites`, `Errors`
 - [ ] **Models per conversation.** Each row adds the models its turns ran on, by turns, when more than one:
