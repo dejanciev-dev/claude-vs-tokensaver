@@ -455,6 +455,37 @@ namespace ClaudeVS.Core.Tests
             Eq(null, SessionNotices.FailedTurnCost(false, null, 2.00), "finished");
         }
 
+        private static void Test_SavingsReport_OneHourCache()
+        {
+            var t = new DateTime(2026, 11, 10, 9, 0, 0, DateTimeKind.Utc);
+            const string sonnet = "claude-sonnet-5-5";
+            var recs = new[]
+            {
+                // a: writes 40k to the 1-hour cache: 40k × (2×2 − 2.5) = $0.06 above 5-minute writes
+                new UsageRecord { Timestamp = t, SessionId = "a", ModelUsed = sonnet, CacheWriteTokens = 40_000, CacheWrite1hTokens = 40_000 },
+                // 30 min later (started 29 min after): read 40k, which a 5-minute cache would have written again: 40k × (2.5 − 0.1) = $0.096
+                new UsageRecord { Timestamp = t.AddMinutes(30), DurationMs = 60_000, SessionId = "a", ModelUsed = sonnet, CacheReadTokens = 40_000 },
+                // 2 min later: the 5-minute cache would have held too
+                new UsageRecord { Timestamp = t.AddMinutes(32), SessionId = "a", ModelUsed = sonnet, CacheReadTokens = 40_000 },
+                // 3 hours later: even the 1-hour cache had expired
+                new UsageRecord { Timestamp = t.AddHours(3), SessionId = "a", ModelUsed = sonnet, CacheWriteTokens = 40_000 },
+                // b: no 1-hour writes, so its pause does not count
+                new UsageRecord { Timestamp = t, SessionId = "b", ModelUsed = sonnet, CacheWriteTokens = 40_000 },
+                new UsageRecord { Timestamp = t.AddMinutes(10), SessionId = "b", ModelUsed = sonnet, CacheReadTokens = 40_000 },
+            };
+            var rep = SavingsReport.Build(recs, new PriceTable());
+            True(Math.Abs(rep.OneHourExtraUsd - 0.06) < 1e-9, "extra: " + rep.OneHourExtraUsd);
+            Eq(1, rep.OneHourPaidTurns, "turns kept warm");
+            True(Math.Abs(rep.OneHourSavedUsd - 0.096) < 1e-9, "saved: " + rep.OneHourSavedUsd);
+            Eq("$0.06 more to write, ≈ $0.10 saved on 1 turn after a pause of 5–60 min (net ≈ $0.04 saved)", rep.OneHourCacheLine());
+            True(rep.ToText().Contains("1-hour cache:               $0.06 more to write"), rep.ToText());
+
+            var lost = SavingsReport.Build(recs.Take(1), new PriceTable());
+            Eq("$0.06 more to write, ≈ $0.00 saved on 0 turns after a pause of 5–60 min (net ≈ $0.06 lost)", lost.OneHourCacheLine(), "never came back in time");
+            Eq(null, SavingsReport.Build(recs.Skip(4), new PriceTable()).OneHourCacheLine(), "no 1-hour writes: no line");
+            Eq(TimeSpan.FromMinutes(29), SavingsReport.PauseBefore(recs[1], recs[0]), "pause: to the turn's start");
+        }
+
         private static void Test_SavingsReport_CacheRewriteCauses()
         {
             var t = new DateTime(2026, 11, 10, 9, 0, 0, DateTimeKind.Utc);
