@@ -600,6 +600,28 @@ namespace ClaudeVS.Core.Tests
             Eq(null, SavingsReport.Build(recs, new PriceTable(), nowUtc: At(12, 5)).MonthLine(), "nothing in December yet");
         }
 
+        private static void Test_SavingsReport_ConversationDetails()
+        {
+            var t = new DateTime(2026, 11, 9, 9, 0, 0, DateTimeKind.Local).ToUniversalTime();
+            var recs = new[]
+            {
+                new UsageRecord { Timestamp = t, SessionId = "a", Solution = @"C:\src\shop", ModelUsed = "claude-opus-5-5", CostUsd = 0.40, CacheWriteTokens = 30_000 },
+                new UsageRecord { Timestamp = t.AddMinutes(20), SessionId = "a", Solution = @"C:\src\shop", ModelUsed = "claude-opus-5-5", CostUsd = 0.50, CacheWriteTokens = 30_000 },
+                new UsageRecord { Timestamp = t.AddMinutes(21), SessionId = "a", Solution = @"C:\src\shop", ModelUsed = "claude-opus-5-5", CostUsd = 0.10, IsError = true, PromptPreview = "go on" },
+                new UsageRecord { Timestamp = t.AddMinutes(1), SessionId = "b", Solution = @"C:\src\blog", ModelUsed = "claude-sonnet-5-5", CostUsd = 0.70 },
+            };
+            var rep = SavingsReport.Build(recs, new PriceTable());
+            var a = rep.CostliestConversations[0];
+            Eq(1, a.CacheRewrites, "after the 20-minute pause");
+            Eq(1, a.Errors, "errors");
+            Eq("(1 cache rewrite, 1 error)", a.DetailsText());
+            Eq(null, rep.CostliestConversations[1].DetailsText(), "nothing to add");
+            string text = rep.ToText();
+            True(text.Contains("$  1.00     3 turns  shop  (1 cache rewrite, 1 error)  “go on”"), text);
+            True(text.Contains("$  0.70     1 turn   blog\r\n") || text.Contains("$  0.70     1 turn   blog\n"), text);
+            Eq("(2 cache rewrites, 3 errors)", new ConversationBreakdown { CacheRewrites = 2, Errors = 3 }.DetailsText(), "plural");
+        }
+
         private static void Test_SavingsReport_CostliestConversations()
         {
             var t = new DateTime(2026, 11, 9, 9, 0, 0, DateTimeKind.Local).ToUniversalTime();

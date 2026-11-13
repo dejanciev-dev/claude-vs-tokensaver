@@ -232,6 +232,21 @@ namespace ClaudeVS.Core.Tokens
         public string Solution { get; set; }
         /// <summary>The first prompt logged for it (only with Options → Log prompt preview); else null.</summary>
         public string FirstPrompt { get; set; }
+        /// <summary>Its turns that wrote it to the cache again (<see cref="SavingsReport.IsCacheRewrite"/>).</summary>
+        public int CacheRewrites { get; set; }
+        /// <summary>Its turns that ended in an error.</summary>
+        public int Errors { get; set; }
+
+        /// <summary>What the row adds after the solution: "(2 cache rewrites, 1 error)"; null with nothing to add.</summary>
+        public string DetailsText()
+        {
+            var parts = new List<string>();
+            var trouble = new List<string>();
+            if (CacheRewrites > 0) trouble.Add($"{CacheRewrites} cache {(CacheRewrites == 1 ? "rewrite" : "rewrites")}");
+            if (Errors > 0) trouble.Add($"{Errors} {(Errors == 1 ? "error" : "errors")}");
+            if (trouble.Count > 0) parts.Add(string.Join(", ", trouble));
+            return parts.Count > 0 ? "(" + string.Join("; ", parts) + ")" : null;
+        }
     }
 
     /// <summary>The turns sent with one effort, in the savings report.</summary>
@@ -732,6 +747,7 @@ namespace ClaudeVS.Core.Tokens
                     .ThenBy(b => b.Effort, StringComparer.Ordinal));
 
             rep.Costliest.AddRange(list.Where(r => r.CostUsd > 0).OrderByDescending(r => r.CostUsd).Take(CostliestCount));
+            var rewrites = CacheRewriteCauses(list).GroupBy(kv => kv.Key.SessionId, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
             var conversations = list
                 .Where(r => !string.IsNullOrEmpty(r.SessionId))
                 .GroupBy(r => r.SessionId, StringComparer.Ordinal)
@@ -743,6 +759,8 @@ namespace ClaudeVS.Core.Tokens
                     CostUsd = g.Sum(r => r.CostUsd + r.RouterCostUsd),
                     Solution = g.First().Solution,
                     FirstPrompt = g.Select(r => r.PromptPreview).FirstOrDefault(p => !string.IsNullOrWhiteSpace(p)),
+                    CacheRewrites = rewrites.TryGetValue(g.Key, out var n) ? n : 0,
+                    Errors = g.Count(r => r.IsError),
                 })
                 .Where(b => b.CostUsd > 0)
                 .OrderByDescending(b => b.CostUsd)
@@ -963,7 +981,8 @@ namespace ClaudeVS.Core.Tokens
                 {
                     string where = Solution == null ? SolutionBreakdown.NameOf(b.Solution) + "  " : "";
                     string what = b.FirstPrompt != null ? "“" + OneLine(b.FirstPrompt, 50) + "”" : "";
-                    sb.AppendLine($"  {b.Started.ToLocalTime():yyyy-MM-dd HH:mm}  ${b.CostUsd,6:0.00}  {b.Turns,4} {(b.Turns == 1 ? "turn " : "turns")}  {where}{what}".TrimEnd());
+                    string details = b.DetailsText() is string d ? d + "  " : "";
+                    sb.AppendLine($"  {b.Started.ToLocalTime():yyyy-MM-dd HH:mm}  ${b.CostUsd,6:0.00}  {b.Turns,4} {(b.Turns == 1 ? "turn " : "turns")}  {where}{details}{what}".TrimEnd());
                 }
             }
             if (ByDay.Count > 1)
