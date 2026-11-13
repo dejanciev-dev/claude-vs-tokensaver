@@ -1110,7 +1110,7 @@ Planned on 2026-11-13.
       once per Visual Studio session. `ConversationStats.TurnMedian`, `TurnNote`
 - [x] **Turn spread in the report.** Above the costliest turns: `Turns: median $0.03, 9 in 10 up to $0.40, dearest
       $2.10`, from the turns that cost something; shown with 10 or more. `SavingsReport.TurnsLine`
-- [ ] **Manual checks for Phases 44–45.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md). Section 12,
+- [x] **Manual checks for Phases 44–45.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md). Section 12,
       *The 1-hour cache and your usual turn*: the cache line, the CSV's `pause_s`, the footer marker and the turn
       spread; Release is now 13
 
