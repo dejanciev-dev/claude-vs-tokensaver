@@ -460,6 +460,20 @@ namespace ClaudeVS.Core.Tokens
             return EarlierTurnUsd > 0 ? line + $" against ${EarlierTurnUsd.ToString("0.000", c)} in the first {LongConversationFromTurn}" : line;
         }
 
+        /// <summary>Turns that ended in an error (interrupted, a limit, an API error) and what they cost, router included.</summary>
+        public int FailedTurns { get; set; }
+        public double FailedUsd { get; set; }
+        /// <summary>Percent of the period's spend.</summary>
+        public double FailedShare { get; set; }
+
+        /// <summary>"3 turns, $0.40 (1% of the spend)"; null when the failed turns cost nothing.</summary>
+        public string FailedTurnsLine()
+        {
+            if (FailedTurns == 0 || FailedUsd <= 0) return null;
+            var c = CultureInfo.InvariantCulture;
+            return $"{FailedTurns} {(FailedTurns == 1 ? "turn" : "turns")}, ${FailedUsd.ToString("0.00", c)} ({FailedShare.ToString("0", c)}% of the spend)";
+        }
+
         public int LongContextTurns { get; set; }
         public double LongContextExtraUsd { get; set; }
         public List<ModelBreakdown> ByModel { get; } = new List<ModelBreakdown>();
@@ -655,6 +669,10 @@ namespace ClaudeVS.Core.Tokens
                 }
             }
             rep.EarlierTurnUsd = earlierTurns > 0 ? earlierUsd / earlierTurns : 0;
+            var failed = list.Where(r => r.IsError).ToList();
+            rep.FailedTurns = failed.Count;
+            rep.FailedUsd = failed.Sum(r => r.CostUsd + r.RouterCostUsd);
+            rep.FailedShare = rep.ActualCostUsd > 0 ? 100.0 * rep.FailedUsd / rep.ActualCostUsd : 0;
             rep.LongConversationShare = rep.LongConversationTurns > 0 && list.Sum(r => r.CostUsd + r.RouterCostUsd) is double all && all > 0
                 ? 100.0 * rep.LongConversationUsd / all : 0;
             var timed = list.Where(r => r.RouterMs > 0).ToList();
@@ -850,6 +868,8 @@ namespace ClaudeVS.Core.Tokens
                 sb.AppendLine($"                            {causes}");
             if (LongConversationsLine() is string longOnes)
                 sb.AppendLine($"Past a conversation's 30th: {longOnes}  (each turn sends the whole conversation again; /compact or a new chat starts small)");
+            if (FailedTurnsLine() is string failedOnes)
+                sb.AppendLine($"Ended in an error:          {failedOnes}  (interrupted, a limit or an API error: paid for, nothing finished)");
             if (ThinkingTokens > 0)
                 sb.AppendLine($"Thinking:                   {TokenMeter.Format(ThinkingTokens)} tokens ≈ ${ThinkingCostUsd:0.00}  ({(OutputTokens > 0 ? 100.0 * ThinkingTokens / OutputTokens : 0):0}% of output tokens; Thinking off or lower effort cuts it)");
             if (FableTurns > 0)
