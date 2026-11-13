@@ -1151,7 +1151,7 @@ Planned on 2026-11-13.
       `CacheHitPercent`
 - [x] **Conversations per solution.** The rows add the conversations (logged session ids): `12 conversations`.
       `SolutionBreakdown.Conversations`
-- [ ] **Manual checks for Phases 46–48.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md). Section 13,
+- [x] **Manual checks for Phases 46–48.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md). Section 13,
       *What you send, time and solutions*: the CSV columns, the attachments line, the times per model and effort,
       the time waited and the solution rows; Release is now 14
 

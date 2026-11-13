@@ -166,7 +166,19 @@ claude.ai plan; with an API key Claude Code writes the 5-minute one, and the cac
 | With 20 or more turns logged, ask for something much bigger than usual (e.g. Opus, a big file, a long answer) | The turn footer adds `· …× your usual turn` after the cost, when the turn cost $0.05 or more and 5× the median. Not on ordinary turns. (The logged turns are read once per Visual Studio session, so today's turns count after a restart) |
 | **Show Savings Report** with 10 or more turns that cost something | `Turns: median $…, 9 in 10 up to $…, dearest $…` just above `Costliest turns:` |
 
-## 13. Release (Phase 5)
+## 13. What you send, time and solutions (Phases 46–48)
+
+Needs **Options → Diagnostics → Keep local usage log** on.
+
+| Do | Expect |
+|---|---|
+| A prompt with a selection attached (select lines, **Ask Claude About Selection**), then one with nothing attached | **Export Usage as CSV…**: the last columns `prompt_chars`, `attached_lines`, `attached_files`; the selection's line count on the first, `0` on the second |
+| **Show Savings Report** | `With attachments:           … turns, $… per turn (… lines on average); without: $… per turn` under the file references line |
+| The same report | `Waiting on Claude:          … over … turns (… s per turn)` right under the `Period:` line |
+| The same report | `By model:` and `By effort:` rows end with `, … s per turn)` |
+| The same report, all solutions, with turns in two solutions or more | `By solution:` rows add `($… per turn, cache …%, … conversations` and, for a period reaching back before this month, `; $… this month)` |
+
+## 14. Release (Phase 5)
 
 These need you rather than a check list:
 
