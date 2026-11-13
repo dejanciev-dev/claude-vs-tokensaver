@@ -68,6 +68,8 @@ All notable changes to this project are listed here. The format follows
   median turn in the usage log or more (and $0.05 or more), once 20 turns are logged.
 - **Turn spread in the savings report**: above the costliest turns, what a turn usually costs (`Turns: median $0.03,
   9 in 10 up to $0.40, dearest $2.10`), with 10 or more turns that cost something.
+- **What you sent, in the usage CSV**: `prompt_chars`, `attached_lines` and `attached_files` columns, the prompt's
+  length and what was attached to it, logged since the first versions but not exported until now.
 - **Failed turns in the savings report**: what the turns that ended in an error cost (interrupted, a limit or an API
   error), and their share of the spend (`Ended in an error: 3 turns, $0.40 (1% of the spend)`), when they cost
   anything. The usage log now keeps why such a turn ended (`end`), and the line says it: `(1% of the spend; 2

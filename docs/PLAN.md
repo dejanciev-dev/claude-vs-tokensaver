@@ -1121,7 +1121,7 @@ Planned on 2026-11-13.
 Planned on 2026-11-13. The usage log has held the prompt's length and the attached lines and files since Phase 2;
 neither the CSV nor the report shows them.
 
-- [ ] **Prompt and attachments in the CSV.** `prompt_chars`, `attached_lines` and `attached_files` columns after
+- [x] **Prompt and attachments in the CSV.** `prompt_chars`, `attached_lines` and `attached_files` columns after
       `pause_s`. `UsageCsv.Columns`
 - [ ] **Attached context in the report.** Turns sent with files or a selection attached, against those without:
       `With attachments:          40 turns, $0.120 per turn (210 lines on average); without: $0.050 per turn`;
