@@ -1321,7 +1321,7 @@ namespace ClaudeVS.ToolWindow
         private HaikuRouter _haikuRouter;
         private static readonly TimeSpan HaikuRouteTimeout = TimeSpan.FromSeconds(4);
 
-        /// <summary>The Haiku router while the option is on (started ahead of time: it takes ~14 s to start); null when off.</summary>
+        /// <summary>The Haiku router while the option is on (started and warmed ahead of time: ~14 s to start, then a slow first request); null when off.</summary>
         private HaikuRouter HaikuRouterIfOn()
         {
             if (Options?.HaikuRouting != true)
@@ -1333,7 +1333,7 @@ namespace ClaudeVS.ToolWindow
             {
                 _haikuRouter = new HaikuRouter(Options?.ClaudePath ?? "");
                 var r = _haikuRouter;
-                _ = System.Threading.Tasks.Task.Run(() => r.WarmUp()); // starting a process makes no model call
+                _ = System.Threading.Tasks.Task.Run(() => r.WarmUp()); // starts it and sends one short warm-up request (~$0.0001)
             }
             return _haikuRouter;
         }
