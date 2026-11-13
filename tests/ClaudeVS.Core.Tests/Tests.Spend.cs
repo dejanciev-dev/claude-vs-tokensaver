@@ -404,6 +404,26 @@ namespace ClaudeVS.Core.Tests
             Eq(null, SavingsReport.Build(recs.Take(2), new PriceTable()).CacheRewriteCausesLine(), "no rewrite: no causes");
         }
 
+        private static void Test_SavingsReport_FailedTurns()
+        {
+            var t = DateTime.UtcNow.AddDays(-1);
+            var recs = new[]
+            {
+                new UsageRecord { Timestamp = t, CostUsd = 0.30, IsError = true, RouterCostUsd = 0.001 },
+                new UsageRecord { Timestamp = t, CostUsd = 0.10, IsError = true },
+                new UsageRecord { Timestamp = t, CostUsd = 3.60 },
+                new UsageRecord { Timestamp = t, IsError = true }, // failed before it cost anything
+            };
+            var rep = SavingsReport.Build(recs, new PriceTable());
+            Eq(3, rep.FailedTurns, "turns");
+            True(Math.Abs(rep.FailedUsd - 0.401) < 1e-9, "router included: " + rep.FailedUsd);
+            Eq("3 turns, $0.40 (10% of the spend)", rep.FailedTurnsLine());
+            True(rep.ToText().Contains("Ended in an error:          3 turns, $0.40 (10% of the spend)  (interrupted"), rep.ToText());
+            Eq("1 turn, $0.10 (3% of the spend)", SavingsReport.Build(recs.Skip(1).Take(2), new PriceTable()).FailedTurnsLine(), "one turn");
+            Eq(null, SavingsReport.Build(recs.Skip(2), new PriceTable()).FailedTurnsLine(), "cost nothing: no line");
+            True(!SavingsReport.Build(recs.Skip(2), new PriceTable()).ToText().Contains("Ended in an error"), "no line in the text");
+        }
+
         private static void Test_SavingsReport_CacheRewriteCauses()
         {
             var t = new DateTime(2026, 11, 10, 9, 0, 0, DateTimeKind.Utc);
