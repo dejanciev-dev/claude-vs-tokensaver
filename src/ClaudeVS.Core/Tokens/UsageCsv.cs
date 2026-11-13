@@ -16,7 +16,7 @@ namespace ClaudeVS.Core.Tokens
         {
             "time", "solution", "model", "routed", "route_model", "route_effort", "router",
             "input", "output", "thinking", "cache_read", "cache_write", "cache_write_1h", "fast_tokens", "large_context_tokens", "agent_tokens", "agent_types",
-            "cost_usd", "router_cost_usd", "duration_ms", "error", "tokens_avoided", "route_reason", "prompt", "session", "effort", "tools", "turn",
+            "cost_usd", "router_cost_usd", "duration_ms", "error", "tokens_avoided", "route_reason", "prompt", "session", "effort", "tools", "turn", "cache_rewrite",
         };
 
         /// <summary>Writes the header and one row per record; returns the number of rows.</summary>
@@ -26,10 +26,13 @@ namespace ClaudeVS.Core.Tokens
             w.Write(string.Join(",", Columns));
             w.Write("\r\n");
             int rows = 0;
-            var turns = new Dictionary<string, int>(StringComparer.Ordinal); // turns so far per session id
-            foreach (var r in (records ?? Enumerable.Empty<UsageRecord>())
+            var list = (records ?? Enumerable.Empty<UsageRecord>())
                 .Where(r => solution == null || string.Equals((r.Solution ?? "").TrimEnd('\\', '/'), solution.TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase))
-                .OrderBy(r => r.Timestamp))
+                .OrderBy(r => r.Timestamp).ToList();
+            // The turns that wrote their conversation to the cache again, judged over the exported rows
+            var rewrites = SavingsReport.CacheRewriteCauses(list).ToDictionary(kv => kv.Key, kv => kv.Value);
+            var turns = new Dictionary<string, int>(StringComparer.Ordinal); // turns so far per session id
+            foreach (var r in list)
             {
                 // The turn's number in its conversation; empty for lines logged without a session id
                 string turn = "";
@@ -46,7 +49,7 @@ namespace ClaudeVS.Core.Tokens
                     r.InputTokens.ToString(c), r.OutputTokens.ToString(c), r.ThinkingTokens.ToString(c),
                     r.CacheReadTokens.ToString(c), r.CacheWriteTokens.ToString(c), r.CacheWrite1hTokens.ToString(c), r.FastTokens.ToString(c), r.LargeContextTokens.ToString(c), r.AgentTokensTotal.ToString(c), Text(AgentTypes(r.AgentTypes)),
                     r.CostUsd.ToString("0.######", c), r.RouterCostUsd.ToString("0.######", c), r.DurationMs.ToString(c),
-                    r.IsError ? "1" : "0", TokenEstimate.FromChars(r.CharsAvoided).ToString(c), Text(r.RouteReason), Text(r.PromptPreview), Text(r.SessionId), Text(r.Effort), Text(Tools(r.ToolResultTokens)), turn,
+                    r.IsError ? "1" : "0", TokenEstimate.FromChars(r.CharsAvoided).ToString(c), Text(r.RouteReason), Text(r.PromptPreview), Text(r.SessionId), Text(r.Effort), Text(Tools(r.ToolResultTokens)), turn, rewrites.TryGetValue(r, out var cause) ? cause : "",
                 };
                 w.Write(string.Join(",", cells));
                 w.Write("\r\n");
