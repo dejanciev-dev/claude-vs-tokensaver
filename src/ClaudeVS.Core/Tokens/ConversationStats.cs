@@ -18,13 +18,52 @@ namespace ClaudeVS.Core.Tokens
         /// <summary>Fewer other conversations than this say little: no comparison.</summary>
         public const int MinConversations = 3;
 
+        /// <summary>The logged turns that cost something, cheapest first (with or without a session id).</summary>
+        private List<double> _turns = new List<double>();
+
+        /// <summary>Fewer logged turns than this say little about your usual turn: no note.</summary>
+        public const int MinTurns = 20;
+        /// <summary>A turn this many times the median logged turn, and costing at least <see cref="TurnNoteFromUsd"/>, gets a note.</summary>
+        public const double TurnNoteTimes = 5;
+        public const double TurnNoteFromUsd = 0.05;
+
         public void Load(IEnumerable<UsageRecord> records)
         {
             var by = new Dictionary<string, double>(StringComparer.Ordinal);
+            var turns = new List<double>();
             foreach (var r in records ?? new UsageRecord[0])
+            {
+                double cost = r.CostUsd + r.RouterCostUsd;
+                if (cost > 0) turns.Add(cost);
                 if (!string.IsNullOrEmpty(r.SessionId))
-                    by[r.SessionId] = (by.TryGetValue(r.SessionId, out var v) ? v : 0) + r.CostUsd + r.RouterCostUsd;
-            lock (_gate) _bySession = by;
+                    by[r.SessionId] = (by.TryGetValue(r.SessionId, out var v) ? v : 0) + cost;
+            }
+            turns.Sort();
+            lock (_gate) { _bySession = by; _turns = turns; }
+        }
+
+        /// <summary>The median cost of the logged turns that cost something, and how many there are.</summary>
+        public (double MedianUsd, int Count) TurnMedian()
+        {
+            List<double> costs;
+            lock (_gate) costs = _turns;
+            if (costs.Count == 0) return (0, 0);
+            int mid = costs.Count / 2;
+            return (costs.Count % 2 == 1 ? costs[mid] : (costs[mid - 1] + costs[mid]) / 2, costs.Count);
+        }
+
+        /// <summary>
+        /// For the turn footer: "6× your usual turn" when <paramref name="turnUsd"/> is <see cref="TurnNoteTimes"/> or
+        /// more the median logged turn and at least <see cref="TurnNoteFromUsd"/>; null otherwise, or with fewer than
+        /// <see cref="MinTurns"/> logged turns.
+        /// </summary>
+        public string TurnNote(double turnUsd)
+        {
+            var (median, count) = TurnMedian();
+            if (count < MinTurns || median <= 0 || turnUsd < TurnNoteFromUsd) return null;
+            double times = turnUsd / median + 1e-9; // 0.12 / 0.02 is 5.999… in doubles
+            if (times < TurnNoteTimes) return null;
+            return ((int)Math.Floor(times)).ToString(CultureInfo.InvariantCulture) + "× your usual turn";
         }
 
         /// <summary>The median cost and the number of logged conversations, leaving out <paramref name="exceptSession"/> (the open one).</summary>

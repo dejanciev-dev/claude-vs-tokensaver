@@ -1105,7 +1105,7 @@ write, against 1.25× for the 5-minute one, so it pays only when you come back w
 
 Planned on 2026-11-13.
 
-- [ ] **Turn against your usual.** The turn footer adds `· 6× your usual turn` when a turn cost 5× or more the
+- [x] **Turn against your usual.** The turn footer adds `· 6× your usual turn` when a turn cost 5× or more the
       median logged turn and $0.05 or more; from 20 logged turns that cost something, read with the spend watches
       once per Visual Studio session. `ConversationStats.TurnMedian`, `TurnNote`
 - [ ] **Turn spread in the report.** Above the costliest turns: `Turns: median $0.03, 9 in 10 under $0.40, dearest

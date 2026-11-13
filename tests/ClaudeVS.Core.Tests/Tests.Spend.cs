@@ -1441,6 +1441,27 @@ namespace ClaudeVS.Core.Tests
             True(!SpendWatch.BudgetLine(d, m, Nov(16), w).Contains("this week"), "weekly warning off: left out");
         }
 
+        private static void Test_TurnAgainstUsual()
+        {
+            var t = DateTime.UtcNow.AddDays(-1);
+            var s = new ConversationStats();
+            // 19 turns of $0.02 and one of $0.01 (router included): median $0.02; turns that cost nothing left out
+            var recs = Enumerable.Range(0, 19).Select(i => new UsageRecord { Timestamp = t, CostUsd = 0.02 })
+                .Concat(new[] { new UsageRecord { Timestamp = t, CostUsd = 0.009, RouterCostUsd = 0.001 }, new UsageRecord { Timestamp = t } }).ToList();
+            s.Load(recs.Take(19));
+            Eq(null, s.TurnNote(1.00), "19 turns: too few");
+            s.Load(recs);
+            Eq((0.02, 20), s.TurnMedian());
+            Eq("6× your usual turn", s.TurnNote(0.12), "6×");
+            Eq("5× your usual turn", s.TurnNote(0.10), "from 5×");
+            Eq(null, s.TurnNote(0.099), "under 5×");
+            Eq(null, new ConversationStats().TurnNote(1.00), "not loaded");
+            var cheap = new ConversationStats();
+            cheap.Load(Enumerable.Range(0, 20).Select(i => new UsageRecord { Timestamp = t, CostUsd = 0.001 }));
+            Eq(null, cheap.TurnNote(0.04), "40× but under $0.05");
+            Eq("50× your usual turn", cheap.TurnNote(0.05), "from $0.05");
+        }
+
         private static void Test_ConversationStats()
         {
             var t = DateTime.UtcNow.AddDays(-1);

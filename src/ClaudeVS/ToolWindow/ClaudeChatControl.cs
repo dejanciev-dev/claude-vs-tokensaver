@@ -1941,7 +1941,9 @@ namespace ClaudeVS.ToolWindow
                         var turn = _turnPrompts.Count > 0 ? _turnPrompts.Dequeue() : new TurnPrompt();
                         string answer = _turnAnswer.ToString();
                         _turnAnswer.Clear();
-                        _view.AppendTurnFooter($"✓ {ev.DurationMs / 1000.0:0.0}s · {TokenMeter.Format(ev.Usage.Total)} tok · {TurnFooter.Cost(_meterModel?.LastTurnCostUsd ?? 0, _meterModel?.LastTurnSubagentCostUsd ?? 0)}{used}{TurnFooter.Extras(ev.Usage, _meterModel?.LastTurnCacheSavedUsd ?? 0)}",
+                        // A turn far dearer than your usual one (the median logged turn, read once per VS session)
+                        string usual = PastConversations.TurnNote(_meterModel?.LastTurnCostUsd ?? 0) is string u ? " · " + u : "";
+                        _view.AppendTurnFooter($"✓ {ev.DurationMs / 1000.0:0.0}s · {TokenMeter.Format(ev.Usage.Total)} tok · {TurnFooter.Cost(_meterModel?.LastTurnCostUsd ?? 0, _meterModel?.LastTurnSubagentCostUsd ?? 0)}{usual}{used}{TurnFooter.Extras(ev.Usage, _meterModel?.LastTurnCacheSavedUsd ?? 0)}",
                             string.IsNullOrWhiteSpace(answer) ? null : BookmarkToggle(turn.Prompt, answer, turn.Anchor), answer,
                             tooltip: _meterModel == null ? null : TurnFooter.CostBreakdown(_meterModel.LastModel, _meterModel.LastTurn, _meterModel.LastTurnSubagentCostUsd, _meterModel.LastTurnCostUsd, _meterModel.Prices));
                         if (!string.IsNullOrWhiteSpace(answer)) _lastAnswer = answer;
