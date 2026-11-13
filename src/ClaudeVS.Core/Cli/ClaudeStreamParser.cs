@@ -46,6 +46,16 @@ namespace ClaudeVS.Core.Cli
                 case "user": return ParseUser(json);
                 case "result": return ParseResult(json);
                 case "control_request": return ParseControlRequest(json);
+                case "tool_progress":
+                    // Only the hook heartbeat (2.1.323); tool output does not stream here.
+                    if (json.Value<bool?>("heartbeat") != true) return None;
+                    return new[] { new ClaudeEvent
+                    {
+                        Kind = ClaudeEventKind.HookRunning,
+                        ToolName = (string)json["tool_name"],
+                        ToolUseId = (string)json["parent_tool_use_id"],
+                        DurationMs = (long)((json.Value<double?>("elapsed_time_seconds") ?? 0) * 1000),
+                    } };
                 case "rate_limit_event":
                     return json["rate_limit_info"] is JObject limits ? new[] { new ClaudeEvent { Kind = ClaudeEventKind.RateLimit, Payload = limits } } : None;
                 case "control_response":

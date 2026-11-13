@@ -64,6 +64,8 @@ namespace ClaudeVS.ToolWindow
         private TimeSpan _turnThought;       // thinking time this turn, for "thought for 4s"
         private DateTime? _thinkingSinceUtc; // set while Claude is thinking
         private bool _thoughtFromCli;        // this thinking block was timed by the CLI (thinking_duration_ms, 2.1.319)
+        private string _hookRunning;         // a hook that runs long ("PreToolUse"), from the CLI's heartbeat (2.1.323)
+        private DateTime _hookSinceUtc;
         private Brush _activityColor;
 
         private void InitActivity()
@@ -115,6 +117,7 @@ namespace ClaudeVS.ToolWindow
             _turnThought = TimeSpan.Zero;
             _thinkingSinceUtc = null;
             _thoughtFromCli = false;
+            _hookRunning = null;
             _turnVerb = Verbs[Rng.Next(Verbs.Length)];
             _activityTip.Text = "⎿  Tip: " + Tips[Rng.Next(Tips.Length)];
         }
@@ -125,8 +128,14 @@ namespace ClaudeVS.ToolWindow
         /// <summary>Events that change what the strip says. Called for every event on the UI thread.</summary>
         private void OnActivityEvent(ClaudeEvent ev)
         {
+            if (ev.Kind != ClaudeEventKind.HookRunning && ev.Kind != ClaudeEventKind.Task) _hookRunning = null; // anything else: the hook is done
             switch (ev.Kind)
             {
+                case ClaudeEventKind.HookRunning:
+                    // Every 30 s while a hook runs long; also keeps the "Not responding" notice away (any event does).
+                    _hookRunning = ev.ToolName ?? "a";
+                    _hookSinceUtc = DateTime.UtcNow - TimeSpan.FromMilliseconds(ev.DurationMs);
+                    break;
                 case ClaudeEventKind.Activity:
                     if (ev.Activity == ClaudeActivity.Thinking)
                     {
@@ -222,6 +231,8 @@ namespace ClaudeVS.ToolWindow
             long tokens = _turnThinkingTokens + TokenEstimate.FromChars(_turnOutputChars);
             if (tokens > 0) detail += " · ↓ " + TokenMeter.Format(tokens) + " tokens";
             if (what != null) detail += " · " + what;
+            if (_hookRunning != null && phase != Phase.Waiting)
+                detail += $" · {_hookRunning} hook running for {Core.Cli.ToolCallView.Duration(DateTime.UtcNow - _hookSinceUtc)}";
             // Like the terminal: once Claude has stopped thinking, how long it thought (explains a long pause).
             if (phase != Phase.Thinking && _turnThought.TotalSeconds >= 1)
                 detail += " · thought for " + Core.Cli.ToolCallView.Duration(_turnThought);

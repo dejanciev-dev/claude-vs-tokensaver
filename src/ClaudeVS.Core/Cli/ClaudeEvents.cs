@@ -165,6 +165,12 @@ namespace ClaudeVS.Core.Cli
         /// </summary>
         ThinkingDuration,
         Error,
+        /// <summary>
+        /// A hook is still running (2.1.323: a heartbeat every 30 s while hooks run long in <c>-p</c>, as a
+        /// <c>tool_progress</c> line with <c>heartbeat: true</c>). <see cref="ClaudeEvent.ToolName"/> = the hook event
+        /// (<c>PreToolUse</c>), ToolUseId = the tool call it runs for, <see cref="ClaudeEvent.DurationMs"/> = how long so far.
+        /// </summary>
+        HookRunning,
     }
 
     /// <summary>The phase of the main agent's current response (<see cref="ClaudeEventKind.Activity"/>).</summary>

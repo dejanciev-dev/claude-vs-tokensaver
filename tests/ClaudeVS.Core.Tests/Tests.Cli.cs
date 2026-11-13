@@ -606,6 +606,18 @@ namespace ClaudeVS.Core.Tests
             Eq("hi", ToolCallView.Summarize("Bash", "hi\nShell cwd was reset to C:\\repo", false).Lines.Single(), "the note is dropped after real output");
         }
 
+        private static void Test_HookHeartbeat()
+        {
+            // Captured with 2.1.323: a PreToolUse hook callback answered after 65 s.
+            var events = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.323-hook-heartbeat.jsonl"))
+                .SelectMany(l => new ClaudeStreamParser().Parse(l)).ToList();
+            Eq(2, events.Count);
+            True(events.All(e => e.Kind == ClaudeEventKind.HookRunning && e.ToolName == "PreToolUse" && e.ToolUseId == "toolu_019aDiAWFMiXQD4guEnWjKqp"), "hook event and its tool call");
+            Eq(30_000L, events[0].DurationMs);
+            Eq(60_000L, events[1].DurationMs);
+            Eq(0, new ClaudeStreamParser().Parse("{\"type\":\"tool_progress\",\"tool_use_id\":\"t1\",\"tool_name\":\"Bash\",\"elapsed_time_seconds\":5}").Count, "other tool progress is ignored");
+        }
+
         private static void Test_ToolData_Shapes()
         {
             Eq("Read 4 lines", ToolCallView.FromData("Read", JObject.Parse("{\"file\":{\"numLines\":4,\"startLine\":1,\"totalLines\":4}}")), "whole file");
