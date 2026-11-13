@@ -237,10 +237,26 @@ namespace ClaudeVS.Core.Tokens
         /// <summary>Its turns that ended in an error.</summary>
         public int Errors { get; set; }
 
-        /// <summary>What the row adds after the solution: "(2 cache rewrites, 1 error)"; null with nothing to add.</summary>
+        /// <summary>The model families its turns ran on, by turns, most first ("other" for unknown models).</summary>
+        public List<KeyValuePair<string, int>> Models { get; } = new List<KeyValuePair<string, int>>();
+
+        /// <summary>Fills <see cref="Models"/> from its turns; returns this.</summary>
+        public ConversationBreakdown WithModels(IEnumerable<UsageRecord> turns)
+        {
+            Models.AddRange(turns.GroupBy(r => PriceTable.Family(r.ModelUsed) ?? "other", StringComparer.Ordinal)
+                .Select(g => new KeyValuePair<string, int>(g.Key, g.Count()))
+                .OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal));
+            return this;
+        }
+
+        /// <summary>
+        /// What the row adds after the solution: "(opus 12, haiku 3; 2 cache rewrites, 1 error)", the models only when
+        /// more than one; null with nothing to add.
+        /// </summary>
         public string DetailsText()
         {
             var parts = new List<string>();
+            if (Models.Count > 1) parts.Add(string.Join(", ", Models.Select(m => m.Key + " " + m.Value)));
             var trouble = new List<string>();
             if (CacheRewrites > 0) trouble.Add($"{CacheRewrites} cache {(CacheRewrites == 1 ? "rewrite" : "rewrites")}");
             if (Errors > 0) trouble.Add($"{Errors} {(Errors == 1 ? "error" : "errors")}");
@@ -761,7 +777,7 @@ namespace ClaudeVS.Core.Tokens
                     FirstPrompt = g.Select(r => r.PromptPreview).FirstOrDefault(p => !string.IsNullOrWhiteSpace(p)),
                     CacheRewrites = rewrites.TryGetValue(g.Key, out var n) ? n : 0,
                     Errors = g.Count(r => r.IsError),
-                })
+                }.WithModels(g))
                 .Where(b => b.CostUsd > 0)
                 .OrderByDescending(b => b.CostUsd)
                 .ToList();
