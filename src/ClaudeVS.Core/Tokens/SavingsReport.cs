@@ -301,6 +301,8 @@ namespace ClaudeVS.Core.Tokens
         public int Turns { get; set; }
         public double CostUsd { get; set; }
         public long ThinkingTokens { get; set; }
+        /// <summary>The average answer time of its turns logged with a duration; null when none was.</summary>
+        public double? AverageSeconds { get; set; }
     }
 
     public sealed class ModelBreakdown
@@ -898,7 +900,7 @@ namespace ClaudeVS.Core.Tokens
             if (list.Any(r => (r.Effort ?? r.RouteEffort) != null))
                 rep.ByEffort.AddRange(list
                     .GroupBy(r => (r.Effort ?? r.RouteEffort)?.ToLowerInvariant() ?? DefaultEffort, StringComparer.Ordinal)
-                    .Select(g => new EffortBreakdown { Effort = g.Key, Turns = g.Count(), CostUsd = g.Sum(r => r.CostUsd + r.RouterCostUsd), ThinkingTokens = g.Sum(r => r.ThinkingTokens) })
+                    .Select(g => new EffortBreakdown { Effort = g.Key, Turns = g.Count(), CostUsd = g.Sum(r => r.CostUsd + r.RouterCostUsd), ThinkingTokens = g.Sum(r => r.ThinkingTokens), AverageSeconds = TurnTime.AverageSeconds(g) })
                     .OrderBy(b => Array.IndexOf(EffortOrder, b.Effort) is int i && i >= 0 ? i : EffortOrder.Length + (b.Effort == DefaultEffort ? 1 : 0))
                     .ThenBy(b => b.Effort, StringComparer.Ordinal));
 
@@ -1156,7 +1158,7 @@ namespace ClaudeVS.Core.Tokens
                 foreach (var b in ByEffort)
                 {
                     string thinking = b.ThinkingTokens > 0 ? $"  {TokenMeter.Format(b.ThinkingTokens)} thinking" : "";
-                    sb.AppendLine($"  {b.Effort,-7} {b.Turns,5} turns  ${b.CostUsd,8:0.00}  (${(b.Turns > 0 ? b.CostUsd / b.Turns : 0):0.000} per turn){thinking}");
+                    sb.AppendLine($"  {b.Effort,-7} {b.Turns,5} turns  ${b.CostUsd,8:0.00}  (${(b.Turns > 0 ? b.CostUsd / b.Turns : 0):0.000} per turn{TurnTime.PerTurn(b.AverageSeconds)}){thinking}");
                 }
             }
             if (Solution == null && SolutionsText() is string solutions && solutions.Length > 0) sb.AppendLine().Append(solutions);
