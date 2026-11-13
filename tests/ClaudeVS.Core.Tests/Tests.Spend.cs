@@ -710,6 +710,29 @@ namespace ClaudeVS.Core.Tests
             Eq(null, SavingsReport.Build(recs.Take(2), new PriceTable(), nowUtc: At(11)).WeekLine(), "nothing this week");
         }
 
+        private static void Test_SavingsReport_ByWeekday()
+        {
+            DateTime At(int day) => new DateTime(2026, 11, day, 12, 0, 0, DateTimeKind.Local).ToUniversalTime();
+            // Mon Nov 2 to Sun Nov 15: 14 days
+            var recs = new[]
+            {
+                new UsageRecord { Timestamp = At(2), CostUsd = 1.0 },
+                new UsageRecord { Timestamp = At(9), CostUsd = 2.0, RouterCostUsd = 0.5 },
+                new UsageRecord { Timestamp = At(4), CostUsd = 0.3 },
+                new UsageRecord { Timestamp = At(15), CostUsd = 0.6 },
+            };
+            var rep = SavingsReport.Build(recs, new PriceTable(), nowUtc: At(15));
+            Eq("Monday,Wednesday,Sunday", string.Join(",", rep.ByWeekday.Select(w => w.Day)), "Monday first, empty days left out");
+            Eq(2, rep.ByWeekday[0].Turns, "both Mondays");
+            True(Math.Abs(rep.ByWeekday[0].CostUsd - 3.5) < 1e-9, "router included: " + rep.ByWeekday[0].CostUsd);
+            string text = rep.ToText();
+            True(text.Contains("By weekday:"), text);
+            True(text.Contains("  Mon         2 turns  $    3.50  ($1.750 per turn)"), text);
+            True(text.Contains("  Sun         1 turns  $    0.60  ($0.600 per turn)"), text);
+            Eq(0, SavingsReport.Build(recs.Take(3), new PriceTable(), nowUtc: At(15)).ByWeekday.Count, "Nov 2 to 9: 8 days, too few");
+            True(!SavingsReport.Build(recs.Take(3), new PriceTable(), nowUtc: At(15)).ToText().Contains("By weekday:"), "no list");
+        }
+
         private static void Test_SavingsReport_Today()
         {
             DateTime At(int day, int hour = 12) => new DateTime(2026, 11, day, hour, 0, 0, DateTimeKind.Local).ToUniversalTime();

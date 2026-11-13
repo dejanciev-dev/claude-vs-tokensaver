@@ -214,6 +214,15 @@ namespace ClaudeVS.Core.Tokens
     }
 
     /// <summary>One conversation (a session id in the usage log) of the savings report.</summary>
+    /// <summary>The turns of one local weekday, in the savings report.</summary>
+    public sealed class WeekdayBreakdown
+    {
+        public DayOfWeek Day { get; set; }
+        public int Turns { get; set; }
+        /// <summary>Including what asking the Haiku router cost.</summary>
+        public double CostUsd { get; set; }
+    }
+
     /// <summary>Cache rewrites of one likely cause: how many, and what they cost more than reading the cache.</summary>
     public sealed class RewriteCauseBreakdown
     {
@@ -617,6 +626,15 @@ namespace ClaudeVS.Core.Tokens
                 + $"{ConversationAverageTurns.ToString("0.#", c)} turns on average";
         }
 
+        /// <summary>The list by weekday needs turns over this many local days, first to last, so each weekday has had two.</summary>
+        public const int WeekdaysFromDays = 14;
+
+        /// <summary>
+        /// Turns and cost per local weekday, Monday first, weekdays without turns left out; empty when the period's turns
+        /// span fewer than <see cref="WeekdaysFromDays"/> days.
+        /// </summary>
+        public List<WeekdayBreakdown> ByWeekday { get; } = new List<WeekdayBreakdown>();
+
         /// <summary>Turns, tokens, cost and cache per local day, oldest first.</summary>
         public List<DayBreakdown> ByDay { get; } = new List<DayBreakdown>();
         /// <summary>How many days the text shows (the latest).</summary>
@@ -825,6 +843,11 @@ namespace ClaudeVS.Core.Tokens
                     CacheHitPercent = dIn > 0 ? 100.0 * dRead / dIn : 0,
                 });
             }
+            if (list.Count > 0 && (list[list.Count - 1].Timestamp.ToLocalTime().Date - list[0].Timestamp.ToLocalTime().Date).Days + 1 >= WeekdaysFromDays)
+                rep.ByWeekday.AddRange(list
+                    .GroupBy(r => r.Timestamp.ToLocalTime().DayOfWeek)
+                    .Select(g => new WeekdayBreakdown { Day = g.Key, Turns = g.Count(), CostUsd = g.Sum(r => r.CostUsd + r.RouterCostUsd) })
+                    .OrderBy(b => ((int)b.Day + 6) % 7)); // Monday first
             var today = (nowUtc ?? DateTime.UtcNow).ToLocalTime().Date;
             rep.Month = new DateTime(today.Year, today.Month, 1);
             rep.MonthToDateUsd = scoped.Where(r => r.Timestamp.ToLocalTime().Date >= rep.Month && r.Timestamp.ToLocalTime().Date <= today).Sum(r => r.CostUsd + r.RouterCostUsd);
@@ -1041,6 +1064,14 @@ namespace ClaudeVS.Core.Tokens
                     string details = b.DetailsText() is string d ? d + "  " : "";
                     sb.AppendLine($"  {b.Started.ToLocalTime():yyyy-MM-dd HH:mm}  ${b.CostUsd,6:0.00}  {b.Turns,4} {(b.Turns == 1 ? "turn " : "turns")}  {where}{details}{what}".TrimEnd());
                 }
+            }
+            if (ByWeekday.Count > 0)
+            {
+                // Which days of the week cost most: a busy Monday, or weekend sessions that run long
+                sb.AppendLine();
+                sb.AppendLine("By weekday:");
+                foreach (var w in ByWeekday)
+                    sb.AppendLine($"  {CultureInfo.InvariantCulture.DateTimeFormat.GetAbbreviatedDayName(w.Day),-7} {w.Turns,5} turns  ${w.CostUsd,8:0.00}  (${(w.Turns > 0 ? w.CostUsd / w.Turns : 0):0.000} per turn)");
             }
             if (ByDay.Count > 1)
             {
