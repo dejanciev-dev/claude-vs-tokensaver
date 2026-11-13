@@ -64,6 +64,8 @@ All notable changes to this project are listed here. The format follows
   (net ≈ $0.80 saved)`).
 - **Pause in the usage CSV**: a last `pause_s` column, the seconds from the previous turn's end in the same
   conversation to this turn's start, to see in a spreadsheet which pauses let the prompt cache expire.
+- **A turn against your usual one**: the turn footer adds `· 6× your usual turn` when a turn cost five times the
+  median turn in the usage log or more (and $0.05 or more), once 20 turns are logged.
 - **Failed turns in the savings report**: what the turns that ended in an error cost (interrupted, a limit or an API
   error), and their share of the spend (`Ended in an error: 3 turns, $0.40 (1% of the spend)`), when they cost
   anything. The usage log now keeps why such a turn ended (`end`), and the line says it: `(1% of the spend; 2
