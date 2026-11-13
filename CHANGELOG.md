@@ -40,6 +40,10 @@ All notable changes to this project are listed here. The format follows
 - **Average conversation in the savings report**: above the costliest conversations, how many there were, what one
   cost on average and the median, and how many turns one ran (`Conversations: 32, $0.40 on average (median $0.12),
   6.2 turns on average`). A median well under the average means a few long conversations cost most.
+- **Why the cache was written again, in the savings report**: under *Cache written again*, its turns by likely
+  cause: after a pause longer than the cache lasts (5 minutes, or an hour once the conversation used the 1-hour
+  cache), after a model switch, or other (a changed CLAUDE.md, MCP tools, settings or speed), each with what it cost
+  (`after a pause: 3 ($0.20), model switch: 1 ($0.05), other: 1 ($0.04)`).
 
 ### Fixed
 - **Haiku router on Claude Code 2.1.323**: there the first request of every Claude Code process waits 5–7 s for its

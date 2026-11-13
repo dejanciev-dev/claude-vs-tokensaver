@@ -1019,7 +1019,7 @@ Checked, nothing to change:
 
 Planned on 2026-11-13.
 
-- [ ] **Why the cache was written again.** The report's *Cache written again* line splits its turns by likely cause:
+- [x] **Why the cache was written again.** The report's *Cache written again* line splits its turns by likely cause:
       after a pause longer than the cache's lifetime (5 minutes, or 1 hour once the conversation wrote the 1-hour
       cache), after a model switch, or else (a changed CLAUDE.md, MCP tools, settings or speed). `after a pause: 3
       ($0.20), model switch: 1 ($0.05), other: 1 ($0.04)` under the line; the pause from the previous turn's end to

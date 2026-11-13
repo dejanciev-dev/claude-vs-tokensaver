@@ -398,6 +398,37 @@ namespace ClaudeVS.Core.Tests
             True(rep.ToText().Contains("Cache written again:        $0.29 more than reading it  (2 turns, 70.0k tokens:"), rep.ToText());
             Eq(0, SavingsReport.Build(recs.Take(2), new PriceTable()).CacheRewriteTurns, "none");
             True(!SavingsReport.Build(recs.Take(2), new PriceTable()).ToText().Contains("Cache written again"), "no line");
+            // a's third turn came 3 hours after the second (past the 1-hour cache a wrote); b's second a minute later
+            Eq("after a pause: 1 ($0.20), other: 1 ($0.10)", rep.CacheRewriteCausesLine());
+            True(rep.ToText().Contains("\n                            after a pause: 1 ($0.20), other: 1 ($0.10)"), rep.ToText());
+            Eq(null, SavingsReport.Build(recs.Take(2), new PriceTable()).CacheRewriteCausesLine(), "no rewrite: no causes");
+        }
+
+        private static void Test_SavingsReport_CacheRewriteCauses()
+        {
+            var t = new DateTime(2026, 11, 10, 9, 0, 0, DateTimeKind.Utc);
+            var prev = new UsageRecord { Timestamp = t, ModelUsed = "claude-sonnet-5-5" };
+            UsageRecord At(TimeSpan after, long ms = 0, string model = "claude-sonnet-5-5") =>
+                new UsageRecord { Timestamp = t + after, DurationMs = ms, ModelUsed = model };
+            // The pause runs from the previous turn's end to this turn's start: its logged time less its duration
+            Eq(SavingsReport.CausePause, SavingsReport.RewriteCause(At(TimeSpan.FromMinutes(6)), prev, false), "6 min > 5");
+            Eq(SavingsReport.CauseOther, SavingsReport.RewriteCause(At(TimeSpan.FromMinutes(6), 120_000), prev, false), "started after 4 min");
+            Eq(SavingsReport.CauseOther, SavingsReport.RewriteCause(At(TimeSpan.FromMinutes(30)), prev, true), "within the 1-hour cache");
+            Eq(SavingsReport.CausePause, SavingsReport.RewriteCause(At(TimeSpan.FromMinutes(61)), prev, true), "past the 1-hour cache");
+            Eq(SavingsReport.CauseModel, SavingsReport.RewriteCause(At(TimeSpan.FromMinutes(1), 0, "claude-opus-5-5"), prev, false), "model switch");
+            Eq(SavingsReport.CausePause, SavingsReport.RewriteCause(At(TimeSpan.FromMinutes(9), 0, "claude-opus-5-5"), prev, false), "a pause first");
+            Eq(SavingsReport.CauseOther, SavingsReport.RewriteCause(At(TimeSpan.FromMinutes(1), 0, "claude-sonnet-5-0"), prev, false), "same family");
+
+            var recs = new[]
+            {
+                new UsageRecord { Timestamp = t, SessionId = "a", ModelUsed = "claude-sonnet-5-5", CacheWriteTokens = 30_000 },
+                new UsageRecord { Timestamp = t.AddMinutes(2), SessionId = "a", ModelUsed = "claude-opus-5-5", CacheWriteTokens = 30_000 },
+                new UsageRecord { Timestamp = t.AddMinutes(3), SessionId = "a", ModelUsed = "claude-opus-5-5", CacheReadTokens = 30_000 },
+                new UsageRecord { Timestamp = t.AddMinutes(20), SessionId = "a", ModelUsed = "claude-opus-5-5", CacheWriteTokens = 30_000 },
+            };
+            var found = SavingsReport.CacheRewriteCauses(recs.Reverse());
+            Eq("model,pause", string.Join(",", found.Select(kv => kv.Value)), "oldest first, whatever the order given");
+            Eq("after a pause: 1 ($0.14), model switch: 1 ($0.14)", SavingsReport.Build(recs, new PriceTable()).CacheRewriteCausesLine(), "pause listed first");
         }
 
         private static void Test_SavingsReport_ByEffort()
