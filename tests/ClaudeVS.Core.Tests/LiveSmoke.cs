@@ -111,7 +111,7 @@ namespace ClaudeVS.Core.Tests
             {
                 var t0 = DateTime.UtcNow;
                 router.WarmUp();
-                Thread.Sleep(TimeSpan.FromSeconds(18)); // start-up happens while idle
+                Thread.Sleep(TimeSpan.FromSeconds(25)); // start-up and the warm-up request (slow since 2.1.323) happen while idle
                 string[] prompts =
                 {
                     "rename the variable x to count in Program.cs",

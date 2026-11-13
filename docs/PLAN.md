@@ -974,13 +974,14 @@ Checked on 2026-11-13 with 2.1.323 installed: the whole 2.1.323 section read, th
 extension sends or reads probed with stream-json the way the extension runs it, and the live tests run. Terminal,
 cloud, Remote Control, Claude Tag, gateway, sandbox and plugin-authoring entries are left out.
 
-- [ ] **Router warm-up request** (found while verifying, not in the changelog). In 2.1.323 the first request of every
+- [x] **Router warm-up request** (found while verifying, not in the changelog). In 2.1.323 the first request of every
       process waits 5–7 s for its first byte (plain `claude -p`: 5.5 s and 6.4 s against 0.7–0.8 s with 2.1.322;
       later requests in the same process ~0.5 s), so `--live-haiku-router`'s first route took 6.4 s and the chat's
       first route would miss its 4 s limit and fall back to the local rules. `HaikuRouter.WarmUp` now sends one
       short route request (not counted as a route, its cost counted), so the slow request happens while idle; it
       writes the prompt cache the first real route would have written anyway. The main chat's first answer is
-      ~6 s slower too, which the extension can't help
+      ~6 s slower too, which the extension can't help. Measured with `--live-haiku-router` (now 25 s of warm-up): first route 1.25 s (was 6.4 s), 4 routes
+      $0.00072 (was $0.00053), so the warm-up costs ~$0.0002. The process restarted after 25 routes is warmed too
 - [ ] **Hook heartbeat** (2.1.323: a progress heartbeat every 30 s while hooks run long in `claude -p`). It comes as
       `tool_progress` with `heartbeat: true`, `tool_name` the hook event (`PreToolUse`) and `parent_tool_use_id` the
       tool call. The parser ignored it, so a hook running past 60 s showed "Not responding". Now a `HookRunning`

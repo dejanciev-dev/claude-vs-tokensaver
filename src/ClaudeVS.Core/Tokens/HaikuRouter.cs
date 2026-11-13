@@ -13,6 +13,9 @@ namespace ClaudeVS.Core.Tokens
     /// session, an empty working folder: about 1.3k tokens instead of the usual ~25k. Measured with 2.1.318: the
     /// process takes ~14 s to start (so it is started ahead of time), then ~1–2 s and ~$0.0001 per route.
     /// One request at a time; restarted every <see cref="RestartAfter"/> routes so its history stays small.
+    /// Since Claude Code 2.1.323 the first request of a process waits 5–7 s for its first byte (later ones ~0.5 s),
+    /// past the chat's 4 s limit, so each new process gets one short warm-up request (<see cref="WarmUpRequest"/>)
+    /// while idle. Its cost is added to the next route's, so the usage log still has every cent.
     /// </summary>
     public sealed class HaikuRouter : IDisposable
     {
@@ -46,6 +49,12 @@ namespace ClaudeVS.Core.Tokens
         private double _lastProcessCost;
         private TaskCompletionSource<ClaudeEvent> _pending;
         private bool _disposed;
+        private bool _warming;          // the request in flight is the warm-up, not a route
+        private ClaudeSession _warmed;  // the process that has had its warm-up
+        private double _warmUpCost;     // not yet added to TotalCostUsd (it goes with the next route)
+
+        /// <summary>The warm-up request sent to a new process: a real request, so the slow first one is over.</summary>
+        public const string WarmUpRequest = "Request:\nfix a typo in a comment";
 
         public HaikuRouter(string claudePath) { _claudePath = claudePath ?? ""; }
 
@@ -98,11 +107,27 @@ namespace ClaudeVS.Core.Tokens
             return new RouteDecision { Model = model, Effort = effort, Score = double.NaN, Reason = "Haiku router" + (string.IsNullOrEmpty(reason) ? "" : ": " + reason) };
         }
 
-        /// <summary>Starts the process now, so the ~14 s start-up is over before the first prompt. No model call.</summary>
+        /// <summary>
+        /// Starts the process now and sends it the warm-up request, so the ~14 s start-up and the slow first request
+        /// (2.1.323) are over before the first prompt. About $0.0001.
+        /// </summary>
         public void WarmUp()
         {
-            try { EnsureSession(); }
-            catch (Exception ex) when (ex is FileNotFoundException || ex is InvalidOperationException || ex is System.ComponentModel.Win32Exception) { }
+            ClaudeSession session;
+            try { session = EnsureSession(); }
+            catch (Exception ex) when (ex is FileNotFoundException || ex is InvalidOperationException || ex is System.ComponentModel.Win32Exception) { return; }
+            if (!_gate.Wait(0)) return; // a route is running: it warms the process itself
+            TaskCompletionSource<ClaudeEvent> tcs;
+            lock (_lock)
+            {
+                if (_disposed || session != _session || _warmed == session) { _gate.Release(); return; }
+                _warmed = session;
+                _warming = true;
+                tcs = _pending = new TaskCompletionSource<ClaudeEvent>(TaskCreationOptions.RunContinuationsAsynchronously);
+            }
+            _ = tcs.Task.ContinueWith(_ => _gate.Release(), TaskScheduler.Default);
+            try { session.SendPromptAsync(WarmUpRequest).GetAwaiter().GetResult(); }
+            catch (InvalidOperationException) { lock (_lock) { _warming = false; if (_pending == tcs) _pending = null; } tcs.TrySetResult(null); }
         }
 
         /// <summary>
@@ -139,7 +164,14 @@ namespace ClaudeVS.Core.Tokens
                 var ev = await tcs.Task.ConfigureAwait(false);
                 return ev == null || ev.IsError ? null : Parse(ev.Text);
             }
-            finally { if (!releaseLater) _gate.Release(); }
+            finally
+            {
+                if (!releaseLater) _gate.Release();
+                // The process is restarted after this many routes: start and warm the next one now, while idle.
+                bool restartDue;
+                lock (_lock) restartDue = !_disposed && _routesThisProcess >= RestartAfter;
+                if (restartDue) _ = Task.Run(() => WarmUp());
+            }
         }
 
         private ClaudeSession EnsureSession()
@@ -162,7 +194,7 @@ namespace ClaudeVS.Core.Tokens
                     ExtraArguments = TrimmedArguments(),
                 });
                 s.EventReceived += OnEvent;
-                s.Exited += (o, code) => { lock (_lock) { _pending?.TrySetResult(null); _pending = null; } };
+                s.Exited += (o, code) => { lock (_lock) { _pending?.TrySetResult(null); _pending = null; _warming = false; } };
                 s.Start();
                 _session = s;
                 _routesThisProcess = 0;
@@ -186,12 +218,22 @@ namespace ClaudeVS.Core.Tokens
                 if (sender != _session) return;
                 tcs = _pending;
                 _pending = null;
-                _routesThisProcess++;
-                Routes++;
                 double total = ev.TotalCostUsd ?? _lastProcessCost; // cumulative for this process
-                LastRouteCostUsd = Math.Max(0, total - _lastProcessCost);
+                double cost = Math.Max(0, total - _lastProcessCost);
                 _lastProcessCost = total;
-                TotalCostUsd += LastRouteCostUsd;
+                if (_warming)
+                {
+                    _warming = false;
+                    _warmUpCost += cost; // billed with the next route
+                }
+                else
+                {
+                    _routesThisProcess++;
+                    Routes++;
+                    LastRouteCostUsd = cost + _warmUpCost;
+                    _warmUpCost = 0;
+                    TotalCostUsd += LastRouteCostUsd;
+                }
             }
             tcs?.TrySetResult(ev);
         }

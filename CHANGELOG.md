@@ -39,6 +39,12 @@ All notable changes to this project are listed here. The format follows
   cost on average and the median, and how many turns one ran (`Conversations: 32, $0.40 on average (median $0.12),
   6.2 turns on average`). A median well under the average means a few long conversations cost most.
 
+### Fixed
+- **Haiku router on Claude Code 2.1.323**: there the first request of every Claude Code process waits 5–7 s for its
+  answer (0.7 s with 2.1.322), so the router's first route in each chat missed its 4 s limit and the local rules
+  were used instead. The router now sends one short warm-up request when it starts (about $0.0002, counted with
+  the first route in the usage log), and when it restarts after 25 routes; the first route then takes about 1 s.
+
 ## [0.10.0] - 2026-11-11
 
 Still a **preview**, for Claude Code 2.1.318 or newer (checked up to 2.1.322). This release is about knowing where the
