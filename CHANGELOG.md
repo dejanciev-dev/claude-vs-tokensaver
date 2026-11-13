@@ -44,6 +44,9 @@ All notable changes to this project are listed here. The format follows
   answer (0.7 s with 2.1.322), so the router's first route in each chat missed its 4 s limit and the local rules
   were used instead. The router now sends one short warm-up request when it starts (about $0.0002, counted with
   the first route in the usage log), and when it restarts after 25 routes; the first route then takes about 1 s.
+- **No "Not responding" while a hook runs long**: a hook taking over a minute (one of your own `PreToolUse` hooks,
+  say) showed the red "Not responding" notice. Claude Code 2.1.323 sends a heartbeat every 30 s while a hook runs;
+  the activity strip now says `PreToolUse hook running for 1m 30s` instead.
 
 ## [0.10.0] - 2026-11-11
 

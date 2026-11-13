@@ -982,10 +982,11 @@ cloud, Remote Control, Claude Tag, gateway, sandbox and plugin-authoring entries
       writes the prompt cache the first real route would have written anyway. The main chat's first answer is
       ~6 s slower too, which the extension can't help. Measured with `--live-haiku-router` (now 25 s of warm-up): first route 1.25 s (was 6.4 s), 4 routes
       $0.00072 (was $0.00053), so the warm-up costs ~$0.0002. The process restarted after 25 routes is warmed too
-- [ ] **Hook heartbeat** (2.1.323: a progress heartbeat every 30 s while hooks run long in `claude -p`). It comes as
+- [x] **Hook heartbeat** (2.1.323: a progress heartbeat every 30 s while hooks run long in `claude -p`). It comes as
       `tool_progress` with `heartbeat: true`, `tool_name` the hook event (`PreToolUse`) and `parent_tool_use_id` the
       tool call. The parser ignored it, so a hook running past 60 s showed "Not responding". Now a `HookRunning`
-      event: the activity strip says which hook runs and for how long, and the stall timer restarts
+      event: the activity strip says which hook runs and for how long, and the stall timer restarts (any parsed
+      event does). Capture: `Fixtures/cli-2.1.323-hook-heartbeat.jsonl` (a hook callback answered after 65 s)
 - [ ] **"Always allow" that wasn't saved** (2.1.323: a rule that looks like it holds a secret, or would go to a
       `settings.local.json` that git tracks, lasts for the session only). The CLI still suggests
       `destination: "localSettings"` and reports the decision as `user_temporary` either way, so the card promised
