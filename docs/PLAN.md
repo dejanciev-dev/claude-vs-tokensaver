@@ -1048,7 +1048,7 @@ Planned on 2026-11-13. Probed with 2.1.323: a Stop ends the turn with `terminal_
       `Ended in an error: 3 turns, $0.40 (1% of the spend; 2 stopped, 1 API error)`; `aborted_*` reads "stopped",
       `api_error` "API error", `max_turns` / `error_max_turns` "turn limit", `error_max_budget_usd` "budget limit",
       others as sent. `UsageRecord.EndReason`, `SavingsReport.EndReasonText`
-- [ ] **End reason in the CSV.** An `end_reason` column after `cache_rewrite`: the logged `end`, empty on turns that
+- [x] **End reason in the CSV.** An `end_reason` column after `cache_rewrite`: the logged `end`, empty on turns that
       finished. `UsageCsv.Columns`
 - [ ] **Failed turn cost in the chat.** After a turn that ended in an error other than a Stop and cost $0.05 or more:
       `ⓘ This turn ended with an API error after costing $0.12: its tokens are paid for. Sending again starts from

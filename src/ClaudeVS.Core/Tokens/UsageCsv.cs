@@ -16,7 +16,7 @@ namespace ClaudeVS.Core.Tokens
         {
             "time", "solution", "model", "routed", "route_model", "route_effort", "router",
             "input", "output", "thinking", "cache_read", "cache_write", "cache_write_1h", "fast_tokens", "large_context_tokens", "agent_tokens", "agent_types",
-            "cost_usd", "router_cost_usd", "duration_ms", "error", "tokens_avoided", "route_reason", "prompt", "session", "effort", "tools", "turn", "cache_rewrite",
+            "cost_usd", "router_cost_usd", "duration_ms", "error", "tokens_avoided", "route_reason", "prompt", "session", "effort", "tools", "turn", "cache_rewrite", "end_reason",
         };
 
         /// <summary>Writes the header and one row per record; returns the number of rows.</summary>
@@ -49,7 +49,7 @@ namespace ClaudeVS.Core.Tokens
                     r.InputTokens.ToString(c), r.OutputTokens.ToString(c), r.ThinkingTokens.ToString(c),
                     r.CacheReadTokens.ToString(c), r.CacheWriteTokens.ToString(c), r.CacheWrite1hTokens.ToString(c), r.FastTokens.ToString(c), r.LargeContextTokens.ToString(c), r.AgentTokensTotal.ToString(c), Text(AgentTypes(r.AgentTypes)),
                     r.CostUsd.ToString("0.######", c), r.RouterCostUsd.ToString("0.######", c), r.DurationMs.ToString(c),
-                    r.IsError ? "1" : "0", TokenEstimate.FromChars(r.CharsAvoided).ToString(c), Text(r.RouteReason), Text(r.PromptPreview), Text(r.SessionId), Text(r.Effort), Text(Tools(r.ToolResultTokens)), turn, rewrites.TryGetValue(r, out var cause) ? cause : "",
+                    r.IsError ? "1" : "0", TokenEstimate.FromChars(r.CharsAvoided).ToString(c), Text(r.RouteReason), Text(r.PromptPreview), Text(r.SessionId), Text(r.Effort), Text(Tools(r.ToolResultTokens)), turn, rewrites.TryGetValue(r, out var cause) ? cause : "", Text(r.EndReason),
                 };
                 w.Write(string.Join(",", cells));
                 w.Write("\r\n");
