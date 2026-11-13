@@ -442,6 +442,19 @@ namespace ClaudeVS.Core.Tests
             True(!SavingsReport.Build(recs.Skip(2), new PriceTable()).ToText().Contains("Ended in an error"), "no line in the text");
         }
 
+        private static void Test_FailedTurnCostNote()
+        {
+            Eq("This turn ended with an API error after costing $0.12: its tokens are paid for. Sending again starts from the conversation as it is.",
+                SessionNotices.FailedTurnCost(true, "api_error", 0.12));
+            True(SessionNotices.FailedTurnCost(true, "error_max_turns", 0.05)?.StartsWith("This turn ended with the turn limit after costing $0.05") == true, "from $0.05");
+            True(SessionNotices.FailedTurnCost(true, "prompt_too_long", 0.30)?.StartsWith("This turn ended with an error (prompt too long)") == true, "others as sent");
+            True(SessionNotices.FailedTurnCost(true, null, 0.30)?.StartsWith("This turn ended with an error after") == true, "no reason sent");
+            Eq(null, SessionNotices.FailedTurnCost(true, "aborted_streaming", 0.50), "a Stop: no note");
+            Eq(null, SessionNotices.FailedTurnCost(true, "aborted_tools", 0.50), "a Stop during a tool: no note");
+            Eq(null, SessionNotices.FailedTurnCost(true, "api_error", 0.049), "under $0.05");
+            Eq(null, SessionNotices.FailedTurnCost(false, null, 2.00), "finished");
+        }
+
         private static void Test_SavingsReport_CacheRewriteCauses()
         {
             var t = new DateTime(2026, 11, 10, 9, 0, 0, DateTimeKind.Utc);

@@ -1929,6 +1929,8 @@ namespace ClaudeVS.ToolWindow
                         SaveModelUsage(ev.SessionId, ev.ModelUsage);
                         CheckCost();
                         CacheBreakTip();
+                        if (_meterModel != null && SessionNotices.FailedTurnCost(ev.IsError, UsageRecord.EndOf(ev.IsError, ev.TerminalReason, ev.ResultSubtype), _meterModel.LastTurnCostUsd) is string failedCost)
+                            Notice(failedCost);
                         if (_meterModel != null) Tip(SessionNotices.SubagentsDominate(_meterModel.LastTurnSubagentCostUsd, _meterModel.LastTurnCostUsd));
                         if (!LongConversationTip()) PriceyContextTip(_turnModel); // both say "the conversation is big": one per turn
                         OverkillModelTip(_turnModel);
