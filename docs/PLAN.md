@@ -1116,6 +1116,47 @@ Planned on 2026-11-13.
 
 ---
 
+## Phase 46 — What you send
+
+Planned on 2026-11-13. The usage log has held the prompt's length and the attached lines and files since Phase 2;
+neither the CSV nor the report shows them.
+
+- [ ] **Prompt and attachments in the CSV.** `prompt_chars`, `attached_lines` and `attached_files` columns after
+      `pause_s`. `UsageCsv.Columns`
+- [ ] **Attached context in the report.** Turns sent with files or a selection attached, against those without:
+      `With attachments:          40 turns, $0.120 per turn (210 lines on average); without: $0.050 per turn`;
+      shown when both kinds have turns. `SavingsReport.AttachmentsLine`
+
+---
+
+## Phase 47 — Time per turn
+
+Planned on 2026-11-13.
+
+- [ ] **Time per model.** The *By model* rows add the average answer time: `(…, cache 90%, 14.2 s per turn)`; from
+      the logged durations, turns logged without one left out. `ModelBreakdown.AverageSeconds`
+- [ ] **Time per effort.** The *By effort* rows add the same: higher effort thinks longer, and this shows how much.
+      `EffortBreakdown.AverageSeconds`
+- [ ] **Time waited.** `Waiting on Claude:          3 h 20 min over 412 turns (29 s per turn)` under the turns line
+      of the period. `SavingsReport.WaitLine`
+
+---
+
+## Phase 48 — Solutions side by side
+
+Planned on 2026-11-13.
+
+- [ ] **Cost per turn and cache per solution.** The *By solution* rows add the cost per turn and the cache hit rate
+      (the main agent's tokens, as per model): `(… , $0.080 per turn, cache 88%)`. `SolutionBreakdown.CostPerTurnUsd`,
+      `CacheHitPercent`
+- [ ] **Conversations per solution.** The rows add the conversations (logged session ids): `12 conversations`.
+      `SolutionBreakdown.Conversations`
+- [ ] **Manual checks for Phases 46–48.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md). Section 13,
+      *What you send, time and solutions*: the CSV columns, the attachments line, the times per model and effort,
+      the time waited and the solution rows; Release is now 14
+
+---
+
 ## Working in Visual Studio — daily loop
 
 1. Core logic change → edit in `ClaudeVS.Core` → run tests (`ClaudeVS.Core.Tests` → Set as Startup → Ctrl+F5, or `dotnet run` in its folder).
