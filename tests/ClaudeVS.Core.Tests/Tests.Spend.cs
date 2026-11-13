@@ -1460,6 +1460,26 @@ namespace ClaudeVS.Core.Tests
             True(!SpendWatch.BudgetLine(d, m, Nov(16), w).Contains("this week"), "weekly warning off: left out");
         }
 
+        private static void Test_SavingsReport_TimeWaited()
+        {
+            var t = DateTime.UtcNow.AddDays(-1);
+            var recs = new[]
+            {
+                new UsageRecord { Timestamp = t, DurationMs = 3_600_000 },
+                new UsageRecord { Timestamp = t, DurationMs = 1_200_000 },
+                new UsageRecord { Timestamp = t, DurationMs = 0 },  // logged without a duration
+            };
+            var rep = SavingsReport.Build(recs, new PriceTable());
+            Eq("1 h 20 min over 2 turns (2400 s per turn)", rep.WaitLine());
+            string nl = Environment.NewLine;
+            True(rep.ToText().Contains("auto-routed)" + nl + "Waiting on Claude:          1 h 20 min over 2 turns"), "under the period line: " + rep.ToText());
+            Eq(null, SavingsReport.Build(recs.Skip(2), new PriceTable()).WaitLine(), "no durations: no line");
+            Eq("45 s", TurnTime.Span(TimeSpan.FromSeconds(45.9)));
+            Eq("12 min", TurnTime.Span(TimeSpan.FromMinutes(12.5)));
+            Eq("2 h", TurnTime.Span(TimeSpan.FromHours(2)));
+            Eq("1 turn", SavingsReport.Build(recs.Take(1), new PriceTable()).WaitLine().Split(new[] { " over " }, StringSplitOptions.None)[1].Substring(0, 6), "one turn");
+        }
+
         private static void Test_SavingsReport_Attachments()
         {
             var t = DateTime.UtcNow.AddDays(-1);
