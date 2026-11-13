@@ -421,6 +421,24 @@ namespace ClaudeVS.Core.Tests
             True(rep.ToText().Contains("Ended in an error:          3 turns, $0.40 (10% of the spend)  (interrupted"), rep.ToText());
             Eq("1 turn, $0.10 (3% of the spend)", SavingsReport.Build(recs.Skip(1).Take(2), new PriceTable()).FailedTurnsLine(), "one turn");
             Eq(null, SavingsReport.Build(recs.Skip(2), new PriceTable()).FailedTurnsLine(), "cost nothing: no line");
+
+            // Why they ended, once some were logged; older lines as "not logged", last
+            recs[0].EndReason = "aborted_streaming";
+            recs[1].EndReason = "api_error";
+            recs[3].EndReason = "aborted_tools";
+            Eq("3 turns, $0.40 (10% of the spend; 2 stopped, 1 API error)", SavingsReport.Build(recs, new PriceTable()).FailedTurnsLine());
+            recs[1].EndReason = null;
+            Eq("3 turns, $0.40 (10% of the spend; 2 stopped, 1 not logged)", SavingsReport.Build(recs, new PriceTable()).FailedTurnsLine());
+            Eq("turn limit", SavingsReport.EndReasonText("error_max_turns"));
+            Eq("budget limit", SavingsReport.EndReasonText("error_max_budget_usd"));
+            Eq("prompt too long", SavingsReport.EndReasonText("prompt_too_long"), "others as sent");
+            Eq(null, SavingsReport.EndReasonText(null));
+
+            // What to log from a result
+            Eq("aborted_streaming", UsageRecord.EndOf(true, "aborted_streaming", "error_during_execution"));
+            Eq("error_max_turns", UsageRecord.EndOf(true, null, "error_max_turns"), "older CLIs: the subtype");
+            Eq(null, UsageRecord.EndOf(false, "completed", "success"), "finished");
+            Eq(null, UsageRecord.EndOf(true, "completed", "success"), "nothing to tell");
             True(!SavingsReport.Build(recs.Skip(2), new PriceTable()).ToText().Contains("Ended in an error"), "no line in the text");
         }
 

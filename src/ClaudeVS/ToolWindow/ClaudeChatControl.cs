@@ -2018,6 +2018,7 @@ namespace ClaudeVS.ToolWindow
             rec.CostUsd = _meterModel?.LastTurnCostUsd ?? 0;
             rec.DurationMs = ev.DurationMs;
             rec.IsError = ev.IsError;
+            rec.EndReason = UsageRecord.EndOf(ev.IsError, ev.TerminalReason, ev.ResultSubtype);
             _ = System.Threading.Tasks.Task.Run(() =>
             {
                 try { Usage.KeepMonths = Options?.KeepUsageMonths ?? 3; Usage.Append(rec); }

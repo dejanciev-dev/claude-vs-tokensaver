@@ -63,6 +63,7 @@ namespace ClaudeVS.Core.Tests
 
             var normal = new ClaudeStreamParser().Parse("{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"result\":\"hi\",\"terminal_reason\":\"completed\"}").Single();
             Eq("completed", normal.TerminalReason, "normal turn");
+            Eq("success", normal.ResultSubtype, "subtype");
             Eq(null, new ClaudeStreamParser().Parse("{\"type\":\"result\",\"subtype\":\"success\",\"result\":\"hi\"}").Single().TerminalReason, "older CLIs");
         }
 

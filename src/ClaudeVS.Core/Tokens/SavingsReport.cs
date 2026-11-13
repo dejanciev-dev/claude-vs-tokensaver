@@ -466,12 +466,40 @@ namespace ClaudeVS.Core.Tokens
         /// <summary>Percent of the period's spend.</summary>
         public double FailedShare { get; set; }
 
-        /// <summary>"3 turns, $0.40 (1% of the spend)"; null when the failed turns cost nothing.</summary>
+        /// <summary>The failed turns per <see cref="EndReasonText"/> of their logged end ("not logged" for older lines).</summary>
+        public Dictionary<string, int> FailedByReason { get; } = new Dictionary<string, int>(StringComparer.Ordinal);
+        private const string ReasonNotLogged = "not logged";
+
+        /// <summary>
+        /// A logged <see cref="UsageRecord.EndReason"/> in words: "stopped" (any <c>aborted_*</c>), "API error", "turn
+        /// limit", "budget limit"; others as sent, underscores as spaces; null for none.
+        /// </summary>
+        public static string EndReasonText(string end)
+        {
+            if (string.IsNullOrEmpty(end)) return null;
+            if (end.StartsWith("aborted", StringComparison.Ordinal)) return "stopped";
+            switch (end)
+            {
+                case "api_error": return "API error";
+                case "max_turns": case "error_max_turns": return "turn limit";
+                case "error_max_budget_usd": return "budget limit";
+                default: return end.Replace('_', ' ');
+            }
+        }
+
+        /// <summary>
+        /// "3 turns, $0.40 (1% of the spend; 2 stopped, 1 API error)", the reasons most first and only when some were
+        /// logged; null when the failed turns cost nothing.
+        /// </summary>
         public string FailedTurnsLine()
         {
             if (FailedTurns == 0 || FailedUsd <= 0) return null;
             var c = CultureInfo.InvariantCulture;
-            return $"{FailedTurns} {(FailedTurns == 1 ? "turn" : "turns")}, ${FailedUsd.ToString("0.00", c)} ({FailedShare.ToString("0", c)}% of the spend)";
+            string reasons = FailedByReason.Keys.Any(k => k != ReasonNotLogged)
+                ? "; " + string.Join(", ", FailedByReason.OrderBy(kv => kv.Key == ReasonNotLogged).ThenByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal)
+                    .Select(kv => $"{kv.Value} {kv.Key}"))
+                : "";
+            return $"{FailedTurns} {(FailedTurns == 1 ? "turn" : "turns")}, ${FailedUsd.ToString("0.00", c)} ({FailedShare.ToString("0", c)}% of the spend{reasons})";
         }
 
         public int LongContextTurns { get; set; }
@@ -673,6 +701,11 @@ namespace ClaudeVS.Core.Tokens
             rep.FailedTurns = failed.Count;
             rep.FailedUsd = failed.Sum(r => r.CostUsd + r.RouterCostUsd);
             rep.FailedShare = rep.ActualCostUsd > 0 ? 100.0 * rep.FailedUsd / rep.ActualCostUsd : 0;
+            foreach (var r in failed)
+            {
+                string reason = EndReasonText(r.EndReason) ?? ReasonNotLogged;
+                rep.FailedByReason[reason] = (rep.FailedByReason.TryGetValue(reason, out var n) ? n : 0) + 1;
+            }
             rep.LongConversationShare = rep.LongConversationTurns > 0 && list.Sum(r => r.CostUsd + r.RouterCostUsd) is double all && all > 0
                 ? 100.0 * rep.LongConversationUsd / all : 0;
             var timed = list.Where(r => r.RouterMs > 0).ToList();
