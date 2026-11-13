@@ -2089,7 +2089,7 @@ namespace ClaudeVS.ToolWindow
             var m = _meterModel;
             if (m == null) return;
             _ctxBar.Value = Math.Min(100, m.ContextPercent);
-            long window = m.ContextWindow > 0 ? m.ContextWindow : 200_000;
+            long window = m.ContextWindow > 0 ? m.ContextWindow : new TokenMeterSettings().DefaultContextWindow;
             RenderMeter(m, window);
 
             var advice = m.GetAdvice().OrderByDescending(a => a.Level).FirstOrDefault();

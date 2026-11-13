@@ -50,6 +50,9 @@ All notable changes to this project are listed here. The format follows
 - **"Always allow" that Claude Code didn't save**: since 2.1.323 Claude Code keeps a rule for the session only when
   it looks like it holds a secret, or when git tracks `.claude/settings.local.json`, though the card still offered
   to save it there. After the call, the chat now checks the settings file and says when the rule isn't in it.
+- **Context meter before the first answer** assumed a 200K window; every current model has 1M, and Claude Code
+  2.1.323 also assumes 1M for a model it doesn't know. The meter now starts from 1M until Claude Code reports the
+  window.
 
 ## [0.10.0] - 2026-11-11
 

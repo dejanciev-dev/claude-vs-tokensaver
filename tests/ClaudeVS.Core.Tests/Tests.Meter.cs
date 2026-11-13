@@ -63,6 +63,15 @@ namespace ClaudeVS.Core.Tests
             Eq(null, SubagentStats.Parse(null), "older CLIs");
         }
 
+        private static void Test_Meter_DefaultWindowIs1M()
+        {
+            // Every current model reports 1M, and 2.1.323 assumes 1M for an unknown model ID.
+            var m = new TokenMeter();
+            Eq(1_000_000L, new TokenMeterSettings().DefaultContextWindow);
+            m.Observe(new ClaudeEvent { Kind = ClaudeEventKind.TurnCompleted, LastRequestUsage = new TokenUsage { CacheRead = 50_000 } });
+            Eq(5.0, Math.Round(m.ContextPercent, 1), "50k of 1M before the CLI reports a window");
+        }
+
         private static void Test_CacheWindow_FromRealUsage_2_1_319()
         {
             // The real 2.1.319 thinking turn: Claude Code wrote the cache with the 1-hour lifetime.

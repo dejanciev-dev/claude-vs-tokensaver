@@ -22,7 +22,11 @@ namespace ClaudeVS.Core.Tokens
         public double CompactUrgentPercent { get; set; } = 85;
         /// <summary>A single tool result above this many characters (~4 chars/token) is flagged.</summary>
         public int LargeToolResultChars { get; set; } = 40_000;
-        public long DefaultContextWindow { get; set; } = 200_000;
+        /// <summary>
+        /// The window assumed until the CLI reports one (its result's <c>contextWindow</c>, or <c>get_context_usage</c>):
+        /// every current model reports 1M, and since 2.1.323 Claude Code assumes 1M for a model ID it doesn't know.
+        /// </summary>
+        public long DefaultContextWindow { get; set; } = 1_000_000;
     }
 
     /// <summary>
