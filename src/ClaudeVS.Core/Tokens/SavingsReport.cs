@@ -214,6 +214,13 @@ namespace ClaudeVS.Core.Tokens
     }
 
     /// <summary>One conversation (a session id in the usage log) of the savings report.</summary>
+    /// <summary>Cache rewrites of one likely cause: how many, and what they cost more than reading the cache.</summary>
+    public sealed class RewriteCauseBreakdown
+    {
+        public int Turns { get; set; }
+        public double ExtraUsd { get; set; }
+    }
+
     public sealed class ConversationBreakdown
     {
         public string SessionId { get; set; }
@@ -357,6 +364,60 @@ namespace ClaudeVS.Core.Tokens
         public int CacheRewriteTurns { get; set; }
         public long CacheRewriteTokens { get; set; }
         public double CacheRewriteExtraUsd { get; set; }
+
+        /// <summary>The likely cause of a cache rewrite (<see cref="RewriteCause"/>).</summary>
+        public const string CausePause = "pause", CauseModel = "model", CauseOther = "other";
+        private static readonly (string Cause, string Text)[] CauseTexts = { (CausePause, "after a pause"), (CauseModel, "model switch"), (CauseOther, "other") };
+
+        /// <summary>The cache rewrites per likely cause, with what they cost more than reading the cache.</summary>
+        public Dictionary<string, RewriteCauseBreakdown> CacheRewriteByCause { get; } = new Dictionary<string, RewriteCauseBreakdown>(StringComparer.Ordinal);
+
+        /// <summary>
+        /// Why a turn wrote the conversation to the cache again, judged against the previous turn of its conversation:
+        /// <see cref="CausePause"/> when more than the cache's lifetime passed from that turn's end to this one's start
+        /// (its logged time less its duration; 1 hour once the conversation wrote the 1-hour cache, else 5 minutes),
+        /// else <see cref="CauseModel"/> when the model family changed, else <see cref="CauseOther"/> (a changed
+        /// CLAUDE.md, MCP tools, settings or speed).
+        /// </summary>
+        public static string RewriteCause(UsageRecord r, UsageRecord previous, bool wrote1h)
+        {
+            var lifetime = wrote1h ? CacheWindow.Long : CacheWindow.Short;
+            var start = r.Timestamp - TimeSpan.FromMilliseconds(Math.Max(0, r.DurationMs));
+            if (start - previous.Timestamp > lifetime) return CausePause;
+            if (PriceTable.Family(r.ModelUsed) != PriceTable.Family(previous.ModelUsed)) return CauseModel;
+            return CauseOther;
+        }
+
+        /// <summary>
+        /// The turns that wrote their conversation to the cache again (<see cref="IsCacheRewrite"/>), each with its likely
+        /// cause (<see cref="RewriteCause"/>), oldest first. Turns without a logged session id are not judged.
+        /// </summary>
+        public static List<KeyValuePair<UsageRecord, string>> CacheRewriteCauses(IEnumerable<UsageRecord> records)
+        {
+            var found = new List<KeyValuePair<UsageRecord, string>>();
+            foreach (var session in (records ?? Enumerable.Empty<UsageRecord>()).Where(r => !string.IsNullOrEmpty(r.SessionId))
+                .OrderBy(r => r.Timestamp).GroupBy(r => r.SessionId, StringComparer.Ordinal))
+            {
+                UsageRecord previous = null;
+                bool wrote1h = false;
+                foreach (var r in session)
+                {
+                    if (IsCacheRewrite(r, previous == null)) found.Add(new KeyValuePair<UsageRecord, string>(r, RewriteCause(r, previous, wrote1h)));
+                    wrote1h |= r.CacheWrite1hTokens > 0;
+                    previous = r;
+                }
+            }
+            return found.OrderBy(kv => kv.Key.Timestamp).ToList();
+        }
+
+        /// <summary>"after a pause: 3 ($0.20), model switch: 1 ($0.05), other: 1 ($0.04)"; null with no rewrite.</summary>
+        public string CacheRewriteCausesLine()
+        {
+            var c = CultureInfo.InvariantCulture;
+            var parts = CauseTexts.Where(t => CacheRewriteByCause.ContainsKey(t.Cause))
+                .Select(t => $"{t.Text}: {CacheRewriteByCause[t.Cause].Turns} (${CacheRewriteByCause[t.Cause].ExtraUsd.ToString("0.00", c)})").ToList();
+            return parts.Count > 0 ? string.Join(", ", parts) : null;
+        }
         /// <summary>A turn that wrote at least this many tokens to the cache, and more than it read, wrote the conversation again.</summary>
         public const long CacheRewriteFromTokens = 10_000;
 
@@ -568,19 +629,16 @@ namespace ClaudeVS.Core.Tokens
                 }
             }
             rep.CacheHitPercent = input > 0 ? 100.0 * cacheRead / input : 0;
-            foreach (var session in list.Where(r => !string.IsNullOrEmpty(r.SessionId)).GroupBy(r => r.SessionId, StringComparer.Ordinal))
+            foreach (var kv in CacheRewriteCauses(list))
             {
-                bool first = true; // the list is oldest first
-                foreach (var r in session)
-                {
-                    if (IsCacheRewrite(r, first))
-                    {
-                        rep.CacheRewriteTurns++;
-                        rep.CacheRewriteTokens += r.CacheWriteTokens;
-                        rep.CacheRewriteExtraUsd += RewriteExtra(r, prices.For(r.ModelUsed) ?? prices.Sonnet);
-                    }
-                    first = false;
-                }
+                var r = kv.Key;
+                double extra = RewriteExtra(r, prices.For(r.ModelUsed) ?? prices.Sonnet);
+                rep.CacheRewriteTurns++;
+                rep.CacheRewriteTokens += r.CacheWriteTokens;
+                rep.CacheRewriteExtraUsd += extra;
+                if (!rep.CacheRewriteByCause.TryGetValue(kv.Value, out var b)) rep.CacheRewriteByCause[kv.Value] = b = new RewriteCauseBreakdown();
+                b.Turns++;
+                b.ExtraUsd += extra;
             }
             // Long conversations: the turns past the 30th of their conversation, against the earlier ones
             double earlierUsd = 0; int earlierTurns = 0;
@@ -788,6 +846,8 @@ namespace ClaudeVS.Core.Tokens
             sb.AppendLine($"Cache hit rate:             {CacheHitPercent:0}%");
             if (CacheRewriteTurns > 0)
                 sb.AppendLine($"Cache written again:        ${CacheRewriteExtraUsd:0.00} more than reading it  ({CacheRewriteTurns} {(CacheRewriteTurns == 1 ? "turn" : "turns")}, {TokenMeter.Format(CacheRewriteTokens)} tokens: an expired cache, a model switch or a changed CLAUDE.md, MCP tools or settings)");
+            if (CacheRewriteCausesLine() is string causes)
+                sb.AppendLine($"                            {causes}");
             if (LongConversationsLine() is string longOnes)
                 sb.AppendLine($"Past a conversation's 30th: {longOnes}  (each turn sends the whole conversation again; /compact or a new chat starts small)");
             if (ThinkingTokens > 0)
