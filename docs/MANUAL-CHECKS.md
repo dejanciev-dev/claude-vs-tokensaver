@@ -141,7 +141,20 @@ or the rewrites are too small to count.
 | **Export Usage as CSV…** | A last `cache_rewrite` column: `pause` and `model` on those two turns, empty on the others |
 | Ask Claude to run `sleep 25 && echo done`, allow it, and press **Stop** while it runs | The report adds `Ended in an error:          1 turn, $… (…% of the spend)` (a Stop before Claude's first answer reports no cost, so it isn't listed) |
 
-## 11. Release (Phase 5)
+## 11. Why turns failed, and when you spend (Phases 41–43)
+
+Needs **Options → Diagnostics → Keep local usage log** on, and the turns from section 10.
+
+| Do | Expect |
+|---|---|
+| **Show Savings Report** after the Stop in section 10 | The failed line ends `(…% of the spend; 1 stopped)` |
+| **Export Usage as CSV…** | A last `end_reason` column: `aborted_streaming` (or `aborted_tools`) on the stopped turn, empty on the others. No ℹ note was shown after the Stop |
+| Close Visual Studio. From a command prompt: `set CLAUDE_CODE_MAX_OUTPUT_TOKENS=60`, then start `devenv` from it. Model **Opus**, attach a big file and ask for a long answer | The answer is cut off with an error, then `ℹ This turn ended with an API error after costing $…: its tokens are paid for. …` (only when the turn cost $0.05 or more; attach more if not). The report's failed line adds `1 API error`. Start Visual Studio normally afterwards |
+| **Show Savings Report**, period *All* | Under `Costliest conversations:` the rows add `(…)` with the models when more than one, how long it ran (`over … min`), and the cache rewrites and errors |
+| The same report | Under the month and week lines: `Today:                      $… so far in … turns (yesterday $…)` |
+| The same report, with turns logged over 14 days or more | A `By weekday:` list, Monday first, before `By day` |
+
+## 12. Release (Phase 5)
 
 These need you rather than a check list:
 
