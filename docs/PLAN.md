@@ -994,7 +994,7 @@ cloud, Remote Control, Claude Tag, gateway, sandbox and plugin-authoring entries
       there, says it holds for this session only. `PermissionPrompt.MissingRules` / `SettingsPath`. Verified with
       2.1.323: in a repo where git tracks `settings.local.json` the file stayed `{}`; untracked, the rule was written
       ~2 s before the tool result, so checking at the result is safe
-- [ ] **1M context before the first answer** (2.1.323: an unknown model ID is assumed to have 1M, not 200K; every
+- [x] **1M context before the first answer** (2.1.323: an unknown model ID is assumed to have 1M, not 200K; every
       current model reports `contextWindow: 1000000`). The meter's fallback before the CLI reports a window was
       200K. Now 1M
 - [ ] **Verify with 2.1.323 and raise `CliVersion.Tested`.** All live tests pass with 2.1.323 except the router's
