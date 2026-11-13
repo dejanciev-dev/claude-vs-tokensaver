@@ -36,7 +36,7 @@ namespace ClaudeVS.Core.Tests
 
         private static void Test_Router_PlanModeSaysSonnet()
         {
-            // Claude Code answers with Sonnet in plan mode when Haiku is asked for (2.1.316-2.1.322)
+            // Claude Code answers with Sonnet in plan mode when Haiku is asked for (2.1.316-2.1.323)
             var router = new ModelRouter();
             var simple = new RouteRequest { Prompt = "rename x to count" };
             Eq(ModelChoice.Haiku, router.Route(simple).Model, "outside plan mode: Haiku");

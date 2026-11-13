@@ -16,7 +16,7 @@ namespace ClaudeVS.Core.Cli
         public const string Required = "2.1.318";
 
         /// <summary>The newest version everything was verified with (all live tests); raise it when re-verifying.</summary>
-        public const string Tested = "2.1.322";
+        public const string Tested = "2.1.323";
 
         private static readonly Regex Number = new Regex(@"^\s*v?(\d+)\.(\d+)\.(\d+)", RegexOptions.CultureInvariant);
 

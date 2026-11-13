@@ -117,7 +117,19 @@ Set the amounts back afterwards: monthly `200`, ask before sending past conversa
 
 Set the weekly warning back to `0` afterwards.
 
-## 9. Release (Phase 5)
+## 9. Claude Code 2.1.323 (Phase 39)
+
+Needs Claude Code 2.1.323 or newer (`claude --version`).
+
+| Do | Expect |
+|---|---|
+| In the open solution's `.claude/settings.local.json`, add a slow hook: `{"hooks":{"PreToolUse":[{"matcher":"Bash\|PowerShell","hooks":[{"type":"command","command":"sleep 75","timeout":120}]}]}}`, then ask Claude to run `echo hi` | After 30 s the activity strip adds `· PreToolUse hook running for 30s`, then `1m 00s`; the red "Not responding" never shows. Once the command has run, the hook part goes away |
+| Remove the hook. Ask Claude to run `curl -s -H "Authorization: Bearer sk-ant-api03-Zx9Qw8Er7Ty6Ui5Op4As3Df2Gh1Jk0LzXcVbNm" https://example.invalid/` in Manual mode and click **Always allow …** | After the call: `ⓘ Claude Code allows Bash(curl …) until this session ends but didn't save it in .claude\settings.local.json …`, and the file has no such rule |
+| The same with `curl -s https://example.invalid/` | No ⓘ note; the rule is in `.claude/settings.local.json` |
+| **Options → Route with Haiku** on, open a new chat window, wait half a minute, send a prompt | Output → Claude Code: `Haiku router (… ms)` well under 4000 ms on the first prompt, not "gave no answer" |
+| A new chat, before the first answer: look at the meter line | It ends in `(0/1.0M)`, not `(0/200.0k)` |
+
+## 10. Release (Phase 5)
 
 These need you rather than a check list:
 

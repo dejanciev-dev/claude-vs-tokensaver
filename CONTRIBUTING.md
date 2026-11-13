@@ -22,7 +22,7 @@ dotnet run --project tests/ClaudeVS.Core.Tests -- --live-all
 ```
 
 It runs them one after another, each in an empty temp folder and asking for Haiku, then prints a summary with each
-test's cost and the total (12 tests, about $0.18 and 5 minutes with Claude Code 2.1.322; a single `--live-…` test
+test's cost and the total (12 tests, about $0.17 and 4.5 minutes with Claude Code 2.1.323; a single `--live-…` test
 prints its cost too). The exit code is 0 only when all pass. It never uses plan mode, where Claude Code answers
 with Sonnet even when Haiku is asked for (~20x the cost).
 
