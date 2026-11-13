@@ -54,6 +54,8 @@ All notable changes to this project are listed here. The format follows
   its cache rewrites and the turns that ended in an error, when there were any (`(2 cache rewrites, 1 error)`),
   and the models its turns ran on when more than one (`opus 12, haiku 3`), and how long it ran from its first
   turn to its last (`over 2 h 10 min`).
+- **Today in the savings report**: under the month and week lines, today's spend so far and its turns, with
+  yesterday's to compare (`Today: $3.20 so far in 14 turns (yesterday $5.10)`).
 - **Failed turns in the savings report**: what the turns that ended in an error cost (interrupted, a limit or an API
   error), and their share of the spend (`Ended in an error: 3 turns, $0.40 (1% of the spend)`), when they cost
   anything. The usage log now keeps why such a turn ended (`end`), and the line says it: `(1% of the spend; 2

@@ -1074,7 +1074,7 @@ Planned on 2026-11-13.
 
 Planned on 2026-11-13.
 
-- [ ] **Today in the report.** Under the month and week lines, for a period up to now: `Today: $3.20 so far in 14
+- [x] **Today in the report.** Under the month and week lines, for a period up to now: `Today: $3.20 so far in 14
       turns (yesterday $5.10)`; all of today's turns in scope whatever the period, as the month line; yesterday
       only when it cost something. `SavingsReport.TodayLine`
 - [ ] **By weekday.** A *By weekday* list in the report once the period spans 14 days or more: turns, cost and

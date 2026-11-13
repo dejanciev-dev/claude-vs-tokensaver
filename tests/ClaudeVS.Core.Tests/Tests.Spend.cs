@@ -710,6 +710,25 @@ namespace ClaudeVS.Core.Tests
             Eq(null, SavingsReport.Build(recs.Take(2), new PriceTable(), nowUtc: At(11)).WeekLine(), "nothing this week");
         }
 
+        private static void Test_SavingsReport_Today()
+        {
+            DateTime At(int day, int hour = 12) => new DateTime(2026, 11, day, hour, 0, 0, DateTimeKind.Local).ToUniversalTime();
+            var recs = new[]
+            {
+                new UsageRecord { Timestamp = At(10, 23), CostUsd = 5, RouterCostUsd = 0.1 },
+                new UsageRecord { Timestamp = At(11, 0), CostUsd = 1.2 },
+                new UsageRecord { Timestamp = At(11, 15), CostUsd = 2, RouterCostUsd = 0.001 },
+            };
+            var rep = SavingsReport.Build(recs, new PriceTable(), nowUtc: At(11, 18));
+            Eq("Today:                      $3.20 so far in 2 turns (yesterday $5.10)", rep.TodayLine());
+            True(rep.ToText().Contains(rep.WeekLine() + Environment.NewLine + rep.TodayLine()), "under the week line: " + rep.ToText());
+            // Whatever the period: today's turns count though the period starts today at noon
+            Eq(rep.TodayLine(), SavingsReport.Build(recs, new PriceTable(), sinceUtc: At(11, 12), nowUtc: At(11, 18)).TodayLine(), "all of today");
+            Eq("Today:                      $1.20 so far in 1 turn", SavingsReport.Build(recs.Skip(1).Take(1), new PriceTable(), nowUtc: At(11, 18)).TodayLine(), "nothing yesterday");
+            Eq(null, SavingsReport.Build(recs, new PriceTable(), nowUtc: At(12, 9)).TodayLine(), "nothing today yet");
+            True(!SavingsReport.Build(recs, new PriceTable(), nowUtc: At(11, 18), untilUtc: At(11, 1)).ToText().Contains("Today:"), "a period that ends before now: no line");
+        }
+
         private static void Test_SavingsReport_LastMonth()
         {
             DateTime At(int month, int day) => new DateTime(2026, month, day, 12, 0, 0, DateTimeKind.Local).ToUniversalTime();
