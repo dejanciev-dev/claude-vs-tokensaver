@@ -1133,7 +1133,7 @@ neither the CSV nor the report shows them.
 
 Planned on 2026-11-13.
 
-- [ ] **Time per model.** The *By model* rows add the average answer time: `(…, cache 90%, 14.2 s per turn)`; from
+- [x] **Time per model.** The *By model* rows add the average answer time: `(…, cache 90%, 14.2 s per turn)`; from
       the logged durations, turns logged without one left out. `ModelBreakdown.AverageSeconds`
 - [ ] **Time per effort.** The *By effort* rows add the same: higher effort thinks longer, and this shows how much.
       `EffortBreakdown.AverageSeconds`

@@ -575,6 +575,16 @@ namespace ClaudeVS.Core.Tests
             string text = rep.ToText();
             True(text.Contains("  opus        2 turns  $    0.80  (67% of turns, $0.400 per turn, cache 90%)"), text);
             True(text.Contains("(33% of turns, $0.010 per turn, cache 0%)"), "no input tokens: 0% — " + text);
+            Eq(null, opus.AverageSeconds, "no durations logged");
+
+            // Time per turn: the turns logged with a duration
+            recs[0].DurationMs = 20_000;
+            recs[1].DurationMs = 8_400;
+            recs[2].DurationMs = 0;
+            var timed = SavingsReport.Build(recs, new PriceTable());
+            Eq(14.2, Math.Round(timed.ByModel.Single(b => b.Family == "opus").AverageSeconds.Value, 6), "average");
+            True(timed.ToText().Contains("(67% of turns, $0.400 per turn, cache 90%, 14.2 s per turn)"), timed.ToText());
+            True(timed.ToText().Contains("(33% of turns, $0.010 per turn, cache 0%)"), "no duration: left out");
         }
 
         private static void Test_SavingsReport_ToolResults()
