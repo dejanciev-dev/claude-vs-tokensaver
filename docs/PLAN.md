@@ -1038,6 +1038,53 @@ Planned on 2026-11-13.
 
 ---
 
+## Phase 41 — Why turns failed
+
+Planned on 2026-11-13. Probed with 2.1.323: a Stop ends the turn with `terminal_reason: "aborted_streaming"`
+(`subtype: "error_during_execution"`); the captures also hold `api_error`.
+
+- [ ] **Why a turn ended, in the usage log.** An `end` field on turns that ended in an error: the result's
+      `terminal_reason`, or its `subtype` when Claude Code sends none. The report's failed line says why:
+      `Ended in an error: 3 turns, $0.40 (1% of the spend; 2 stopped, 1 API error)`; `aborted_*` reads "stopped",
+      `api_error` "API error", `max_turns` / `error_max_turns` "turn limit", `error_max_budget_usd` "budget limit",
+      others as sent. `UsageRecord.EndReason`, `SavingsReport.EndReasonText`
+- [ ] **End reason in the CSV.** An `end_reason` column after `cache_rewrite`: the logged `end`, empty on turns that
+      finished. `UsageCsv.Columns`
+- [ ] **Failed turn cost in the chat.** After a turn that ended in an error other than a Stop and cost $0.05 or more:
+      `ⓘ This turn ended with an API error after costing $0.12: its tokens are paid for. Sending again starts from
+      the conversation as it is.` A Stop is your own choice and gets no note. `SessionNotices.FailedTurnCost`
+
+---
+
+## Phase 42 — What the costliest conversations went through
+
+Planned on 2026-11-13.
+
+- [ ] **Rewrites and errors per conversation.** Each *Costliest conversations* row adds its cache rewrites and the
+      turns that ended in an error, when there are any: `(2 cache rewrites, 1 error)`. From
+      `SavingsReport.CacheRewriteCauses` and the logged errors. `ConversationBreakdown.CacheRewrites`, `Errors`
+- [ ] **Models per conversation.** Each row adds the models its turns ran on, by turns, when more than one:
+      `opus 12, haiku 3`. `ConversationBreakdown.Models`
+- [ ] **How long a conversation ran.** Each row adds the time from its first turn's start to its last turn's end:
+      `over 2 h 10 min`, `over 25 min`; left out under a minute. `ConversationBreakdown.Span`
+
+---
+
+## Phase 43 — When you spend
+
+Planned on 2026-11-13.
+
+- [ ] **Today in the report.** Under the month and week lines, for a period up to now: `Today: $3.20 so far in 14
+      turns (yesterday $5.10)`; all of today's turns in scope whatever the period, as the month line; yesterday
+      only when it cost something. `SavingsReport.TodayLine`
+- [ ] **By weekday.** A *By weekday* list in the report once the period spans 14 days or more: turns, cost and
+      cost per turn per local weekday, Monday first, the days without turns left out. `SavingsReport.ByWeekday`
+- [ ] **Manual checks for Phases 41–43.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md). Section 11,
+      *Why turns failed, and when you spend*: the end reason after a Stop and in the CSV, the failed turn note,
+      the conversation rows, today's line and the weekdays; Release is now 12
+
+---
+
 ## Working in Visual Studio — daily loop
 
 1. Core logic change → edit in `ClaudeVS.Core` → run tests (`ClaudeVS.Core.Tests` → Set as Startup → Ctrl+F5, or `dotnet run` in its folder).
