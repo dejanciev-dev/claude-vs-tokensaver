@@ -311,6 +311,23 @@ namespace ClaudeVS.Core.Tokens
         public double CostPerTurnUsd => Turns > 0 ? CostUsd / Turns : 0;
         /// <summary>The main agent's input tokens read from the cache, in percent (subagents may run other models).</summary>
         public double CacheHitPercent { get; set; }
+        /// <summary>The average answer time of its turns logged with a duration; null when none was.</summary>
+        public double? AverageSeconds { get; set; }
+    }
+
+    /// <summary>Durations of turns in the savings report.</summary>
+    public static class TurnTime
+    {
+        /// <summary>The average duration in seconds of the turns logged with one; null when none was.</summary>
+        public static double? AverageSeconds(IEnumerable<UsageRecord> turns)
+        {
+            var timed = turns.Where(r => r.DurationMs > 0).ToList();
+            return timed.Count > 0 ? timed.Average(r => r.DurationMs) / 1000.0 : (double?)null;
+        }
+
+        /// <summary>", 14.2 s per turn"; "" when not known.</summary>
+        public static string PerTurn(double? seconds) =>
+            seconds is double s ? ", " + s.ToString("0.0", CultureInfo.InvariantCulture) + " s per turn" : "";
     }
 
     /// <summary>
@@ -873,6 +890,7 @@ namespace ClaudeVS.Core.Tokens
                     {
                         Family = g.Key, Turns = g.Count(), CostUsd = g.Sum(r => r.CostUsd),
                         CacheHitPercent = mIn > 0 ? 100.0 * g.Sum(r => r.CacheReadTokens) / mIn : 0,
+                        AverageSeconds = TurnTime.AverageSeconds(g),
                     };
                 })
                 .OrderByDescending(b => b.Turns));
@@ -1130,7 +1148,7 @@ namespace ClaudeVS.Core.Tokens
             sb.AppendLine();
             sb.AppendLine("By model:");
             foreach (var b in ByModel)
-                sb.AppendLine($"  {b.Family,-7} {b.Turns,5} turns  ${b.CostUsd,8:0.00}  ({100.0 * b.Turns / Turns:0}% of turns, ${b.CostPerTurnUsd:0.000} per turn, cache {b.CacheHitPercent:0}%)");
+                sb.AppendLine($"  {b.Family,-7} {b.Turns,5} turns  ${b.CostUsd,8:0.00}  ({100.0 * b.Turns / Turns:0}% of turns, ${b.CostPerTurnUsd:0.000} per turn, cache {b.CacheHitPercent:0}%{TurnTime.PerTurn(b.AverageSeconds)})");
             if (ByEffort.Count > 0)
             {
                 sb.AppendLine();
