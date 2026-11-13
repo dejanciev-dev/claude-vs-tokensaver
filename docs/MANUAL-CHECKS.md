@@ -129,7 +129,19 @@ Needs Claude Code 2.1.323 or newer (`claude --version`).
 | **Options → Route with Haiku** on, open a new chat window, wait half a minute, send a prompt | Output → Claude Code: `Haiku router (… ms)` well under 4000 ms on the first prompt, not "gave no answer" |
 | A new chat, before the first answer: look at the meter line | It ends in `(0/1.0M)`, not `(0/200.0k)` |
 
-## 10. Release (Phase 5)
+## 10. Turns that didn't pay off (Phase 40)
+
+Needs **Options → Diagnostics → Keep local usage log** on. Use a context of 10k tokens or more (attach a big file),
+or the rewrites are too small to count.
+
+| Do | Expect |
+|---|---|
+| In one conversation: a prompt, wait 6 minutes, another prompt | **Show Savings Report**: under `Cache written again:` a line `after a pause: 1 ($…)` |
+| In the same conversation, switch the model (e.g. Haiku → Sonnet) and send a prompt | The causes line adds `model switch: 1 ($…)`, after the pause |
+| **Export Usage as CSV…** | A last `cache_rewrite` column: `pause` and `model` on those two turns, empty on the others |
+| Ask Claude to run `sleep 25 && echo done`, allow it, and press **Stop** while it runs | The report adds `Ended in an error:          1 turn, $… (…% of the spend)` (a Stop before Claude's first answer reports no cost, so it isn't listed) |
+
+## 11. Release (Phase 5)
 
 These need you rather than a check list:
 
