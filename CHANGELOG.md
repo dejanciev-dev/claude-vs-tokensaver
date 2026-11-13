@@ -76,6 +76,8 @@ All notable changes to this project are listed here. The format follows
   took on average (`14.2 s per turn`), so you can see what a higher effort costs in waiting as well as in money.
 - **Time waited in the savings report**: under the period, how long you waited on Claude's answers in all
   (`Waiting on Claude: 3 h 20 min over 412 turns (29 s per turn)`).
+- **Solutions side by side in the savings report**: each *By solution* row adds the cost per turn and the cache hit
+  rate (`($0.080 per turn, cache 88%; $9.00 this month)`); this month's part moves inside the same brackets.
 - **Failed turns in the savings report**: what the turns that ended in an error cost (interrupted, a limit or an API
   error), and their share of the spend (`Ended in an error: 3 turns, $0.40 (1% of the spend)`), when they cost
   anything. The usage log now keeps why such a turn ended (`end`), and the line says it: `(1% of the spend; 2

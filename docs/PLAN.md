@@ -1138,7 +1138,7 @@ Planned on 2026-11-13.
 - [x] **Time per effort.** The *By effort* rows add the same: higher effort thinks longer, and this shows how much.
       `EffortBreakdown.AverageSeconds`
 - [x] **Time waited.** `Waiting on Claude:          3 h 20 min over 412 turns (29 s per turn)` under the period line
-      of the period. `SavingsReport.WaitLine`
+      (`Period: …`). `SavingsReport.WaitLine`
 
 ---
 
@@ -1146,8 +1146,8 @@ Planned on 2026-11-13.
 
 Planned on 2026-11-13.
 
-- [ ] **Cost per turn and cache per solution.** The *By solution* rows add the cost per turn and the cache hit rate
-      (the main agent's tokens, as per model): `(… , $0.080 per turn, cache 88%)`. `SolutionBreakdown.CostPerTurnUsd`,
+- [x] **Cost per turn and cache per solution.** The *By solution* rows add the cost per turn and the cache hit rate
+      (the main agent's tokens, as per model): `($0.080 per turn, cache 88%; $9.00 this month)`. `SolutionBreakdown.CostPerTurnUsd`,
       `CacheHitPercent`
 - [ ] **Conversations per solution.** The rows add the conversations (logged session ids): `12 conversations`.
       `SolutionBreakdown.Conversations`

@@ -206,6 +206,9 @@ namespace ClaudeVS.Core.Tokens
         public double CostUsd { get; set; }
         /// <summary>Spent this calendar month up to the report, whatever the period, router included.</summary>
         public double MonthUsd { get; set; }
+        public double CostPerTurnUsd => Turns > 0 ? CostUsd / Turns : 0;
+        /// <summary>The main agent's input tokens read from the cache, in percent; null when its turns logged no input.</summary>
+        public double? CacheHitPercent { get; set; }
         /// <summary>The folder's name ("linq-samples"), or "(no folder)".</summary>
         public string Name => NameOf(Solution);
 
@@ -1020,6 +1023,8 @@ namespace ClaudeVS.Core.Tokens
                     {
                         Solution = g.Key.Length == 0 ? null : g.First().Solution, Turns = g.Count(), CostUsd = g.Sum(r => r.CostUsd + r.RouterCostUsd),
                         MonthUsd = month.TryGetValue(g.Key, out var m) ? m : 0,
+                        CacheHitPercent = g.Sum(r => r.InputTokens + r.CacheReadTokens + r.CacheWriteTokens) is long sIn && sIn > 0
+                            ? 100.0 * g.Sum(r => r.CacheReadTokens) / sIn : (double?)null,
                     })
                     .OrderByDescending(b => b.CostUsd).ThenByDescending(b => b.Turns));
             }
@@ -1098,9 +1103,14 @@ namespace ClaudeVS.Core.Tokens
             sb.AppendLine("By solution:");
             // This month's part, when the period reaches today and is more than this month
             bool month = Until == null && Since.HasValue && Since.Value.ToLocalTime().Date < Month && BySolution.Any(b => b.MonthUsd > 0);
+            var c = CultureInfo.InvariantCulture;
             foreach (var b in BySolution.Take(SolutionsShown))
-                sb.AppendLine(($"  {OneLine(b.Name, 30),-30} {b.Turns,5} turns  ${b.CostUsd,8:0.00}"
-                    + (month && b.MonthUsd > 0 ? $"  (${b.MonthUsd:0.00} this month)" : "")).TrimEnd());
+            {
+                var parts = new List<string> { "$" + b.CostPerTurnUsd.ToString("0.000", c) + " per turn" };
+                if (b.CacheHitPercent is double hit) parts.Add("cache " + hit.ToString("0", c) + "%");
+                string thisMonth = month && b.MonthUsd > 0 ? "; $" + b.MonthUsd.ToString("0.00", c) + " this month" : "";
+                sb.AppendLine($"  {OneLine(b.Name, 30),-30} {b.Turns,5} turns  ${b.CostUsd,8:0.00}  ({string.Join(", ", parts)}{thisMonth})");
+            }
             if (BySolution.Count > SolutionsShown)
                 sb.AppendLine($"  … {BySolution.Count - SolutionsShown} more, ${BySolution.Skip(SolutionsShown).Sum(b => b.CostUsd):0.00}");
             return sb.ToString();
