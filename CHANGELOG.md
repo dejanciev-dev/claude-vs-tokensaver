@@ -47,6 +47,9 @@ All notable changes to this project are listed here. The format follows
 - **No "Not responding" while a hook runs long**: a hook taking over a minute (one of your own `PreToolUse` hooks,
   say) showed the red "Not responding" notice. Claude Code 2.1.323 sends a heartbeat every 30 s while a hook runs;
   the activity strip now says `PreToolUse hook running for 1m 30s` instead.
+- **"Always allow" that Claude Code didn't save**: since 2.1.323 Claude Code keeps a rule for the session only when
+  it looks like it holds a secret, or when git tracks `.claude/settings.local.json`, though the card still offered
+  to save it there. After the call, the chat now checks the settings file and says when the rule isn't in it.
 
 ## [0.10.0] - 2026-11-11
 

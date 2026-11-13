@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -196,6 +197,26 @@ namespace ClaudeVS.ToolWindow
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine("Open command failed: " + ex.Message); }
         }
 
+        private sealed class AlwaysAllowCheck { public string ToolUseId, File; public IReadOnlyList<string> Rules; }
+        private AlwaysAllowCheck _alwaysAllowCheck;
+
+        /// <summary>After the result of a call allowed with "Always allow": say so when its rule did not reach the settings file.</summary>
+        private void CheckAlwaysAllowSaved(ClaudeEvent ev)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var check = _alwaysAllowCheck;
+            if (check == null || ev.ToolUseId != check.ToolUseId) return;
+            _alwaysAllowCheck = null;
+            string text = null;
+            try { if (System.IO.File.Exists(check.File)) text = System.IO.File.ReadAllText(check.File); }
+            catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException) { return; } // can't tell: say nothing
+            var missing = PermissionPrompt.MissingRules(text, check.Rules);
+            if (missing.Count == 0) return;
+            string shown = check.File;
+            if (_sessionDir != null && shown.StartsWith(_sessionDir, StringComparison.OrdinalIgnoreCase)) shown = shown.Substring(_sessionDir.Length).TrimStart('\\', '/');
+            Append("  " + PermissionPrompt.NotSavedNote(missing, shown) + "\n");
+        }
+
         /// <summary>Allow (once or always) or deny; a denial can carry what to do instead.</summary>
         private void AnswerPermission(bool allow, bool always = false, string feedback = null)
         {
@@ -214,6 +235,10 @@ namespace ClaudeVS.ToolWindow
             JArray rules = always ? prompt?.AlwaysAllow : null;
             if (allow) Append(rules != null ? $"  ✔ Allowed, and from now on: {string.Join(", ", prompt.AlwaysAllowRules)}\n" : "  ✔ Allowed\n");
             else Append(feedback != null ? $"  ✖ Denied: {feedback}\n" : "  ✖ Denied\n");
+            // Claude Code may keep the rule for this session only (2.1.323); checked when the call's result comes.
+            string settingsFile = allow && rules != null && req.ToolUseId != null
+                ? PermissionPrompt.SettingsPath(prompt.AlwaysAllowDestination, _sessionDir, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)) : null;
+            _alwaysAllowCheck = settingsFile != null ? new AlwaysAllowCheck { ToolUseId = req.ToolUseId, File = settingsFile, Rules = prompt.AlwaysAllowRules } : null;
             string denyMessage = feedback != null ? "The user denied this and said what to do instead: " + feedback : null;
             var session = _session;
             Fire(() => session.RespondToPermissionAsync(req.RequestId, req.ToolInput ?? new JObject(), allow, denyMessage, rules));

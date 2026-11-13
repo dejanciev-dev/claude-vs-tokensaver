@@ -32,6 +32,17 @@ namespace ClaudeVS.Core.Cli
         public IReadOnlyList<string> AlwaysAllowRules { get; private set; } = Array.Empty<string>();
         /// <summary>Where they are saved, in words: "in this project, just for you (.claude/settings.local.json)".</summary>
         public string AlwaysAllowScope { get; private set; }
+        /// <summary>Where they are saved, as the CLI names it: <c>localSettings</c>, <c>projectSettings</c>, <c>userSettings</c>, <c>session</c>.</summary>
+        public string AlwaysAllowDestination { get; private set; }
+
+        /// <summary>
+        /// Said when an "Always allow" rule is not in its settings file after the call. Since 2.1.323 Claude Code keeps
+        /// a rule for the session only when it looks like it holds a secret, or would be saved to a
+        /// <c>settings.local.json</c> that git tracks, though it still suggests saving it there (verified with 2.1.323:
+        /// the suggestion says <c>localSettings</c> and the call is reported as <c>user_temporary</c> either way).
+        /// </summary>
+        public static string NotSavedNote(IReadOnlyList<string> rules, string file) =>
+            $"ⓘ Claude Code allows {string.Join(", ", rules)} until this session ends but didn't save it in {file}: it does that when a rule looks like it holds a secret, or when git tracks the file. Add it to the file yourself to keep it.";
 
         public static PermissionPrompt From(string toolName, JObject input, JObject request)
         {
@@ -96,9 +107,38 @@ namespace ClaudeVS.Core.Cli
                 p.AlwaysAllowRules = allow.SelectMany(s => ((JArray)s["rules"]).OfType<JObject>())
                     .Select(r => string.IsNullOrEmpty((string)r["ruleContent"]) ? (string)r["toolName"] : $"{(string)r["toolName"]}({(string)r["ruleContent"]})")
                     .Where(r => !string.IsNullOrEmpty(r)).Distinct().ToList();
-                p.AlwaysAllowScope = Scope((string)allow[0]["destination"]);
+                p.AlwaysAllowDestination = (string)allow[0]["destination"];
+                p.AlwaysAllowScope = Scope(p.AlwaysAllowDestination);
             }
             return p;
+        }
+
+        /// <summary>
+        /// The settings file an "Always allow" goes to: <paramref name="projectDir"/>/.claude/settings.local.json,
+        /// …/settings.json, or ~/.claude/settings.json; null for <c>session</c>, unknown destinations or no folder.
+        /// </summary>
+        public static string SettingsPath(string destination, string projectDir, string userHome)
+        {
+            switch (destination)
+            {
+                case "localSettings": return string.IsNullOrEmpty(projectDir) ? null : System.IO.Path.Combine(projectDir, ".claude", "settings.local.json");
+                case "projectSettings": return string.IsNullOrEmpty(projectDir) ? null : System.IO.Path.Combine(projectDir, ".claude", "settings.json");
+                case "userSettings": return string.IsNullOrEmpty(userHome) ? null : System.IO.Path.Combine(userHome, ".claude", "settings.json");
+                default: return null;
+            }
+        }
+
+        /// <summary>The rules not in <c>permissions.allow</c> of a settings file's text (all of them for a missing or unreadable file).</summary>
+        public static IReadOnlyList<string> MissingRules(string settingsJson, IEnumerable<string> rules)
+        {
+            var saved = new HashSet<string>(StringComparer.Ordinal);
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(settingsJson) && JObject.Parse(settingsJson).SelectToken("permissions.allow") is JArray allow)
+                    foreach (var r in allow) if (r.Type == JTokenType.String) saved.Add(((string)r).Trim());
+            }
+            catch (Newtonsoft.Json.JsonException) { }
+            return (rules ?? Array.Empty<string>()).Where(r => !saved.Contains(r)).ToList();
         }
 
         private static string Scope(string destination)

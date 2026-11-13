@@ -606,6 +606,25 @@ namespace ClaudeVS.Core.Tests
             Eq("hi", ToolCallView.Summarize("Bash", "hi\nShell cwd was reset to C:\\repo", false).Lines.Single(), "the note is dropped after real output");
         }
 
+        private static void Test_AlwaysAllow_NotSaved()
+        {
+            // 2.1.323: a secret-looking rule still comes as a localSettings suggestion, but is kept for the session only.
+            var req = JObject.Parse("{\"permission_suggestions\":[{\"type\":\"addRules\",\"rules\":[{\"toolName\":\"Bash\",\"ruleContent\":\"curl -s https://example.invalid/probe4\"}],\"behavior\":\"allow\",\"destination\":\"localSettings\"}]}");
+            var p = PermissionPrompt.From("Bash", JObject.Parse("{\"command\":\"curl -s https://example.invalid/probe4\"}"), req);
+            Eq("localSettings", p.AlwaysAllowDestination);
+            Eq(Path.Combine("C:\\repo", ".claude", "settings.local.json"), PermissionPrompt.SettingsPath(p.AlwaysAllowDestination, "C:\\repo", "C:\\home"));
+            Eq(Path.Combine("C:\\home", ".claude", "settings.json"), PermissionPrompt.SettingsPath("userSettings", "C:\\repo", "C:\\home"));
+            Eq(null, PermissionPrompt.SettingsPath("session", "C:\\repo", "C:\\home"), "session rules have no file");
+
+            // As 2.1.323 wrote it in an untracked repo, and left it in a tracked one.
+            string saved = "{\n  \"permissions\": {\n    \"allow\": [\n      \"Bash(curl -s https://example.invalid/probe4)\"\n    ]\n  }\n}";
+            Eq(0, PermissionPrompt.MissingRules(saved, p.AlwaysAllowRules).Count, "saved");
+            Eq(1, PermissionPrompt.MissingRules("{}", p.AlwaysAllowRules).Count, "kept for the session only");
+            Eq(1, PermissionPrompt.MissingRules(null, p.AlwaysAllowRules).Count, "no file");
+            Eq(1, PermissionPrompt.MissingRules("not json", p.AlwaysAllowRules).Count, "unreadable file");
+            True(PermissionPrompt.NotSavedNote(p.AlwaysAllowRules, ".claude/settings.local.json").Contains("Bash(curl -s https://example.invalid/probe4)"), "names the rule");
+        }
+
         private static void Test_HookHeartbeat()
         {
             // Captured with 2.1.323: a PreToolUse hook callback answered after 65 s.
