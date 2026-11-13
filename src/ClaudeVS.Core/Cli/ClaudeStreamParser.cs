@@ -287,6 +287,7 @@ namespace ClaudeVS.Core.Cli
                 ContextWindow = window,
                 CredentialExpiresUtc = SignInExpiry.Parse(json["credential_expires_at"]),
                 TerminalReason = (string)json["terminal_reason"],
+                ResultSubtype = (string)json["subtype"],
                 Subagents = SubagentStats.Parse(json["subagent_stats"]),
                 ModelUsage = ModelUsageEntry.Parse(json["modelUsage"]),
             } };

@@ -48,7 +48,8 @@ All notable changes to this project are listed here. The format follows
   `other`) on the turns the savings report counts as having written the cache again, empty on the others.
 - **Failed turns in the savings report**: what the turns that ended in an error cost (interrupted, a limit or an API
   error), and their share of the spend (`Ended in an error: 3 turns, $0.40 (1% of the spend)`), when they cost
-  anything.
+  anything. The usage log now keeps why such a turn ended (`end`), and the line says it: `(1% of the spend; 2
+  stopped, 1 API error)`.
 
 ### Fixed
 - **Haiku router on Claude Code 2.1.323**: there the first request of every Claude Code process waits 5–7 s for its

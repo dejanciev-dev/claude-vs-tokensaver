@@ -241,6 +241,8 @@ namespace ClaudeVS.Core.Cli
         public System.DateTime? CredentialExpiresUtc { get; set; }
         /// <summary>Why the turn ended (<c>terminal_reason</c>, 2.1.319): "completed", "api_error"…; null when not sent.</summary>
         public string TerminalReason { get; set; }
+        /// <summary>TurnCompleted: the result's <c>subtype</c> ("success", "error_during_execution", "error_max_turns"…).</summary>
+        public string ResultSubtype { get; set; }
         /// <summary>The turn's subagents (<c>subagent_stats</c>, 2.1.319); null when not sent.</summary>
         public SubagentStats Subagents { get; set; }
         /// <summary>TurnCompleted: the result's <c>modelUsage</c>, cumulative per model for the process (subagents included).</summary>

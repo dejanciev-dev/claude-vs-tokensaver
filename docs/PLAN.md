@@ -1043,7 +1043,7 @@ Planned on 2026-11-13.
 Planned on 2026-11-13. Probed with 2.1.323: a Stop ends the turn with `terminal_reason: "aborted_streaming"`
 (`subtype: "error_during_execution"`); the captures also hold `api_error`.
 
-- [ ] **Why a turn ended, in the usage log.** An `end` field on turns that ended in an error: the result's
+- [x] **Why a turn ended, in the usage log.** An `end` field on turns that ended in an error: the result's
       `terminal_reason`, or its `subtype` when Claude Code sends none. The report's failed line says why:
       `Ended in an error: 3 turns, $0.40 (1% of the spend; 2 stopped, 1 API error)`; `aborted_*` reads "stopped",
       `api_error` "API error", `max_turns` / `error_max_turns` "turn limit", `error_max_budget_usd` "budget limit",

@@ -68,6 +68,16 @@ namespace ClaudeVS.Core.Tokens
         [JsonProperty("cost")] public double CostUsd { get; set; }
         [JsonProperty("ms")] public long DurationMs { get; set; }
         [JsonProperty("error")] public bool IsError { get; set; }
+        /// <summary>
+        /// Why a turn that ended in an error ended: the result's <c>terminal_reason</c> ("aborted_streaming" for a Stop,
+        /// "api_error"…), or its <c>subtype</c> when Claude Code sent none; null on turns that finished and in older lines.
+        /// </summary>
+        [JsonProperty("end", NullValueHandling = NullValueHandling.Ignore)] public string EndReason { get; set; }
+
+        /// <summary>The <see cref="EndReason"/> to log for a turn's result.</summary>
+        public static string EndOf(bool isError, string terminalReason, string subtype) =>
+            !isError ? null : !string.IsNullOrEmpty(terminalReason) && terminalReason != "completed" ? terminalReason
+                : !string.IsNullOrEmpty(subtype) && subtype != "success" ? subtype : null;
 
         /// <summary>Characters of file content not sent thanks to references (≈ chars / TokenEstimate.CharsPerToken tokens).</summary>
         [JsonProperty("charsAvoided")] public long CharsAvoided { get; set; }
