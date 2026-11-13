@@ -1085,6 +1085,37 @@ Planned on 2026-11-13.
 
 ---
 
+## Phase 44 — Did the 1-hour cache pay?
+
+Planned on 2026-11-13. Claude Code writes the 1-hour cache on a claude.ai plan (2.1.319): 2× the input price to
+write, against 1.25× for the 5-minute one, so it pays only when you come back within the hour.
+
+- [ ] **1-hour cache in the report.** What writing the 1-hour cache cost above 5-minute writes, against what it
+      saved on turns that came 5–60 minutes after the previous one of their conversation and read the cache (with
+      the 5-minute cache those turns would have written it again): `1-hour cache: $0.40 more to write, ≈ $1.20 saved
+      on 6 turns after a pause of 5–60 min (net ≈ $0.80 saved)`; shown when any turn wrote it. The pause as for the
+      rewrite causes. `SavingsReport.OneHourCacheLine`, `SavingsReport.PauseBefore`
+- [ ] **Pause in the CSV.** A `pause_s` column after `end_reason`: seconds from the previous turn's end in the same
+      conversation to this turn's start; empty on a conversation's first turn and without a session id.
+      `UsageCsv.Columns`
+
+---
+
+## Phase 45 — Turns against your usual
+
+Planned on 2026-11-13.
+
+- [ ] **Turn against your usual.** The turn footer adds `· 6× your usual turn` when a turn cost 5× or more the
+      median logged turn and $0.05 or more; from 20 logged turns that cost something, read with the spend watches
+      once per Visual Studio session. `ConversationStats.TurnMedian`, `TurnNote`
+- [ ] **Turn spread in the report.** Above the costliest turns: `Turns: median $0.03, 9 in 10 under $0.40, dearest
+      $2.10`, from the turns that cost something; shown with 10 or more. `SavingsReport.TurnsLine`
+- [ ] **Manual checks for Phases 44–45.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md). Section 12,
+      *The 1-hour cache and your usual turn*: the cache line, the CSV's `pause_s`, the footer marker and the turn
+      spread; Release is now 13
+
+---
+
 ## Working in Visual Studio — daily loop
 
 1. Core logic change → edit in `ClaudeVS.Core` → run tests (`ClaudeVS.Core.Tests` → Set as Startup → Ctrl+F5, or `dotnet run` in its folder).
