@@ -431,18 +431,44 @@ namespace ClaudeVS.Core.Tokens
         /// <summary>The cache rewrites per likely cause, with what they cost more than reading the cache.</summary>
         public Dictionary<string, RewriteCauseBreakdown> CacheRewriteByCause { get; } = new Dictionary<string, RewriteCauseBreakdown>(StringComparer.Ordinal);
 
+        /// <summary>From <paramref name="previous"/>'s end (its logged time) to <paramref name="r"/>'s start (its logged time less its duration).</summary>
+        public static TimeSpan PauseBefore(UsageRecord r, UsageRecord previous) =>
+            r.Timestamp - TimeSpan.FromMilliseconds(Math.Max(0, r.DurationMs)) - previous.Timestamp;
+
+        /// <summary>What writing the 1-hour cache cost above writing the same tokens to the 5-minute cache.</summary>
+        public double OneHourExtraUsd { get; set; }
+        /// <summary>
+        /// Turns that came 5–60 minutes after the previous one of a conversation that wrote the 1-hour cache, and read
+        /// from it; and what reading cost less than writing those tokens again, as the 5-minute cache would have made them.
+        /// </summary>
+        public int OneHourPaidTurns { get; set; }
+        public double OneHourSavedUsd { get; set; }
+        public bool WroteOneHourCache { get; set; }
+
+        /// <summary>
+        /// "$0.40 more to write, ≈ $1.20 saved on 6 turns after a pause of 5–60 min (net ≈ $0.80 saved)"; null when no
+        /// turn wrote the 1-hour cache.
+        /// </summary>
+        public string OneHourCacheLine()
+        {
+            if (!WroteOneHourCache) return null;
+            var c = CultureInfo.InvariantCulture;
+            double net = OneHourSavedUsd - OneHourExtraUsd;
+            return $"${OneHourExtraUsd.ToString("0.00", c)} more to write, ≈ ${OneHourSavedUsd.ToString("0.00", c)} saved on {OneHourPaidTurns} "
+                + $"{(OneHourPaidTurns == 1 ? "turn" : "turns")} after a pause of 5–60 min (net ≈ ${Math.Abs(net).ToString("0.00", c)} {(net >= 0 ? "saved" : "lost")})";
+        }
+
         /// <summary>
         /// Why a turn wrote the conversation to the cache again, judged against the previous turn of its conversation:
         /// <see cref="CausePause"/> when more than the cache's lifetime passed from that turn's end to this one's start
-        /// (its logged time less its duration; 1 hour once the conversation wrote the 1-hour cache, else 5 minutes),
-        /// else <see cref="CauseModel"/> when the model family changed, else <see cref="CauseOther"/> (a changed
-        /// CLAUDE.md, MCP tools, settings or speed).
+        /// (<see cref="PauseBefore"/>; 1 hour once the conversation wrote the 1-hour cache, else 5 minutes), else
+        /// <see cref="CauseModel"/> when the model family changed, else <see cref="CauseOther"/> (a changed CLAUDE.md,
+        /// MCP tools, settings or speed).
         /// </summary>
         public static string RewriteCause(UsageRecord r, UsageRecord previous, bool wrote1h)
         {
             var lifetime = wrote1h ? CacheWindow.Long : CacheWindow.Short;
-            var start = r.Timestamp - TimeSpan.FromMilliseconds(Math.Max(0, r.DurationMs));
-            if (start - previous.Timestamp > lifetime) return CausePause;
+            if (PauseBefore(r, previous) > lifetime) return CausePause;
             if (PriceTable.Family(r.ModelUsed) != PriceTable.Family(previous.ModelUsed)) return CauseModel;
             return CauseOther;
         }
@@ -750,6 +776,30 @@ namespace ClaudeVS.Core.Tokens
                 b.Turns++;
                 b.ExtraUsd += extra;
             }
+            // The 1-hour cache: what its writes cost above 5-minute ones, against the turns it kept warm through a pause
+            foreach (var session in list.Where(r => !string.IsNullOrEmpty(r.SessionId)).GroupBy(r => r.SessionId, StringComparer.Ordinal))
+            {
+                UsageRecord previous = null;
+                bool wrote1h = false;
+                foreach (var r in session) // oldest first
+                {
+                    var p = prices.For(r.ModelUsed) ?? prices.Sonnet;
+                    long write1h = Math.Min(Math.Max(0, r.CacheWrite1hTokens), r.CacheWriteTokens);
+                    if (write1h > 0)
+                    {
+                        rep.WroteOneHourCache = true;
+                        rep.OneHourExtraUsd += write1h * (2 * p.Input - p.CacheWrite) / 1_000_000.0 * p.Multiplier(r);
+                    }
+                    if (previous != null && wrote1h && r.CacheReadTokens > 0 && PauseBefore(r, previous) is TimeSpan pause
+                        && pause > CacheWindow.Short && pause <= CacheWindow.Long)
+                    {
+                        rep.OneHourPaidTurns++;
+                        rep.OneHourSavedUsd += r.CacheReadTokens * (p.CacheWrite - p.CacheRead) / 1_000_000.0 * p.Multiplier(r);
+                    }
+                    wrote1h |= write1h > 0;
+                    previous = r;
+                }
+            }
             // Long conversations: the turns past the 30th of their conversation, against the earlier ones
             double earlierUsd = 0; int earlierTurns = 0;
             foreach (var session in list.Where(r => !string.IsNullOrEmpty(r.SessionId)).GroupBy(r => r.SessionId, StringComparer.Ordinal))
@@ -997,6 +1047,8 @@ namespace ClaudeVS.Core.Tokens
                 sb.AppendLine($"Cache written again:        ${CacheRewriteExtraUsd:0.00} more than reading it  ({CacheRewriteTurns} {(CacheRewriteTurns == 1 ? "turn" : "turns")}, {TokenMeter.Format(CacheRewriteTokens)} tokens: an expired cache, a model switch or a changed CLAUDE.md, MCP tools or settings)");
             if (CacheRewriteCausesLine() is string causes)
                 sb.AppendLine($"                            {causes}");
+            if (OneHourCacheLine() is string oneHour)
+                sb.AppendLine($"1-hour cache:               {oneHour}");
             if (LongConversationsLine() is string longOnes)
                 sb.AppendLine($"Past a conversation's 30th: {longOnes}  (each turn sends the whole conversation again; /compact or a new chat starts small)");
             if (FailedTurnsLine() is string failedOnes)

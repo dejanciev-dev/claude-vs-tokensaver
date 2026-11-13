@@ -1090,7 +1090,7 @@ Planned on 2026-11-13.
 Planned on 2026-11-13. Claude Code writes the 1-hour cache on a claude.ai plan (2.1.319): 2× the input price to
 write, against 1.25× for the 5-minute one, so it pays only when you come back within the hour.
 
-- [ ] **1-hour cache in the report.** What writing the 1-hour cache cost above 5-minute writes, against what it
+- [x] **1-hour cache in the report.** What writing the 1-hour cache cost above 5-minute writes, against what it
       saved on turns that came 5–60 minutes after the previous one of their conversation and read the cache (with
       the 5-minute cache those turns would have written it again): `1-hour cache: $0.40 more to write, ≈ $1.20 saved
       on 6 turns after a pause of 5–60 min (net ≈ $0.80 saved)`; shown when any turn wrote it. The pause as for the
