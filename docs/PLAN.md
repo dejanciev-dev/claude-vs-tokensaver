@@ -1065,8 +1065,8 @@ Planned on 2026-11-13.
       `SavingsReport.CacheRewriteCauses` and the logged errors. `ConversationBreakdown.CacheRewrites`, `Errors`
 - [x] **Models per conversation.** Each row adds the models its turns ran on, by turns, when more than one:
       `opus 12, haiku 3`. `ConversationBreakdown.Models`
-- [ ] **How long a conversation ran.** Each row adds the time from its first turn's start to its last turn's end:
-      `over 2 h 10 min`, `over 25 min`; left out under a minute. `ConversationBreakdown.Span`
+- [x] **How long a conversation ran.** Each row adds the time from its first turn's start to its last turn's end:
+      `over 2 h 10 min`, `over 25 min`, `over 3 days` from 2 days; left out under a minute. `ConversationBreakdown.Span`
 
 ---
 

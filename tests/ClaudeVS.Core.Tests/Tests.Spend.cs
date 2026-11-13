@@ -614,10 +614,10 @@ namespace ClaudeVS.Core.Tests
             var a = rep.CostliestConversations[0];
             Eq(1, a.CacheRewrites, "after the 20-minute pause");
             Eq(1, a.Errors, "errors");
-            Eq("(1 cache rewrite, 1 error)", a.DetailsText());
+            Eq("(over 21 min; 1 cache rewrite, 1 error)", a.DetailsText());
             Eq(null, rep.CostliestConversations[1].DetailsText(), "nothing to add");
             string text = rep.ToText();
-            True(text.Contains("$  1.00     3 turns  shop  (1 cache rewrite, 1 error)  “go on”"), text);
+            True(text.Contains("$  1.00     3 turns  shop  (over 21 min; 1 cache rewrite, 1 error)  “go on”"), text);
             True(text.Contains("$  0.70     1 turn   blog\r\n") || text.Contains("$  0.70     1 turn   blog\n"), text);
             Eq("(2 cache rewrites, 3 errors)", new ConversationBreakdown { CacheRewrites = 2, Errors = 3 }.DetailsText(), "plural");
 
@@ -630,10 +630,24 @@ namespace ClaudeVS.Core.Tests
             });
             var b = SavingsReport.Build(mixed, new PriceTable()).CostliestConversations[1];
             Eq("haiku 2, other 1, sonnet 1", string.Join(", ", b.Models.Select(m => m.Key + " " + m.Value)), "ties by name");
-            Eq("(haiku 2, other 1, sonnet 1)", b.DetailsText());
+            Eq("(haiku 2, other 1, sonnet 1; over 3 min)", b.DetailsText());
             Eq(1, a.Models.Count, "one model");
-            var both = new ConversationBreakdown { Errors = 1 }.WithModels(new[] { new UsageRecord { ModelUsed = "claude-opus-5-5" }, new UsageRecord { ModelUsed = "claude-haiku-5-5" } });
+            var both = new ConversationBreakdown { Errors = 1 }.WithTurns(new[] { new UsageRecord { ModelUsed = "claude-opus-5-5" }, new UsageRecord { ModelUsed = "claude-haiku-5-5" } });
             Eq("(haiku 1, opus 1; 1 error)", both.DetailsText(), "models first");
+
+            // How long it ran: from the first turn's start (time less duration) to the last turn's end
+            var ran = new ConversationBreakdown().WithTurns(new[]
+            {
+                new UsageRecord { Timestamp = t, DurationMs = 120_000 },
+                new UsageRecord { Timestamp = t.AddHours(2).AddMinutes(8) },
+            });
+            Eq(TimeSpan.FromMinutes(130), ran.Span, "span");
+            Eq("(over 2 h 10 min)", ran.DetailsText());
+            Eq(null, ConversationBreakdown.SpanText(TimeSpan.FromSeconds(59)), "under a minute");
+            Eq("over 1 min", ConversationBreakdown.SpanText(TimeSpan.FromSeconds(61)));
+            Eq("over 3 h", ConversationBreakdown.SpanText(TimeSpan.FromHours(3)));
+            Eq("over 47 h 59 min", ConversationBreakdown.SpanText(TimeSpan.FromHours(48) - TimeSpan.FromMinutes(1)));
+            Eq("over 2 days", ConversationBreakdown.SpanText(TimeSpan.FromHours(50)));
         }
 
         private static void Test_SavingsReport_CostliestConversations()
@@ -656,7 +670,7 @@ namespace ClaudeVS.Core.Tests
             Eq("fix the\ncart total", a.FirstPrompt, "the first prompt logged");
             string text = rep.ToText();
             True(text.Contains("Costliest conversations:"), text);
-            True(text.Contains("$  1.00     2 turns  shop  “fix the cart total”"), text);
+            True(text.Contains("$  1.00     2 turns  shop  (over 5 min)  “fix the cart total”"), text);
             True(text.Contains("$  0.70     1 turn   blog"), text);
             True(text.Contains("Conversations: 2, $0.85 on average (median $0.85), 1.5 turns on average\r\nCostliest conversations:")
                 || text.Contains("Conversations: 2, $0.85 on average (median $0.85), 1.5 turns on average\nCostliest conversations:"), "above the list, $0 left out: " + text);
