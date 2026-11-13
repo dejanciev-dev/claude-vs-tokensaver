@@ -624,6 +624,22 @@ namespace ClaudeVS.Core.Tokens
             if (HaikuDearer > 0) parts.Add($"{HaikuDearer} to a dearer one (≈ ${HaikuDearerExtraUsd:0.00} more)");
             return string.Join(", ", parts);
         }
+        /// <summary>The turns that cost something (router included): how many, the median, the 90th percentile and the dearest.</summary>
+        public int PricedTurns { get; set; }
+        public double TurnMedianUsd { get; set; }
+        public double TurnP90Usd { get; set; }
+        public double TurnMaxUsd { get; set; }
+        /// <summary>The turn spread needs this many turns that cost something.</summary>
+        public const int TurnsLineFrom = 10;
+
+        /// <summary>"Turns: median $0.03, 9 in 10 up to $0.40, dearest $2.10"; null with fewer than <see cref="TurnsLineFrom"/> priced turns.</summary>
+        public string TurnsLine()
+        {
+            if (PricedTurns < TurnsLineFrom) return null;
+            var c = CultureInfo.InvariantCulture;
+            return $"Turns: median ${TurnMedianUsd.ToString("0.00", c)}, 9 in 10 up to ${TurnP90Usd.ToString("0.00", c)}, dearest ${TurnMaxUsd.ToString("0.00", c)}";
+        }
+
         /// <summary>The dearest turns, dearest first (at most <see cref="CostliestCount"/>).</summary>
         public List<UsageRecord> Costliest { get; } = new List<UsageRecord>();
         public const int CostliestCount = 5;
@@ -849,6 +865,15 @@ namespace ClaudeVS.Core.Tokens
                     .OrderBy(b => Array.IndexOf(EffortOrder, b.Effort) is int i && i >= 0 ? i : EffortOrder.Length + (b.Effort == DefaultEffort ? 1 : 0))
                     .ThenBy(b => b.Effort, StringComparer.Ordinal));
 
+            var priced = list.Select(r => r.CostUsd + r.RouterCostUsd).Where(v => v > 0).OrderBy(v => v).ToList();
+            rep.PricedTurns = priced.Count;
+            if (priced.Count > 0)
+            {
+                int mid = priced.Count / 2;
+                rep.TurnMedianUsd = priced.Count % 2 == 1 ? priced[mid] : (priced[mid - 1] + priced[mid]) / 2;
+                rep.TurnP90Usd = priced[(int)Math.Ceiling(0.9 * priced.Count) - 1]; // nearest rank
+                rep.TurnMaxUsd = priced[priced.Count - 1];
+            }
             rep.Costliest.AddRange(list.Where(r => r.CostUsd > 0).OrderByDescending(r => r.CostUsd).Take(CostliestCount));
             var rewrites = CacheRewriteCauses(list).GroupBy(kv => kv.Key.SessionId, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
             var conversations = list
@@ -1091,10 +1116,16 @@ namespace ClaudeVS.Core.Tokens
                 }
             }
             if (Solution == null && SolutionsText() is string solutions && solutions.Length > 0) sb.AppendLine().Append(solutions);
+            if (TurnsLine() is string spread)
+            {
+                // What a turn usually costs, so the costliest ones below can be read against it
+                sb.AppendLine();
+                sb.AppendLine(spread);
+            }
             if (Costliest.Count > 1)
             {
                 // Where the money went: the turns worth looking at (and the prompt, when previews are logged).
-                sb.AppendLine();
+                if (TurnsLine() == null) sb.AppendLine();
                 sb.AppendLine("Costliest turns:");
                 foreach (var r in Costliest)
                 {
