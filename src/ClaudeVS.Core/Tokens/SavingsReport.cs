@@ -833,6 +833,10 @@ namespace ClaudeVS.Core.Tokens
             // This week from Monday, and last week up to the same weekday
             rep.WeekStart = today.AddDays(-(((int)today.DayOfWeek + 6) % 7));
             rep.WeekToDateUsd = scoped.Where(r => r.Timestamp.ToLocalTime().Date >= rep.WeekStart && r.Timestamp.ToLocalTime().Date <= today).Sum(r => r.CostUsd + r.RouterCostUsd);
+            var todays = scoped.Where(r => r.Timestamp.ToLocalTime().Date == today).ToList();
+            rep.TodayTurns = todays.Count;
+            rep.TodayUsd = todays.Sum(r => r.CostUsd + r.RouterCostUsd);
+            rep.YesterdayUsd = scoped.Where(r => r.Timestamp.ToLocalTime().Date == today.AddDays(-1)).Sum(r => r.CostUsd + r.RouterCostUsd);
             var lastWeek = rep.WeekStart.AddDays(-7);
             rep.LastWeekToDateUsd = scoped.Where(r => r.Timestamp.ToLocalTime().Date >= lastWeek && r.Timestamp.ToLocalTime().Date <= lastWeek.AddDays((today - rep.WeekStart).Days)).Sum(r => r.CostUsd + r.RouterCostUsd);
             // Last month up to the same day (its last day when it is shorter), to compare with
@@ -884,6 +888,23 @@ namespace ClaudeVS.Core.Tokens
             string line = $"This week:                  ${WeekToDateUsd.ToString("0.00", c)} since Monday";
             if (LastWeekToDateUsd <= 0) return line;
             return line + $" (last week by the same day: ${LastWeekToDateUsd.ToString("0.00", c)}, {Change(WeekToDateUsd, LastWeekToDateUsd)})";
+        }
+
+        /// <summary>Today's turns and spend (local day), and yesterday's spend, whatever the period (as the month line).</summary>
+        public int TodayTurns { get; set; }
+        public double TodayUsd { get; set; }
+        public double YesterdayUsd { get; set; }
+
+        /// <summary>
+        /// "Today:                      $3.20 so far in 14 turns (yesterday $5.10)"; yesterday left out when it cost
+        /// nothing; null with nothing spent today.
+        /// </summary>
+        public string TodayLine()
+        {
+            if (TodayUsd <= 0) return null;
+            var c = CultureInfo.InvariantCulture;
+            string line = $"Today:                      ${TodayUsd.ToString("0.00", c)} so far in {TodayTurns} {(TodayTurns == 1 ? "turn" : "turns")}";
+            return YesterdayUsd > 0 ? line + $" (yesterday ${YesterdayUsd.ToString("0.00", c)})" : line;
         }
 
         /// <summary>"+37%", "−50%", "±0%".</summary>
@@ -943,6 +964,7 @@ namespace ClaudeVS.Core.Tokens
             sb.AppendLine($"Actual cost:                ${ActualCostUsd:0.00}");
             if (Until == null && MonthLine() is string month) sb.AppendLine(month); // "so far" lines: only for a period up to now
             if (Until == null && WeekLine() is string week) sb.AppendLine(week);
+            if (Until == null && TodayLine() is string todayLine) sb.AppendLine(todayLine);
             sb.AppendLine($"Same tokens at Opus prices: ${OpusEquivalentUsd:0.00}  (estimate)");
             sb.AppendLine($"Saved by model routing:     ${RoutingSavedUsd:0.00}  ({RoutingSavedPercent:0}%)");
             sb.AppendLine($"Saved by file references:   ~{TokenMeter.Format(TokensAvoided)} tokens ≈ ${ReferencesSavedUsd:0.00}");
