@@ -1077,7 +1077,7 @@ Planned on 2026-11-13.
 - [x] **Today in the report.** Under the month and week lines, for a period up to now: `Today: $3.20 so far in 14
       turns (yesterday $5.10)`; all of today's turns in scope whatever the period, as the month line; yesterday
       only when it cost something. `SavingsReport.TodayLine`
-- [ ] **By weekday.** A *By weekday* list in the report once the period spans 14 days or more: turns, cost and
+- [x] **By weekday.** A *By weekday* list in the report once the period spans 14 days or more: turns, cost and
       cost per turn per local weekday, Monday first, the days without turns left out. `SavingsReport.ByWeekday`
 - [ ] **Manual checks for Phases 41–43.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md). Section 11,
       *Why turns failed, and when you spend*: the end reason after a Stop and in the CSV, the failed turn note,
