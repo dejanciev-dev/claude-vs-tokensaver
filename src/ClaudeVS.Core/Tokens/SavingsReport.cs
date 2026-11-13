@@ -624,6 +624,25 @@ namespace ClaudeVS.Core.Tokens
             if (HaikuDearer > 0) parts.Add($"{HaikuDearer} to a dearer one (≈ ${HaikuDearerExtraUsd:0.00} more)");
             return string.Join(", ", parts);
         }
+        /// <summary>
+        /// Prompts sent with files or a selection attached, and those without (turns Claude Code started itself, with no
+        /// prompt, left out): turns, cost (router included), and the attached lines.
+        /// </summary>
+        public int AttachedTurns { get; set; }
+        public double AttachedUsd { get; set; }
+        public long AttachedLinesTotal { get; set; }
+        public int PlainTurns { get; set; }
+        public double PlainUsd { get; set; }
+
+        /// <summary>"40 turns, $0.120 per turn (210 lines on average); without: $0.050 per turn"; null unless both kinds have turns.</summary>
+        public string AttachmentsLine()
+        {
+            if (AttachedTurns == 0 || PlainTurns == 0) return null;
+            var c = CultureInfo.InvariantCulture;
+            return $"{AttachedTurns} {(AttachedTurns == 1 ? "turn" : "turns")}, ${(AttachedUsd / AttachedTurns).ToString("0.000", c)} per turn "
+                + $"({(AttachedLinesTotal / (double)AttachedTurns).ToString("0", c)} lines on average); without: ${(PlainUsd / PlainTurns).ToString("0.000", c)} per turn";
+        }
+
         /// <summary>The turns that cost something (router included): how many, the median, the 90th percentile and the dearest.</summary>
         public int PricedTurns { get; set; }
         public double TurnMedianUsd { get; set; }
@@ -865,6 +884,11 @@ namespace ClaudeVS.Core.Tokens
                     .OrderBy(b => Array.IndexOf(EffortOrder, b.Effort) is int i && i >= 0 ? i : EffortOrder.Length + (b.Effort == DefaultEffort ? 1 : 0))
                     .ThenBy(b => b.Effort, StringComparer.Ordinal));
 
+            foreach (var r in list.Where(r => r.PromptChars > 0 || r.AttachedLines > 0 || r.AttachedFiles > 0))
+            {
+                if (r.AttachedLines > 0 || r.AttachedFiles > 0) { rep.AttachedTurns++; rep.AttachedUsd += r.CostUsd + r.RouterCostUsd; rep.AttachedLinesTotal += r.AttachedLines; }
+                else { rep.PlainTurns++; rep.PlainUsd += r.CostUsd + r.RouterCostUsd; }
+            }
             var priced = list.Select(r => r.CostUsd + r.RouterCostUsd).Where(v => v > 0).OrderBy(v => v).ToList();
             rep.PricedTurns = priced.Count;
             if (priced.Count > 0)
@@ -1066,6 +1090,8 @@ namespace ClaudeVS.Core.Tokens
             sb.AppendLine($"Same tokens at Opus prices: ${OpusEquivalentUsd:0.00}  (estimate)");
             sb.AppendLine($"Saved by model routing:     ${RoutingSavedUsd:0.00}  ({RoutingSavedPercent:0}%)");
             sb.AppendLine($"Saved by file references:   ~{TokenMeter.Format(TokensAvoided)} tokens ≈ ${ReferencesSavedUsd:0.00}");
+            if (AttachmentsLine() is string attached)
+                sb.AppendLine($"With attachments:           {attached}");
             sb.AppendLine($"Saved by the prompt cache:  ${CacheSavedUsd:0.00}  ({TokenMeter.Format(CacheReadTokens)} tokens read from the cache instead of sent in full)");
             sb.AppendLine($"Cache hit rate:             {CacheHitPercent:0}%");
             if (CacheRewriteTurns > 0)

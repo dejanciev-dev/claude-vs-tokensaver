@@ -1441,6 +1441,27 @@ namespace ClaudeVS.Core.Tests
             True(!SpendWatch.BudgetLine(d, m, Nov(16), w).Contains("this week"), "weekly warning off: left out");
         }
 
+        private static void Test_SavingsReport_Attachments()
+        {
+            var t = DateTime.UtcNow.AddDays(-1);
+            var recs = new[]
+            {
+                new UsageRecord { Timestamp = t, PromptChars = 80, AttachedLines = 300, AttachedFiles = 1, CostUsd = 0.10, RouterCostUsd = 0.002 },
+                new UsageRecord { Timestamp = t, PromptChars = 40, AttachedLines = 120, CostUsd = 0.14 },
+                new UsageRecord { Timestamp = t, PromptChars = 30, AttachedFiles = 2, CostUsd = 0.12 },  // whole files: no lines counted
+                new UsageRecord { Timestamp = t, PromptChars = 50, CostUsd = 0.05 },
+                new UsageRecord { Timestamp = t, PromptChars = 20, CostUsd = 0.03 },
+                new UsageRecord { Timestamp = t, CostUsd = 0.90 },  // started by Claude Code: no prompt, left out
+            };
+            var rep = SavingsReport.Build(recs, new PriceTable());
+            Eq(3, rep.AttachedTurns, "with");
+            Eq(2, rep.PlainTurns, "without");
+            Eq("3 turns, $0.121 per turn (140 lines on average); without: $0.040 per turn", rep.AttachmentsLine());
+            True(rep.ToText().Contains("With attachments:           3 turns, $0.121 per turn"), rep.ToText());
+            Eq(null, SavingsReport.Build(recs.Take(3), new PriceTable()).AttachmentsLine(), "no turn without: no line");
+            Eq(null, SavingsReport.Build(recs.Skip(3), new PriceTable()).AttachmentsLine(), "no turn with: no line");
+        }
+
         private static void Test_SavingsReport_TurnSpread()
         {
             var t = DateTime.UtcNow.AddDays(-1);
