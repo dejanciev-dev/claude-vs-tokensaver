@@ -44,6 +44,8 @@ All notable changes to this project are listed here. The format follows
   cause: after a pause longer than the cache lasts (5 minutes, or an hour once the conversation used the 1-hour
   cache), after a model switch, or other (a changed CLAUDE.md, MCP tools, settings or speed), each with what it cost
   (`after a pause: 3 ($0.20), model switch: 1 ($0.05), other: 1 ($0.04)`).
+- **Cache rewrites in the usage CSV**: a last `cache_rewrite` column with the likely cause (`pause`, `model` or
+  `other`) on the turns the savings report counts as having written the cache again, empty on the others.
 
 ### Fixed
 - **Haiku router on Claude Code 2.1.323**: there the first request of every Claude Code process waits 5–7 s for its
