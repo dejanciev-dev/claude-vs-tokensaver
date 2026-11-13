@@ -209,6 +209,8 @@ namespace ClaudeVS.Core.Tokens
         public double CostPerTurnUsd => Turns > 0 ? CostUsd / Turns : 0;
         /// <summary>The main agent's input tokens read from the cache, in percent; null when its turns logged no input.</summary>
         public double? CacheHitPercent { get; set; }
+        /// <summary>Its conversations: the distinct logged session ids of its turns.</summary>
+        public int Conversations { get; set; }
         /// <summary>The folder's name ("linq-samples"), or "(no folder)".</summary>
         public string Name => NameOf(Solution);
 
@@ -1025,6 +1027,7 @@ namespace ClaudeVS.Core.Tokens
                         MonthUsd = month.TryGetValue(g.Key, out var m) ? m : 0,
                         CacheHitPercent = g.Sum(r => r.InputTokens + r.CacheReadTokens + r.CacheWriteTokens) is long sIn && sIn > 0
                             ? 100.0 * g.Sum(r => r.CacheReadTokens) / sIn : (double?)null,
+                        Conversations = g.Where(r => !string.IsNullOrEmpty(r.SessionId)).Select(r => r.SessionId).Distinct(StringComparer.Ordinal).Count(),
                     })
                     .OrderByDescending(b => b.CostUsd).ThenByDescending(b => b.Turns));
             }
@@ -1108,6 +1111,7 @@ namespace ClaudeVS.Core.Tokens
             {
                 var parts = new List<string> { "$" + b.CostPerTurnUsd.ToString("0.000", c) + " per turn" };
                 if (b.CacheHitPercent is double hit) parts.Add("cache " + hit.ToString("0", c) + "%");
+                if (b.Conversations > 0) parts.Add(b.Conversations + (b.Conversations == 1 ? " conversation" : " conversations"));
                 string thisMonth = month && b.MonthUsd > 0 ? "; $" + b.MonthUsd.ToString("0.00", c) + " this month" : "";
                 sb.AppendLine($"  {OneLine(b.Name, 30),-30} {b.Turns,5} turns  ${b.CostUsd,8:0.00}  ({string.Join(", ", parts)}{thisMonth})");
             }

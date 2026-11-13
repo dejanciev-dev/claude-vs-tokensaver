@@ -646,6 +646,14 @@ namespace ClaudeVS.Core.Tests
             recs[1].InputTokens = 1_000; recs[1].CacheReadTokens = 88_000; recs[1].CacheWriteTokens = 11_000;
             var cached = SavingsReport.Build(recs, new PriceTable(), nowUtc: At(11, 10));
             True(cached.SolutionsText().Contains("    2 turns  $    9.00  ($4.500 per turn, cache 88%; $9.00 this month)"), cached.SolutionsText());
+
+            // Conversations: the distinct logged session ids
+            recs[1].SessionId = "s1"; recs[2].SessionId = "s1"; recs[0].SessionId = "s0";
+            var withIds = SavingsReport.Build(recs.Concat(new[] { new UsageRecord { Timestamp = At(11, 9), Solution = @"C:\src\shop", SessionId = "s2", CostUsd = 0.5 } }), new PriceTable(), nowUtc: At(11, 10));
+            Eq(2, withIds.BySolution.Single(b => b.Name == "shop").Conversations, "two ids, one of them twice");
+            True(withIds.SolutionsText().Contains("($3.167 per turn, cache 88%, 2 conversations; $9.50 this month)"), withIds.SolutionsText());
+            True(withIds.SolutionsText().Contains("($50.000 per turn, 1 conversation)"), "one: " + withIds.SolutionsText());
+            Eq(0, withIds.BySolution.Single(b => b.Solution == null).Conversations, "no ids logged: none, left out");
             var novemberOnly = SavingsReport.Build(recs, new PriceTable(), nowUtc: At(11, 10), sinceUtc: At(11, 1).AddHours(-12));
             True(!novemberOnly.SolutionsText().Contains("this month"), "a period within this month: the same figure, left out");
             True(!SavingsReport.Build(recs, new PriceTable(), solution: @"C:\src\old", nowUtc: At(11, 10)).ToText().Contains("By solution:"), "not in one solution's report");

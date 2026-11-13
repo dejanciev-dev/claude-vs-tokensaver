@@ -1149,7 +1149,7 @@ Planned on 2026-11-13.
 - [x] **Cost per turn and cache per solution.** The *By solution* rows add the cost per turn and the cache hit rate
       (the main agent's tokens, as per model): `($0.080 per turn, cache 88%; $9.00 this month)`. `SolutionBreakdown.CostPerTurnUsd`,
       `CacheHitPercent`
-- [ ] **Conversations per solution.** The rows add the conversations (logged session ids): `12 conversations`.
+- [x] **Conversations per solution.** The rows add the conversations (logged session ids): `12 conversations`.
       `SolutionBreakdown.Conversations`
 - [ ] **Manual checks for Phases 46–48.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md). Section 13,
       *What you send, time and solutions*: the CSV columns, the attachments line, the times per model and effort,
