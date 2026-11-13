@@ -62,6 +62,8 @@ All notable changes to this project are listed here. The format follows
   a claude.ai plan), what that cost above 5-minute writes, against what it saved on turns that came back after a
   pause of 5–60 minutes (`1-hour cache: $0.40 more to write, ≈ $1.20 saved on 6 turns after a pause of 5–60 min
   (net ≈ $0.80 saved)`).
+- **Pause in the usage CSV**: a last `pause_s` column, the seconds from the previous turn's end in the same
+  conversation to this turn's start, to see in a spreadsheet which pauses let the prompt cache expire.
 - **Failed turns in the savings report**: what the turns that ended in an error cost (interrupted, a limit or an API
   error), and their share of the spend (`Ended in an error: 3 turns, $0.40 (1% of the spend)`), when they cost
   anything. The usage log now keeps why such a turn ended (`end`), and the line says it: `(1% of the spend; 2

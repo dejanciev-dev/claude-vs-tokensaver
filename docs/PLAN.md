@@ -1095,7 +1095,7 @@ write, against 1.25× for the 5-minute one, so it pays only when you come back w
       the 5-minute cache those turns would have written it again): `1-hour cache: $0.40 more to write, ≈ $1.20 saved
       on 6 turns after a pause of 5–60 min (net ≈ $0.80 saved)`; shown when any turn wrote it. The pause as for the
       rewrite causes. `SavingsReport.OneHourCacheLine`, `SavingsReport.PauseBefore`
-- [ ] **Pause in the CSV.** A `pause_s` column after `end_reason`: seconds from the previous turn's end in the same
+- [x] **Pause in the CSV.** A `pause_s` column after `end_reason`: seconds from the previous turn's end in the same
       conversation to this turn's start; empty on a conversation's first turn and without a session id.
       `UsageCsv.Columns`
 
