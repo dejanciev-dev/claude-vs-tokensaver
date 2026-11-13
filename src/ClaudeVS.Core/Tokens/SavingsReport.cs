@@ -240,10 +240,28 @@ namespace ClaudeVS.Core.Tokens
         /// <summary>The model families its turns ran on, by turns, most first ("other" for unknown models).</summary>
         public List<KeyValuePair<string, int>> Models { get; } = new List<KeyValuePair<string, int>>();
 
-        /// <summary>Fills <see cref="Models"/> from its turns; returns this.</summary>
-        public ConversationBreakdown WithModels(IEnumerable<UsageRecord> turns)
+        /// <summary>From its first turn's start (logged time less duration) to its last turn's end.</summary>
+        public TimeSpan Span { get; set; }
+
+        /// <summary>"over 25 min", "over 2 h 10 min", "over 3 days"; null under a minute.</summary>
+        public static string SpanText(TimeSpan span)
         {
-            Models.AddRange(turns.GroupBy(r => PriceTable.Family(r.ModelUsed) ?? "other", StringComparer.Ordinal)
+            if (span < TimeSpan.FromMinutes(1)) return null;
+            if (span >= TimeSpan.FromDays(2)) return $"over {(int)span.TotalDays} days";
+            int h = (int)span.TotalHours, m = span.Minutes;
+            return h == 0 ? $"over {m} min" : m == 0 ? $"over {h} h" : $"over {h} h {m} min";
+        }
+
+        /// <summary>Fills <see cref="Models"/> and <see cref="Span"/> from its turns, oldest first; returns this.</summary>
+        public ConversationBreakdown WithTurns(IEnumerable<UsageRecord> turns)
+        {
+            var list = turns.ToList();
+            if (list.Count > 0)
+            {
+                var start = list[0].Timestamp - TimeSpan.FromMilliseconds(Math.Max(0, list[0].DurationMs));
+                Span = list[list.Count - 1].Timestamp - start;
+            }
+            Models.AddRange(list.GroupBy(r => PriceTable.Family(r.ModelUsed) ?? "other", StringComparer.Ordinal)
                 .Select(g => new KeyValuePair<string, int>(g.Key, g.Count()))
                 .OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal));
             return this;
@@ -257,6 +275,7 @@ namespace ClaudeVS.Core.Tokens
         {
             var parts = new List<string>();
             if (Models.Count > 1) parts.Add(string.Join(", ", Models.Select(m => m.Key + " " + m.Value)));
+            if (SpanText(Span) is string span) parts.Add(span);
             var trouble = new List<string>();
             if (CacheRewrites > 0) trouble.Add($"{CacheRewrites} cache {(CacheRewrites == 1 ? "rewrite" : "rewrites")}");
             if (Errors > 0) trouble.Add($"{Errors} {(Errors == 1 ? "error" : "errors")}");
@@ -777,7 +796,7 @@ namespace ClaudeVS.Core.Tokens
                     FirstPrompt = g.Select(r => r.PromptPreview).FirstOrDefault(p => !string.IsNullOrWhiteSpace(p)),
                     CacheRewrites = rewrites.TryGetValue(g.Key, out var n) ? n : 0,
                     Errors = g.Count(r => r.IsError),
-                }.WithModels(g))
+                }.WithTurns(g))
                 .Where(b => b.CostUsd > 0)
                 .OrderByDescending(b => b.CostUsd)
                 .ToList();
