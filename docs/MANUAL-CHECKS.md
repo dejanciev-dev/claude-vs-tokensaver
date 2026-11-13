@@ -154,7 +154,19 @@ Needs **Options → Diagnostics → Keep local usage log** on, and the turns fro
 | The same report | Under the month and week lines: `Today:                      $… so far in … turns (yesterday $…)` |
 | The same report, with turns logged over 14 days or more | A `By weekday:` list, Monday first, before `By day` |
 
-## 12. Release (Phase 5)
+## 12. The 1-hour cache and your usual turn (Phases 44–45)
+
+Needs **Options → Diagnostics → Keep local usage log** on. The 1-hour cache is written when you're signed in with a
+claude.ai plan; with an API key Claude Code writes the 5-minute one, and the cache line doesn't show.
+
+| Do | Expect |
+|---|---|
+| Signed in with a claude.ai plan: a prompt with a big file attached, wait 10 minutes, another prompt in the same chat | **Show Savings Report**: `1-hour cache:               $… more to write, ≈ $… saved on 1 turn after a pause of 5–60 min (net ≈ $… saved)` |
+| **Export Usage as CSV…** | A last `pause_s` column: about `600` on the second prompt, empty on the first turn of each conversation |
+| With 20 or more turns logged, ask for something much bigger than usual (e.g. Opus, a big file, a long answer) | The turn footer adds `· …× your usual turn` after the cost, when the turn cost $0.05 or more and 5× the median. Not on ordinary turns. (The logged turns are read once per Visual Studio session, so today's turns count after a restart) |
+| **Show Savings Report** with 10 or more turns that cost something | `Turns: median $…, 9 in 10 up to $…, dearest $…` just above `Costliest turns:` |
+
+## 13. Release (Phase 5)
 
 These need you rather than a check list:
 
