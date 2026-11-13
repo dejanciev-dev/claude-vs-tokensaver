@@ -48,6 +48,8 @@ All notable changes to this project are listed here. The format follows
   `other`) on the turns the savings report counts as having written the cache again, empty on the others.
 - **End reason in the usage CSV**: a last `end_reason` column, why a turn that ended in an error ended, as Claude
   Code said it (`aborted_streaming` for a Stop, `api_error` …); empty on turns that finished.
+- **What a failed turn cost, in the chat**: after a turn that ended in an error and cost $0.05 or more, a note says
+  so (`This turn ended with an API error after costing $0.12: its tokens are paid for.`). Not after a Stop.
 - **Failed turns in the savings report**: what the turns that ended in an error cost (interrupted, a limit or an API
   error), and their share of the spend (`Ended in an error: 3 turns, $0.40 (1% of the spend)`), when they cost
   anything. The usage log now keeps why such a turn ended (`end`), and the line says it: `(1% of the spend; 2

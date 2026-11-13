@@ -257,6 +257,30 @@ namespace ClaudeVS.Core.Cli
         /// <summary>Subagents that cost less than this in a turn get no tip, however small the main agent's share.</summary>
         public const double SubagentTipFromUsd = 0.05;
 
+        /// <summary>From this cost a turn that ended in an error gets a note saying it was paid for.</summary>
+        public const double FailedTurnNoteFromUsd = 0.05;
+
+        /// <summary>
+        /// After a turn that ended in an error and cost <see cref="FailedTurnNoteFromUsd"/> or more: "This turn ended
+        /// with an API error after costing $0.12 …". A Stop (<c>aborted_*</c>) is the user's own doing and gets none.
+        /// <paramref name="endReason"/> is the logged end (<see cref="Tokens.UsageRecord.EndOf"/>).
+        /// </summary>
+        public static string FailedTurnCost(bool isError, string endReason, double turnUsd)
+        {
+            if (!isError || turnUsd < FailedTurnNoteFromUsd || (endReason ?? "").StartsWith("aborted", System.StringComparison.Ordinal)) return null;
+            string why;
+            switch (Tokens.SavingsReport.EndReasonText(endReason))
+            {
+                case null: why = "an error"; break;
+                case "API error": why = "an API error"; break;
+                case "turn limit": why = "the turn limit"; break;
+                case "budget limit": why = "the budget limit"; break;
+                case string other: why = "an error (" + other + ")"; break;
+            }
+            return $"This turn ended with {why} after costing ${turnUsd.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}: its tokens are paid for. "
+                + "Sending again starts from the conversation as it is.";
+        }
+
         /// <summary>
         /// A token tip when a turn's subagents cost more than the main agent (<paramref name="turnUsd"/> is the
         /// whole turn, agents included, as the CLI's <c>total_cost_usd</c> counts it). Null otherwise. The text is

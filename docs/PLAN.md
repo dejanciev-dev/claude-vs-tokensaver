@@ -1050,8 +1050,8 @@ Planned on 2026-11-13. Probed with 2.1.323: a Stop ends the turn with `terminal_
       others as sent. `UsageRecord.EndReason`, `SavingsReport.EndReasonText`
 - [x] **End reason in the CSV.** An `end_reason` column after `cache_rewrite`: the logged `end`, empty on turns that
       finished. `UsageCsv.Columns`
-- [ ] **Failed turn cost in the chat.** After a turn that ended in an error other than a Stop and cost $0.05 or more:
-      `ⓘ This turn ended with an API error after costing $0.12: its tokens are paid for. Sending again starts from
+- [x] **Failed turn cost in the chat.** After a turn that ended in an error other than a Stop and cost $0.05 or more:
+      `ℹ This turn ended with an API error after costing $0.12: its tokens are paid for. Sending again starts from
       the conversation as it is.` A Stop is your own choice and gets no note. `SessionNotices.FailedTurnCost`
 
 ---
