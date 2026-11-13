@@ -1135,7 +1135,7 @@ Planned on 2026-11-13.
 
 - [x] **Time per model.** The *By model* rows add the average answer time: `(…, cache 90%, 14.2 s per turn)`; from
       the logged durations, turns logged without one left out. `ModelBreakdown.AverageSeconds`
-- [ ] **Time per effort.** The *By effort* rows add the same: higher effort thinks longer, and this shows how much.
+- [x] **Time per effort.** The *By effort* rows add the same: higher effort thinks longer, and this shows how much.
       `EffortBreakdown.AverageSeconds`
 - [ ] **Time waited.** `Waiting on Claude:          3 h 20 min over 412 turns (29 s per turn)` under the turns line
       of the period. `SavingsReport.WaitLine`

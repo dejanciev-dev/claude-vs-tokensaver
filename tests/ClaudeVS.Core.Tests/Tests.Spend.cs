@@ -536,6 +536,15 @@ namespace ClaudeVS.Core.Tests
             True(text.Contains("  high        2 turns  $    0.40  ($0.201 per turn)  15.0k thinking"), text);
             True(text.Contains("  default     1 turns  $    0.07  ($0.070 per turn)\r\n") || text.Contains("  default     1 turns  $    0.07  ($0.070 per turn)\n"), text);
             Eq(0, SavingsReport.Build(new[] { recs[4] }, new PriceTable()).ByEffort.Count, "no effort known: no list");
+
+            // Time per effort: higher effort thinks longer
+            recs[0].DurationMs = 40_000;
+            recs[1].DurationMs = 20_000;
+            recs[5].DurationMs = 95_500;
+            string timed = SavingsReport.Build(recs, new PriceTable()).ToText();
+            True(timed.Contains("  high        2 turns  $    0.40  ($0.201 per turn, 30.0 s per turn)  15.0k thinking"), timed);
+            True(timed.Contains("($1.000 per turn, 95.5 s per turn)"), "max: " + timed);
+            True(timed.Contains("  low         1 turns  $    0.02  ($0.020 per turn)"), "no duration: left out — " + timed);
         }
 
         private static void Test_SavingsReport_LongConversations()
