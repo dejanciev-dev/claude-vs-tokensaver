@@ -638,8 +638,14 @@ namespace ClaudeVS.Core.Tests
             True(rep.ToText().Contains("By solution:"), "in the all-solutions report");
             True(Math.Abs(rep.BySolution[1].MonthUsd - 9) < 1e-9, "shop this month, router included: " + rep.BySolution[1].MonthUsd);
             string solutions = rep.SolutionsText();
-            True(solutions.Contains("    2 turns  $    9.00  ($9.00 this month)"), solutions);
-            True(solutions.Contains("old                                1 turns  $   50.00\r\n") || solutions.Contains("old                                1 turns  $   50.00\n"), "nothing this month: no part — " + solutions);
+            True(solutions.Contains("    2 turns  $    9.00  ($4.500 per turn; $9.00 this month)"), solutions);
+            True(solutions.Contains("old                                1 turns  $   50.00  ($50.000 per turn)\r\n") || solutions.Contains("old                                1 turns  $   50.00  ($50.000 per turn)\n"), "nothing this month: no part — " + solutions);
+            Eq(null, rep.BySolution[1].CacheHitPercent, "no tokens logged: no cache rate");
+
+            // The cache hit rate, from the main agent's tokens
+            recs[1].InputTokens = 1_000; recs[1].CacheReadTokens = 88_000; recs[1].CacheWriteTokens = 11_000;
+            var cached = SavingsReport.Build(recs, new PriceTable(), nowUtc: At(11, 10));
+            True(cached.SolutionsText().Contains("    2 turns  $    9.00  ($4.500 per turn, cache 88%; $9.00 this month)"), cached.SolutionsText());
             var novemberOnly = SavingsReport.Build(recs, new PriceTable(), nowUtc: At(11, 10), sinceUtc: At(11, 1).AddHours(-12));
             True(!novemberOnly.SolutionsText().Contains("this month"), "a period within this month: the same figure, left out");
             True(!SavingsReport.Build(recs, new PriceTable(), solution: @"C:\src\old", nowUtc: At(11, 10)).ToText().Contains("By solution:"), "not in one solution's report");
