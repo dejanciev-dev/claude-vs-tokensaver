@@ -1030,9 +1030,11 @@ Planned on 2026-11-13.
 - [x] **Failed turns in the report.** What the turns that ended in an error cost (interrupted, a limit, an API
       error): `Ended in an error: 3 turns, $0.40 (1% of the spend)` under the cache lines; shown when they cost
       something. `SavingsReport.FailedTurnsLine`
-- [ ] **Manual checks for Phase 40.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md). Section 10,
+- [x] **Manual checks for Phase 40.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md). Section 10,
       *Turns that didn't pay off*: the causes line after a pause and a model switch, the CSV column and the failed
-      turns line; Release is now 11
+      turns line; Release is now 11. Probed with 2.1.323: Stop (`interrupt`) ends the turn with `is_error: true`
+      (`error_during_execution`), but a Stop before the first answer reports `total_cost_usd: 0`, so the check stops
+      a running command
 
 ---
 
