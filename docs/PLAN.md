@@ -1137,7 +1137,7 @@ Planned on 2026-11-13.
       the logged durations, turns logged without one left out. `ModelBreakdown.AverageSeconds`
 - [x] **Time per effort.** The *By effort* rows add the same: higher effort thinks longer, and this shows how much.
       `EffortBreakdown.AverageSeconds`
-- [ ] **Time waited.** `Waiting on Claude:          3 h 20 min over 412 turns (29 s per turn)` under the turns line
+- [x] **Time waited.** `Waiting on Claude:          3 h 20 min over 412 turns (29 s per turn)` under the period line
       of the period. `SavingsReport.WaitLine`
 
 ---

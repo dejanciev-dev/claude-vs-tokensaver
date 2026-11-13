@@ -327,6 +327,14 @@ namespace ClaudeVS.Core.Tokens
             return timed.Count > 0 ? timed.Average(r => r.DurationMs) / 1000.0 : (double?)null;
         }
 
+        /// <summary>"3 h 20 min", "12 min", "45 s".</summary>
+        public static string Span(TimeSpan t)
+        {
+            if (t.TotalMinutes < 1) return ((int)t.TotalSeconds).ToString(CultureInfo.InvariantCulture) + " s";
+            int h = (int)t.TotalHours;
+            return h == 0 ? $"{t.Minutes} min" : t.Minutes == 0 ? $"{h} h" : $"{h} h {t.Minutes} min";
+        }
+
         /// <summary>", 14.2 s per turn"; "" when not known.</summary>
         public static string PerTurn(double? seconds) =>
             seconds is double s ? ", " + s.ToString("0.0", CultureInfo.InvariantCulture) + " s per turn" : "";
@@ -662,6 +670,18 @@ namespace ClaudeVS.Core.Tokens
                 + $"({(AttachedLinesTotal / (double)AttachedTurns).ToString("0", c)} lines on average); without: ${(PlainUsd / PlainTurns).ToString("0.000", c)} per turn";
         }
 
+        /// <summary>The turns logged with a duration, and their durations added up.</summary>
+        public int TimedTurns { get; set; }
+        public long WaitedMs { get; set; }
+
+        /// <summary>"3 h 20 min over 412 turns (29 s per turn)"; null when no turn was logged with a duration.</summary>
+        public string WaitLine()
+        {
+            if (TimedTurns == 0 || WaitedMs <= 0) return null;
+            return $"{TurnTime.Span(TimeSpan.FromMilliseconds(WaitedMs))} over {TimedTurns} {(TimedTurns == 1 ? "turn" : "turns")} "
+                + $"({(WaitedMs / 1000.0 / TimedTurns).ToString("0", CultureInfo.InvariantCulture)} s per turn)";
+        }
+
         /// <summary>The turns that cost something (router included): how many, the median, the 90th percentile and the dearest.</summary>
         public int PricedTurns { get; set; }
         public double TurnMedianUsd { get; set; }
@@ -904,6 +924,8 @@ namespace ClaudeVS.Core.Tokens
                     .OrderBy(b => Array.IndexOf(EffortOrder, b.Effort) is int i && i >= 0 ? i : EffortOrder.Length + (b.Effort == DefaultEffort ? 1 : 0))
                     .ThenBy(b => b.Effort, StringComparer.Ordinal));
 
+            rep.TimedTurns = list.Count(r => r.DurationMs > 0);
+            rep.WaitedMs = list.Where(r => r.DurationMs > 0).Sum(r => r.DurationMs);
             foreach (var r in list.Where(r => r.PromptChars > 0 || r.AttachedLines > 0 || r.AttachedFiles > 0))
             {
                 if (r.AttachedLines > 0 || r.AttachedFiles > 0) { rep.AttachedTurns++; rep.AttachedUsd += r.CostUsd + r.RouterCostUsd; rep.AttachedLinesTotal += r.AttachedLines; }
@@ -1102,6 +1124,7 @@ namespace ClaudeVS.Core.Tokens
 
             string to = Until is DateTime until ? until.ToLocalTime().AddDays(-1).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) : "today";
             sb.AppendLine($"Period: {Since.Value.ToLocalTime():yyyy-MM-dd} to {to} · {Turns} turns ({RoutedTurns} auto-routed)");
+            if (WaitLine() is string waited) sb.AppendLine($"Waiting on Claude:          {waited}");
             sb.AppendLine();
             sb.AppendLine($"Actual cost:                ${ActualCostUsd:0.00}");
             if (Until == null && MonthLine() is string month) sb.AppendLine(month); // "so far" lines: only for a period up to now
