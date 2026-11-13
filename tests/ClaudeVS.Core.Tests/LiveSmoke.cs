@@ -54,7 +54,7 @@ namespace ClaudeVS.Core.Tests
         /// <summary>
         /// `--live-all`: every live test in order, with a summary and the total cost (about $0.15 on Haiku with
         /// 2.1.322). Nothing runs in plan mode: there the CLI answers with Sonnet even when Haiku is asked for
-        /// (2.1.316-2.1.322), which costs ~20x more and fails the "answered by Haiku" check; `--live raw.jsonl Plan`
+        /// (2.1.316-2.1.323), which costs ~20x more and fails the "answered by Haiku" check; `--live raw.jsonl Plan`
         /// checks that on purpose. Exit code 0 only when every test passed.
         /// </summary>
         public static int RunAll()
@@ -727,7 +727,7 @@ namespace ClaudeVS.Core.Tests
 
         /// <summary>
         /// `--live [rawLogPath] [mode] [turns]`: short turns asking for Haiku, Accept Edits unless another mode is named.
-        /// Plan mode is the known exception: the CLI answers with Sonnet there (2.1.316-2.1.322), ~20x the cost.
+        /// Plan mode is the known exception: the CLI answers with Sonnet there (2.1.316-2.1.323), ~20x the cost.
         /// </summary>
         public static int Run(string rawLogPath, PermissionModeChoice mode = PermissionModeChoice.AcceptEdits, int turns = 2)
         {

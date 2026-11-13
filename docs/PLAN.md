@@ -11,7 +11,7 @@ Tick the boxes as you go. Each phase ends with something you can run.
 |---|---|
 | `ClaudeVS.Core` (CLI session, parser, router, meter, context, setup) | ✅ Written, 16/16 tests pass |
 | `ClaudeVS` VSIX (package, tool window, commands, options) | ✅ Builds clean (0 warnings); not yet run in the experimental instance |
-| Real end-to-end run against `claude` CLI | ⚠️ Core verified against CLI 2.1.316 (`--live` smoke test): sessions, streaming, usage, cost, cache OK; Haiku routing works in acceptEdits ($0.002 vs $0.042 per turn on Sonnet); in plan mode the CLI answers with Sonnet even when Haiku is requested (still so in 2.1.322, where all other live smoke tests pass). VS UI not run yet |
+| Real end-to-end run against `claude` CLI | ⚠️ Core verified against CLI 2.1.316 (`--live` smoke test): sessions, streaming, usage, cost, cache OK; Haiku routing works in acceptEdits ($0.002 vs $0.042 per turn on Sonnet); in plan mode the CLI answers with Sonnet even when Haiku is requested (still so in 2.1.323, where all other live smoke tests pass). VS UI not run yet |
 | Markdown transcript, diffs, history, question cards | ❌ Not started |
 
 ---
@@ -997,8 +997,11 @@ cloud, Remote Control, Claude Tag, gateway, sandbox and plugin-authoring entries
 - [x] **1M context before the first answer** (2.1.323: an unknown model ID is assumed to have 1M, not 200K; every
       current model reports `contextWindow: 1000000`). The meter's fallback before the CLI reports a window was
       200K. Now 1M
-- [ ] **Verify with 2.1.323 and raise `CliVersion.Tested`.** All live tests pass with 2.1.323 except the router's
-      first-route time (above)
+- [x] **Verify with 2.1.323 and raise `CliVersion.Tested`.** With the warm-up, all 12 live tests pass with 2.1.323
+      ($0.17, 4.3 min; the router's first route 1.3 s). `--live` in plan mode still answers with Sonnet when Haiku is
+      asked for, as since 2.1.316. `CliVersion.Tested` is 2.1.323 (`Required` stays 2.1.318); README, Marketplace
+      overview, CONTRIBUTING and the plan-mode notes say so. The VS-only parts are in
+      [MANUAL-CHECKS.md](MANUAL-CHECKS.md), section 9; Release is now 10
 
 Checked, nothing to change:
 - `CLAUDE_CODE_DISABLE_AGENT_PROGRESS_SUMMARIES`: in `-p` a subagent's `task_progress` only carries the

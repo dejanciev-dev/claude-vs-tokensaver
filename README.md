@@ -33,8 +33,8 @@ Pre-release (v0.1 → v0.2).
 
 | Layer | State |
 |---|---|
-| Core library (CLI session, parser, router, meter, context, Markdown, usage log) | ✅ 157 automated tests, many replaying real CLI output (2.1.316–2.1.322) |
-| Core against the real `claude` CLI | ✅ Verified with Claude Code 2.1.322 via the opt-in live tests: streaming, usage, cost, prompt cache, model switch, resume, `/compact`, dialogs, edit review, MCP, question and plan approval. Needs 2.1.318 or newer |
+| Core library (CLI session, parser, router, meter, context, Markdown, usage log) | ✅ 191 automated tests, many replaying real CLI output (2.1.316–2.1.323) |
+| Core against the real `claude` CLI | ✅ Verified with Claude Code 2.1.323 via the opt-in live tests: streaming, usage, cost, prompt cache, model switch, resume, `/compact`, dialogs, edit review, MCP, question and plan approval. Needs 2.1.318 or newer |
 | Visual Studio extension (UI) | ⚠️ Builds with zero warnings in CI, but not yet run in the experimental instance |
 
 ## Why this exists
@@ -230,7 +230,7 @@ claude --print --input-format stream-json --output-format stream-json --verbose
 
 Requirements:
 - Visual Studio 2022 (17.x) or 2026 (18.x), x64 or ARM64
-- [Claude Code](https://claude.com/product/claude-code) **2.1.318 or newer** (tested with 2.1.322), installed and
+- [Claude Code](https://claude.com/product/claude-code) **2.1.318 or newer** (tested with 2.1.323), installed and
   logged in, so that `claude` works in a terminal. `claude --version` shows yours; `claude update` updates it.
   Older versions lack control requests the extension uses (Stop for one agent, settings changes, rewind
   checkpoints in headless mode) and resume fixes. On Windows, recent versions also fix tool calls refused on some
@@ -375,7 +375,7 @@ msbuild ClaudeVS.sln /restore /p:Configuration=Release /warnaserror     # → sr
 
 - **The VS UI has not been run yet.** Everything builds and the Core is verified against the real CLI, but the
   first F5 session may still turn up UI issues. Please [open an issue](https://github.com/dejanciev-dev/claude-vs-tokensaver/issues).
-- **Plan mode ignores Haiku.** With Claude Code 2.1.316 to 2.1.322, plan mode answered with Sonnet even when Haiku
+- **Plan mode ignores Haiku.** With Claude Code 2.1.316 to 2.1.323, plan mode answered with Sonnet even when Haiku
   was requested. So in plan mode Auto picks Sonnet instead of Haiku, and a Haiku you pick by hand shows "Plan mode:
   Sonnet answers" under the input box, priced at Sonnet.
 - **Resume** redraws at most the last 300 items (prompts, answers, tool calls) of a conversation. Redrawn tool

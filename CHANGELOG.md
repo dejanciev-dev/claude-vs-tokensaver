@@ -33,6 +33,8 @@ All notable changes to this project are listed here. The format follows
   conversations (12% of the spend), $0.120 per turn against $0.040 in the first 30`).
 
 ### Changed
+- **Tested with Claude Code 2.1.323** (still needs 2.1.318 or newer). All live tests pass; plan mode still answers
+  with Sonnet when Haiku is asked for.
 - **More per model in the savings report**: each *By model* row adds the cost per turn and the cache hit rate (the
   main agent's tokens; subagents may run on other models).
 - **Average conversation in the savings report**: above the costliest conversations, how many there were, what one

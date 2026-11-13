@@ -7,7 +7,7 @@ warm, and shows what every turn costs.
 > Community project, not affiliated with or endorsed by Anthropic. "Claude" and "Claude Code" are trademarks of Anthropic.
 
 > **Preview.** The extension reads Claude Code's streamed output, which is not a documented API and can change
-> between Claude Code releases. It is tested with Claude Code 2.1.318–2.1.322. If something breaks after a
+> between Claude Code releases. It is tested with Claude Code 2.1.318–2.1.323. If something breaks after a
 > `claude update`, please [open an issue](https://github.com/dejanciev-dev/claude-vs-tokensaver/issues).
 
 ![Claude Code chat in Visual Studio](https://raw.githubusercontent.com/dejanciev-dev/claude-vs-tokensaver/main/src/ClaudeVS/Resources/preview.png)

@@ -150,7 +150,7 @@ namespace ClaudeVS.Core.Tokens
             if (d == null || r == null) return d;
             if (r.PlanMode && d.Model == ModelChoice.Haiku)
             {
-                // Claude Code answers with Sonnet in plan mode even when Haiku is asked for (2.1.316-2.1.322): say so up
+                // Claude Code answers with Sonnet in plan mode even when Haiku is asked for (2.1.316-2.1.323): say so up
                 // front, so the hint, the price, the model switch and the usage log all name what answers
                 d.Model = ModelChoice.Sonnet;
                 d.Reason = (d.Reason == "default" ? "" : d.Reason + ", ") + PlanModeNote;
