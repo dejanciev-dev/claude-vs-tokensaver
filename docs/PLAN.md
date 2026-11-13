@@ -1015,6 +1015,27 @@ Checked, nothing to change:
 
 ---
 
+## Phase 40 — Turns that didn't pay off
+
+Planned on 2026-11-13.
+
+- [ ] **Why the cache was written again.** The report's *Cache written again* line splits its turns by likely cause:
+      after a pause longer than the cache's lifetime (5 minutes, or 1 hour once the conversation wrote the 1-hour
+      cache), after a model switch, or else (a changed CLAUDE.md, MCP tools, settings or speed). `after a pause: 3
+      ($0.20), model switch: 1 ($0.05), other: 1 ($0.04)` under the line; the pause from the previous turn's end to
+      this turn's start (its logged time less its duration). `SavingsReport.RewriteCause`, `CacheRewriteCausesLine`
+- [ ] **Cache rewrites in the CSV.** A `cache_rewrite` column: the cause (`pause`, `model`, `other`) on the turns the
+      report counts as written again, empty on the others. The last column; judged over the exported rows by
+      conversation, as `turn` is. `UsageCsv.Columns`
+- [ ] **Failed turns in the report.** What the turns that ended in an error cost (interrupted, a limit, an API
+      error): `Ended in an error: 3 turns, $0.40 (1% of the spend)` under the cache lines; shown when they cost
+      something. `SavingsReport.FailedTurnsLine`
+- [ ] **Manual checks for Phase 40.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md). Section 10,
+      *Turns that didn't pay off*: the causes line after a pause and a model switch, the CSV column and the failed
+      turns line; Release is now 11
+
+---
+
 ## Working in Visual Studio — daily loop
 
 1. Core logic change → edit in `ClaudeVS.Core` → run tests (`ClaudeVS.Core.Tests` → Set as Startup → Ctrl+F5, or `dotnet run` in its folder).
