@@ -1441,6 +1441,26 @@ namespace ClaudeVS.Core.Tests
             True(!SpendWatch.BudgetLine(d, m, Nov(16), w).Contains("this week"), "weekly warning off: left out");
         }
 
+        private static void Test_SavingsReport_TurnSpread()
+        {
+            var t = DateTime.UtcNow.AddDays(-1);
+            // $0.01 … $0.10 and one of $2.10 (router included), and two that cost nothing
+            var recs = Enumerable.Range(1, 10).Select(i => new UsageRecord { Timestamp = t, CostUsd = i / 100.0 })
+                .Concat(new[] { new UsageRecord { Timestamp = t, CostUsd = 2.0, RouterCostUsd = 0.1 }, new UsageRecord { Timestamp = t }, new UsageRecord { Timestamp = t } }).ToList();
+            var rep = SavingsReport.Build(recs, new PriceTable());
+            Eq(11, rep.PricedTurns, "priced turns");
+            // Nearest rank: ceil(0.9 × 11) = 10th of 11, $0.10; the median the 6th, $0.06
+            Eq("Turns: median $0.06, 9 in 10 up to $0.10, dearest $2.10", rep.TurnsLine());
+            string text = rep.ToText();
+            string nl = Environment.NewLine;
+            True(text.Contains(nl + nl + "Turns: median $0.06, 9 in 10 up to $0.10, dearest $2.10" + nl + "Costliest turns:"), "above the costliest turns: " + text);
+            var ten = SavingsReport.Build(recs.Take(10).Concat(recs.Skip(11)), new PriceTable());
+            True(Math.Abs(ten.TurnMedianUsd - 0.055) < 1e-9, "even count: the middle two: " + ten.TurnMedianUsd);
+            True(ten.TurnsLine()?.EndsWith("9 in 10 up to $0.09, dearest $0.10") == true, "10 turns: shown, the 9th of 10: " + ten.TurnsLine());
+            Eq(null, SavingsReport.Build(recs.Take(9), new PriceTable()).TurnsLine(), "9 turns: too few");
+            True(SavingsReport.Build(recs.Take(9), new PriceTable()).ToText().Contains(nl + nl + "Costliest turns:"), "the list keeps its blank line");
+        }
+
         private static void Test_TurnAgainstUsual()
         {
             var t = DateTime.UtcNow.AddDays(-1);
