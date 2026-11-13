@@ -968,6 +968,46 @@ Planned on 2026-11-12.
 
 ---
 
+## Phase 39 — Keep up with the CLI (from the Claude Code CHANGELOG 2.1.323)
+
+Checked on 2026-11-13 with 2.1.323 installed: the whole 2.1.323 section read, the entries that touch what the
+extension sends or reads probed with stream-json the way the extension runs it, and the live tests run. Terminal,
+cloud, Remote Control, Claude Tag, gateway, sandbox and plugin-authoring entries are left out.
+
+- [ ] **Router warm-up request** (found while verifying, not in the changelog). In 2.1.323 the first request of every
+      process waits 5–7 s for its first byte (plain `claude -p`: 5.5 s and 6.4 s against 0.7–0.8 s with 2.1.322;
+      later requests in the same process ~0.5 s), so `--live-haiku-router`'s first route took 6.4 s and the chat's
+      first route would miss its 4 s limit and fall back to the local rules. `HaikuRouter.WarmUp` now sends one
+      short route request (not counted as a route, its cost counted), so the slow request happens while idle; it
+      writes the prompt cache the first real route would have written anyway. The main chat's first answer is
+      ~6 s slower too, which the extension can't help
+- [ ] **Hook heartbeat** (2.1.323: a progress heartbeat every 30 s while hooks run long in `claude -p`). It comes as
+      `tool_progress` with `heartbeat: true`, `tool_name` the hook event (`PreToolUse`) and `parent_tool_use_id` the
+      tool call. The parser ignored it, so a hook running past 60 s showed "Not responding". Now a `HookRunning`
+      event: the activity strip says which hook runs and for how long, and the stall timer restarts
+- [ ] **"Always allow" that wasn't saved** (2.1.323: a rule that looks like it holds a secret, or would go to a
+      `settings.local.json` that git tracks, lasts for the session only). The CLI still suggests
+      `destination: "localSettings"` and reports the decision as `user_temporary` either way, so the card promised
+      a save that didn't happen. After the tool result, the chat checks the settings file and, when the rule is not
+      there, says it holds for this session only
+- [ ] **1M context before the first answer** (2.1.323: an unknown model ID is assumed to have 1M, not 200K; every
+      current model reports `contextWindow: 1000000`). The meter's fallback before the CLI reports a window was
+      200K. Now 1M
+- [ ] **Verify with 2.1.323 and raise `CliVersion.Tested`.** All live tests pass with 2.1.323 except the router's
+      first-route time (above)
+
+Checked, nothing to change:
+- `CLAUDE_CODE_DISABLE_AGENT_PROGRESS_SUMMARIES`: in `-p` a subagent's `task_progress` only carries the
+  tool-derived "Running …" text, with or without it, and the cost was within run-to-run noise. No option
+- Live Bash output (VS Code panel): not in stream-json; a foreground command is a `task_started` `local_bash` task
+  (since 2.1.318) and then its result. Nothing to show
+- Writes to `.git` no longer offer "don't ask again": the request now suggests `addDirectories` for the session,
+  which the card already leaves out (it offers `addRules` only)
+- `init.plugin_errors`: absent when there are none; not captured with an error
+- Code Mode (opt-in, experimental), the Fable limit message in `-p`, usage-credit menus: not seen from here
+
+---
+
 ## Working in Visual Studio — daily loop
 
 1. Core logic change → edit in `ClaudeVS.Core` → run tests (`ClaudeVS.Core.Tests` → Set as Startup → Ctrl+F5, or `dotnet run` in its folder).
