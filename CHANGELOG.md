@@ -90,6 +90,9 @@ All notable changes to this project are listed here. The format follows
   stopped, 1 API error)`.
 
 ### Fixed
+- **Blurry text in the chat's menus** (mode, model, +, actions, context breakdown, sessions, folder): the drop
+  shadow was drawn on the menu itself, which turned its text into a bitmap. The shadow is now drawn behind the
+  menu, with ClearType and display text formatting like Visual Studio's own menus.
 - **Haiku router on Claude Code 2.1.323**: there the first request of every Claude Code process waits 5–7 s for its
   answer (0.7 s with 2.1.322), so the router's first route in each chat missed its 4 s limit and the local rules
   were used instead. The router now sends one short warm-up request when it starts (about $0.0002, counted with
