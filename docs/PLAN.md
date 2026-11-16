@@ -1181,7 +1181,8 @@ extension sends or reads; terminal, cloud, Remote Control, Claude Tag, gateway a
 
 Planned on 2026-11-16. When a turn ends, Claude's answer often ends with the obvious next step ("The title says 33,
 which is wrong", "If you want separate PRs, tell me"), but the input box only says *Ask Claude to edit…*. Show a
-suggestion there instead, at no extra token cost.
+suggestion there instead. By default it comes from a local rule at no token cost; the CLI's own suggestions are
+opt-in, since they cost tokens the stream doesn't report.
 
 - [x] **Does the CLI send one?** Yes, with `--prompt-suggestions true` (2.1.325 `--help`: "In print/SDK mode, emits a
       prompt_suggestion message after each turn"): `{"type":"prompt_suggestion","suggestion":"add the C# example",…}`
@@ -1190,13 +1191,17 @@ suggestion there instead, at no extra token cost.
       cost is not in `total_cost_usd` (two suggestions: $0.00486 for the session, none: $0.00484), but turn 2 reported
       about $0.0003 more with the flag on than off (Haiku, a small conversation). `--live-suggestions` (not in
       `--live-all`); capture: `Fixtures/cli-2.1.325-prompt-suggestion.jsonl`
-- [ ] **Read it in Core.** The parser surfaces the CLI's suggestion when there is one; otherwise a local rule takes
-      the answer's closing offer ("If you want …, tell me", "I can …") and turns it into a short reply. No model
-      call, so no extra tokens. Tests from the capture and from real closing paragraphs
+- [ ] **Read it in Core.** The parser surfaces the CLI's suggestion when there is one (only sent when the option
+      below is on); otherwise a local rule takes the answer's closing offer ("If you want …, tell me", "I can …") and
+      turns it into a short reply. The rule makes no model call, so no extra tokens. Tests from the capture and from
+      real closing paragraphs
 - [ ] **Grey text in the input box.** The suggestion replaces the placeholder once a turn ends; **Tab** or **→**
       puts it into the box to edit or send, and typing clears it. Never sent on its own; hidden while a permission
       or question card is open, and on a new conversation
-- [ ] **An option to turn it off** (Options → Claude Code, on by default)
+- [ ] **Options** (Options → Claude Code): *Suggest the next prompt* turns the grey text on or off (on by default,
+      local rule only). *Ask Claude Code for suggestions* adds `--prompt-suggestions true` (off by default; its
+      description says each one costs tokens that aren't shown in the turn's cost). Changing it restarts the session,
+      like other launch options
 - [ ] **Manual checks for Phase 50.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
 
 ---
