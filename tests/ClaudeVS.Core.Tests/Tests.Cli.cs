@@ -442,6 +442,29 @@ namespace ClaudeVS.Core.Tests
             True(p.AlwaysAllowScope.Contains("settings.local.json"), "scope: " + p.AlwaysAllowScope);
         }
 
+        /// <summary>
+        /// Real Bash permission requests from Claude Code 2.1.325 (temp folder replaced by C:\work). Since 2.1.325 an
+        /// IDE or SDK host is offered a rule only when saving it would allow the command again: a compound command
+        /// with a redirect comes with no suggestion, so the card has no "Always allow".
+        /// </summary>
+        private static void Test_PermissionPrompt_RealCli_Suggestions_2_1_325()
+        {
+            var parser = new ClaudeStreamParser();
+            var prompts = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.325-permission-suggestions.jsonl"))
+                .SelectMany(l => parser.Parse(l)).Where(e => e.Kind == ClaudeEventKind.PermissionRequest)
+                .Select(e => PermissionPrompt.From(e.ToolName, e.ToolInput, e.Payload)).ToList();
+            Eq(4, prompts.Count, "four permission requests");
+
+            Eq("mkdir probe-dir && echo made > probe-dir/a.txt", prompts[0].Detail, "compound command");
+            True(prompts[0].AlwaysAllow == null && prompts[0].AlwaysAllowRules.Count == 0, "no suggestion, no Always allow");
+
+            Eq("Bash(curl -s https://example.invalid/probe325)", string.Join(",", prompts[1].AlwaysAllowRules), "exact rule for curl");
+            Eq("Bash(mkdir probe-dir2 *)", string.Join(",", prompts[2].AlwaysAllowRules), "prefix rule for mkdir");
+            Eq(1, prompts[2].AlwaysAllow.Count, "addDirectories and setMode are not sent back");
+            Eq("Bash(echo made *)", string.Join(",", prompts[3].AlwaysAllowRules), "prefix rule for a single redirect");
+            True(prompts.Skip(1).All(p => p.AlwaysAllowDestination == "localSettings"), "saved in settings.local.json");
+        }
+
         private static void Test_PermissionPrompt_OtherTools()
         {
             var edit = PermissionPrompt.From("Edit", JObject.Parse("{\"file_path\":\"C:\\\\work\\\\a.cs\",\"old_string\":\"x\",\"new_string\":\"y\"}"), null);
