@@ -56,6 +56,9 @@ namespace ClaudeVS.Core.Cli
                         ToolUseId = (string)json["parent_tool_use_id"],
                         DurationMs = (long)((json.Value<double?>("elapsed_time_seconds") ?? 0) * 1000),
                     } };
+                case "prompt_suggestion":
+                    string suggestion = ((string)json["suggestion"])?.Trim();
+                    return string.IsNullOrEmpty(suggestion) ? None : new[] { new ClaudeEvent { Kind = ClaudeEventKind.PromptSuggestion, Text = suggestion, SessionId = (string)json["session_id"] } };
                 case "rate_limit_event":
                     return json["rate_limit_info"] is JObject limits ? new[] { new ClaudeEvent { Kind = ClaudeEventKind.RateLimit, Payload = limits } } : None;
                 case "control_response":

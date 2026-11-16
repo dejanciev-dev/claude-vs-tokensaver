@@ -863,7 +863,7 @@ namespace ClaudeVS.Core.Tests
 
         /// <summary>Events until a TurnCompleted (or timeout), skipping leftovers from before.</summary>
         /// <summary>
-        /// Phase 50 probe: the same two turns with <c>--prompt-suggestions true</c> and without. Prints each turn's
+        /// Phase 50 probe: the same two turns with <see cref="ClaudeLaunchOptions.PromptSuggestions"/> and without. Prints each turn's
         /// cost (total_cost_usd is cumulative per session) and the <c>prompt_suggestion</c> line that follows the
         /// result, so whether a suggestion is sent, when, and whether its cost is reported can be read off.
         /// `--live-suggestions [rawPath]` (rawPath gets "-on"/"-off" before the extension)
@@ -894,15 +894,10 @@ namespace ClaudeVS.Core.Tests
                     Model = ModelChoice.Haiku,
                     Effort = EffortChoice.Low,
                     PermissionMode = PermissionModeChoice.AcceptEdits,
-                    ExtraArguments = on ? "--prompt-suggestions true" : "",
+                    PromptSuggestions = on,
                 });
-                session.EventReceived += (s, e) => events.Add(e);
-                session.RawLine += (s, e) =>
-                {
-                    lock (raw) raw.Append(e.Direction).Append('\t').Append(e.Line).Append('\n');
-                    if (e.Direction == RawLineDirection.Stdout && e.Line.Contains("\"prompt_suggestion\""))
-                        suggestions.Add((string)Newtonsoft.Json.Linq.JObject.Parse(e.Line)["suggestion"]);
-                };
+                session.EventReceived += (s, e) => { if (e.Kind == ClaudeEventKind.PromptSuggestion) suggestions.Add(e.Text); else events.Add(e); };
+                session.RawLine += (s, e) => { lock (raw) raw.Append(e.Direction).Append('\t').Append(e.Line).Append('\n'); };
                 int got = 0;
                 try
                 {

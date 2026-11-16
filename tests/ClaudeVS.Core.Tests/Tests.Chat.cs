@@ -659,5 +659,47 @@ namespace ClaudeVS.Core.Tests
             var b = Bookmark.Create("d", null, "p", new string('a', Bookmark.MaxAnswerChars + 10), DateTime.UtcNow);
             True(b.Answer.Length < Bookmark.MaxAnswerChars + 20 && b.Answer.EndsWith("(cut)"), "cut");
         }
+
+        private static void Test_PromptSuggestion_RealCli_2_1_325()
+        {
+            var parser = new ClaudeStreamParser();
+            var events = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.325-prompt-suggestion.jsonl"))
+                .SelectMany(l => parser.Parse(l)).ToList();
+            Eq("TurnCompleted,PromptSuggestion,TurnCompleted,PromptSuggestion", string.Join(",", events.Select(e => e.Kind)), "each suggestion after its result");
+            Eq("add the C# example", events[1].Text, "first suggestion");
+            Eq("show me the notes file", events[3].Text, "second suggestion");
+            True(!string.IsNullOrEmpty(events[1].SessionId), "session id");
+            Eq(0, parser.Parse("{\"type\":\"prompt_suggestion\",\"suggestion\":\"  \"}").Count, "blank suggestion ignored");
+
+            True(ClaudeArgsBuilder.Build(new ClaudeLaunchOptions { PromptSuggestions = true }).Contains("--prompt-suggestions true"), "flag when on");
+            True(!ClaudeArgsBuilder.Build(new ClaudeLaunchOptions()).Contains("--prompt-suggestions"), "off by default");
+        }
+
+        private static void Test_NextPrompt_FromClosingOffer()
+        {
+            // The two answers from the Phase 50 screenshot (Claude Code in VS, 2026-11-16).
+            Eq("Yes, split them out", NextPrompt.FromAnswer(
+                "It targets main and covers all 43 new samples.\n\nI only opened this one PR, because the branch holds a single set of changes. " +
+                "If you wanted separate PRs for each category, tell me and I'll split them out."));
+            Eq("Yes, open it with a description that has no Claude attribution", NextPrompt.FromAnswer(
+                "I read \"create branch\" as the branch I'd already made, so I didn't open a pull request. If you want one, I can open it with a " +
+                "description that has no Claude attribution. GitHub also offers a link: https://github.com/example/repo/pull/new/add-more-samples"));
+
+            Eq("Yes, run the tests", NextPrompt.FromAnswer("Done.\n\nWant me to run the tests?"));
+            Eq("Yes, commit my changes", NextPrompt.FromAnswer("Should I commit your changes?"));
+            Eq("Yes, show me the diff", NextPrompt.FromAnswer("Would you like me to show you the diff?"));
+            Eq("Yes, add tests for it", NextPrompt.FromAnswer("Let me know if you'd like me to add tests for it."));
+            Eq("Yes, add a Where example", NextPrompt.FromAnswer("I can also add a `Where` example if you want."), "markup dropped");
+            Eq("Yes, rename file_name too", NextPrompt.FromAnswer("Should I rename file_name too?"), "underscores inside words kept");
+            Eq("Yes, push", NextPrompt.FromAnswer("If you want me to push, tell me."));
+            Eq("Yes, split them out", NextPrompt.FromAnswer("If so, **tell me and I'll split them out**, so each can be reviewed alone."), "bold and trailing reason");
+
+            Eq(null, NextPrompt.FromAnswer("I can see the build failed on line 12."), "a statement, not an offer");
+            Eq(null, NextPrompt.FromAnswer("Want me to run the tests?\n\nThe build passes and all 203 tests pass."), "the offer is not at the end");
+            Eq(null, NextPrompt.FromAnswer("Should I?\n\n```\ncode\n```"), "a code block at the end");
+            Eq(null, NextPrompt.FromAnswer("Should I " + new string('x', NextPrompt.MaxLength + 1) + "?"), "too long");
+            Eq("Yes, " + new string('x', NextPrompt.MaxLength), NextPrompt.FromAnswer("Should I " + new string('x', NextPrompt.MaxLength) + "?"), "at the limit");
+            Eq(null, NextPrompt.FromAnswer(""), "empty");
+        }
     }
 }
