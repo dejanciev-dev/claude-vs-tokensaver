@@ -1168,6 +1168,11 @@ extension sends or reads; terminal, cloud, Remote Control, Claude Tag, gateway a
 - [x] **Plan mode and Haiku** (2.1.325 fixes subagents being moved to the plan-mode model under `haiku`). The main
       session is unchanged: `--live raw.jsonl Plan` still answers with Sonnet when Haiku is asked for, so Auto keeps
       picking Sonnet in Plan mode
+- [x] **"Always allow" offered less often** (2.1.325, IDE and SDK hosts: a rule alone is offered only when saving it
+      would allow that command again). Probed with `--live-ask` in Manual mode: `mkdir d && echo x > d/a.txt` came
+      with no `permission_suggestions`; `curl …`, `mkdir d2` and `echo x > f` still got an `addRules` suggestion. The
+      card already hides **Always allow** when none comes. Capture: `Fixtures/cli-2.1.325-permission-suggestions.jsonl`,
+      `Test_PermissionPrompt_RealCli_Suggestions_2_1_325`
 - [x] **Verify with 2.1.325 and raise `CliVersion.Tested`.** All 12 live tests pass with 2.1.325 ($0.18, 1.6 min);
       202 offline tests pass. `CliVersion.Tested` is 2.1.325 (`Required` stays 2.1.318); README, Marketplace
       overview, CONTRIBUTING and the plan-mode notes say so
