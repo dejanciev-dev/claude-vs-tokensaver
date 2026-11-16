@@ -11,7 +11,7 @@ Tick the boxes as you go. Each phase ends with something you can run.
 |---|---|
 | `ClaudeVS.Core` (CLI session, parser, router, meter, context, setup) | ✅ Written, 16/16 tests pass |
 | `ClaudeVS` VSIX (package, tool window, commands, options) | ✅ Builds clean (0 warnings); not yet run in the experimental instance |
-| Real end-to-end run against `claude` CLI | ⚠️ Core verified against CLI 2.1.316 (`--live` smoke test): sessions, streaming, usage, cost, cache OK; Haiku routing works in acceptEdits ($0.002 vs $0.042 per turn on Sonnet); in plan mode the CLI answers with Sonnet even when Haiku is requested (still so in 2.1.323, where all other live smoke tests pass). VS UI not run yet |
+| Real end-to-end run against `claude` CLI | ⚠️ Core verified against CLI 2.1.316 (`--live` smoke test): sessions, streaming, usage, cost, cache OK; Haiku routing works in acceptEdits ($0.002 vs $0.042 per turn on Sonnet); in plan mode the CLI answers with Sonnet even when Haiku is requested (still so in 2.1.325, where all other live smoke tests pass). VS UI not run yet |
 | Markdown transcript, diffs, history, question cards | ❌ Not started |
 
 ---
@@ -1154,6 +1154,23 @@ Planned on 2026-11-13.
 - [x] **Manual checks for Phases 46–48.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md). Section 13,
       *What you send, time and solutions*: the CSV columns, the attachments line, the times per model and effort,
       the time waited and the solution rows; Release is now 14
+
+## Phase 49 — Keep up with the CLI (from the Claude Code CHANGELOG 2.1.325)
+
+Checked on 2026-11-16 with 2.1.325 installed (2.1.324 was not released). The 2.1.325 section read for what the
+extension sends or reads; terminal, cloud, Remote Control, Claude Tag, gateway and plugin entries are left out.
+
+- [x] **Sandboxed Bash asks by default** (2.1.325, unless `sandbox.autoAllowBashIfSandboxed: true`). The extension
+      doesn't turn the sandbox on, so nothing to change
+- [x] **`claude -p` waits for account data on a clean machine** (2.1.325: a first run can start a few seconds
+      later). The router's warm-up already happens while idle: `--live-haiku-router` warm routes 0.7–1.1 s, under the
+      4 s limit
+- [x] **Plan mode and Haiku** (2.1.325 fixes subagents being moved to the plan-mode model under `haiku`). The main
+      session is unchanged: `--live raw.jsonl Plan` still answers with Sonnet when Haiku is asked for, so Auto keeps
+      picking Sonnet in Plan mode
+- [x] **Verify with 2.1.325 and raise `CliVersion.Tested`.** All 12 live tests pass with 2.1.325 ($0.18, 1.6 min);
+      202 offline tests pass. `CliVersion.Tested` is 2.1.325 (`Required` stays 2.1.318); README, Marketplace
+      overview, CONTRIBUTING and the plan-mode notes say so
 
 ---
 
