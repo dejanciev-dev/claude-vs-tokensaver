@@ -7,6 +7,11 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Suggested next prompt**: when an answer ends with an offer ("If you want separate PRs, tell me and I'll split
+  them out"), the empty input box shows the reply in grey (`Yes, split them out   Tab ⇥`). Tab or → puts it into
+  the box to edit or send; typing clears it. Read from the answer, with no model call (Options → Chat → *Suggest
+  the next prompt*, on by default). Options → CLI → *Ask Claude Code for suggestions* (off by default) uses Claude
+  Code's own prediction (`--prompt-suggestions`, 2.1.325) instead, at a model call per turn that its cost doesn't show.
 - **Month pace in the meter**: from the 3rd, the meter's tooltip says where this month's spend is heading at its pace
   so far (`this month $41.20, ~$137.33 by Nov 30 at this pace`), as the savings report's month line does.
 - **Pace warning**: once a month, from the 7th and while 3 days or more are left, the chat says when this month's

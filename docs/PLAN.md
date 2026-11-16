@@ -1197,14 +1197,17 @@ opt-in, since they cost tokens the stream doesn't report.
       real closing paragraphs. `ClaudeEventKind.PromptSuggestion`, `ClaudeLaunchOptions.PromptSuggestions`,
       `NextPrompt.FromAnswer` (looks at the last 3 sentences of the last paragraph; up to 90 characters; "you" in
       the offer becomes "me"). `--live-suggestions` now goes through the option and the parser
-- [ ] **Grey text in the input box.** The suggestion replaces the placeholder once a turn ends; **Tab** or **→**
+- [x] **Grey text in the input box.** The suggestion replaces the placeholder once a turn ends; **Tab** or **→**
       puts it into the box to edit or send, and typing clears it. Never sent on its own; hidden while a permission
-      or question card is open, and on a new conversation
-- [ ] **Options** (Options → Claude Code): *Suggest the next prompt* turns the grey text on or off (on by default,
-      local rule only). *Ask Claude Code for suggestions* adds `--prompt-suggestions true` (off by default; its
-      description says each one costs tokens that aren't shown in the turn's cost). Changing it restarts the session,
-      like other launch options
-- [ ] **Manual checks for Phase 50.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
+      or question card is open, and on a new conversation. `ClaudeChatControl.NextPrompt.cs`: shown as
+      `Yes, …   Tab ⇥`, not while busy, waiting on a card or over typed text; Claude Code's suggestion replaces the
+      local one when it comes; screen readers get it as the box's help text. Builds clean; not yet run in VS
+- [x] **Options** (Options → Claude Code): *Suggest the next prompt* (Chat) turns the grey text on or off (on by
+      default, local rule only). *Ask Claude Code for suggestions* (CLI) adds `--prompt-suggestions true` (off by
+      default, and only with the first on; its description says each one is a model call whose cost isn't in the
+      turn's cost). Applies to new sessions, like the other CLI options. README settings and shortcuts, CHANGELOG
+- [x] **Manual checks for Phase 50.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md). Section 14,
+      *A suggested next prompt*; Release is now 15
 
 ---
 
