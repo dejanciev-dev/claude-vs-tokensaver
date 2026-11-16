@@ -1177,6 +1177,23 @@ extension sends or reads; terminal, cloud, Remote Control, Claude Tag, gateway a
       203 offline tests pass. `CliVersion.Tested` is 2.1.325 (`Required` stays 2.1.318); README, Marketplace
       overview, CONTRIBUTING and the plan-mode notes say so
 
+## Phase 50 — A suggested next prompt
+
+Planned on 2026-11-16. When a turn ends, Claude's answer often ends with the obvious next step ("The title says 33,
+which is wrong", "If you want separate PRs, tell me"), but the input box only says *Ask Claude to edit…*. Show a
+suggestion there instead, at no extra token cost.
+
+- [ ] **Does the CLI send one?** Probe 2.1.325 with `--live` for a suggested prompt in the `stream-json` output after
+      a turn (the terminal shows them). Keep a capture under `Fixtures/` if it does, and note what turns it on
+- [ ] **Read it in Core.** The parser surfaces the CLI's suggestion when there is one; otherwise a local rule takes
+      the answer's closing offer ("If you want …, tell me", "I can …") and turns it into a short reply. No model
+      call, so no extra tokens. Tests from the capture and from real closing paragraphs
+- [ ] **Grey text in the input box.** The suggestion replaces the placeholder once a turn ends; **Tab** or **→**
+      puts it into the box to edit or send, and typing clears it. Never sent on its own; hidden while a permission
+      or question card is open, and on a new conversation
+- [ ] **An option to turn it off** (Options → Claude Code, on by default)
+- [ ] **Manual checks for Phase 50.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
+
 ---
 
 ## Working in Visual Studio — daily loop
