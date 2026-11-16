@@ -1174,7 +1174,7 @@ extension sends or reads; terminal, cloud, Remote Control, Claude Tag, gateway a
       card already hides **Always allow** when none comes. Capture: `Fixtures/cli-2.1.325-permission-suggestions.jsonl`,
       `Test_PermissionPrompt_RealCli_Suggestions_2_1_325`
 - [x] **Verify with 2.1.325 and raise `CliVersion.Tested`.** All 12 live tests pass with 2.1.325 ($0.18, 1.6 min);
-      202 offline tests pass. `CliVersion.Tested` is 2.1.325 (`Required` stays 2.1.318); README, Marketplace
+      203 offline tests pass. `CliVersion.Tested` is 2.1.325 (`Required` stays 2.1.318); README, Marketplace
       overview, CONTRIBUTING and the plan-mode notes say so
 
 ---
