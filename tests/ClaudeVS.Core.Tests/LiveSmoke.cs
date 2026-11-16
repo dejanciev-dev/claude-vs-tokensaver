@@ -862,6 +862,87 @@ namespace ClaudeVS.Core.Tests
         }
 
         /// <summary>Events until a TurnCompleted (or timeout), skipping leftovers from before.</summary>
+        /// <summary>
+        /// Phase 50 probe: the same two turns with <c>--prompt-suggestions true</c> and without. Prints each turn's
+        /// cost (total_cost_usd is cumulative per session) and the <c>prompt_suggestion</c> line that follows the
+        /// result, so whether a suggestion is sent, when, and whether its cost is reported can be read off.
+        /// `--live-suggestions [rawPath]` (rawPath gets "-on"/"-off" before the extension)
+        /// </summary>
+        public static int RunSuggestions(string rawLogPath)
+        {
+            string exe = ClaudeCliLocator.Resolve("");
+            if (exe == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }
+            var failures = new List<string>();
+            void Check(bool ok, string what) { Console.WriteLine((ok ? "  ok   " : "  FAIL ") + what); if (!ok) failures.Add(what); }
+            string[] prompts =
+            {
+                "Write a file notes.txt with three short lines about LINQ. Then tell me in one sentence what you could add next.",
+                "Yes, add one more line to notes.txt about deferred execution.",
+            };
+
+            foreach (bool on in new[] { true, false })
+            {
+                Console.WriteLine(on ? "With --prompt-suggestions true:" : "Without:");
+                string dir = Path.Combine(Path.GetTempPath(), "cvs-live-" + Guid.NewGuid().ToString("N"));
+                Directory.CreateDirectory(dir);
+                var events = new BlockingCollection<ClaudeEvent>();
+                var suggestions = new BlockingCollection<string>();
+                var raw = new StringBuilder();
+                var session = NewSession(new ClaudeLaunchOptions
+                {
+                    WorkingDirectory = dir,
+                    Model = ModelChoice.Haiku,
+                    Effort = EffortChoice.Low,
+                    PermissionMode = PermissionModeChoice.AcceptEdits,
+                    ExtraArguments = on ? "--prompt-suggestions true" : "",
+                });
+                session.EventReceived += (s, e) => events.Add(e);
+                session.RawLine += (s, e) =>
+                {
+                    lock (raw) raw.Append(e.Direction).Append('\t').Append(e.Line).Append('\n');
+                    if (e.Direction == RawLineDirection.Stdout && e.Line.Contains("\"prompt_suggestion\""))
+                        suggestions.Add((string)Newtonsoft.Json.Linq.JObject.Parse(e.Line)["suggestion"]);
+                };
+                int got = 0;
+                try
+                {
+                    double before = 0;
+                    for (int turn = 0; turn < prompts.Length; turn++)
+                    {
+                        session.SendPromptAsync(prompts[turn]).GetAwaiter().GetResult();
+                        var done = Collect(events, TimeSpan.FromSeconds(120)).LastOrDefault(e => e.Kind == ClaudeEventKind.TurnCompleted);
+                        double total = done?.TotalCostUsd ?? 0;
+                        Console.WriteLine($"  turn {turn + 1}: ${total - before:0.00000} (session ${total:0.00000})" + (done?.IsError == true ? " ERROR " + done.Text : ""));
+                        before = total;
+                        var sw = System.Diagnostics.Stopwatch.StartNew();
+                        if (suggestions.TryTake(out var suggestion, TimeSpan.FromSeconds(on ? 30 : 5)))
+                        {
+                            got++;
+                            Console.WriteLine($"    suggestion after {sw.Elapsed.TotalSeconds:0.0} s: \"{suggestion}\"");
+                        }
+                        else Console.WriteLine("    no suggestion");
+                    }
+                    // 2.1.325 often sends none after a turn (3 of 6 turns over three runs), so one is enough.
+                    Check(on ? got > 0 : got == 0, on ? $"a prompt_suggestion followed {got} of {prompts.Length} results" : "no prompt_suggestion without the flag");
+                }
+                catch (Exception ex) { Check(false, "exception: " + ex.Message); }
+                finally
+                {
+                    session.Dispose();
+                    if (!string.IsNullOrEmpty(rawLogPath))
+                    {
+                        string path = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(rawLogPath)),
+                            Path.GetFileNameWithoutExtension(rawLogPath) + (on ? "-on" : "-off") + Path.GetExtension(rawLogPath));
+                        File.WriteAllText(path, raw.ToString());
+                        Console.WriteLine("  raw lines: " + path);
+                    }
+                    try { Directory.Delete(dir, true); } catch { }
+                }
+            }
+            Console.WriteLine(failures.Count == 0 ? "LIVE: all checks passed" : $"LIVE: {failures.Count} check(s) failed");
+            return failures.Count == 0 ? 0 : 1;
+        }
+
         private static List<ClaudeEvent> Collect(BlockingCollection<ClaudeEvent> events, TimeSpan timeout)
         {
             var list = new List<ClaudeEvent>();

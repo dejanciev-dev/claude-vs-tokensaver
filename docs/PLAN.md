@@ -1183,8 +1183,13 @@ Planned on 2026-11-16. When a turn ends, Claude's answer often ends with the obv
 which is wrong", "If you want separate PRs, tell me"), but the input box only says *Ask Claude to edit…*. Show a
 suggestion there instead, at no extra token cost.
 
-- [ ] **Does the CLI send one?** Probe 2.1.325 with `--live` for a suggested prompt in the `stream-json` output after
-      a turn (the terminal shows them). Keep a capture under `Fixtures/` if it does, and note what turns it on
+- [x] **Does the CLI send one?** Yes, with `--prompt-suggestions true` (2.1.325 `--help`: "In print/SDK mode, emits a
+      prompt_suggestion message after each turn"): `{"type":"prompt_suggestion","suggestion":"add the C# example",…}`
+      comes 0.6–0.8 s *after* the turn's `result`. Not after every turn: 3 of 6 turns over three runs got none, so the
+      box falls back to the local rule. Works with all the flags the extension sends and with stdin kept open. Its
+      cost is not in `total_cost_usd` (two suggestions: $0.00486 for the session, none: $0.00484), but turn 2 reported
+      about $0.0003 more with the flag on than off (Haiku, a small conversation). `--live-suggestions` (not in
+      `--live-all`); capture: `Fixtures/cli-2.1.325-prompt-suggestion.jsonl`
 - [ ] **Read it in Core.** The parser surfaces the CLI's suggestion when there is one; otherwise a local rule takes
       the answer's closing offer ("If you want …, tell me", "I can …") and turns it into a short reply. No model
       call, so no extra tokens. Tests from the capture and from real closing paragraphs
