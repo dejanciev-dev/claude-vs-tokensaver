@@ -33,7 +33,7 @@ Pre-release (v0.1 → v0.2).
 
 | Layer | State |
 |---|---|
-| Core library (CLI session, parser, router, meter, context, Markdown, usage log) | ✅ 203 automated tests, many replaying real CLI output (2.1.316–2.1.325) |
+| Core library (CLI session, parser, router, meter, context, Markdown, usage log) | ✅ 205 automated tests, many replaying real CLI output (2.1.316–2.1.325) |
 | Core against the real `claude` CLI | ✅ Verified with Claude Code 2.1.325 via the opt-in live tests: streaming, usage, cost, prompt cache, model switch, resume, `/compact`, dialogs, edit review, MCP, question and plan approval. Needs 2.1.318 or newer |
 | Visual Studio extension (UI) | ⚠️ Builds with zero warnings in CI, but not yet run in the experimental instance |
 
@@ -108,7 +108,7 @@ This extension attacks all three, and shows the numbers so you can see the effec
 | **Claude Code dialogs** | `/` → *Claude Code*: **Status**, **Account & usage** (plan, every usage limit with its reset time, this session's cost), **Memory & instructions** (CLAUDE.md files and saved memories, with what each costs per request; click to open or create), **Output style** (switch for this project), **Permission rules** and **Hooks** (with the settings file each comes from). Read from Claude Code with no model call. |
 | **Screen readers** | Announcements through a UIA live region when Claude finishes (with the start of the answer), asks for permission, has a question or a plan, wants an edit reviewed, stops responding, or hits a usage limit. **Focus last message** (`Ctrl+Alt+K, M`) puts the keyboard at the start of Claude's last answer; `Esc` returns to the prompt box. |
 | **Several chat windows** | Each window has its own conversation, meter and model. |
-| **Prompt box helpers** | `Ctrl+Up/Down` prompt history; typing `/` opens a list of commands above the box (`/compact` and your own `.claude/commands`), each with what it does; Tab or Enter puts it in the box for its arguments. Your skills (project, user and plugin skills, as Claude Code reports them) are in the `/` button menu under Skills; `@` picks a file (each with its size in tokens, `~3.2k tok`). |
+| **Prompt box helpers** | A suggested next prompt in grey once an answer ends with an offer (Tab takes it; no model call); `Ctrl+Up/Down` prompt history; typing `/` opens a list of commands above the box (`/compact` and your own `.claude/commands`), each with what it does; Tab or Enter puts it in the box for its arguments. Your skills (project, user and plugin skills, as Claude Code reports them) are in the `/` button menu under Skills; `@` picks a file (each with its size in tokens, `~3.2k tok`). |
 | **Diagnostics** | An **Output → Claude Code** pane with route decisions, errors and plain-language hints (not logged in, sign-in expired, answer cut off at the output limit, rate limited, context too long…), plus optional raw CLI traffic. If Claude Code is older than 2.1.318, the chat says so once. |
 
 ## How it works
@@ -272,6 +272,7 @@ In the prompt box:
 | `Ctrl+Up` / `Ctrl+Down` | Previous / next prompt (your unsent text is kept) |
 | `@` + name | Pick a solution file to attach (`↑ ↓`, `Enter` or `Tab`, `Esc`) |
 | `/` | A list of matching commands above the box (`/compact` and your `.claude/commands/*.md`; skills are in the `/` button menu): ↑ ↓ to choose, Tab or Enter to insert, Esc to close |
+| `Tab` or `→` in the empty box | Take the suggested next prompt shown in grey, to edit or send |
 | `Esc` | Remove attachments |
 
 Editor commands go to the chat window you used last.
@@ -288,6 +289,8 @@ Editor commands go to the chat window you used last.
 | Chat | Focus view | Off | Consecutive tool calls collapse into one summary row; also / → Focus view. |
 | Chat | Screen reader announcements | On | Narrator, NVDA or JAWS announce finished answers (their start), permission requests, questions, plans, edits to review, stalls and usage limits. Nothing is sent without a screen reader. |
 | Chat | Show message timestamps | On | Time above each prompt and at the end of each answer line; a date line where the day changes. |
+| Chat | Suggest the next prompt | On | When an answer ends with an offer ("tell me and I'll split them out"), the empty box shows the reply in grey; Tab takes it. Read from the answer, no model call. |
+| CLI | Ask Claude Code for suggestions | Off | Claude Code predicts the next prompt after each turn (`--prompt-suggestions`) and replaces the one read from the answer. An extra model call whose cost isn't in the turn's cost; not after every turn. Applies to new sessions. |
 | CLI | File checkpoints (rewind) | On | Claude Code keeps a copy of each file before Claude changes it, so prompts can be rewound. Applies to new sessions. |
 | CLI | No forks | Off | Claude can't start forks (subagents that start with a copy of the whole conversation). Sets `CLAUDE_CODE_FORK_SUBAGENT=0`. Applies to new sessions. |
 | CLI | Extra arguments | | Appended to the `claude` command line, e.g. `--add-dir ..\shared`. |

@@ -178,7 +178,22 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | The same report | `By model:` and `By effort:` rows end with `, … s per turn)` |
 | The same report, all solutions, with turns in two solutions or more | `By solution:` rows add `($… per turn, cache …%, … conversations` and, for a period reaching back before this month, `; $… this month)` |
 
-## 14. Release (Phase 5)
+## 14. A suggested next prompt (Phase 50)
+
+| Do | Expect |
+|---|---|
+| Ask for something whose answer will end with an offer, e.g. *Make a notes.txt with two lines about LINQ, then ask me whether to add a third* | Once the turn ends, the empty input box shows `Yes, …   Tab ⇥` in grey instead of *Ask Claude to edit…* |
+| Press **Tab** (or **→**) | The suggestion is in the box with the caret at its end, not sent; Enter sends it |
+| Get a suggestion again, then type a letter and delete it | The grey text is gone and *Ask Claude to edit…* is back |
+| An answer that ends without an offer (*Reply with the word PING*) | *Ask Claude to edit…*, and Tab moves the focus as before |
+| **Shift+Tab** with a suggestion showing | Cycles the mode, as before; the suggestion stays |
+| A prompt that asks for permission (Manual mode, a shell command) | No grey text while the permission card is open |
+| **New chat** with a suggestion showing | *Ask Claude to edit…* |
+| **Options → Chat → Suggest the next prompt** off, then the first row again | No suggestion |
+| **Options → CLI → Ask Claude Code for suggestions** on, **New chat**, then any prompt | Claude Code's suggestion replaces the local one a second after the answer ends, also after answers with no offer (not after every turn) |
+| With a screen reader (Narrator), Tab into the input box while a suggestion shows | It reads *Suggested prompt: … Press Tab to use it.* |
+
+## 15. Release (Phase 5)
 
 These need you rather than a check list:
 

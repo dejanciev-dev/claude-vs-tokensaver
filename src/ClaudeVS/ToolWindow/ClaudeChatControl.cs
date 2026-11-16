@@ -63,7 +63,7 @@ namespace ClaudeVS.ToolWindow
         };
         private readonly TextBlock _placeholder = new TextBlock
         {
-            Text = "Ask Claude to edit…",
+            Text = PlaceholderText, // or the suggested next prompt (ClaudeChatControl.NextPrompt.cs)
             IsHitTestVisible = false, FontSize = 13, Margin = new Thickness(2, 0, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis,
         };
         private readonly Border _inputBox = new Border { CornerRadius = new CornerRadius(6), BorderThickness = new Thickness(1), Padding = new Thickness(10, 8, 6, 6) };
@@ -177,6 +177,7 @@ namespace ClaudeVS.ToolWindow
             _prompt.TextChanged += (s, e) =>
             {
                 ThreadHelper.ThrowIfNotOnUIThread();
+                if (_prompt.Text.Length > 0) ClearSuggestion(); // typing clears it; it doesn't come back when the box is emptied
                 _placeholder.Visibility = _prompt.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
                 if (_prompt.Text.Length == 0) _pastes.Clear();
                 _routeTimer.Stop();
@@ -364,6 +365,7 @@ namespace ClaudeVS.ToolWindow
             if (busy && !_busy) System.Threading.Interlocked.Exchange(ref _lastOutputTicks, DateTime.UtcNow.Ticks); // the 60 s count starts now
             bool wasBusy = _busy;
             _busy = busy;
+            if (busy) ClearSuggestion(); // a prompt went out
             UpdateCacheNote(); // only while idle
             if (!busy) SetStalled(false);
             OnBusyChangedActivity(busy, wasBusy);
@@ -1023,6 +1025,7 @@ namespace ClaudeVS.ToolWindow
             if (_filePopup.IsOpen && HandleFilePickerKey(e.Key)) { e.Handled = true; return; }
             if (_commandPopup.IsOpen && HandleCommandPickerKey(e.Key)) { e.Handled = true; return; }
             if (TryPasteImage(e)) { e.Handled = true; return; }
+            if (TakeSuggestion(e)) { e.Handled = true; return; } // Tab or → in the empty box: the suggested prompt
             if (e.Key == Key.Tab && (Keyboard.Modifiers & ModifierKeys.Shift) != 0)
             {
                 e.Handled = true; // Shift+Tab cycles the mode, like VS Code
@@ -1419,6 +1422,7 @@ namespace ClaudeVS.ToolWindow
                 ForkSession = _forkNext && _resumeId != null,
                 EnableFileCheckpointing = o?.FileCheckpoints ?? true,
                 NoForks = o?.NoForks ?? false,
+                PromptSuggestions = (o?.SuggestNextPrompt ?? true) && (o?.ClaudeCodeSuggestions ?? false),
                 SessionName = _sessionName,
                 EditNotesHook = true, // tells Claude which changes of an edit were rejected (review card)
             });
@@ -1782,6 +1786,7 @@ namespace ClaudeVS.ToolWindow
             RefreshCommands(force: true);
             _fileIndex = null; // re-index on the next @ (files may have been added)
             SetBusy(false);
+            ClearSuggestion();
             SetTitle(null);
             SetEmptyState(true);
             UpdateFolderChip();
@@ -1891,6 +1896,7 @@ namespace ClaudeVS.ToolWindow
                         break;
                     case ClaudeEventKind.PermissionRequest:
                         FlushText();
+                        ClearSuggestion();
                         _waitingForUser = true; // Claude waits for you; not a stall
                         SetStalled(false);
                         if (ShowInteractiveCard(ev)) break;
@@ -1947,12 +1953,16 @@ namespace ClaudeVS.ToolWindow
                             string.IsNullOrWhiteSpace(answer) ? null : BookmarkToggle(turn.Prompt, answer, turn.Anchor), answer,
                             tooltip: _meterModel == null ? null : TurnFooter.CostBreakdown(_meterModel.LastModel, _meterModel.LastTurn, _meterModel.LastTurnSubagentCostUsd, _meterModel.LastTurnCostUsd, _meterModel.Prices));
                         if (!string.IsNullOrWhiteSpace(answer)) _lastAnswer = answer;
+                        SuggestFromAnswer(answer, ev.IsError); // grey text in the input box; not while queued prompts run
                         ShowTurnChanges(); // "Files changed" with Diff links
                         Announce(ev.IsError ? "Claude stopped with an error. " + Short(ev.Text) : ScreenReaderText.AnswerFinished(answer));
                         if (_queuedBubbles.Count > 0) { _queuedBubbles.Dequeue().Render(); RefreshQueuedPanel(); } // Claude starts on the next one now
                         break;
                     case ClaudeEventKind.Error:
                         AppendError("[claude] ", ev.Text);
+                        break;
+                    case ClaudeEventKind.PromptSuggestion:
+                        SuggestFromCli(ev.Text); // only with "Ask Claude Code for suggestions" on
                         break;
                 }
                 OnActivityEvent(ev);
