@@ -97,16 +97,30 @@ namespace ClaudeVS.ToolWindow
                 BorderThickness = new Thickness(1),
                 Padding = new Thickness(0, 2, 0, 2),
                 Width = width,
-                Effect = new DropShadowEffect { BlurRadius = 12, ShadowDepth = 2, Opacity = 0.35 },
-                Margin = new Thickness(6), // room for the shadow
             };
             border.SetResourceReference(Border.BackgroundProperty, EnvironmentColors.ToolWindowBackgroundBrushKey);
             border.SetResourceReference(Border.BorderBrushProperty, EnvironmentColors.ToolWindowBorderBrushKey);
             ChatTheme.UseEnvironmentFont(border);
+            // Sharp text: the border is opaque, so ClearType can stay on in this transparent popup window, and the
+            // text is laid out on whole pixels like Visual Studio's own menus.
+            RenderOptions.SetClearTypeHint(border, ClearTypeHint.Enabled);
+            TextOptions.SetTextFormattingMode(border, TextFormattingMode.Display);
+
+            // The shadow is drawn by an empty border behind the content, not on it: an Effect turns everything under
+            // it into a bitmap, which blurred the text (grey anti-aliasing, off the pixel grid).
+            var shadow = new Border
+            {
+                CornerRadius = new CornerRadius(6),
+                Effect = new DropShadowEffect { BlurRadius = 12, ShadowDepth = 2, Opacity = 0.35 },
+            };
+            shadow.SetResourceReference(Border.BackgroundProperty, EnvironmentColors.ToolWindowBackgroundBrushKey);
+            var root = new Grid { Margin = new Thickness(6), UseLayoutRounding = true, SnapsToDevicePixels = true }; // room for the shadow
+            root.Children.Add(shadow);
+            root.Children.Add(border);
 
             _popup = new Popup
             {
-                Child = border,
+                Child = root,
                 PlacementTarget = target,
                 Placement = placement,
                 StaysOpen = false,
