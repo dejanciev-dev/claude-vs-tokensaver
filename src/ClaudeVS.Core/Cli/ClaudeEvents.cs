@@ -171,6 +171,12 @@ namespace ClaudeVS.Core.Cli
         /// (<c>PreToolUse</c>), ToolUseId = the tool call it runs for, <see cref="ClaudeEvent.DurationMs"/> = how long so far.
         /// </summary>
         HookRunning,
+        /// <summary>
+        /// The CLI's predicted next prompt, in <see cref="ClaudeEvent.Text"/> (<c>prompt_suggestion</c>, 2.1.325, only
+        /// with <see cref="ClaudeLaunchOptions.PromptSuggestions"/>). It comes after the turn's TurnCompleted, and not
+        /// after every turn.
+        /// </summary>
+        PromptSuggestion,
     }
 
     /// <summary>The phase of the main agent's current response (<see cref="ClaudeEventKind.Activity"/>).</summary>

@@ -155,6 +155,12 @@ namespace ClaudeVS.Core.Cli
         /// (<see cref="ClaudeSession.SetToolResultNote"/>), e.g. when the user applied only part of an edit.
         /// </summary>
         public bool EditNotesHook { get; set; }
+        /// <summary>
+        /// <c>--prompt-suggestions true</c>: after a turn's result the CLI sends a predicted next prompt
+        /// (<see cref="ClaudeEventKind.PromptSuggestion"/>; 2.1.325). Off by default: each one is a model call whose
+        /// cost is not in <c>total_cost_usd</c>, and it is not sent after every turn.
+        /// </summary>
+        public bool PromptSuggestions { get; set; }
         public string ExtraArguments { get; set; } = "";
     }
 
@@ -196,6 +202,8 @@ namespace ClaudeVS.Core.Cli
             if (!string.IsNullOrWhiteSpace(o.SessionName)) { parts.Add("--name"); parts.Add(o.SessionName.Trim().Replace('\n', ' ').Replace('\r', ' ')); }
 
             if (!string.IsNullOrWhiteSpace(o.AppendSystemPrompt)) { parts.Add("--append-system-prompt"); parts.Add(o.AppendSystemPrompt.Trim()); }
+
+            if (o.PromptSuggestions) { parts.Add("--prompt-suggestions"); parts.Add("true"); }
 
             if (o.SdkMcpServers.Count > 0)
             {

@@ -1191,10 +1191,12 @@ opt-in, since they cost tokens the stream doesn't report.
       cost is not in `total_cost_usd` (two suggestions: $0.00486 for the session, none: $0.00484), but turn 2 reported
       about $0.0003 more with the flag on than off (Haiku, a small conversation). `--live-suggestions` (not in
       `--live-all`); capture: `Fixtures/cli-2.1.325-prompt-suggestion.jsonl`
-- [ ] **Read it in Core.** The parser surfaces the CLI's suggestion when there is one (only sent when the option
+- [x] **Read it in Core.** The parser surfaces the CLI's suggestion when there is one (only sent when the option
       below is on); otherwise a local rule takes the answer's closing offer ("If you want …, tell me", "I can …") and
       turns it into a short reply. The rule makes no model call, so no extra tokens. Tests from the capture and from
-      real closing paragraphs
+      real closing paragraphs. `ClaudeEventKind.PromptSuggestion`, `ClaudeLaunchOptions.PromptSuggestions`,
+      `NextPrompt.FromAnswer` (looks at the last 3 sentences of the last paragraph; up to 90 characters; "you" in
+      the offer becomes "me"). `--live-suggestions` now goes through the option and the parser
 - [ ] **Grey text in the input box.** The suggestion replaces the placeholder once a turn ends; **Tab** or **→**
       puts it into the box to edit or send, and typing clears it. Never sent on its own; hidden while a permission
       or question card is open, and on a new conversation
