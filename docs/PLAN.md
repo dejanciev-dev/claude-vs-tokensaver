@@ -1424,7 +1424,9 @@ keeps setting keys as written (even unknown ones), so the settings check must kn
       from Visual Studio's environment or Claude Code's settings. A token tip. Builds clean; not yet run in VS
 - [x] **Retries in the CSV.** `output_retries` and `output_retry_cost_usd` columns, last (the count always, the cost
       when there is one)
-- [ ] **Manual checks for Phase 56.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
+- [x] **Manual checks for Phase 56.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md). Section 19, *The
+      effort Claude Code really uses, and settings that cost*: routed and picked efforts that change the thinking,
+      the settings check and its breakdown line, the cut-off tip and the CSV columns; Release is now 20
 
 ---
 
