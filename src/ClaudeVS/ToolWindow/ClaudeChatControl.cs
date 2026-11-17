@@ -1935,6 +1935,7 @@ namespace ClaudeVS.ToolWindow
                         // The effort this turn was sent with: its record is next in line (RecordUsage takes it below)
                         if (TurnFooter.Effort(ClaudeSettings.Cap(_pendingUsages.Count > 0 ? _pendingUsages.Peek().Effort : null, _effortCap)) is string effortSent) used += " · " + effortSent; // as used: no higher than maxEffortLevel
                         if (TurnFooter.Agents(ev.Subagents, _meterModel?.LastTurnSubagentTotal.Total ?? 0) is string agents) used += " · " + agents;
+                        used += TurnFooter.Retries(_meterModel?.LastTurnOutputRetries ?? 0, _meterModel?.LastTurnOutputRetryCostUsd ?? 0); // answers cut off at the output limit
                         if (ev.Subagents?.Warning() is string agentTrouble)
                         {
                             FlushText();
@@ -1975,6 +1976,11 @@ namespace ClaudeVS.ToolWindow
                         break;
                     case ClaudeEventKind.PromptSuggestion:
                         SuggestFromCli(ev.Text); // only with "Ask Claude Code for suggestions" on
+                        break;
+                    case ClaudeEventKind.OutputLimitRetry:
+                        // An answer cut off at the output limit: Claude Code asks for the rest (the meter prices it)
+                        ClaudeOutputPane.WriteLine((ev.IsSubagent ? "A subagent's" : "Claude's") + " answer hit the output token limit; Claude Code asked it to go on");
+                        if (_tasks.ObserveRetry(ev)) RefreshAgentsPanel();
                         break;
                 }
                 OnActivityEvent(ev);
@@ -2052,6 +2058,8 @@ namespace ClaudeVS.ToolWindow
             rec.DurationMs = ev.DurationMs;
             rec.IsError = ev.IsError;
             rec.EndReason = UsageRecord.EndOf(ev.IsError, ev.TerminalReason, ev.ResultSubtype);
+            rec.OutputRetries = _meterModel?.LastTurnOutputRetries ?? 0;
+            rec.OutputRetryCostUsd = _meterModel?.LastTurnOutputRetryCostUsd ?? 0;
             if (!side.IsEmpty)
             {
                 rec.SideKind = _meterModel.LastTurnSideIsCompact ? UsageRecord.SideCompact : UsageRecord.SideSuggestion;

@@ -30,6 +30,8 @@ namespace ClaudeVS.Core.Cli
         public string LastToolName { get; set; }
         public long TotalTokens { get; set; }
         public int ToolUses { get; set; }
+        /// <summary>How often its answer was cut off at the output limit and Claude Code asked for the rest (<see cref="ClaudeEventKind.OutputLimitRetry"/>).</summary>
+        public int OutputRetries { get; set; }
         /// <summary>Final summary (task_notification): the agent's answer or the command's description.</summary>
         public string Summary { get; set; }
         public DateTime StartedUtc { get; set; }
@@ -137,6 +139,16 @@ namespace ClaudeVS.Core.Cli
             if (t == null) return false;
             t.CostUsd = _costs.Of(t.ToolUseId);
             t.Model = _costs.ModelOf(t.ToolUseId) ?? t.Model;
+            return true;
+        }
+
+        /// <summary>A subagent's answer was cut off at the output limit: counted on its task. True when a task changed.</summary>
+        public bool ObserveRetry(ClaudeEvent ev)
+        {
+            if (ev?.Kind != ClaudeEventKind.OutputLimitRetry || !ev.IsSubagent || string.IsNullOrEmpty(ev.ParentToolUseId)) return false;
+            var t = _tasks.FirstOrDefault(x => x.ToolUseId == ev.ParentToolUseId);
+            if (t == null) return false;
+            t.OutputRetries++;
             return true;
         }
 

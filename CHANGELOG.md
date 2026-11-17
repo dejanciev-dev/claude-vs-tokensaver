@@ -7,6 +7,10 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Answers cut off at the output limit**: when Claude's or a subagent's answer hits the output token limit, Claude
+  Code asks it to go on (since 2.1.325 a subagent gives its whole answer again, more briefly), and each retry reads
+  the context again. The turn footer says so with what the retries cost (`· cut off 2× ($0.004 to go on)`), the
+  agent's row says `cut off 2×`, and the savings report adds a *Cut off, asked to go on* line.
 - **The effort cap from Claude Code's settings**: with `maxEffortLevel` set (by you, the project or your
   organization), Claude Code answers at no higher effort and says so only in its debug log. The chat now reads it
   when Claude Code starts (no model call): the effort picker greys out what is above it, the router stays under it,

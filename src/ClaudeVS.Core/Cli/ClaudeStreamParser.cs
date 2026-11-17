@@ -194,10 +194,25 @@ namespace ClaudeVS.Core.Cli
             return events;
         }
 
+        /// <summary>How Claude Code's message after a cut-off answer starts (2.1.326, both kinds).</summary>
+        public const string OutputLimitRetryText = "Output token limit hit.";
+
         private static IReadOnlyList<ClaudeEvent> ParseUser(JObject json)
         {
             if (!(json.SelectToken("message.content") is JArray content)) return None;
             var events = new List<ClaudeEvent>();
+            // Claude Code asking for the rest of an answer cut off at the output limit (synthetic; 2.1.326)
+            if (json.Value<bool?>("isSynthetic") == true)
+            {
+                string said = content.OfType<JObject>().Where(b => (string)b["type"] == "text").Select(b => (string)b["text"]).FirstOrDefault();
+                if (said != null && said.StartsWith(OutputLimitRetryText, StringComparison.Ordinal))
+                {
+                    var parent = json["parent_tool_use_id"];
+                    bool sub = parent != null && parent.Type != JTokenType.Null;
+                    events.Add(new ClaudeEvent { Kind = ClaudeEventKind.OutputLimitRetry, Text = said, IsSubagent = sub, ParentToolUseId = sub ? (string)parent : null });
+                    return events;
+                }
+            }
             var results = content.OfType<JObject>().Where(b => (string)b["type"] == "tool_result").ToList();
             // The CLI's structured result sits beside the message, so it only belongs to a block when there is one.
             string original = results.Count == 1 ? OriginalFile(json["tool_use_result"]) : null;

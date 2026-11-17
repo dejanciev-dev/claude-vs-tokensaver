@@ -161,6 +161,56 @@ namespace ClaudeVS.Core.Tests
             Eq(0.005, Math.Round(old.LastTurnCostUsd, 6), "the growth of the total");
         }
 
+        /// <summary>
+        /// 2.1.326 with CLAUDE_CODE_MAX_OUTPUT_TOKENS=400: a background subagent asked for a 700-word essay, then the
+        /// main agent's own answer, each cut off and asked to go on (synthetic "Output token limit hit." messages).
+        /// </summary>
+        private static void Test_Meter_OutputLimitRetries_RealCli_2_1_326()
+        {
+            var events = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.326-output-limit-retries.jsonl"))
+                .SelectMany(l => new ClaudeStreamParser().Parse(l)).ToList();
+            var retries = events.Where(e => e.Kind == ClaudeEventKind.OutputLimitRetry).ToList();
+            Eq(6, retries.Count, "every cut-off");
+            Eq(3, retries.Count(e => e.IsSubagent), "the subagent's");
+            True(retries.Where(e => e.IsSubagent).All(e => e.ParentToolUseId != null && e.ParentToolUseId.StartsWith("toolu")), "whose: its Agent call");
+            True(retries.Any(e => e.Text.Contains("give the whole answer again, more briefly")), "2.1.325's ask for the whole answer again");
+            Eq(0, events.Count(e => e.Kind == ClaudeEventKind.OutputLimitRetry && !e.Text.StartsWith(ClaudeStreamParser.OutputLimitRetryText)), "only those");
+
+            var meter = new TokenMeter();
+            meter.FreshSession();
+            var perTurn = new List<(int Retries, double Usd)>();
+            foreach (var e in events)
+            {
+                meter.Observe(e);
+                if (e.Kind == ClaudeEventKind.TurnCompleted) perTurn.Add((meter.LastTurnOutputRetries, meter.LastTurnOutputRetryCostUsd));
+            }
+            Eq(2, perTurn.Count);
+            Eq(6, perTurn.Sum(t => t.Retries), "counted in the turns they came in");
+            Eq(6, meter.SessionOutputRetries);
+            True(meter.SessionOutputRetryCostUsd > 0, "the requests that went on: " + meter.SessionOutputRetryCostUsd);
+            True(perTurn.All(t => t.Retries == 0 || t.Usd > 0), "each turn with retries priced them");
+
+            // The agent's row
+            var tasks = new AgentTaskList();
+            foreach (var e in events) { if (e.Kind == ClaudeEventKind.Task) tasks.Apply(e.Payload); tasks.ObserveRetry(e); }
+            Eq(3, tasks.Tasks.Single(t => t.IsAgent).OutputRetries, "on the subagent's task");
+
+            // Footer and report
+            Eq(" · cut off 2× ($0.004 to go on)", TurnFooter.Retries(2, 0.004));
+            Eq(" · cut off 1×", TurnFooter.Retries(1, 0.0002), "too small to price");
+            Eq("", TurnFooter.Retries(0, 0));
+            var t0 = DateTime.UtcNow.AddDays(-1);
+            var rep = SavingsReport.Build(new[]
+            {
+                new UsageRecord { Timestamp = t0, CostUsd = 0.05, OutputRetries = 2, OutputRetryCostUsd = 0.02 },
+                new UsageRecord { Timestamp = t0, CostUsd = 0.03, OutputRetries = 3, OutputRetryCostUsd = 0.01 },
+                new UsageRecord { Timestamp = t0, CostUsd = 0.01 },
+            }, new PriceTable());
+            Eq("5 retries in 2 turns, $0.030 for the requests that went on", rep.OutputRetriesLine());
+            True(rep.ToText().Contains("Cut off, asked to go on:    5 retries"), rep.ToText());
+            Eq(null, SavingsReport.Build(new[] { new UsageRecord { Timestamp = t0, CostUsd = 0.01 } }, new PriceTable()).OutputRetriesLine(), "none: no line");
+        }
+
         private static void Test_Meter_DefaultWindowIs1M()
         {
             // Every current model reports 1M, and 2.1.323 assumes 1M for an unknown model ID.

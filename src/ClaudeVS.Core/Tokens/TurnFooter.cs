@@ -48,6 +48,16 @@ namespace ClaudeVS.Core.Tokens
 
         /// <summary>" · 1.2k thinking" and the like; "" when there is nothing to add.</summary>
         /// <param name="cacheSavedUsd">What the cache saved this turn (<see cref="TokenMeter.LastTurnCacheSavedUsd"/>); shown from $0.001.</param>
+        /// <summary>
+        /// " · cut off 2× ($0.004 to go on)": answers cut off at the output limit that Claude Code asked to go on, and what
+        /// the requests that went on cost; "" when none.
+        /// </summary>
+        public static string Retries(int retries, double usd)
+        {
+            if (retries <= 0) return "";
+            return $" · cut off {retries}×" + (usd >= 0.001 ? " ($" + usd.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture) + " to go on)" : "");
+        }
+
         public static string Extras(TokenUsage turn, double cacheSavedUsd = 0)
         {
             var parts = new List<string>();
