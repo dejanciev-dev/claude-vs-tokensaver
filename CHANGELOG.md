@@ -7,6 +7,11 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Settings that cost**: `/` → *Settings that cost* asks Claude Code for its settings (no model call) and says in
+  the chat which make turns dearer, where each is set (managed, the project's, yours) and how to change it: a default
+  model of Opus or Fable, thinking always on or a large `MAX_THINKING_TOKENS`, an explanatory output style, a high
+  default effort, the prompt cache off, a low `CLAUDE_CODE_MAX_OUTPUT_TOKENS`, all project MCP servers on, subagents
+  forced onto Opus. The context breakdown says when some are set.
 - **Answers cut off at the output limit**: when Claude's or a subagent's answer hits the output token limit, Claude
   Code asks it to go on (since 2.1.325 a subagent gives its whole answer again, more briefly), and each retry reads
   the context again. The turn footer says so with what the retries cost (`· cut off 2× ($0.004 to go on)`), the

@@ -18,6 +18,8 @@ namespace ClaudeVS.Core.Cli
         public EffortChoice? MaxEffort { get; set; }
         /// <summary><c>promptSuggestionEnabled</c>; null when not set.</summary>
         public bool? PromptSuggestionEnabled { get; set; }
+        /// <summary>The settings that make turns dearer (<see cref="SettingsCheck"/>); empty when none.</summary>
+        public System.Collections.Generic.List<CostlySetting> Costly { get; set; } = new System.Collections.Generic.List<CostlySetting>();
         /// <summary><c>applied.effort</c>: the effort Claude Code uses now ("medium"); null when not sent.</summary>
         public string AppliedEffort { get; set; }
 
@@ -29,6 +31,7 @@ namespace ClaudeVS.Core.Cli
                 MaxEffort = Effort((string)effective?["maxEffortLevel"]),
                 PromptSuggestionEnabled = effective?["promptSuggestionEnabled"]?.Type == JTokenType.Boolean ? (bool?)(bool)effective["promptSuggestionEnabled"] : null,
                 AppliedEffort = response?.SelectToken("applied.effort")?.Type == JTokenType.String ? (string)response.SelectToken("applied.effort") : null,
+                Costly = SettingsCheck.Find(response),
             };
         }
 

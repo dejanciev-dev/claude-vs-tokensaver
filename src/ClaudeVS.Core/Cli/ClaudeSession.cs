@@ -306,9 +306,10 @@ namespace ClaudeVS.Core.Cli
         }
 
         /// <summary>Claude Code's merged settings, the few the chat follows (<c>get_settings</c>, no model call). Null when the process is not running or doesn't answer.</summary>
-        public async Task<ClaudeSettings> GetSettingsAsync()
+        public async Task<ClaudeSettings> GetSettingsAsync(bool start = false)
         {
-            var r = await RequestAsync(new JObject { ["subtype"] = "get_settings" }, TimeSpan.FromSeconds(10)).ConfigureAwait(false);
+            if (start) EnsureRunning(); // starting makes no model call
+            var r = await RequestAsync(new JObject { ["subtype"] = "get_settings" }, TimeSpan.FromSeconds(start ? 20 : 10)).ConfigureAwait(false);
             if (r == null) return null;
             var s = ClaudeSettings.Parse(r);
             if (s.AppliedEffort != null) AppliedEffort = s.AppliedEffort;

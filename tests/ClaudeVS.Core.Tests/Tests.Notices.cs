@@ -130,6 +130,34 @@ namespace ClaudeVS.Core.Tests
             True(ClaudeErrorHints.Explain(signedOut.Text).Contains("not logged in"), ClaudeErrorHints.Explain(signedOut.Text));
         }
 
+        /// <summary>The shape of 2.1.326's get_settings answer (sources as in a probe with these settings in .claude/settings.json).</summary>
+        private static void Test_SettingsCheck()
+        {
+            var r = JObject.Parse(@"{""effective"":{},""applied"":{""effort"":""low""},""sources"":[
+                {""source"":""userSettings"",""settings"":{""model"":""sonnet"",""theme"":""dark"",""outputStyle"":""Explanatory""}},
+                {""source"":""projectSettings"",""settings"":{""model"":""opus"",""alwaysThinkingEnabled"":true,""effortLevel"":""high"",""fastMode"":true,
+                    ""enableAllProjectMcpServers"":true,""madeUpKey"":1,""env"":{""MAX_THINKING_TOKENS"":""32000"",""CLAUDE_CODE_MAX_OUTPUT_TOKENS"":""4000"",""DISABLE_PROMPT_CACHING"":""1""}}},
+                {""source"":""localSettings"",""settings"":{""outputStyle"":""default""}},
+                {""source"":""flagSettings"",""settings"":{""effortLevel"":""max""}}]}");
+            var found = SettingsCheck.Find(r);
+            var names = found.Select(f => f.Setting).ToList();
+            Eq("model: opus|alwaysThinkingEnabled: true|env MAX_THINKING_TOKENS=32000|effortLevel: high|env DISABLE_PROMPT_CACHING=1|env CLAUDE_CODE_MAX_OUTPUT_TOKENS=4000|enableAllProjectMcpServers: true",
+                string.Join("|", names), "known keys only; fastMode left out (not in this kind of session)");
+            Eq(".claude/settings.json", found[0].Where, "the project's model wins over the user's");
+            True(!names.Any(n => n.StartsWith("outputStyle")), "the project's local 'default' wins over the user's Explanatory");
+            True(!names.Contains("effortLevel: max"), "the chat's own switch (flagSettings) is not a setting of yours");
+            True(found[0].Why.Contains("Opus"), found[0].Why);
+            True(SettingsCheck.Text(found).StartsWith("Claude Code settings that cost:\n• model: opus (.claude/settings.json): "), SettingsCheck.Text(found));
+            Eq(found.Count, ClaudeSettings.Parse(r).Costly.Count, "parsed with the rest");
+
+            var clean = SettingsCheck.Find(JObject.Parse(@"{""sources"":[{""source"":""userSettings"",""settings"":{""model"":""sonnet"",""effortLevel"":""medium"",""env"":{""MAX_THINKING_TOKENS"":""8000"",""CLAUDE_CODE_MAX_OUTPUT_TOKENS"":""32000""}}}]}"));
+            Eq(0, clean.Count, "nothing dear");
+            Eq("Claude Code settings that cost: none of the settings known to make turns dearer is set (managed, project or yours).", SettingsCheck.Text(clean));
+            var managed = SettingsCheck.Find(JObject.Parse(@"{""sources"":[{""source"":""userSettings"",""settings"":{""model"":""haiku""}},{""source"":""policySettings"",""settings"":{""model"":""claude-fable-5-2""}}]}"));
+            Eq("model: claude-fable-5-2", managed.Single().Setting); Eq("managed settings", managed.Single().Where, "managed wins");
+            Eq(0, SettingsCheck.Find(null).Count, "no answer");
+        }
+
         private static void Test_ErrorHints_NextStep()
         {
             const string p = "Add a test for the parser";
