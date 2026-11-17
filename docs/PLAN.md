@@ -1209,6 +1209,45 @@ opt-in, since they cost tokens the stream doesn't report.
 - [x] **Manual checks for Phase 50.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md). Section 14,
       *A suggested next prompt*; Release is now 15
 
+## Phase 51 — Keep up with the CLI (from the Claude Code CHANGELOG 2.1.326)
+
+Checked on 2026-11-17 with 2.1.326 installed. The 2.1.326 section read for what the extension sends or reads;
+terminal, cloud, Remote Control, Claude Tag, gateway, sandbox and plugin entries are left out.
+
+- [ ] **Manual stays Manual** (2.1.326: sessions can start in auto mode by default for some organizations, and "in
+      auto mode, not Manual mode, when your organization's policy hasn't loaded"). Manual is launched with no
+      `--permission-mode`, so it would start in auto there with no word. Send `--permission-mode default` for it, and
+      say so when the CLI still starts in another mode, as for the other modes
+- [ ] **No bare-tag suggestions** (2.1.326 fixes "the suggested next prompt sometimes being a bare tag, such as
+      `<signal type="empty" />`"). The parser drops a `prompt_suggestion` that is only tags, so an older CLI can't
+      show one in the input box
+- [ ] **Nothing to change for the rest.** The startup warning for an `--allowedTools` entry that "doesn't look like a
+      complete rule": none in the stream for the extension's MCP tool names (`mcp__visualstudio__…`), nor for a broken
+      `Bash(git`. Hooks whose `"decision": "block"` now holds in more cases: the extension's hooks print none.
+      `--bare` limits: not used. PowerShell asking about more commands: the permission card shows them as any other
+- [ ] **Verify with 2.1.326 and raise `CliVersion.Tested`.** The live tests with 2.1.326; README, Marketplace
+      overview, CONTRIBUTING and the plan-mode notes
+
+## Phase 52 — Suggestions that pay their way
+
+Planned on 2026-11-17. Phase 50 shows a suggested next prompt; is it used, and what do Claude Code's own cost? The
+2.1.326 debug log (`--debug-file`) shows each one as a forked request on the conversation's model:
+`Forked agent [prompt_suggestion] finished: … totalUsage: input=506 output=16 cacheRead=28058 cacheCreate=133`, so it
+reads the whole conversation from the cache, about as much as a small turn, and none of it is in `total_cost_usd`.
+
+- [ ] **A better local rule.** `NextPrompt.FromAnswer` takes more closing forms: "Should I go ahead and …?", "Happy to
+      … if you'd like", "Want to …?", and a last paragraph that asks which of a numbered list you want ("Which do you
+      prefer?" under `1. …` `2. …` → `Option 1: …`). Tests from real closing paragraphs
+- [ ] **How often suggestions are used.** The next turn's usage record says which suggestion was showing when its
+      prompt was sent (`local` or `cli`) and whether it was taken (Tab or →, edited or not). The savings report
+      says how often each kind was shown and taken; the CSV gets a `suggestion` column (`local`, `local taken`,
+      `cli`, `cli taken`)
+- [ ] **What Claude Code's suggestions cost.** An estimate for each one that comes: a request on the turn's model
+      that reads the conversation's context from the cache, plus about 500 input, 150 cache-write and 20 output tokens
+      (from the debug log). The meter's tooltip shows the conversation's total, marked as an estimate; the next
+      turn's record keeps it, and the savings report adds it to the suggestions line, outside the totals
+- [ ] **Manual checks for Phases 51–52.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
+
 ---
 
 ## Working in Visual Studio — daily loop
