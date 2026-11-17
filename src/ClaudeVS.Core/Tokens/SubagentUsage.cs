@@ -65,7 +65,12 @@ namespace ClaudeVS.Core.Tokens
         /// main agent's <paramref name="mainUsage"/>; the rest of its growth that no subagent message explains is
         /// <see cref="LastSide"/>.
         /// </summary>
-        public Dictionary<string, TokenUsage> TurnCompleted(Dictionary<string, ModelUsageEntry> modelUsage, string mainModel, TokenUsage mainUsage)
+        /// <param name="sinceLastResult">
+        /// The result's <c>model_usage_since_last_result</c> (sent since 2.1.316): when sent, it is the growth itself, exact also on
+        /// a resumed session's first turn, so no earlier reading is needed.
+        /// </param>
+        public Dictionary<string, TokenUsage> TurnCompleted(Dictionary<string, ModelUsageEntry> modelUsage, string mainModel, TokenUsage mainUsage,
+            Dictionary<string, ModelUsageEntry> sinceLastResult = null)
         {
             LastSide = default;
             var streamed = new Dictionary<string, TokenUsage>(StringComparer.Ordinal);
@@ -77,14 +82,16 @@ namespace ClaudeVS.Core.Tokens
             }
             _streamed.Clear();
 
-            bool exact = (_previous.Count > 0 || _fromZero) && modelUsage != null && modelUsage.Count > 0;
-            bool check = _savedBaseline;
+            bool since = sinceLastResult != null && sinceLastResult.Count > 0;
+            bool exact = since || (_previous.Count > 0 || _fromZero) && modelUsage != null && modelUsage.Count > 0;
+            bool check = _savedBaseline && !since;
             _fromZero = false; _savedBaseline = false;
             var result = exact ? new Dictionary<string, TokenUsage>(StringComparer.Ordinal) : streamed;
-            if (exact) foreach (var kv in modelUsage)
+            if (exact) foreach (var kv in since ? sinceLastResult : modelUsage)
             {
                 var now = kv.Value.Usage;
-                var grew = _previous.TryGetValue(kv.Key, out var before) && !Lower(now, before) ? TokenUsage.Minus(now, before) : now; // lower: counting started again
+                var grew = since ? now
+                    : _previous.TryGetValue(kv.Key, out var before) && !Lower(now, before) ? TokenUsage.Minus(now, before) : now; // lower: counting started again
                 if (kv.Key == mainModel)
                 {
                     grew = TokenUsage.Minus(grew, mainUsage);

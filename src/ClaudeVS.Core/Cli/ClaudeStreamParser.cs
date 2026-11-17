@@ -296,6 +296,7 @@ namespace ClaudeVS.Core.Cli
                 ResultSubtype = (string)json["subtype"],
                 Subagents = SubagentStats.Parse(json["subagent_stats"]),
                 ModelUsage = ModelUsageEntry.Parse(json["modelUsage"]),
+                ModelUsageSinceLastResult = ModelUsageEntry.Parse(json["model_usage_since_last_result"]),
             } };
         }
 

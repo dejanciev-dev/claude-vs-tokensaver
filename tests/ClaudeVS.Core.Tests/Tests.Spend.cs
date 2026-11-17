@@ -885,7 +885,7 @@ namespace ClaudeVS.Core.Tests
             var done = events.Last(e => e.Kind == ClaudeEventKind.TurnCompleted);
             True(done.ModelUsage.ContainsKey("claude-haiku-5-5") && done.ModelUsage["claude-haiku-5-5"].CostUsd > 0, "modelUsage parsed");
 
-            // First turn this meter sees: from the subagent's streamed message (input and cache exact)
+            // First turn this meter sees, with no earlier reading: model_usage_since_last_result says what grew
             var m = new TokenMeter();
             foreach (var e in events) m.Observe(e);
             var first = m.LastTurnSubagents["claude-haiku-5-5"];
@@ -902,7 +902,7 @@ namespace ClaudeVS.Core.Tests
             var exactFirst = fresh.LastTurnSubagents["claude-haiku-5-5"];
             Eq(131L, exactFirst.Output, "output exact (the streamed copy said 2)");
             Eq(4L, exactFirst.Input); Eq(23_917L, exactFirst.CacheRead); Eq(462L, exactFirst.CacheCreation);
-            True(first.Output < exactFirst.Output, "resumed: streamed, output low");
+            Eq(exactFirst.Output, first.Output, "with no reading too: model_usage_since_last_result is the growth itself");
             // Resumed, with the session's last reading kept here: the growth from it agrees with the streamed input and
             // cache, so the output is exact too (the fork run's reading before the turn was 0)
             var resumed = new TokenMeter();
