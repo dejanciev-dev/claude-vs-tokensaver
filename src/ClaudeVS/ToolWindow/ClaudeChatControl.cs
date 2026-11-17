@@ -2783,6 +2783,7 @@ namespace ClaudeVS.ToolWindow
         private void DisposeSession()
         {
             if (_session == null) return;
+            LogUnbilledSuggestion(_sessionDir); // no later turn of this process will bill it
             var old = _session;
             old.EventReceived -= OnEvent;
             old.RawLine -= OnRawLine;

@@ -34,7 +34,7 @@ namespace ClaudeVS.Core.Tokens
             foreach (var r in records ?? new UsageRecord[0])
             {
                 double cost = r.CostUsd + r.RouterCostUsd;
-                if (cost > 0) turns.Add(cost);
+                if (cost > 0 && !r.NoTurn) turns.Add(cost); // a last suggestion is no turn; its cost is still the conversation's
                 if (!string.IsNullOrEmpty(r.SessionId))
                     by[r.SessionId] = (by.TryGetValue(r.SessionId, out var v) ? v : 0) + cost;
             }

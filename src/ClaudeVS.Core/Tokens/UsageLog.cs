@@ -86,6 +86,21 @@ namespace ClaudeVS.Core.Tokens
         [JsonProperty("side", NullValueHandling = NullValueHandling.Ignore)] public string SideKind { get; set; }
         [JsonProperty("sideTokens", DefaultValueHandling = DefaultValueHandling.Ignore)] public long SideTokens { get; set; }
         [JsonProperty("sideCost", DefaultValueHandling = DefaultValueHandling.Ignore)] public double SideCostUsd { get; set; }
+        /// <summary>
+        /// A record with no turn: Claude Code's suggestion after a conversation's last turn, which no later turn billed,
+        /// estimated (<see cref="SuggestionCost.EstimateUsd"/>) and logged when the chat ended. Its cost counts; the
+        /// turn counts, medians and per-turn costs leave it out.
+        /// </summary>
+        [JsonProperty("noTurn", DefaultValueHandling = DefaultValueHandling.Ignore)] public bool NoTurn { get; set; }
+
+        /// <summary>The record for an unbilled last suggestion (see <see cref="NoTurn"/>).</summary>
+        public static UsageRecord LastSuggestion(string solution, string sessionId, string model, double estimatedUsd, DateTime nowUtc) => new UsageRecord
+        {
+            Timestamp = nowUtc, Solution = solution, SessionId = sessionId, ModelUsed = model, NoTurn = true,
+            SideKind = SideSuggestion, SideCostUsd = estimatedUsd, CostUsd = estimatedUsd,
+            RouteReason = "Claude Code's last suggestion in the conversation (estimated: no later turn billed it)",
+        };
+
         public const string SideCompact = "compact";
         public const string SideSuggestion = "suggestion";
         [JsonProperty("ms")] public long DurationMs { get; set; }
@@ -181,7 +196,7 @@ namespace ClaudeVS.Core.Tokens
             foreach (var r in records ?? Enumerable.Empty<UsageRecord>())
             {
                 if (solution != null && !string.Equals(r.Solution, solution, StringComparison.OrdinalIgnoreCase)) continue;
-                s.Turns++;
+                if (!r.NoTurn) s.Turns++; // a last suggestion: its cost counts, it is no turn
                 s.CostUsd += r.CostUsd;
                 s.TotalTokens += r.TotalTokens;
                 s.TokensAvoided += TokenEstimate.FromChars(r.CharsAvoided);

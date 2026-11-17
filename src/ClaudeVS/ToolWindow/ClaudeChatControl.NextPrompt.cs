@@ -1,7 +1,9 @@
+using System;
 using System.Windows.Automation;
 using System.Windows.Input;
 using ClaudeVS.Core.Chat;
 using ClaudeVS.Core.Tokens;
+using ClaudeVS.Diagnostics;
 using Microsoft.VisualStudio.Shell;
 
 namespace ClaudeVS.ToolWindow
@@ -45,7 +47,31 @@ namespace ClaudeVS.ToolWindow
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             _cliSuggestionsCame++;
+            // Billed with the next result; until then, what it would cost if the chat ends first (no later turn bills it)
+            _unbilledSuggestion = (_session?.SessionId, _meterModel?.LastModel,
+                SuggestionCost.EstimateUsd(_meterModel?.ContextTokens ?? 0, _meterModel?.LastModel, _meterModel?.Prices ?? Options?.ToPriceTable()));
             ShowSuggestion(suggestion, UsageRecord.SuggestionCli);
+        }
+
+        /// <summary>Claude Code's suggestion after the last result, estimated; null once a result billed it.</summary>
+        private (string SessionId, string Model, double Usd)? _unbilledSuggestion;
+
+        /// <summary>The chat ends (New chat, another conversation, closing): logs the unbilled last suggestion as a record with no turn.</summary>
+        private void LogUnbilledSuggestion(string solution)
+        {
+            var unbilled = _unbilledSuggestion;
+            _unbilledSuggestion = null;
+            if (unbilled == null || unbilled.Value.Usd <= 0) return;
+            var (sessionId, model, usd) = unbilled.Value;
+            _cliSuggestionsUsd += usd;
+            ClaudeOutputPane.WriteLine($"Claude Code's last suggestion in the conversation, never billed with a turn: ~${usd:0.0000} estimated");
+            if (Options?.KeepUsageLog == false) return;
+            var rec = UsageRecord.LastSuggestion(solution, sessionId, model, usd, DateTime.UtcNow);
+            _ = System.Threading.Tasks.Task.Run(() =>
+            {
+                try { Usage.Append(rec); }
+                catch (Exception ex) { ClaudeOutputPane.WriteLine("Could not write usage log: " + ex.Message); }
+            });
         }
 
         // Claude Code's suggestions since Visual Studio started, all chat windows together: for the tip when they don't pay
@@ -57,6 +83,7 @@ namespace ClaudeVS.ToolWindow
         private void CountSuggestionCost()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
+            _unbilledSuggestion = null; // this result billed it
             if (_meterModel != null && !_meterModel.LastTurnSide.IsEmpty && !_meterModel.LastTurnSideIsCompact)
                 _cliSuggestionsUsd += _meterModel.LastTurnSideCostUsd;
             if (_suggestionsTipGiven || !(Options?.ClaudeCodeSuggestions ?? false)) return;

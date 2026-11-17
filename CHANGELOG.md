@@ -26,7 +26,8 @@ All notable changes to this project are listed here. The format follows
   billed with the turn after it. The meter's tooltip shows what they have cost in the conversation (`Claude Code's
   own requests in this conversation: suggestions $0.012, /compact $0.030`); the savings report adds the suggestions'
   cost to the suggested prompts line and a *Compacting* line, both part of the actual cost; the usage CSV gets the
-  last columns `side` and `side_cost_usd`.
+  last columns `side` and `side_cost_usd`. The suggestion after a conversation's last turn, which no turn bills, is
+  estimated and logged when the chat ends, as a row with no turn: its cost counts, the turn counts leave it out.
 - **Month pace in the meter**: from the 3rd, the meter's tooltip says where this month's spend is heading at its pace
   so far (`this month $41.20, ~$137.33 by Nov 30 at this pace`), as the savings report's month line does.
 - **Pace warning**: once a month, from the 7th and while 3 days or more are left, the chat says when this month's

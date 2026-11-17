@@ -1306,9 +1306,14 @@ conversation's last turn is never reported.
       subagent and side split start from, exact without an earlier reading. `ClaudeEvent.ModelUsageSinceLastResult`,
       `TokenMeter.LastTurnCostBilled`; spend adds the turn's cost. Capture: `Fixtures/cli-2.1.326-resume-after-
       suggestion.jsonl` (a turn, its suggestion, then the resumed turn: $0.00048 billed, $0.0043 carried)
-- [ ] **The last suggestion.** The one after a conversation's last turn is never reported: when a chat ends (New
+- [x] **The last suggestion.** The one after a conversation's last turn is never reported: when a chat ends (New
       chat, another conversation, closing the window) after a suggestion came, its estimated cost is logged as a
-      record with no turn, which the turn counts leave out
+      record with no turn, which the turn counts leave out. Checked: a resumed process bills it only in the carried
+      total, which the turn costs now leave out (item above), so it isn't counted twice. `UsageRecord.NoTurn`,
+      `LastSuggestion`; `SavingsReport.UnbilledSuggestionsUsd` (in the actual cost and the month, week and day
+      spend, not in any turn count, per-model row or cache-rewrite check); `UsageSummary` and `ConversationStats`
+      count no turn for it; the CSV row has no turn number. A suggestion Claude Code made but never sent (the next
+      prompt was already in) can't be seen, so isn't logged. Builds clean; not yet run in VS
 - [ ] **Manual checks for Phase 53.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
 
 ---

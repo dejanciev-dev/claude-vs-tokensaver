@@ -1548,6 +1548,22 @@ namespace ClaudeVS.Core.Tests
             True(rep.ToText().Contains("Compacting:                 $0.040 for 1 summary"), rep.ToText());
             Eq(null, SavingsReport.Build(recs.Take(4), new PriceTable()).CompactLine(), "no /compact: no line");
             Eq("suggestion", UsageCsv.Text(recs[4].SideKind), "csv: the kind");
+
+            // A conversation's last suggestion, which no turn billed: logged when the chat ended, with no turn
+            var last = UsageRecord.LastSuggestion(@"C:\src\a", "s1", "claude-haiku-5-5", 0.0004, t.AddMinutes(1));
+            Eq(true, last.NoTurn); Eq(UsageRecord.SideSuggestion, last.SideKind); Eq(0.0004, last.CostUsd);
+            var withLast = recs.Concat(new[] { last }).ToList();
+            var r2 = SavingsReport.Build(withLast, new PriceTable());
+            Eq(rep.Turns, r2.Turns, "no turn");
+            Eq(Math.Round(rep.ActualCostUsd + 0.0004, 6), Math.Round(r2.ActualCostUsd, 6), "its cost counts");
+            Eq("before 6 prompts: from the answer 4, taken 1 (25%); Claude Code's 2, taken 2 (100%), $0.042 of the cost above ("
+                + "<$0.001 estimated: a conversation's last, which no turn billed)", r2.SuggestionsLine());
+            Eq(rep.ByModel.Sum(b => b.Turns), r2.ByModel.Sum(b => b.Turns), "not in the per-model turns");
+            Eq(UsageSummary.From(recs).Turns, UsageSummary.From(withLast).Turns, "usage summary: no turn");
+            var csv = new StringWriter();
+            UsageCsv.Write(new[] { new UsageRecord { Timestamp = t, SessionId = "s1" }, last }, csv);
+            var csvLines = csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None);
+            True(csvLines[2].EndsWith(",s1,,,,,,,0,0,0,,suggestion,0.0004"), "csv: no turn number, the kind and the cost: " + csvLines[2]);
         }
 
         private static void Test_SuggestionCost()
