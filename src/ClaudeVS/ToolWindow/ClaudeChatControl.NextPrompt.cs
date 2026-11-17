@@ -44,7 +44,27 @@ namespace ClaudeVS.ToolWindow
         private void SuggestFromCli(string suggestion)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
+            _cliSuggestionsCame++;
             ShowSuggestion(suggestion, UsageRecord.SuggestionCli);
+        }
+
+        // Claude Code's suggestions since Visual Studio started, all chat windows together: for the tip when they don't pay
+        private static int _cliSuggestionsCame, _cliSuggestionsTaken;
+        private static double _cliSuggestionsUsd;
+        private static bool _suggestionsTipGiven;
+
+        /// <summary>After a turn: adds what it billed for suggestions, and gives the tip once per VS session when they don't pay.</summary>
+        private void CountSuggestionCost()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (_meterModel != null && !_meterModel.LastTurnSide.IsEmpty && !_meterModel.LastTurnSideIsCompact)
+                _cliSuggestionsUsd += _meterModel.LastTurnSideCostUsd;
+            if (_suggestionsTipGiven || !(Options?.ClaudeCodeSuggestions ?? false)) return;
+            if (SuggestionCost.Tip(_cliSuggestionsCame, _cliSuggestionsTaken, _cliSuggestionsUsd) is string tip)
+            {
+                _suggestionsTipGiven = true;
+                Tip(tip);
+            }
         }
 
         /// <summary>For the next prompt's usage record: which suggestion was shown before it, and whether it was taken; then forgets it.</summary>
@@ -88,6 +108,7 @@ namespace ClaudeVS.ToolWindow
             string text = _suggestion;
             ClearSuggestion();
             _offeredTaken = true; // sent as is or edited
+            if (_offeredSource == UsageRecord.SuggestionCli) _cliSuggestionsTaken++;
             _prompt.Text = text;
             _prompt.CaretIndex = text.Length;
             return true;

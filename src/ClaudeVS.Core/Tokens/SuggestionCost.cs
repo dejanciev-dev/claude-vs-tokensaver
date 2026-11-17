@@ -29,6 +29,27 @@ namespace ClaudeVS.Core.Tokens
                 * p.RequestMultiplier(context + InputTokens + CacheWriteTokens); // Haiku over 100k: 5x
         }
 
+        /// <summary>The tip waits for this many of Claude Code's suggestions, …</summary>
+        public const int TipAfter = 20;
+        /// <summary>… fewer than this share taken, …</summary>
+        public const double TipTakenBelow = 0.1;
+        /// <summary>… and at least this much billed for them.</summary>
+        public const double TipFromUsd = 0.10;
+
+        /// <summary>
+        /// When Claude Code's suggestions don't pay (in this VS session: <paramref name="came"/> came, you took
+        /// <paramref name="taken"/>, <paramref name="usd"/> was billed for them): a token tip saying so and how to turn
+        /// them off; null otherwise.
+        /// </summary>
+        public static string Tip(int came, int taken, double usd)
+        {
+            if (came < TipAfter || taken >= TipTakenBelow * came || usd < TipFromUsd) return null;
+            var c = CultureInfo.InvariantCulture;
+            return $"Claude Code's suggestions: you took {taken} of {came} since Visual Studio started, and they cost ${usd.ToString("0.00", c)}: "
+                + "each one reads the whole conversation again. Options → Claude Code → CLI → Ask Claude Code for suggestions turns them off; "
+                + "the ones read from the answer stay, at no cost.";
+        }
+
         /// <summary>
         /// "Claude Code's own requests in this conversation: suggestions $0.012, /compact $0.030 (in its cost, billed with
         /// the turn after them)" for the meter's tooltip; null with none.
