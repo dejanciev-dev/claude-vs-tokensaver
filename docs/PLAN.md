@@ -1385,7 +1385,9 @@ way the extension runs it:
       the same; the older "Invalid API key · Please run /login" still reads as a sign-in. Found on the way: Phase 54's
       unknown-model test parsed each line with a new parser, so the kind was lost and only the text matched; it now
       keeps one
-- [ ] **Manual checks for Phase 55.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
+- [x] **Manual checks for Phase 55.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md). Section 18,
+      *Claude Code's settings, and answers cut off*: the effort cap in the menu, the router and the footer,
+      `promptSuggestionEnabled`, a cut-off agent and an invalid API key; Release is now 19
 
 ---
 
