@@ -125,6 +125,11 @@ All notable changes to this project are listed here. The format follows
   stopped, 1 API error)`.
 
 ### Fixed
+- **Effort changes during a conversation did nothing**: the chat switched the effort of a running Claude Code with
+  a setting Claude Code accepts but ignores, so every turn after the first ran at the effort the process started
+  with (the router's choice per prompt and the effort picker included), while the footer and the usage log showed the
+  one asked for. Measured with 2.1.326: launched at low and switched to max, a puzzle took the thinking of low (about
+  90 tokens against 250–300). The switch now uses the setting Claude Code follows, and the live tests check it.
 - **A resumed conversation's first turn cost all of it**: Claude Code's running total carries on after `--resume`,
   so the first turn of a conversation picked under Sessions counted everything the conversation had cost before, in
   the turn footer, the usage log, the savings report and today's, this week's and this month's spend. A turn's cost is
