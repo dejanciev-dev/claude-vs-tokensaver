@@ -11,6 +11,9 @@ All notable changes to this project are listed here. The format follows
   organization), Claude Code answers at no higher effort and says so only in its debug log. The chat now reads it
   when Claude Code starts (no model call): the effort picker greys out what is above it, the router stays under it,
   and the turn footer and the usage log show the effort really used.
+- **`promptSuggestionEnabled` in Claude Code's settings**: `false` turns the chat's suggested next prompt off too, so
+  one switch covers the terminal and Visual Studio. Claude Code then makes no suggestions of its own either, even with
+  *Ask Claude Code for suggestions* on (none are requested, so none are billed).
 - **What to do after a failed turn**, in the empty input box, as Claude Code 2.1.326 does in the terminal: from why
   the turn failed (the error kind and status Claude Code sends, or its message), the grey text says what to do, and
   Tab puts the prompt in: the same prompt again after an overloaded or server error, a Stop, a rate or usage limit,

@@ -28,8 +28,18 @@ namespace ClaudeVS.ToolWindow
                 await Jtf.SwitchToMainThreadAsync();
                 if (s != _session || settings == null) return;
                 ApplyEffortCap(settings.MaxEffort);
+                bool off = settings.PromptSuggestionEnabled == false;
+                if (off && !_claudeSuggestionsOff) ClaudeOutputPane.WriteLine("Suggested next prompts are off: promptSuggestionEnabled is false in Claude Code's settings");
+                _claudeSuggestionsOff = off;
+                if (off) ClearSuggestion();
             }).FileAndForget("ClaudeVS/ChatControl/Settings");
         }
+
+        /// <summary>
+        /// <c>promptSuggestionEnabled: false</c> in Claude Code's settings: no suggested next prompt here either. Claude
+        /// Code then makes none itself, even with <c>--prompt-suggestions true</c> (2.1.326: no request in its debug log).
+        /// </summary>
+        private bool _claudeSuggestionsOff;
 
         /// <summary>
         /// Claude Code answers at no higher effort than <c>maxEffortLevel</c> (and says so only in its debug log), so the

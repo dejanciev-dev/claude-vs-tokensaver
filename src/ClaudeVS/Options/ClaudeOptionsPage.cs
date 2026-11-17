@@ -36,7 +36,7 @@ namespace ClaudeVS.Options
         [Category("Chat"), DisplayName("Show message timestamps"), Description("A small time above each prompt and at the end of each answer's line, with a date line where the day changes.")]
         public bool ShowTimestamps { get; set; } = true;
 
-        [Category("Chat"), DisplayName("Suggest the next prompt"), Description("When an answer ends with an offer (\"tell me and I'll split them out\", \"Want me to run the tests?\"), the empty input box shows the reply that takes it up in grey. Tab or → puts it into the box to edit or send; it is never sent on its own. Read from the answer, with no model call.")]
+        [Category("Chat"), DisplayName("Suggest the next prompt"), Description("When an answer ends with an offer (\"tell me and I'll split them out\", \"Want me to run the tests?\"), the empty input box shows the reply that takes it up in grey. Tab or → puts it into the box to edit or send; it is never sent on its own. Read from the answer, with no model call. Off also when promptSuggestionEnabled is false in Claude Code's settings.")]
         public bool SuggestNextPrompt { get; set; } = true;
 
         [Category("CLI"), DisplayName("Ask Claude Code for suggestions"), Description("With Suggest the next prompt on, Claude Code also predicts the next prompt after each turn (--prompt-suggestions), and its suggestion replaces the one read from the answer. Each one is an extra model call that reads the whole conversation from the cache, billed with the next turn's cost; the meter's tooltip and the savings report show what they cost. It doesn't come after every turn. Applies to new sessions.")]

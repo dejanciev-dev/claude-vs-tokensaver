@@ -1365,9 +1365,12 @@ way the extension runs it:
       `ClaudeSession.GetSettingsAsync`, `ClaudeChatControl.Settings.cs`. A choice above the cap is set down to it,
       with a note; the first prompt's effort is capped in the log when the answer comes after it went out. Builds
       clean; not yet run in VS
-- [ ] **Honour `promptSuggestionEnabled`.** `false` in Claude Code's settings turns the extension's suggested next
+- [x] **Honour `promptSuggestionEnabled`.** `false` in Claude Code's settings turns the extension's suggested next
       prompt off too (Options decide when the setting isn't there); *Ask Claude Code for suggestions* then sends
-      nothing either
+      nothing either. Probed: with the setting `false`, `--prompt-suggestions true` gets no suggestion and the debug log
+      has no `source=prompt_suggestion` request, so the flag needs no change. Read with `get_settings` at each process
+      start (`ClaudeSettings.PromptSuggestionEnabled`); the step after a failed turn still shows. Builds clean; not
+      yet run in VS
 - [ ] **Answers cut off at the output limit.** Count Claude Code's retries after a cut-off, the main agent's and each
       subagent's, and what the retried requests cost: in the turn footer, the agent's row, the usage log and the
       savings report. Capture: `Fixtures/cli-2.1.326-output-limit-retries.jsonl`
