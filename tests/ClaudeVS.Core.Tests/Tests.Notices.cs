@@ -89,6 +89,40 @@ namespace ClaudeVS.Core.Tests
             Eq(null, p2.Parse("{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":true,\"result\":\"x\"}").Single().ErrorKind, "a subagent's error");
         }
 
+        private static void Test_ErrorHints_NextStep()
+        {
+            const string p = "Add a test for the parser";
+            // The real failed turn (2.1.326, unknown model)
+            var done = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.326-unknown-model.jsonl"))
+                .SelectMany(l => new ClaudeStreamParser().Parse(l)).Single(e => e.Kind == ClaudeEventKind.TurnCompleted);
+            var model = ClaudeErrorHints.NextStep(done.IsError, done.TerminalReason, done.ErrorKind, done.ApiErrorStatus, done.Text, p);
+            Eq("That model isn't available: pick another in the model menu, then send it again · Tab puts your prompt back", model.Display());
+            Eq(p, model.Prompt, "Tab puts the failed prompt back");
+
+            // The output limit (2.1.319 capture)
+            var cut = new ClaudeStreamParser().Parse(File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.319-output-limit-result.jsonl")).Single()).Single();
+            Eq("The answer hit the output limit · Tab: Go on from where you stopped, in smaller parts",
+                ClaudeErrorHints.NextStep(true, cut.TerminalReason, cut.ErrorKind, cut.ApiErrorStatus, cut.Text, p).Display());
+
+            NextStep Of(string end = "api_error", string kind = null, int? status = null, string text = "API Error") =>
+                ClaudeErrorHints.NextStep(true, end, kind, status, text, p);
+            Eq(null, ClaudeErrorHints.NextStep(false, "completed", null, null, "hi", p), "a turn that finished");
+            Eq("Stopped · Tab puts your prompt back", Of(end: "aborted_streaming").Display(), "Stop");
+            Eq("The API is overloaded: try again · Tab puts your prompt back", Of(status: 529, text: "API Error: 529 {\"type\":\"error\",\"error\":{\"type\":\"overloaded_error\",\"message\":\"Overloaded\"}}").Display());
+            Eq("The request failed on the way: try again · Tab puts your prompt back", Of(kind: "server_error", status: 500).Display());
+            Eq("The request failed on the way: try again · Tab puts your prompt back", Of(text: "API Error: Request timed out.").Display(), "a timeout");
+            Eq("Rate or usage limit: send it again once it resets · Tab puts your prompt back", Of(kind: "rate_limit", status: 429).Display());
+            Eq("Out of credit: send it again once you have more · Tab puts your prompt back", Of(text: "Credit balance is too low").Display());
+            Eq("Sign in again, then send it again · Tab puts your prompt back", Of(kind: "authentication_failed", status: 401).Display());
+            Eq("The conversation is too long for the context window · Tab: /compact", Of(text: "Prompt is too long").Display());
+            var policy = Of(text: "API Error: Claude Code is unable to respond to this request, which appears to violate our Usage Policy. Run /rewind and change the message, or run /clear.");
+            Eq("Blocked by the usage policy: rewind your message to change it, or start a New chat", policy.Display(), "a policy block: the hint alone");
+            Eq(null, policy.Prompt, "nothing for Tab: the same prompt would be blocked again");
+            Eq("Stopped at the turn limit · Tab: Continue", Of(end: "error_max_turns").Display());
+            Eq("The request failed · Tab puts your prompt back", Of(kind: "unknown", text: "something new").Display(), "anything else");
+            Eq("Stopped", ClaudeErrorHints.NextStep(true, "aborted_streaming", null, null, null, "  ").Display(), "no prompt to put back");
+        }
+
         private static JObject Init(string fields) => (JObject)new ClaudeStreamParser().Parse(
             "{\"type\":\"system\",\"subtype\":\"init\",\"session_id\":\"s\",\"model\":\"claude-haiku-5-5\"" + (fields.Length > 0 ? "," + fields : "") + "}").Single().Payload;
 
