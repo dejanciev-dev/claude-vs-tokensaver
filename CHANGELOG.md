@@ -23,7 +23,9 @@ All notable changes to this project are listed here. The format follows
   Tab puts the prompt in: the same prompt again after an overloaded or server error, a Stop, a rate or usage limit,
   a sign-in or a missing model (`The API is overloaded: try again · Tab puts your prompt back`); `/compact` when
   the conversation no longer fits; going on in smaller parts after the output limit. A usage-policy block offers no
-  prompt, only rewinding the message or a New chat. Shown also with suggestions turned off; no model call.
+  prompt, only rewinding the message or a New chat. Shown also with suggestions turned off; no model call. An
+  invalid `ANTHROPIC_API_KEY` ("Invalid API key · Fix external API key") says to fix or unset the key, both here and
+  in the explanation in the chat, instead of to sign in.
 - **Token tip when Claude Code's suggestions don't pay**: with *Ask Claude Code for suggestions* on, once 20 or more
   have come since Visual Studio started, under 1 in 10 was taken and they cost $0.10 or more, the chat says so once,
   with how to turn them off (the suggestions read from the answer stay, at no cost).

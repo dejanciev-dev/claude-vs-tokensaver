@@ -31,7 +31,9 @@ namespace ClaudeVS.Core.Cli
 
             if (SignInExpiry.IsExpiredError(error))
                 return "Your Claude sign-in has expired. Click Sign in under the meter, or run `claude auth login` in a terminal, then send again.";
-            if (Has(e, "not logged in", "please run /login", "/login", "invalid api key", "authentication_error", "unauthorized", "oauth token"))
+            if (Has(e, "external api key") || Has(e, "invalid api key") && !Has(e, "/login"))
+                return "Claude Code was given an API key that the API refuses (ANTHROPIC_API_KEY, or an apiKeyHelper). Fix it, or unset it to use your Claude sign-in, then restart the chat (New).";
+            if (Has(e, "not logged in", "please run /login", "/login", "authentication_error", "unauthorized", "oauth token"))
                 return "Claude Code is not logged in. Run `claude auth login` in a terminal (or `claude`, then /login). Restart the chat afterwards (New).";
             if (Has(e, "output token maximum", "max_output_tokens"))
                 return "Claude's answer hit the output token limit and was cut off. Ask it to continue, or to work in smaller steps (one file or one part at a time).";
@@ -71,6 +73,9 @@ namespace ClaudeVS.Core.Cli
                 return Step("The answer hit the output limit", "Go on from where you stopped, in smaller parts");
             if (Has(e, "prompt is too long", "context window", "context_length"))
                 return Step("The conversation is too long for the context window", "/compact");
+            // "Invalid API key · Fix external API key" (2.1.326, authentication_failed, 401): a key in the environment, not the sign-in
+            if (Has(e, "external api key") || Has(e, "invalid api key") && !Has(e, "/login"))
+                return Step("Invalid API key: fix or unset ANTHROPIC_API_KEY, then send it again", again);
             if (kind == "authentication_failed" || apiStatus == 401 || SignInExpiry.IsExpiredError(text)
                 || Has(e, "not logged in", "please run /login", "invalid api key", "authentication_error", "oauth token"))
                 return Step("Sign in again, then send it again", again);
