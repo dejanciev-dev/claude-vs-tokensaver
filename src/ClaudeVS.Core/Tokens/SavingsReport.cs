@@ -683,21 +683,25 @@ namespace ClaudeVS.Core.Tokens
         public int LocalSuggestionsTaken { get; set; }
         public int CliSuggested { get; set; }
         public int CliSuggestionsTaken { get; set; }
+        /// <summary>What Claude Code's suggestions cost, estimated (<see cref="UsageRecord.SuggestionCostUsd"/>); not in <see cref="ActualCostUsd"/>.</summary>
+        public double CliSuggestionsUsd { get; set; }
 
         /// <summary>
-        /// "before 40 prompts: from the answer 30, taken 8 (27%); Claude Code's 10, taken 4 (40%)"; null when none
-        /// was logged. A kind with none is left out.
+        /// "before 40 prompts: from the answer 30, taken 8 (27%); Claude Code's 10, taken 4 (40%), ~$0.040 (estimated,
+        /// not in the cost above)"; null when none was logged. A kind with none is left out.
         /// </summary>
         public string SuggestionsLine()
         {
             int shown = LocalSuggested + CliSuggested;
-            if (shown == 0) return null;
+            if (shown == 0 && CliSuggestionsUsd <= 0) return null;
             var c = CultureInfo.InvariantCulture;
             string Kind(string name, int n, int taken) => $"{name} {n}, taken {taken} ({(100.0 * taken / n).ToString("0", c)}%)";
+            string cost = CliSuggestionsUsd <= 0 ? "" : $"{(CliSuggestionsUsd < 0.001 ? "<$0.001" : "~$" + CliSuggestionsUsd.ToString("0.000", c))} (estimated, not in the cost above)";
             var parts = new List<string>();
             if (LocalSuggested > 0) parts.Add(Kind("from the answer", LocalSuggested, LocalSuggestionsTaken));
-            if (CliSuggested > 0) parts.Add(Kind("Claude Code's", CliSuggested, CliSuggestionsTaken));
-            return $"before {shown} {(shown == 1 ? "prompt" : "prompts")}: {string.Join("; ", parts)}";
+            if (CliSuggested > 0) parts.Add(Kind("Claude Code's", CliSuggested, CliSuggestionsTaken) + (cost.Length > 0 ? ", " + cost : ""));
+            else if (cost.Length > 0) parts.Add("Claude Code's cost " + cost); // they came while you typed, so none showed
+            return shown == 0 ? string.Join("; ", parts) : $"before {shown} {(shown == 1 ? "prompt" : "prompts")}: {string.Join("; ", parts)}";
         }
 
         /// <summary>The turns logged with a duration, and their durations added up.</summary>
@@ -961,6 +965,7 @@ namespace ClaudeVS.Core.Tokens
                 if (r.AttachedLines > 0 || r.AttachedFiles > 0) { rep.AttachedTurns++; rep.AttachedUsd += r.CostUsd + r.RouterCostUsd; rep.AttachedLinesTotal += r.AttachedLines; }
                 else { rep.PlainTurns++; rep.PlainUsd += r.CostUsd + r.RouterCostUsd; }
             }
+            rep.CliSuggestionsUsd = list.Sum(r => r.SuggestionCostUsd);
             foreach (var r in list.Where(r => r.Suggestion != null))
             {
                 bool cli = r.Suggestion == UsageRecord.SuggestionCli;

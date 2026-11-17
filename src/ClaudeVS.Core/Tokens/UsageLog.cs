@@ -44,6 +44,11 @@ namespace ClaudeVS.Core.Tokens
         [JsonProperty("suggestion", NullValueHandling = NullValueHandling.Ignore)] public string Suggestion { get; set; }
         /// <summary>With <see cref="Suggestion"/>: Tab or → took it into the box, then it was sent as is or edited.</summary>
         [JsonProperty("suggestionTaken", DefaultValueHandling = DefaultValueHandling.Ignore)] public bool SuggestionTaken { get; set; }
+        /// <summary>
+        /// What Claude Code's suggestions since the previous prompt cost, estimated (<see cref="SuggestionCost"/>): not in
+        /// <see cref="CostUsd"/>, which is what Claude Code reported. 0 when none came (and in older lines).
+        /// </summary>
+        [JsonProperty("suggestionCost", DefaultValueHandling = DefaultValueHandling.Ignore)] public double SuggestionCostUsd { get; set; }
         public const string SuggestionLocal = "local";
         public const string SuggestionCli = "cli";
 
