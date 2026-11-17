@@ -1400,8 +1400,9 @@ process's launch (the router's per prompt, and the picker's) ran at the launch e
 said the one asked for. Other findings: `--effort` at launch wins over a project's `effortLevel`; `get_settings`
 keeps setting keys as written (even unknown ones), so the settings check must know the real keys.
 
-- [ ] **Effort switches that take effect.** `apply_flag_settings` sends `effortLevel`; after a switch, `applied.effort`
-      says it took. `--live-session` checks it
+- [x] **Effort switches that take effect.** `apply_flag_settings` sends `effortLevel`; after a switch, `applied.effort`
+      says it took. `--live-session` checks it: `ok effort switched mid-session: applied.effort = medium`, the rest
+      passing as before ($0.06). `ClaudeSession.EffortSettingKey`
 - [ ] **Effort as Claude Code applied it.** After launch and after each switch, read `applied.effort`: the footer and
       the usage log show it (it also covers caps the settings don't show), and a difference from the one asked for is
       said once

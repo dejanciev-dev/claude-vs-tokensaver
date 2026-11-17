@@ -200,11 +200,18 @@ namespace ClaudeVS.Core.Cli
             CurrentModel = model;
         }
 
+        /// <summary>
+        /// The effort for the next turns: on a running process with <c>apply_flag_settings</c> and the settings key
+        /// <c>effortLevel</c>. (Sent as <c>effort</c>, 2.1.326 accepts it and changes nothing: the turns stay at the launch
+        /// effort and <c>get_settings</c>' <c>applied.effort</c> doesn't move; with <c>effortLevel</c> both follow.)
+        /// </summary>
+        public const string EffortSettingKey = "effortLevel";
+
         public async Task SetEffortAsync(EffortChoice effort)
         {
             if (effort == EffortChoice.Auto || effort == CurrentEffort) return;
             if (!IsRunning) { Options.Effort = effort; CurrentEffort = effort; return; }
-            await SendControlAsync(new JObject { ["subtype"] = "apply_flag_settings", ["settings"] = new JObject { ["effort"] = effort.ToCli() } }).ConfigureAwait(false);
+            await SendControlAsync(new JObject { ["subtype"] = "apply_flag_settings", ["settings"] = new JObject { [EffortSettingKey] = effort.ToCli() } }).ConfigureAwait(false);
             CurrentEffort = effort;
         }
 
