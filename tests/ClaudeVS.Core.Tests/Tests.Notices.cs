@@ -67,6 +67,28 @@ namespace ClaudeVS.Core.Tests
             Eq(null, new ClaudeStreamParser().Parse("{\"type\":\"result\",\"subtype\":\"success\",\"result\":\"hi\"}").Single().TerminalReason, "older CLIs");
         }
 
+        /// <summary>Claude Code 2.1.326 asked for a model that doesn't exist: a synthetic message with the error kind, then the result.</summary>
+        private static void Test_FailedTurn_RealResult_2_1_326()
+        {
+            var parser = new ClaudeStreamParser();
+            var done = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.326-unknown-model.jsonl"))
+                .SelectMany(l => parser.Parse(l)).Single(e => e.Kind == ClaudeEventKind.TurnCompleted);
+            True(done.IsError, "is_error");
+            Eq("api_error", done.TerminalReason);
+            Eq("model_not_found", done.ErrorKind, "the kind, from the synthetic message");
+            Eq(404, done.ApiErrorStatus, "api_error_status");
+            True(done.Text.StartsWith("There's an issue with the selected model"), done.Text);
+
+            // The kind belongs to that turn only; a turn that finished has none
+            var next = parser.Parse("{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"result\":\"hi\"}").Single();
+            Eq(null, next.ErrorKind, "the next turn");
+            Eq(null, next.ApiErrorStatus);
+            // A subagent's failed request is not the turn's
+            var p2 = new ClaudeStreamParser();
+            p2.Parse("{\"type\":\"assistant\",\"parent_tool_use_id\":\"toolu_1\",\"error\":\"rate_limit\",\"message\":{\"id\":\"m\",\"content\":[]}}");
+            Eq(null, p2.Parse("{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":true,\"result\":\"x\"}").Single().ErrorKind, "a subagent's error");
+        }
+
         private static JObject Init(string fields) => (JObject)new ClaudeStreamParser().Parse(
             "{\"type\":\"system\",\"subtype\":\"init\",\"session_id\":\"s\",\"model\":\"claude-haiku-5-5\"" + (fields.Length > 0 ? "," + fields : "") + "}").Single().Payload;
 

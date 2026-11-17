@@ -145,6 +145,9 @@ namespace ClaudeVS.Core.Cli
         {
             var msg = json["message"] as JObject;
             if (msg == null) return None;
+            // A failed request: Claude Code sends a synthetic message saying why, with the kind of error beside it
+            if (json["error"]?.Type == JTokenType.String && (json["parent_tool_use_id"] == null || json["parent_tool_use_id"].Type == JTokenType.Null))
+                _errorKind = (string)json["error"];
             var events = new List<ClaudeEvent>();
             string msgId = (string)msg["id"];
             bool isSub = json["parent_tool_use_id"] != null && json["parent_tool_use_id"].Type != JTokenType.Null;
@@ -262,9 +265,14 @@ namespace ClaudeVS.Core.Cli
         private static IReadOnlyList<string> Strings(JToken t) =>
             t is JArray a ? a.Where(x => x.Type == JTokenType.String).Select(x => (string)x).ToList() : null;
 
+        // The main agent's last error kind in the running turn, for its result
+        private string _errorKind;
+
         private IReadOnlyList<ClaudeEvent> ParseResult(JObject json)
         {
             SessionId = (string)json["session_id"] ?? SessionId;
+            string errorKind = _errorKind;
+            _errorKind = null;
 
             // Context fill = the LAST request of the turn. The top-level usage sums every request.
             TokenUsage last = default;
@@ -293,6 +301,8 @@ namespace ClaudeVS.Core.Cli
                 ContextWindow = window,
                 CredentialExpiresUtc = SignInExpiry.Parse(json["credential_expires_at"]),
                 TerminalReason = (string)json["terminal_reason"],
+                ErrorKind = isError ? errorKind : null,
+                ApiErrorStatus = json["api_error_status"]?.Type == JTokenType.Integer ? (int?)(int)json["api_error_status"] : null,
                 ResultSubtype = (string)json["subtype"],
                 Subagents = SubagentStats.Parse(json["subagent_stats"]),
                 ModelUsage = ModelUsageEntry.Parse(json["modelUsage"]),

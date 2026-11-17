@@ -247,6 +247,15 @@ namespace ClaudeVS.Core.Cli
         public System.DateTime? CredentialExpiresUtc { get; set; }
         /// <summary>Why the turn ended (<c>terminal_reason</c>, 2.1.319): "completed", "api_error"…; null when not sent.</summary>
         public string TerminalReason { get; set; }
+        /// <summary>
+        /// TurnCompleted of a failed turn: the kind of error, from the synthetic assistant message Claude Code sends for
+        /// it (<c>"error": "model_not_found"</c> with 2.1.326; the Agent SDK lists <c>authentication_failed</c>,
+        /// <c>billing_error</c>, <c>rate_limit</c>, <c>invalid_request</c>, <c>server_error</c>, <c>max_output_tokens</c>,
+        /// <c>unknown</c>); null when none came.
+        /// </summary>
+        public string ErrorKind { get; set; }
+        /// <summary>TurnCompleted: the HTTP status of a failed API request (<c>api_error_status</c>: 404, 429, 529 …); null when none.</summary>
+        public int? ApiErrorStatus { get; set; }
         /// <summary>TurnCompleted: the result's <c>subtype</c> ("success", "error_during_execution", "error_max_turns"…).</summary>
         public string ResultSubtype { get; set; }
         /// <summary>The turn's subagents (<c>subagent_stats</c>, 2.1.319); null when not sent.</summary>

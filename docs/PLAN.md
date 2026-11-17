@@ -1328,8 +1328,10 @@ model (no tokens billed) shows what a failed turn sends: a synthetic assistant m
 `result`. The Agent SDK's error kinds: `authentication_failed`, `billing_error`, `rate_limit`, `invalid_request`,
 `server_error`, `max_output_tokens`, `unknown`.
 
-- [ ] **Read why it failed.** The parser keeps the assistant message's `error` kind and the result's
-      `api_error_status` on the turn's result. Capture: `Fixtures/cli-2.1.326-unknown-model.jsonl`
+- [x] **Read why it failed.** The parser keeps the assistant message's `error` kind and the result's
+      `api_error_status` on the turn's result. Capture: `Fixtures/cli-2.1.326-unknown-model.jsonl`.
+      `ClaudeEvent.ErrorKind`, `ApiErrorStatus`; a subagent's error isn't the turn's, and the kind doesn't carry over
+      to the next turn
 - [ ] **The next step in the input box.** After a failed turn, the grey text says what to do, from the kind, the
       status and the message (no model call): try the same prompt again after an overloaded or server error, a
       stop or a limit (**Tab** puts it back); `/compact` when the prompt is too long; go on in shorter parts after
