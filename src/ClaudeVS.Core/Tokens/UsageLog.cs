@@ -83,6 +83,12 @@ namespace ClaudeVS.Core.Tokens
         /// null when none (and in older lines). Their cost is part of <see cref="CostUsd"/>; their tokens are in
         /// <see cref="SideTokens"/>, not in the counts above.
         /// </summary>
+        /// <summary>
+        /// Answers cut off at the output limit in this turn that Claude Code asked to go on (<see cref="TokenMeter.LastTurnOutputRetries"/>),
+        /// and what the requests answering them cost (part of <see cref="CostUsd"/>); 0 when none (and in older lines).
+        /// </summary>
+        [JsonProperty("outputRetries", DefaultValueHandling = DefaultValueHandling.Ignore)] public int OutputRetries { get; set; }
+        [JsonProperty("outputRetryCost", DefaultValueHandling = DefaultValueHandling.Ignore)] public double OutputRetryCostUsd { get; set; }
         [JsonProperty("side", NullValueHandling = NullValueHandling.Ignore)] public string SideKind { get; set; }
         [JsonProperty("sideTokens", DefaultValueHandling = DefaultValueHandling.Ignore)] public long SideTokens { get; set; }
         [JsonProperty("sideCost", DefaultValueHandling = DefaultValueHandling.Ignore)] public double SideCostUsd { get; set; }

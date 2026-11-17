@@ -1371,9 +1371,14 @@ way the extension runs it:
       has no `source=prompt_suggestion` request, so the flag needs no change. Read with `get_settings` at each process
       start (`ClaudeSettings.PromptSuggestionEnabled`); the step after a failed turn still shows. Builds clean; not
       yet run in VS
-- [ ] **Answers cut off at the output limit.** Count Claude Code's retries after a cut-off, the main agent's and each
+- [x] **Answers cut off at the output limit.** Count Claude Code's retries after a cut-off, the main agent's and each
       subagent's, and what the retried requests cost: in the turn footer, the agent's row, the usage log and the
-      savings report. Capture: `Fixtures/cli-2.1.326-output-limit-retries.jsonl`
+      savings report. Capture: `Fixtures/cli-2.1.326-output-limit-retries.jsonl` (6 retries: 3 for the subagent, 3
+      for the main agent, over two results). `ClaudeEventKind.OutputLimitRetry` (a synthetic user message starting
+      "Output token limit hit."); `TokenMeter.LastTurnOutputRetries`, `LastTurnOutputRetryCostUsd` (the request that
+      answers each, at its model's price; a subagent's streamed output can be low); `AgentTask.OutputRetries`;
+      `UsageRecord.OutputRetries`, `OutputRetryCostUsd`; `SavingsReport.OutputRetriesLine`; `TurnFooter.Retries`.
+      Builds clean; not yet run in VS
 - [ ] **Failed-turn texts from real errors.** The invalid key and the signed-out captures as tests; an invalid API
       key gets its own step (fix or unset `ANTHROPIC_API_KEY`) instead of "sign in again"
 - [ ] **Manual checks for Phase 55.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)

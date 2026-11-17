@@ -177,6 +177,13 @@ namespace ClaudeVS.Core.Cli
         /// after every turn.
         /// </summary>
         PromptSuggestion,
+        /// <summary>
+        /// An answer was cut off at the output token limit and Claude Code asks for the rest in a synthetic user message
+        /// ("Output token limit hit. Resume directly — …", or since 2.1.325 for a subagent's final answer "… give the
+        /// whole answer again, more briefly"; 2.1.326). <see cref="ClaudeEvent.IsSubagent"/> and
+        /// <see cref="ClaudeEvent.ParentToolUseId"/> say whose; <see cref="ClaudeEvent.Text"/> is the message.
+        /// </summary>
+        OutputLimitRetry,
     }
 
     /// <summary>The phase of the main agent's current response (<see cref="ClaudeEventKind.Activity"/>).</summary>

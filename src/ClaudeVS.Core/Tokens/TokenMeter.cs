@@ -65,6 +65,30 @@ namespace ClaudeVS.Core.Tokens
         public int SessionSuggestionTurns { get; private set; }
         public double SessionCompactUsd { get; private set; }
         private bool _turnCompacted;
+
+        /// <summary>
+        /// The last turn's answers cut off at the output limit that Claude Code asked to go on (the main agent's and the
+        /// subagents', <see cref="ClaudeEventKind.OutputLimitRetry"/>), and what the requests answering them cost: each
+        /// reads the whole context again. Already in <see cref="LastTurnCostUsd"/>.
+        /// </summary>
+        public int LastTurnOutputRetries { get; private set; }
+        public double LastTurnOutputRetryCostUsd { get; private set; }
+        public int SessionOutputRetries { get; private set; }
+        public double SessionOutputRetryCostUsd { get; private set; }
+        // Whose answer was cut off and waits for its next request ("main" or the Agent call's id) …
+        private readonly HashSet<string> _retryWaiting = new HashSet<string>(StringComparer.Ordinal);
+        // … that request's message id, and its usage (the last streamed copy of a message is final)
+        private readonly Dictionary<string, string> _retryMessageOf = new Dictionary<string, string>(StringComparer.Ordinal);
+        private readonly Dictionary<string, (string Model, TokenUsage Usage)> _retryAnswers = new Dictionary<string, (string, TokenUsage)>(StringComparer.Ordinal);
+        private int _turnRetries;
+
+        private void ObserveRetryAnswer(ClaudeEvent ev)
+        {
+            string key = ev.IsSubagent ? ev.ParentToolUseId : "main";
+            if (key == null || ev.MessageId == null || ev.Usage.IsEmpty) return;
+            if (_retryWaiting.Remove(key)) _retryMessageOf[key] = ev.MessageId;
+            if (_retryMessageOf.TryGetValue(key, out var id) && id == ev.MessageId) _retryAnswers[id] = (ev.Model, ev.Usage);
+        }
         private readonly SubagentUsageTracker _subagents = new SubagentUsageTracker();
         /// <summary>The last turn's subagent cost by kind of agent, costliest first; null when none ran.</summary>
         public List<AgentTypeCost> LastTurnAgentTypes { get; private set; }
@@ -219,6 +243,7 @@ namespace ClaudeVS.Core.Tokens
             Learner.Reset();
             _subagents.Reset(); _agentTypes.Reset(); LastTurnAgentTypes = null; SessionAgentCostByType.Clear(); LastTurnSubagents = new Dictionary<string, TokenUsage>(); LastTurnSubagentCostUsd = 0; SessionSubagentTokens = 0;
             LastTurnSide = default; LastTurnSideCostUsd = 0; LastTurnSideIsCompact = false; SessionSuggestionsUsd = 0; SessionSuggestionTurns = 0; SessionCompactUsd = 0; _turnCompacted = false;
+            LastTurnOutputRetries = 0; LastTurnOutputRetryCostUsd = 0; SessionOutputRetries = 0; SessionOutputRetryCostUsd = 0; _turnRetries = 0; _retryWaiting.Clear(); _retryMessageOf.Clear(); _retryAnswers.Clear();
             _turnLargeByMessage.Clear();
             LastTurnCacheSavedUsd = 0; SessionCacheSavedUsd = 0; _turnModel = null; LastModel = null;
             Changed?.Invoke(this, EventArgs.Empty);
@@ -234,8 +259,13 @@ namespace ClaudeVS.Core.Tokens
         {
             Learner.Observe(ev);
             _agentTypes.Observe(ev, RequestCostUsd);
+            if (ev.Kind == ClaudeEventKind.AssistantUsage) ObserveRetryAnswer(ev);
             switch (ev.Kind)
             {
+                case ClaudeEventKind.OutputLimitRetry:
+                    _retryWaiting.Add(ev.IsSubagent ? ev.ParentToolUseId ?? "agent" : "main");
+                    _turnRetries++;
+                    return;
                 case ClaudeEventKind.AssistantUsage when ev.IsSubagent:
                     _subagents.ObserveSubagent(ev);
                     return;
@@ -292,6 +322,11 @@ namespace ClaudeVS.Core.Tokens
                     LastTurnSideIsCompact = _turnCompacted && !LastTurnSide.IsEmpty;
                     _turnCompacted = false;
                     LastTurnSideCostUsd = LastTurnSide.IsEmpty ? 0 : (pt.For(mainModel) ?? pt.Sonnet).Cost(LastTurnSide.AsRequest());
+                    LastTurnOutputRetries = _turnRetries;
+                    LastTurnOutputRetryCostUsd = _retryAnswers.Values.Sum(a => RequestCostUsd(a.Model ?? mainModel, a.Usage.AsRequest()));
+                    SessionOutputRetries += LastTurnOutputRetries;
+                    SessionOutputRetryCostUsd += LastTurnOutputRetryCostUsd;
+                    _turnRetries = 0; _retryAnswers.Clear(); _retryMessageOf.Clear(); // a retry not answered yet stays waiting
                     if (LastTurnSideIsCompact) SessionCompactUsd += LastTurnSideCostUsd;
                     else if (!LastTurnSide.IsEmpty) { SessionSuggestionsUsd += LastTurnSideCostUsd; SessionSuggestionTurns++; }
                     LastTurnSubagentCostUsd = LastTurnSubagents.Sum(kv => (pt.For(kv.Key) ?? pt.Sonnet).Cost(kv.Value)); // a sum of requests: no per-request tier

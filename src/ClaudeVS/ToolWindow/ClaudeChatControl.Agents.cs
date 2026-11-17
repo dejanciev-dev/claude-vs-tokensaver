@@ -270,6 +270,7 @@ namespace ClaudeVS.ToolWindow
             string cost = AgentTask.FormatCost(t.CostUsd);
             if (cost != null) parts.Add(cost);
             if (t.ToolUses > 0) parts.Add(t.ToolUses + (t.ToolUses == 1 ? " tool" : " tools"));
+            if (t.OutputRetries > 0) parts.Add($"cut off {t.OutputRetries}×"); // past the output limit, asked to go on
             var elapsed = t.Elapsed(nowUtc);
             parts.Add(elapsed.TotalHours >= 1 ? elapsed.ToString(@"h\:mm\:ss") : elapsed.ToString(@"m\:ss"));
             return string.Join(" · ", parts);

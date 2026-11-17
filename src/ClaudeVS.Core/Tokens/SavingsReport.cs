@@ -715,6 +715,20 @@ namespace ClaudeVS.Core.Tokens
             return shown == 0 ? string.Join("; ", parts) : $"before {shown} {(shown == 1 ? "prompt" : "prompts")}: {string.Join("; ", parts)}";
         }
 
+        /// <summary>Answers cut off at the output limit that Claude Code asked to go on, the turns they were in, and what the retried requests cost.</summary>
+        public int OutputRetries { get; set; }
+        public int OutputRetryTurns { get; set; }
+        public double OutputRetryUsd { get; set; }
+
+        /// <summary>"5 retries in 2 turns, $0.030 for the requests that went on"; null when none was logged.</summary>
+        public string OutputRetriesLine()
+        {
+            if (OutputRetries == 0) return null;
+            var c = CultureInfo.InvariantCulture;
+            return $"{OutputRetries} {(OutputRetries == 1 ? "retry" : "retries")} in {OutputRetryTurns} {(OutputRetryTurns == 1 ? "turn" : "turns")}, "
+                + $"{(OutputRetryUsd < 0.001 ? "<$0.001" : "$" + OutputRetryUsd.ToString("0.000", c))} for the requests that went on";
+        }
+
         /// <summary>"$0.040 for 3 summaries, of the cost above"; null when no /compact was logged with its cost.</summary>
         public string CompactLine()
         {
@@ -992,6 +1006,9 @@ namespace ClaudeVS.Core.Tokens
             rep.CliSuggestionsUsd = list.Where(r => r.SideKind == UsageRecord.SideSuggestion).Sum(r => r.SideCostUsd);
             rep.CompactUsd = list.Where(r => r.SideKind == UsageRecord.SideCompact).Sum(r => r.SideCostUsd);
             rep.CompactTurns = list.Count(r => r.SideKind == UsageRecord.SideCompact);
+            rep.OutputRetries = list.Sum(r => r.OutputRetries);
+            rep.OutputRetryTurns = list.Count(r => r.OutputRetries > 0);
+            rep.OutputRetryUsd = list.Sum(r => r.OutputRetryCostUsd);
             foreach (var r in list.Where(r => r.Suggestion != null))
             {
                 bool cli = r.Suggestion == UsageRecord.SuggestionCli;
@@ -1213,6 +1230,8 @@ namespace ClaudeVS.Core.Tokens
                 sb.AppendLine($"With attachments:           {attached}");
             if (SuggestionsLine() is string suggested)
                 sb.AppendLine($"Suggested prompts:          {suggested}");
+            if (OutputRetriesLine() is string retried)
+                sb.AppendLine($"Cut off, asked to go on:    {retried}  (answers past the output limit; smaller steps avoid it)");
             if (CompactLine() is string compacted)
                 sb.AppendLine($"Compacting:                 {compacted}  (the summary /compact writes, billed with its turn)");
             sb.AppendLine($"Saved by the prompt cache:  ${CacheSavedUsd:0.00}  ({TokenMeter.Format(CacheReadTokens)} tokens read from the cache instead of sent in full)");
