@@ -290,6 +290,13 @@ namespace ClaudeVS.Core.Cli
             return r == null ? null : ContextUsage.Parse(r);
         }
 
+        /// <summary>Claude Code's merged settings, the few the chat follows (<c>get_settings</c>, no model call). Null when the process is not running or doesn't answer.</summary>
+        public async Task<ClaudeSettings> GetSettingsAsync()
+        {
+            var r = await RequestAsync(new JObject { ["subtype"] = "get_settings" }, TimeSpan.FromSeconds(10)).ConfigureAwait(false);
+            return r == null ? null : ClaudeSettings.Parse(r);
+        }
+
         /// <summary>The /skills rows (no model call; starts the process if needed). Null when the CLI does not answer.</summary>
         public async Task<List<SkillRow>> GetSkillsAsync()
         {

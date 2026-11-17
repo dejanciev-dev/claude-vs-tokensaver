@@ -89,6 +89,29 @@ namespace ClaudeVS.Core.Tests
             Eq(null, p2.Parse("{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":true,\"result\":\"x\"}").Single().ErrorKind, "a subagent's error");
         }
 
+        /// <summary>get_settings with 2.1.326 in a project whose .claude/settings.json caps the effort (trimmed: the real answer lists every setting).</summary>
+        private static void Test_ClaudeSettings_EffortCap()
+        {
+            var r = JObject.Parse("{\"effective\":{\"model\":\"opus\",\"maxEffortLevel\":\"medium\",\"promptSuggestionEnabled\":false},"
+                + "\"sources\":[{\"source\":\"projectSettings\",\"settings\":{\"maxEffortLevel\":\"medium\",\"promptSuggestionEnabled\":false}}],"
+                + "\"applied\":{\"model\":\"claude-haiku-5-5\",\"effort\":\"medium\"}}");
+            var s = ClaudeSettings.Parse(r);
+            Eq(EffortChoice.Medium, s.MaxEffort);
+            Eq(false, s.PromptSuggestionEnabled);
+            Eq("medium", s.AppliedEffort);
+            var none = ClaudeSettings.Parse(JObject.Parse("{\"effective\":{\"model\":\"opus\"}}"));
+            Eq(null, none.MaxEffort, "no cap"); Eq(null, none.PromptSuggestionEnabled, "not set");
+
+            Eq(EffortChoice.Medium, ClaudeSettings.Cap(EffortChoice.High, EffortChoice.Medium), "above: the cap");
+            Eq(EffortChoice.Low, ClaudeSettings.Cap(EffortChoice.Low, EffortChoice.Medium), "under: kept");
+            Eq(EffortChoice.Auto, ClaudeSettings.Cap(EffortChoice.Auto, EffortChoice.Low), "Auto: Claude Code's default, capped by itself");
+            Eq(EffortChoice.Max, ClaudeSettings.Cap(EffortChoice.Max, null), "no cap");
+            Eq("medium", ClaudeSettings.Cap("xhigh", EffortChoice.Medium), "a logged name");
+            Eq(null, ClaudeSettings.Cap((string)null, EffortChoice.Medium), "none logged");
+            True(ClaudeSettings.Above(EffortChoice.Max, EffortChoice.High) && !ClaudeSettings.Above(EffortChoice.High, EffortChoice.High), "the menu greys out what is above");
+            Eq(null, ClaudeSettings.Effort("ultra"), "an unknown level");
+        }
+
         private static void Test_ErrorHints_NextStep()
         {
             const string p = "Add a test for the parser";

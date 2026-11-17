@@ -56,7 +56,7 @@ This extension attacks all three, and shows the numbers so you can see the effec
 
 | Feature | What it does |
 |---|---|
-| **Auto model and effort routing** | A local classifier (no API call) sends simple prompts to Haiku, normal work to Sonnet, and only hard ones (refactor, deadlock, architecture…) to Opus. The hint under the prompt box shows the choice and the reason before you send. |
+| **Auto model and effort routing** | A local classifier (no API call) sends simple prompts to Haiku, normal work to Sonnet, and only hard ones (refactor, deadlock, architecture…) to Opus. The hint under the prompt box shows the choice and the reason before you send. Neither the router nor the effort picker goes above `maxEffortLevel` in Claude Code's settings. |
 | **Route with Haiku** (optional, off) | Instead of the local keyword rules, a small Haiku call picks model and effort for each Auto prompt, with a short reason: about $0.0001 and 1–2 s per prompt. It runs in a separate, trimmed Claude Code process (no tools, no project files, ~1.3k tokens instead of ~25k), started when the chat opens because it takes ~14 s to start. No answer within 4 s: the local rules decide. The savings report shows how often both agree and what the router cost. |
 | **Cache-aware routing** | The prompt cache is per model. Once a conversation is large (30k tokens by default), routing never switches to a cheaper model, because re-caching the whole context would cost more than it saves. |
 | **Smart selection context** | Small selections are inlined and dedented. Large ones are sent as `path:L10-200` references, so Claude reads only that range. Whole files are never pasted. |

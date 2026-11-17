@@ -732,7 +732,15 @@ namespace ClaudeVS.ToolWindow
                 };
             }
             foreach (EffortChoice ef in Enum.GetValues(typeof(EffortChoice)))
-                yield return new ChatPopup.Entry { Group = "Effort", Label = ef == EffortChoice.Auto ? "Auto (follow the model choice)" : ef.ToString(), Checked = _effortChoice == ef, Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); SetEffort(ef); } };
+            {
+                bool capped = ClaudeSettings.Above(ef, _effortCap); // above maxEffortLevel: Claude Code would answer lower
+                yield return new ChatPopup.Entry
+                {
+                    Group = "Effort", Label = ef == EffortChoice.Auto ? "Auto (follow the model choice)" : ef.ToString(), Checked = _effortChoice == ef,
+                    Enabled = !capped, Description = capped ? $"Above your Claude Code settings' cap ({_effortCap.Value.ToCli()}, maxEffortLevel)" : null,
+                    Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); SetEffort(ef); },
+                };
+            }
             yield return new ChatPopup.Entry { Group = "Thinking", Label = "Extended thinking", Description = "Off answers faster and cheaper on simple tasks", Checked = _thinking, Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); SetThinking(!_thinking); } };
         }
 
@@ -1243,7 +1251,7 @@ namespace ClaudeVS.ToolWindow
                     routerMs = ms;
                     decision = fromHaiku ?? local;
                     if (model == ModelChoice.Auto) model = decision.Model;
-                    if (effort == EffortChoice.Auto) effort = decision.Effort;
+                    if (effort == EffortChoice.Auto) effort = ClaudeSettings.Cap(decision.Effort, _effortCap); // Claude Code wouldn't go above maxEffortLevel
                     routeNote = RouteText.Note(_modelChoice == ModelChoice.Auto, _effortChoice == EffortChoice.Auto, model, effort);
                     routeTip = RouteText.Tip(fromHaiku != null, decision.Reason);
                     ClaudeOutputPane.WriteLine($"Route: {decision} | prompt {userText.Length} chars, {attachedLines} attached lines, {attachedFiles} files, context {_meterModel?.ContextTokens ?? 0} tok → using {model.ToCli()}/{effort.ToCli()}");
@@ -1925,7 +1933,7 @@ namespace ClaudeVS.ToolWindow
                         OnSignInExpiry(ev);
                         string used = _turnModel != null ? " · " + _turnModel : "";
                         // The effort this turn was sent with: its record is next in line (RecordUsage takes it below)
-                        if (TurnFooter.Effort(_pendingUsages.Count > 0 ? _pendingUsages.Peek().Effort : null) is string effortSent) used += " · " + effortSent;
+                        if (TurnFooter.Effort(ClaudeSettings.Cap(_pendingUsages.Count > 0 ? _pendingUsages.Peek().Effort : null, _effortCap)) is string effortSent) used += " · " + effortSent; // as used: no higher than maxEffortLevel
                         if (TurnFooter.Agents(ev.Subagents, _meterModel?.LastTurnSubagentTotal.Total ?? 0) is string agents) used += " · " + agents;
                         if (ev.Subagents?.Warning() is string agentTrouble)
                         {
@@ -2022,6 +2030,7 @@ namespace ClaudeVS.ToolWindow
             CountSuggestionCost(); // and the tip when Claude Code's suggestions don't pay
             if (_pendingUsages.Count == 0) return;
             var rec = _pendingUsages.Dequeue();
+            rec.Effort = ClaudeSettings.Cap(rec.Effort, _effortCap); // as used: Claude Code answers no higher than maxEffortLevel (read after the first prompt went out)
             _lastTurnEffort = rec.Effort; // for the tips and the footer, kept also without the log
             _lastTurnPromptChars = rec.PromptChars;
             if (Options?.KeepUsageLog == false) return;
