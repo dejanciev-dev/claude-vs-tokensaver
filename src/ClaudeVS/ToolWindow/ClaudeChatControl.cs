@@ -1249,9 +1249,12 @@ namespace ClaudeVS.ToolWindow
                     ClaudeOutputPane.WriteLine($"Route: {decision} | prompt {userText.Length} chars, {attachedLines} attached lines, {attachedFiles} files, context {_meterModel?.ContextTokens ?? 0} tok → using {model.ToCli()}/{effort.ToCli()}");
                 }
 
+                var offered = TakeOffered(); // the suggested prompt shown before this one, if any
                 _pendingUsages.Enqueue(new UsageRecord
                 {
                     Solution = dir,
+                    Suggestion = offered.Source,
+                    SuggestionTaken = offered.Taken,
                     Routed = decision != null,
                     RouteModel = decision != null ? model.ToCli() : null,
                     RouteEffort = decision != null ? effort.ToCli() : null,
@@ -1787,6 +1790,7 @@ namespace ClaudeVS.ToolWindow
             _fileIndex = null; // re-index on the next @ (files may have been added)
             SetBusy(false);
             ClearSuggestion();
+            ForgetOffered();
             SetTitle(null);
             SetEmptyState(true);
             UpdateFolderChip();

@@ -36,6 +36,17 @@ namespace ClaudeVS.Core.Tokens
         /// <summary>What asking the Haiku router cost, and how long it took (also when it timed out).</summary>
         [JsonProperty("routerCost", DefaultValueHandling = DefaultValueHandling.Ignore)] public double RouterCostUsd { get; set; }
         [JsonProperty("routerMs", DefaultValueHandling = DefaultValueHandling.Ignore)] public long RouterMs { get; set; }
+        /// <summary>
+        /// The suggested next prompt shown in the input box before this prompt was sent: <see cref="SuggestionLocal"/>
+        /// (read from the answer) or <see cref="SuggestionCli"/> (Claude Code's own); null when none was shown (and in
+        /// older lines). A suggestion after a conversation's last turn is never logged: no prompt followed it.
+        /// </summary>
+        [JsonProperty("suggestion", NullValueHandling = NullValueHandling.Ignore)] public string Suggestion { get; set; }
+        /// <summary>With <see cref="Suggestion"/>: Tab or → took it into the box, then it was sent as is or edited.</summary>
+        [JsonProperty("suggestionTaken", DefaultValueHandling = DefaultValueHandling.Ignore)] public bool SuggestionTaken { get; set; }
+        public const string SuggestionLocal = "local";
+        public const string SuggestionCli = "cli";
+
         /// <summary>First characters of the prompt. Only written when the user opts in; enables router replay.</summary>
         [JsonProperty("prompt")] public string PromptPreview { get; set; }
 

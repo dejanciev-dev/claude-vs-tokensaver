@@ -675,6 +675,31 @@ namespace ClaudeVS.Core.Tokens
                 + $"({(AttachedLinesTotal / (double)AttachedTurns).ToString("0", c)} lines on average); without: ${(PlainUsd / PlainTurns).ToString("0.000", c)} per turn";
         }
 
+        /// <summary>
+        /// Prompts sent while a suggested next prompt was showing, per kind (read from the answer, or Claude Code's
+        /// own), and how many of them took it (Tab or →, sent as is or edited).
+        /// </summary>
+        public int LocalSuggested { get; set; }
+        public int LocalSuggestionsTaken { get; set; }
+        public int CliSuggested { get; set; }
+        public int CliSuggestionsTaken { get; set; }
+
+        /// <summary>
+        /// "before 40 prompts: from the answer 30, taken 8 (27%); Claude Code's 10, taken 4 (40%)"; null when none
+        /// was logged. A kind with none is left out.
+        /// </summary>
+        public string SuggestionsLine()
+        {
+            int shown = LocalSuggested + CliSuggested;
+            if (shown == 0) return null;
+            var c = CultureInfo.InvariantCulture;
+            string Kind(string name, int n, int taken) => $"{name} {n}, taken {taken} ({(100.0 * taken / n).ToString("0", c)}%)";
+            var parts = new List<string>();
+            if (LocalSuggested > 0) parts.Add(Kind("from the answer", LocalSuggested, LocalSuggestionsTaken));
+            if (CliSuggested > 0) parts.Add(Kind("Claude Code's", CliSuggested, CliSuggestionsTaken));
+            return $"before {shown} {(shown == 1 ? "prompt" : "prompts")}: {string.Join("; ", parts)}";
+        }
+
         /// <summary>The turns logged with a duration, and their durations added up.</summary>
         public int TimedTurns { get; set; }
         public long WaitedMs { get; set; }
@@ -936,6 +961,12 @@ namespace ClaudeVS.Core.Tokens
                 if (r.AttachedLines > 0 || r.AttachedFiles > 0) { rep.AttachedTurns++; rep.AttachedUsd += r.CostUsd + r.RouterCostUsd; rep.AttachedLinesTotal += r.AttachedLines; }
                 else { rep.PlainTurns++; rep.PlainUsd += r.CostUsd + r.RouterCostUsd; }
             }
+            foreach (var r in list.Where(r => r.Suggestion != null))
+            {
+                bool cli = r.Suggestion == UsageRecord.SuggestionCli;
+                if (cli) { rep.CliSuggested++; if (r.SuggestionTaken) rep.CliSuggestionsTaken++; }
+                else { rep.LocalSuggested++; if (r.SuggestionTaken) rep.LocalSuggestionsTaken++; }
+            }
             var priced = list.Select(r => r.CostUsd + r.RouterCostUsd).Where(v => v > 0).OrderBy(v => v).ToList();
             rep.PricedTurns = priced.Count;
             if (priced.Count > 0)
@@ -1149,6 +1180,8 @@ namespace ClaudeVS.Core.Tokens
             sb.AppendLine($"Saved by file references:   ~{TokenMeter.Format(TokensAvoided)} tokens ≈ ${ReferencesSavedUsd:0.00}");
             if (AttachmentsLine() is string attached)
                 sb.AppendLine($"With attachments:           {attached}");
+            if (SuggestionsLine() is string suggested)
+                sb.AppendLine($"Suggested prompts:          {suggested}");
             sb.AppendLine($"Saved by the prompt cache:  ${CacheSavedUsd:0.00}  ({TokenMeter.Format(CacheReadTokens)} tokens read from the cache instead of sent in full)");
             sb.AppendLine($"Cache hit rate:             {CacheHitPercent:0}%");
             if (CacheRewriteTurns > 0)
