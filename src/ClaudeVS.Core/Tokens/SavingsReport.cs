@@ -512,7 +512,7 @@ namespace ClaudeVS.Core.Tokens
         public static List<KeyValuePair<UsageRecord, string>> CacheRewriteCauses(IEnumerable<UsageRecord> records)
         {
             var found = new List<KeyValuePair<UsageRecord, string>>();
-            foreach (var session in (records ?? Enumerable.Empty<UsageRecord>()).Where(r => !string.IsNullOrEmpty(r.SessionId))
+            foreach (var session in (records ?? Enumerable.Empty<UsageRecord>()).Where(r => !string.IsNullOrEmpty(r.SessionId) && !r.NoTurn)
                 .OrderBy(r => r.Timestamp).GroupBy(r => r.SessionId, StringComparer.Ordinal))
             {
                 UsageRecord previous = null;
@@ -688,6 +688,8 @@ namespace ClaudeVS.Core.Tokens
         /// of kind <see cref="UsageRecord.SideSuggestion"/>); part of <see cref="ActualCostUsd"/>.
         /// </summary>
         public double CliSuggestionsUsd { get; set; }
+        /// <summary>Of the suggestions' cost: the last ones of conversations, which no turn billed, estimated (<see cref="UsageRecord.NoTurn"/>).</summary>
+        public double UnbilledSuggestionsUsd { get; set; }
         /// <summary>What the summaries of /compact cost, and on how many turns (<see cref="UsageRecord.SideCompact"/>); part of <see cref="ActualCostUsd"/>.</summary>
         public double CompactUsd { get; set; }
         public int CompactTurns { get; set; }
@@ -699,10 +701,13 @@ namespace ClaudeVS.Core.Tokens
         public string SuggestionsLine()
         {
             int shown = LocalSuggested + CliSuggested;
-            if (shown == 0 && CliSuggestionsUsd <= 0) return null;
+            double usd = CliSuggestionsUsd + UnbilledSuggestionsUsd;
+            if (shown == 0 && usd <= 0) return null;
             var c = CultureInfo.InvariantCulture;
             string Kind(string name, int n, int taken) => $"{name} {n}, taken {taken} ({(100.0 * taken / n).ToString("0", c)}%)";
-            string cost = CliSuggestionsUsd <= 0 ? "" : $"{(CliSuggestionsUsd < 0.001 ? "<$0.001" : "$" + CliSuggestionsUsd.ToString("0.000", c))} of the cost above";
+            string Price(double v) => v < 0.001 ? "<$0.001" : "$" + v.ToString("0.000", c);
+            string cost = usd <= 0 ? "" : $"{Price(usd)} of the cost above"
+                + (UnbilledSuggestionsUsd > 0 ? $" ({Price(UnbilledSuggestionsUsd)} estimated: a conversation's last, which no turn billed)" : "");
             var parts = new List<string>();
             if (LocalSuggested > 0) parts.Add(Kind("from the answer", LocalSuggested, LocalSuggestionsTaken));
             if (CliSuggested > 0) parts.Add(Kind("Claude Code's", CliSuggested, CliSuggestionsTaken) + (cost.Length > 0 ? ", " + cost : ""));
@@ -812,13 +817,18 @@ namespace ClaudeVS.Core.Tokens
                 .Where(r => solution == null || string.Equals(r.Solution, solution, StringComparison.OrdinalIgnoreCase))
                 .OrderBy(r => r.Timestamp)
                 .ToList();
-            var list = scoped
+            var inPeriod = scoped
                 .Where(r => !sinceUtc.HasValue || r.Timestamp >= sinceUtc.Value)
                 .Where(r => !untilUtc.HasValue || r.Timestamp < untilUtc.Value)
                 .OrderBy(r => r.Timestamp)
                 .ToList();
+            // An unbilled last suggestion (no turn): in the costs and the suggestions line, not in any turn count
+            var noTurn = inPeriod.Where(r => r.NoTurn).ToList();
+            var list = inPeriod.Where(r => !r.NoTurn).ToList();
 
             var rep = new SavingsReport { Solution = solution, Turns = list.Count, Since = list.Count > 0 ? list[0].Timestamp : (DateTime?)null, Until = untilUtc };
+            rep.ActualCostUsd = noTurn.Sum(r => r.CostUsd);
+            rep.UnbilledSuggestionsUsd = noTurn.Sum(r => r.SideCostUsd);
             long input = 0, cacheRead = 0;
             foreach (var r in list)
             {
@@ -1055,7 +1065,7 @@ namespace ClaudeVS.Core.Tokens
             rep.WeekStart = today.AddDays(-(((int)today.DayOfWeek + 6) % 7));
             rep.WeekToDateUsd = scoped.Where(r => r.Timestamp.ToLocalTime().Date >= rep.WeekStart && r.Timestamp.ToLocalTime().Date <= today).Sum(r => r.CostUsd + r.RouterCostUsd);
             var todays = scoped.Where(r => r.Timestamp.ToLocalTime().Date == today).ToList();
-            rep.TodayTurns = todays.Count;
+            rep.TodayTurns = todays.Count(r => !r.NoTurn);
             rep.TodayUsd = todays.Sum(r => r.CostUsd + r.RouterCostUsd);
             rep.YesterdayUsd = scoped.Where(r => r.Timestamp.ToLocalTime().Date == today.AddDays(-1)).Sum(r => r.CostUsd + r.RouterCostUsd);
             var lastWeek = rep.WeekStart.AddDays(-7);

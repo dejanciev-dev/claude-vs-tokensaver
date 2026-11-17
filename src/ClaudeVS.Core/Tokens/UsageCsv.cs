@@ -38,7 +38,7 @@ namespace ClaudeVS.Core.Tokens
                 // The turn's number in its conversation; empty for lines logged without a session id
                 string turn = "";
                 string pause = ""; // seconds since the previous turn of its conversation ended
-                if (!string.IsNullOrEmpty(r.SessionId))
+                if (!string.IsNullOrEmpty(r.SessionId) && !r.NoTurn) // a last suggestion has no turn number
                 {
                     int n = (turns.TryGetValue(r.SessionId, out var had) ? had : 0) + 1;
                     turns[r.SessionId] = n;
