@@ -312,6 +312,28 @@ namespace ClaudeVS.ToolWindow
             Tip(tip);
         }
 
+        private bool _gaveCutOffTip;
+
+        /// <summary>After a turn: once per conversation, when answers cut off at the output limit have cost enough to go on.</summary>
+        private void CutOffTip()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (_gaveCutOffTip || _meterModel == null) return;
+            string tip = SessionNotices.CutOffTip(_meterModel.SessionOutputRetries, _meterModel.SessionOutputRetryCostUsd, OutputLimitSet());
+            if (tip == null) return;
+            _gaveCutOffTip = true;
+            Tip(tip);
+        }
+
+        /// <summary><c>CLAUDE_CODE_MAX_OUTPUT_TOKENS</c> as Claude Code gets it: from Visual Studio's environment, or its settings' env.</summary>
+        private int? OutputLimitSet()
+        {
+            string fromEnv = Environment.GetEnvironmentVariable("CLAUDE_CODE_MAX_OUTPUT_TOKENS");
+            if (int.TryParse(fromEnv, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int env)) return env;
+            var set = _costlySettings?.FirstOrDefault(c => c.Setting.StartsWith("env CLAUDE_CODE_MAX_OUTPUT_TOKENS=", StringComparison.Ordinal));
+            return set != null && int.TryParse(set.Setting.Substring(set.Setting.IndexOf('=') + 1), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int v) ? v : (int?)null;
+        }
+
         private bool _gaveLongConversationTip;
 
         /// <summary>After a turn: once per conversation, when it has run past 30 turns and its turns have grown dear. True when given now.</summary>
@@ -422,6 +444,7 @@ namespace ClaudeVS.ToolWindow
             _gaveCacheBreakTip = false;
             _gavePriceyContextTip = false;
             _gaveLongConversationTip = false;
+            _gaveCutOffTip = false;
             _gaveOverkillTip = false;
             _gaveHeavyThinkingTip = false;
             _gaveLongAnswerTip = false;

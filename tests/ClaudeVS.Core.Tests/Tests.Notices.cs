@@ -158,6 +158,17 @@ namespace ClaudeVS.Core.Tests
             Eq(0, SettingsCheck.Find(null).Count, "no answer");
         }
 
+        private static void Test_SessionNotices_CutOffTip()
+        {
+            Eq("Answers cut off at the output limit 3 times in this conversation, and going on cost $0.06: each retry reads the whole context again. "
+                + "Ask for smaller steps, one file or one part at a time.", SessionNotices.CutOffTip(3, 0.06, null));
+            Eq("Answers cut off at the output limit 1 time in this conversation, and going on cost $0.05: each retry reads the whole context again. "
+                + "Ask for smaller steps, one file or one part at a time. CLAUDE_CODE_MAX_OUTPUT_TOKENS is 400: a higher limit cuts off less.", SessionNotices.CutOffTip(1, 0.05, 400));
+            True(!SessionNotices.CutOffTip(2, 0.07, 32000).Contains("CLAUDE_CODE_MAX_OUTPUT_TOKENS"), "a limit that isn't low isn't named");
+            Eq(null, SessionNotices.CutOffTip(4, 0.049, 400), "cheap so far");
+            Eq(null, SessionNotices.CutOffTip(0, 1.0, null), "no cut-off");
+        }
+
         private static void Test_ErrorHints_NextStep()
         {
             const string p = "Add a test for the parser";

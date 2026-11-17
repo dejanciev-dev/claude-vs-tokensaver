@@ -1963,6 +1963,7 @@ namespace ClaudeVS.ToolWindow
                             Notice(failedCost);
                         if (_meterModel != null) Tip(SessionNotices.SubagentsDominate(_meterModel.LastTurnSubagentCostUsd, _meterModel.LastTurnCostUsd));
                         if (!LongConversationTip()) PriceyContextTip(_turnModel); // both say "the conversation is big": one per turn
+                        CutOffTip(); // answers cut off at the output limit that cost enough to go on
                         OverkillModelTip(_turnModel);
                         HeavyThinkingTip(_turnModel);
                         LongAnswerTip(_turnModel);
