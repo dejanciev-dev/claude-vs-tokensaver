@@ -1403,9 +1403,12 @@ keeps setting keys as written (even unknown ones), so the settings check must kn
 - [x] **Effort switches that take effect.** `apply_flag_settings` sends `effortLevel`; after a switch, `applied.effort`
       says it took. `--live-session` checks it: `ok effort switched mid-session: applied.effort = medium`, the rest
       passing as before ($0.06). `ClaudeSession.EffortSettingKey`
-- [ ] **Effort as Claude Code applied it.** After launch and after each switch, read `applied.effort`: the footer and
+- [x] **Effort as Claude Code applied it.** After launch and after each switch, read `applied.effort`: the footer and
       the usage log show it (it also covers caps the settings don't show), and a difference from the one asked for is
-      said once
+      said once. `ClaudeSession.AppliedEffort` (from every `get_settings`; re-read after `set_model` and
+      `apply_flag_settings`; reset when a process starts); the chat writes it into the prompt's usage record when it
+      goes out (`ConfirmEffort`), or at the result for a process's first prompt (`EffortUsed`, else the cap).
+      `--live-session` checks the property. Builds clean; not yet run in VS
 - [ ] **Settings that cost.** A check of the Claude Code settings that change what turns cost, from `get_settings`
       (no model call): where each is set, what it does and how to change it (a default model of Opus or Fable,
       thinking always on, a long output style, fast mode, prompt caching off, `MAX_THINKING_TOKENS`, a low

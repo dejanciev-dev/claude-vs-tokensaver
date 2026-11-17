@@ -1,5 +1,6 @@
 using System;
 using ClaudeVS.Core.Cli;
+using ClaudeVS.Core.Tokens;
 using ClaudeVS.Diagnostics;
 using Microsoft.VisualStudio.Shell;
 
@@ -33,6 +34,39 @@ namespace ClaudeVS.ToolWindow
                 _claudeSuggestionsOff = off;
                 if (off) ClearSuggestion();
             }).FileAndForget("ClaudeVS/ChatControl/Settings");
+        }
+
+        /// <summary>
+        /// The effort a turn ran at: what Claude Code said it applies when the prompt went out (<see cref="ConfirmEffort"/>),
+        /// else what it applies now (the first prompt of a process goes out before that is read), else the one asked for,
+        /// no higher than the cap.
+        /// </summary>
+        private string EffortUsed(UsageRecord rec)
+        {
+            if (rec == null) return null;
+            if (rec.EffortFromClaudeCode) return rec.Effort;
+            return _session?.AppliedEffort ?? ClaudeSettings.Cap(rec.Effort, _effortCap);
+        }
+
+        private bool _saidEffortDiffers; // once per conversation
+
+        /// <summary>
+        /// After a prompt's effort switch: Claude Code's applied effort goes into its usage record, and when it is not the
+        /// one asked for (a cap set for the model by your organization, or the settings), the chat says so once.
+        /// </summary>
+        private void ConfirmEffort(UsageRecord rec)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            string applied = _session?.AppliedEffort;
+            if (rec == null || applied == null) return;
+            string asked = rec.Effort;
+            rec.Effort = applied;
+            rec.EffortFromClaudeCode = true;
+            if (asked == null || string.Equals(asked, applied, StringComparison.OrdinalIgnoreCase) || _saidEffortDiffers) return;
+            _saidEffortDiffers = true;
+            ClaudeOutputPane.WriteLine($"Effort: asked for {asked}, Claude Code applies {applied}");
+            Notice($"Claude Code runs at {applied} effort, not {asked}: a cap for this model in your organization's or your Claude Code settings. "
+                + "The footer and the usage log show the effort it runs at.");
         }
 
         /// <summary>

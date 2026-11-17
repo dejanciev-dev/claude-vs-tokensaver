@@ -41,6 +41,11 @@ namespace ClaudeVS.Core.Cli
         /// <summary>Model alias the running process uses right now (after any set_model).</summary>
         public ModelChoice CurrentModel { get; private set; }
         public EffortChoice CurrentEffort { get; private set; }
+        /// <summary>
+        /// The effort Claude Code says it applies (<c>get_settings</c>' <c>applied.effort</c>, read by <see cref="GetSettingsAsync"/> and after
+        /// each <see cref="SetEffortAsync"/>): after any cap, also one an organization sets per model. Null until read for this process.
+        /// </summary>
+        public string AppliedEffort { get; private set; }
 
         public event EventHandler<ClaudeEvent> EventReceived;
         public event EventHandler<int> Exited;
@@ -106,6 +111,7 @@ namespace ClaudeVS.Core.Cli
                 }
                 CurrentModel = Options.Model;
                 CurrentEffort = Options.Effort;
+                AppliedEffort = null; // a new process: read again
 
                 var stdout = p.StandardOutput;
                 var stderr = p.StandardError;
@@ -198,6 +204,7 @@ namespace ClaudeVS.Core.Cli
             if (!IsRunning) { Options.Model = model; CurrentModel = model; return; }
             await SendControlAsync(new JObject { ["subtype"] = "set_model", ["model"] = model.ToCli() }).ConfigureAwait(false);
             CurrentModel = model;
+            await GetSettingsAsync().ConfigureAwait(false); // a cap can be per model: the effort applied may change with it
         }
 
         /// <summary>
@@ -213,6 +220,7 @@ namespace ClaudeVS.Core.Cli
             if (!IsRunning) { Options.Effort = effort; CurrentEffort = effort; return; }
             await SendControlAsync(new JObject { ["subtype"] = "apply_flag_settings", ["settings"] = new JObject { [EffortSettingKey] = effort.ToCli() } }).ConfigureAwait(false);
             CurrentEffort = effort;
+            await GetSettingsAsync().ConfigureAwait(false); // what Claude Code applies now (no model call)
         }
 
         /// <summary>
@@ -301,7 +309,10 @@ namespace ClaudeVS.Core.Cli
         public async Task<ClaudeSettings> GetSettingsAsync()
         {
             var r = await RequestAsync(new JObject { ["subtype"] = "get_settings" }, TimeSpan.FromSeconds(10)).ConfigureAwait(false);
-            return r == null ? null : ClaudeSettings.Parse(r);
+            if (r == null) return null;
+            var s = ClaudeSettings.Parse(r);
+            if (s.AppliedEffort != null) AppliedEffort = s.AppliedEffort;
+            return s;
         }
 
         /// <summary>The /skills rows (no model call; starts the process if needed). Null when the CLI does not answer.</summary>
