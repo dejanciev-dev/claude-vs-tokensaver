@@ -11,7 +11,7 @@ Tick the boxes as you go. Each phase ends with something you can run.
 |---|---|
 | `ClaudeVS.Core` (CLI session, parser, router, meter, context, setup) | ✅ Written, 16/16 tests pass |
 | `ClaudeVS` VSIX (package, tool window, commands, options) | ✅ Builds clean (0 warnings); not yet run in the experimental instance |
-| Real end-to-end run against `claude` CLI | ⚠️ Core verified against CLI 2.1.316 (`--live` smoke test): sessions, streaming, usage, cost, cache OK; Haiku routing works in acceptEdits ($0.002 vs $0.042 per turn on Sonnet); in plan mode the CLI answers with Sonnet even when Haiku is requested (still so in 2.1.325, where all other live smoke tests pass). VS UI not run yet |
+| Real end-to-end run against `claude` CLI | ⚠️ Core verified against CLI 2.1.316 (`--live` smoke test): sessions, streaming, usage, cost, cache OK; Haiku routing works in acceptEdits ($0.002 vs $0.042 per turn on Sonnet); in plan mode the CLI answers with Sonnet even when Haiku is requested (still so in 2.1.326, where all other live smoke tests pass). VS UI not run yet |
 | Markdown transcript, diffs, history, question cards | ❌ Not started |
 
 ---
@@ -1228,8 +1228,9 @@ terminal, cloud, Remote Control, Claude Tag, gateway, sandbox and plugin entries
       `Bash(git`. Hooks whose `"decision": "block"` now holds in more cases: the extension's hooks print none.
       `--bare` limits: not used. PowerShell asking about more commands: the permission card shows them as any other.
       Probed with stream-json the way the extension runs it, 2.1.326, nothing on stderr either
-- [ ] **Verify with 2.1.326 and raise `CliVersion.Tested`.** The live tests with 2.1.326; README, Marketplace
-      overview, CONTRIBUTING and the plan-mode notes
+- [x] **Verify with 2.1.326 and raise `CliVersion.Tested`.** All 12 live tests pass with 2.1.326 ($0.25, 4.4 min);
+      205 offline tests pass. `--live raw.jsonl Plan` still answers with Sonnet. `CliVersion.Tested` is 2.1.326
+      (`Required` stays 2.1.318); README, Marketplace overview, CONTRIBUTING and the plan-mode notes say so
 
 ## Phase 52 — Suggestions that pay their way
 
