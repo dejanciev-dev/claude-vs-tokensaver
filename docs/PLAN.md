@@ -1239,9 +1239,11 @@ Planned on 2026-11-17. Phase 50 shows a suggested next prompt; is it used, and w
 `Forked agent [prompt_suggestion] finished: … totalUsage: input=506 output=16 cacheRead=28058 cacheCreate=133`, so it
 reads the whole conversation from the cache, about as much as a small turn, and none of it is in `total_cost_usd`.
 
-- [ ] **A better local rule.** `NextPrompt.FromAnswer` takes more closing forms: "Should I go ahead and …?", "Happy to
+- [x] **A better local rule.** `NextPrompt.FromAnswer` takes more closing forms: "Should I go ahead and …?", "Happy to
       … if you'd like", "Want to …?", and a last paragraph that asks which of a numbered list you want ("Which do you
-      prefer?" under `1. …` `2. …` → `Option 1: …`). Tests from real closing paragraphs
+      prefer?" under `1. …` `2. …` → `Option 1: …`). Tests from real closing paragraphs. "Want to see …?" becomes
+      `Yes, show me …`; the option is the item's bold start, or its text up to a dash, colon or full stop; the
+      question may also come just before the list; a list that doesn't start at 1, or has no "Which …?", is left alone
 - [ ] **How often suggestions are used.** The next turn's usage record says which suggestion was showing when its
       prompt was sent (`local` or `cli`) and whether it was taken (Tab or →, edited or not). The savings report
       says how often each kind was shown and taken; the CSV gets a `suggestion` column (`local`, `local taken`,

@@ -9,7 +9,9 @@ All notable changes to this project are listed here. The format follows
 ### Added
 - **Suggested next prompt**: when an answer ends with an offer ("If you want separate PRs, tell me and I'll split
   them out"), the empty input box shows the reply in grey (`Yes, split them out   Tab ⇥`). Tab or → puts it into
-  the box to edit or send; typing clears it. Read from the answer, with no model call (Options → Chat → *Suggest
+  the box to edit or send; typing clears it. The offers it reads include "Should I go ahead and …?", "Happy to … if
+  you'd like", "Want to see …?" (`Yes, show me …`), and a closing "Which do you prefer?" over a numbered list
+  (`Option 1: Split into two PRs`). Read from the answer, with no model call (Options → Chat → *Suggest
   the next prompt*, on by default). Options → CLI → *Ask Claude Code for suggestions* (off by default) uses Claude
   Code's own prediction (`--prompt-suggestions`, 2.1.325) instead, at a model call per turn that its cost doesn't show.
 - **Month pace in the meter**: from the 3rd, the meter's tooltip says where this month's spend is heading at its pace

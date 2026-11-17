@@ -698,6 +698,21 @@ namespace ClaudeVS.Core.Tests
             Eq("Yes, push", NextPrompt.FromAnswer("If you want me to push, tell me."));
             Eq("Yes, split them out", NextPrompt.FromAnswer("If so, **tell me and I'll split them out**, so each can be reviewed alone."), "bold and trailing reason");
 
+            // Phase 52: more closing forms
+            Eq("Yes, commit and push", NextPrompt.FromAnswer("The build is green.\n\nShould I go ahead and commit and push?"), "go ahead and");
+            Eq("Yes, add a test for the empty case", NextPrompt.FromAnswer("Fixed. Happy to add a test for the empty case if you'd like."));
+            Eq("Yes, split the class into two files", NextPrompt.FromAnswer("I'm glad to split the class into two files, if that helps."));
+            Eq("Yes, show me the full diff", NextPrompt.FromAnswer("That's the only change. Want to see the full diff?"), "want to see → show me");
+            Eq("Yes, rename the other two as well", NextPrompt.FromAnswer("Done with Parser.cs. Want to rename the other two as well?"));
+            Eq("Option 1: Split into two PRs", NextPrompt.FromAnswer(
+                "There are two ways to ship this:\n\n1. **Split into two PRs** — one for the parser, one for the UI.\n   Easier to review.\n" +
+                "2. **One PR** — faster, but larger.\n\nWhich do you prefer?"), "a numbered list, then which");
+            Eq("Option 1: Keep the old API", NextPrompt.FromAnswer(
+                "Both work. Which one should I go with?\n1. Keep the old API: nothing breaks\n2) Remove it: less code"), "which, then the list");
+            Eq(null, NextPrompt.FromAnswer("I changed:\n\n1. Parser.cs\n2. Lexer.cs\n\nAll tests pass."), "a list with no question");
+            Eq(null, NextPrompt.FromAnswer("Which do you prefer?"), "which with no list");
+            Eq(null, NextPrompt.FromAnswer("Steps:\n\n2. Build\n3. Test\n\nWhich failed for you?"), "a list not starting at 1");
+
             Eq(null, NextPrompt.FromAnswer("I can see the build failed on line 12."), "a statement, not an offer");
             Eq(null, NextPrompt.FromAnswer("Want me to run the tests?\n\nThe build passes and all 203 tests pass."), "the offer is not at the end");
             Eq(null, NextPrompt.FromAnswer("Should I?\n\n```\ncode\n```"), "a code block at the end");
