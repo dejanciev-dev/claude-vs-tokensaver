@@ -209,6 +209,9 @@ namespace ClaudeVS.Core.Tests
             Eq("5 retries in 2 turns, $0.030 for the requests that went on", rep.OutputRetriesLine());
             True(rep.ToText().Contains("Cut off, asked to go on:    5 retries"), rep.ToText());
             Eq(null, SavingsReport.Build(new[] { new UsageRecord { Timestamp = t0, CostUsd = 0.01 } }, new PriceTable()).OutputRetriesLine(), "none: no line");
+            var csv = new StringWriter();
+            UsageCsv.Write(new[] { new UsageRecord { Timestamp = t0, CostUsd = 0.05, OutputRetries = 3, OutputRetryCostUsd = 0.0123 } }, csv);
+            True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",3,0.0123"), "csv: output_retries, output_retry_cost_usd last: " + csv);
         }
 
         private static void Test_Meter_DefaultWindowIs1M()
