@@ -193,7 +193,19 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | **Options → CLI → Ask Claude Code for suggestions** on, **New chat**, then any prompt | Claude Code's suggestion replaces the local one a second after the answer ends, also after answers with no offer (not after every turn) |
 | With a screen reader (Narrator), Tab into the input box while a suggestion shows | It reads *Suggested prompt: … Press Tab to use it.* |
 
-## 15. Release (Phase 5)
+## 15. Manual mode and the suggestions' worth (Phases 51–52)
+
+| Do | Expect |
+|---|---|
+| Pick **Manual** in the mode picker, **New chat**, then a prompt that edits a file | The edit asks first, and the picker still shows Manual after the answer. No note about the mode (unless your organization starts sessions in auto: then a note says Claude Code started in Auto mode, not Manual, the picker shows Auto, and the Output pane has `Mode: the CLI runs in auto, the chat asked for default`) |
+| An answer that ends with *Should I go ahead and commit?* or *Want to see the diff?* | `Yes, commit   Tab ⇥` / `Yes, show me the diff   Tab ⇥` |
+| An answer that ends with a numbered list and *Which do you prefer?* | `Option 1: …   Tab ⇥`, the first item's bold title or its text up to a dash or colon |
+| With the usage log on: take one suggestion with **Tab** and send it, then type over the next one and send that | **Export Usage as CSV…**: the last column `suggestion` says `local taken`, then `local` |
+| **Show Savings Report** | `Suggested prompts:          before … prompts: from the answer …, taken … (…%)` under the attachments line |
+| **Options → CLI → Ask Claude Code for suggestions** on, **New chat**, two prompts | The Output pane says `Suggestion from Claude Code: ~$… estimated` after each one that comes; the meter's tooltip adds `Claude Code's suggestions: ~$… for … in this conversation (estimated; not in the costs above)`; the report's suggestions line adds Claude Code's count and `~$… (estimated, not in the cost above)` |
+| **New chat** after that | The tooltip no longer has the suggestions line |
+
+## 16. Release (Phase 5)
 
 These need you rather than a check list:
 

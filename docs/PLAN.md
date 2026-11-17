@@ -1259,7 +1259,9 @@ reads the whole conversation from the cache ($0.00036 there, an eighth of the $0
       (`suggestionCost`), `SavingsReport.CliSuggestionsUsd`. Counted also when one comes while you type and isn't
       shown; only the ones that come, since a turn with none may still have made the call. Each one goes to the
       Output pane. Option description and README say so. Builds clean; not yet run in VS
-- [ ] **Manual checks for Phases 51–52.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
+- [x] **Manual checks for Phases 51–52.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md). Section 15,
+      *Manual mode and the suggestions' worth*: Manual stays Manual, the new closing offers, the CSV column, the
+      report line and the cost estimate in the tooltip; Release is now 16
 
 ---
 
