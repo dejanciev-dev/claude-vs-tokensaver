@@ -1283,10 +1283,10 @@ namespace ClaudeVS.Core.Tests
             Eq(2, UsageCsv.Write(recs, sw), "rows");
             var lines = sw.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None);
             Eq(string.Join(",", UsageCsv.Columns), lines[0], "header");
-            Eq(t.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") + @",C:\src\a\,claude-opus-5-5,1,,,,5,1200,300,9000,100,100,10405,0,0,,0.25,0.0001,4200,0,134,multi-file,,,,,,,,,640,120,2", lines[1], "oldest first, invariant numbers; fast_tokens, large_context_tokens, agent_tokens and agent_types after the cache columns");
-            True(lines[2].EndsWith(",0,,0.001235,0,0,0,0,,\"'=SUM(A1) say \"\"hi\"\", ok\",,,,,,,,0,0,0"), "quoted, formula-guarded prompt: " + lines[2]);
+            Eq(t.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") + @",C:\src\a\,claude-opus-5-5,1,,,,5,1200,300,9000,100,100,10405,0,0,,0.25,0.0001,4200,0,134,multi-file,,,,,,,,,640,120,2,", lines[1], "oldest first, invariant numbers; fast_tokens, large_context_tokens, agent_tokens and agent_types after the cache columns");
+            True(lines[2].EndsWith(",0,,0.001235,0,0,0,0,,\"'=SUM(A1) say \"\"hi\"\", ok\",,,,,,,,0,0,0,"), "quoted, formula-guarded prompt: " + lines[2]);
             Eq("", lines[3], "ends with a line break");
-            Eq("session,effort,tools,turn,cache_rewrite,end_reason,pause_s,prompt_chars,attached_lines,attached_files", string.Join(",", UsageCsv.Columns.Skip(UsageCsv.Columns.Length - 10)), "session id … pause_s, then what was sent, last");
+            Eq("session,effort,tools,turn,cache_rewrite,end_reason,pause_s,prompt_chars,attached_lines,attached_files,suggestion", string.Join(",", UsageCsv.Columns.Skip(UsageCsv.Columns.Length - 11)), "session id … pause_s, then what was sent, then the suggestion shown before it, last");
             var withSession = new StringWriter();
             UsageCsv.Write(new[]
             {
@@ -1295,9 +1295,9 @@ namespace ClaudeVS.Core.Tests
                 new UsageRecord { Timestamp = t.AddMinutes(1), SessionId = "other" },
             }, withSession);
             var sessionLines = withSession.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None);
-            True(sessionLines[1].EndsWith(",,abc-123,high,Read:1200;Shell:400,1,,,,0,0,0"), "after the prompt; its first turn: " + withSession);
-            True(sessionLines[2].EndsWith(",other,,,1,,,,0,0,0"), "another conversation counts from 1: " + sessionLines[2]);
-            True(sessionLines[3].EndsWith(",abc-123,,,2,,,120,0,0,0"), "its second turn, by time, 2 minutes after the first: " + sessionLines[3]);
+            True(sessionLines[1].EndsWith(",,abc-123,high,Read:1200;Shell:400,1,,,,0,0,0,"), "after the prompt; its first turn: " + withSession);
+            True(sessionLines[2].EndsWith(",other,,,1,,,,0,0,0,"), "another conversation counts from 1: " + sessionLines[2]);
+            True(sessionLines[3].EndsWith(",abc-123,,,2,,,120,0,0,0,"), "its second turn, by time, 2 minutes after the first: " + sessionLines[3]);
 
             // cache_rewrite: the cause on the turns that wrote their conversation to the cache again
             var rewrites = new StringWriter();
@@ -1309,8 +1309,8 @@ namespace ClaudeVS.Core.Tests
                 new UsageRecord { Timestamp = t.AddMinutes(31), SessionId = "s", ModelUsed = "claude-opus-5-5", CacheWriteTokens = 30_000, IsError = true, EndReason = "aborted_streaming" },
             }, rewrites);
             var rewriteLines = rewrites.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None);
-            Eq(",model,pause,other", string.Join(",", rewriteLines.Skip(1).Take(4).Select(l => l.Split(',').Reverse().Skip(5).First())), "first turn empty, then each cause");
-            True(rewriteLines[4].EndsWith(",4,other,aborted_streaming,60,0,0,0"), "end_reason as logged, then the pause: " + rewriteLines[4]);
+            Eq(",model,pause,other", string.Join(",", rewriteLines.Skip(1).Take(4).Select(l => l.Split(',').Reverse().Skip(6).First())), "first turn empty, then each cause");
+            True(rewriteLines[4].EndsWith(",4,other,aborted_streaming,60,0,0,0,"), "end_reason as logged, then the pause: " + rewriteLines[4]);
 
             var one = new StringWriter();
             Eq(1, UsageCsv.Write(recs, one, solution: @"c:\SRC\a"), "one solution, any case or trailing slash");
@@ -1513,6 +1513,26 @@ namespace ClaudeVS.Core.Tests
             True(rep.ToText().Contains("With attachments:           3 turns, $0.121 per turn"), rep.ToText());
             Eq(null, SavingsReport.Build(recs.Take(3), new PriceTable()).AttachmentsLine(), "no turn without: no line");
             Eq(null, SavingsReport.Build(recs.Skip(3), new PriceTable()).AttachmentsLine(), "no turn with: no line");
+        }
+
+        private static void Test_SavingsReport_Suggestions()
+        {
+            var t = DateTime.UtcNow.AddDays(-1);
+            var recs = new List<UsageRecord>();
+            for (int i = 0; i < 4; i++) recs.Add(new UsageRecord { Timestamp = t, PromptChars = 20, Suggestion = UsageRecord.SuggestionLocal, SuggestionTaken = i == 0 });
+            for (int i = 0; i < 2; i++) recs.Add(new UsageRecord { Timestamp = t, PromptChars = 20, Suggestion = UsageRecord.SuggestionCli, SuggestionTaken = true });
+            recs.Add(new UsageRecord { Timestamp = t, PromptChars = 20 }); // none shown
+            var rep = SavingsReport.Build(recs, new PriceTable());
+            Eq("before 6 prompts: from the answer 4, taken 1 (25%); Claude Code's 2, taken 2 (100%)", rep.SuggestionsLine());
+            True(rep.ToText().Contains("Suggested prompts:          before 6 prompts"), rep.ToText());
+            Eq("before 1 prompt: from the answer 1, taken 1 (100%)", SavingsReport.Build(recs.Take(1), new PriceTable()).SuggestionsLine(), "one kind only");
+            Eq(null, SavingsReport.Build(recs.Skip(6), new PriceTable()).SuggestionsLine(), "none shown: no line");
+
+            Eq("local taken", UsageCsv.Suggestion(recs[0]), "csv: taken");
+            Eq("local", UsageCsv.Suggestion(recs[1]), "csv: shown");
+            Eq("cli taken", UsageCsv.Suggestion(recs[4]), "csv: Claude Code's");
+            Eq("", UsageCsv.Suggestion(recs[6]), "csv: none");
+            Eq("", UsageCsv.Suggestion(new UsageRecord { Suggestion = "=evil" }), "csv: unknown kind left out");
         }
 
         private static void Test_SavingsReport_TurnSpread()

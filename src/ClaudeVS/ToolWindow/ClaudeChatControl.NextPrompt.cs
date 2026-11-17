@@ -1,6 +1,7 @@
 using System.Windows.Automation;
 using System.Windows.Input;
 using ClaudeVS.Core.Chat;
+using ClaudeVS.Core.Tokens;
 using Microsoft.VisualStudio.Shell;
 
 namespace ClaudeVS.ToolWindow
@@ -15,27 +16,47 @@ namespace ClaudeVS.ToolWindow
         private const string PlaceholderText = "Ask Claude to edit…";
         private string _suggestion;
 
+        /// <summary>
+        /// The suggestion shown since the last prompt went out, for that prompt's usage record: its source
+        /// (<see cref="UsageRecord.SuggestionLocal"/> or <see cref="UsageRecord.SuggestionCli"/>) and whether Tab or →
+        /// took it. Kept after typing clears the grey text; reset once a prompt takes it along, and on a new conversation.
+        /// </summary>
+        private string _offeredSource;
+        private bool _offeredTaken;
+
         /// <summary>After a turn ends: the local rule's suggestion, if any.</summary>
         private void SuggestFromAnswer(string answer, bool isError)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             if (isError) { ClearSuggestion(); return; }
-            ShowSuggestion(NextPrompt.FromAnswer(answer));
+            ShowSuggestion(NextPrompt.FromAnswer(answer), UsageRecord.SuggestionLocal);
         }
 
         /// <summary>Claude Code's suggestion (it comes just after the turn's result): it knows the conversation, so it wins.</summary>
         private void SuggestFromCli(string suggestion)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            ShowSuggestion(suggestion);
+            ShowSuggestion(suggestion, UsageRecord.SuggestionCli);
         }
 
-        private void ShowSuggestion(string text)
+        /// <summary>For the next prompt's usage record: which suggestion was shown before it, and whether it was taken; then forgets it.</summary>
+        private (string Source, bool Taken) TakeOffered()
+        {
+            var offered = (_offeredSource, _offeredSource != null && _offeredTaken);
+            ForgetOffered();
+            return offered;
+        }
+
+        private void ForgetOffered() { _offeredSource = null; _offeredTaken = false; }
+
+        private void ShowSuggestion(string text, string source)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             // Not while Claude works or waits on a card, not over what you typed, not when turned off.
             if (string.IsNullOrWhiteSpace(text) || !(Options?.SuggestNextPrompt ?? true) || _busy || _waitingForUser || _prompt.Text.Length > 0)
                 return;
+            _offeredSource = source;
+            _offeredTaken = false;
             _suggestion = text.Trim();
             _placeholder.Text = _suggestion + "   Tab ⇥";
             AutomationProperties.SetHelpText(_prompt, "Suggested prompt: " + _suggestion + ". Press Tab to use it.");
@@ -58,6 +79,7 @@ namespace ClaudeVS.ToolWindow
             if (e.Key != Key.Tab && e.Key != Key.Right) return false;
             string text = _suggestion;
             ClearSuggestion();
+            _offeredTaken = true; // sent as is or edited
             _prompt.Text = text;
             _prompt.CaretIndex = text.Length;
             return true;

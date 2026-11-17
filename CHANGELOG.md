@@ -7,6 +7,10 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Suggested prompts in the savings report**: how often a prompt went out while a suggested next prompt showed, and
+  how often Tab or → took it, for each kind (`Suggested prompts: before 40 prompts: from the answer 30, taken 8
+  (27%); Claude Code's 10, taken 4 (40%)`). The usage CSV gets a last `suggestion` column (`local`, `local taken`,
+  `cli`, `cli taken`).
 - **Suggested next prompt**: when an answer ends with an offer ("If you want separate PRs, tell me and I'll split
   them out"), the empty input box shows the reply in grey (`Yes, split them out   Tab ⇥`). Tab or → puts it into
   the box to edit or send; typing clears it. The offers it reads include "Should I go ahead and …?", "Happy to … if

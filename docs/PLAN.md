@@ -1244,10 +1244,12 @@ reads the whole conversation from the cache, about as much as a small turn, and 
       prefer?" under `1. …` `2. …` → `Option 1: …`). Tests from real closing paragraphs. "Want to see …?" becomes
       `Yes, show me …`; the option is the item's bold start, or its text up to a dash, colon or full stop; the
       question may also come just before the list; a list that doesn't start at 1, or has no "Which …?", is left alone
-- [ ] **How often suggestions are used.** The next turn's usage record says which suggestion was showing when its
+- [x] **How often suggestions are used.** The next turn's usage record says which suggestion was showing when its
       prompt was sent (`local` or `cli`) and whether it was taken (Tab or →, edited or not). The savings report
       says how often each kind was shown and taken; the CSV gets a `suggestion` column (`local`, `local taken`,
-      `cli`, `cli taken`)
+      `cli`, `cli taken`). `UsageRecord.Suggestion`, `SuggestionTaken`; `SavingsReport.SuggestionsLine`;
+      `UsageCsv.Suggestion`. Shown means it was in the box, so not one that came while you typed; typing over it
+      still counts it as shown. Builds clean; not yet run in VS
 - [ ] **What Claude Code's suggestions cost.** An estimate for each one that comes: a request on the turn's model
       that reads the conversation's context from the cache, plus about 500 input, 150 cache-write and 20 output tokens
       (from the debug log). The meter's tooltip shows the conversation's total, marked as an estimate; the next
