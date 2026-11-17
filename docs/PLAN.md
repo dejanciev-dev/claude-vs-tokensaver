@@ -1344,6 +1344,32 @@ model (no tokens billed) shows what a failed turn sends: a synthetic assistant m
       *What to do after a failed turn*: Stop, an unknown model, typing over it, with suggestions off, beside Claude
       Code's suggestions, and Narrator; Release is now 18
 
+## Phase 55 — Settings Claude Code honours, and turns that run out of room
+
+Planned on 2026-11-17, from the Claude Code changelog (2.1.325) and Phase 54's open ends. Probed with 2.1.326, the
+way the extension runs it:
+- `maxEffortLevel: "medium"` in a project's `.claude/settings.json`, `--effort high`: Claude Code answers at medium
+  and says so only in its debug log ("Effort 'high' exceeds the cap … using 'medium'"); nothing in the stream
+- `CLAUDE_CODE_MAX_OUTPUT_TOKENS=400`, a subagent asked for a 700-word essay: each cut-off is followed by a
+  synthetic user message (`isSynthetic: true`), for the subagent (`parent_tool_use_id`) and for the main agent:
+  "Output token limit hit. Resume directly — …" or (2.1.325) "Output token limit hit. Your caller does not receive
+  an answer in pieces. … give the whole answer again, more briefly"
+- An invalid `ANTHROPIC_API_KEY`: `"error": "authentication_failed"`, status 401, "Invalid API key · Fix external
+  API key"; an empty `CLAUDE_CONFIG_DIR`: `authentication_failed`, no status, "Not logged in · Please run /login"
+
+- [ ] **Respect the effort cap.** Read `maxEffortLevel` from Claude Code's settings (managed, the project's local and
+      shared, the user's). The effort picker offers nothing above it, the router doesn't pick above it, and the
+      footer and the usage log say the effort really used
+- [ ] **Honour `promptSuggestionEnabled`.** `false` in Claude Code's settings turns the extension's suggested next
+      prompt off too (Options decide when the setting isn't there); *Ask Claude Code for suggestions* then sends
+      nothing either
+- [ ] **Answers cut off at the output limit.** Count Claude Code's retries after a cut-off, the main agent's and each
+      subagent's, and what the retried requests cost: in the turn footer, the agent's row, the usage log and the
+      savings report. Capture: `Fixtures/cli-2.1.326-output-limit-retries.jsonl`
+- [ ] **Failed-turn texts from real errors.** The invalid key and the signed-out captures as tests; an invalid API
+      key gets its own step (fix or unset `ANTHROPIC_API_KEY`) instead of "sign in again"
+- [ ] **Manual checks for Phase 55.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
+
 ---
 
 ## Working in Visual Studio — daily loop
