@@ -1409,10 +1409,15 @@ keeps setting keys as written (even unknown ones), so the settings check must kn
       `apply_flag_settings`; reset when a process starts); the chat writes it into the prompt's usage record when it
       goes out (`ConfirmEffort`), or at the result for a process's first prompt (`EffortUsed`, else the cap).
       `--live-session` checks the property. Builds clean; not yet run in VS
-- [ ] **Settings that cost.** A check of the Claude Code settings that change what turns cost, from `get_settings`
+- [x] **Settings that cost.** A check of the Claude Code settings that change what turns cost, from `get_settings`
       (no model call): where each is set, what it does and how to change it (a default model of Opus or Fable,
       thinking always on, a long output style, fast mode, prompt caching off, `MAX_THINKING_TOKENS`, a low
-      `CLAUDE_CODE_MAX_OUTPUT_TOKENS`, all project MCP servers on). In the context breakdown and as a `/` command
+      `CLAUDE_CODE_MAX_OUTPUT_TOKENS`, all project MCP servers on). In the context breakdown and as a `/` command.
+      `SettingsCheck.Find` reads `sources` (managed, then local, project, user; the chat's own `flagSettings` left
+      out), known keys only; also `ANTHROPIC_MODEL`, `CLAUDE_CODE_SUBAGENT_MODEL` on Opus or Fable, and
+      `effortLevel` high or more. Fast mode left out: the debug log says it isn't available in this kind of session.
+      `ClaudeSettings.Costly`; `/` → *Settings that cost* (starts Claude Code if needed); the breakdown's *Tips*
+      count them. Builds clean; not yet run in VS
 - [ ] **Tip after costly cut-offs.** Once per conversation, when answers cut off at the output limit cost $0.05 or
       more: ask for smaller steps, and name `CLAUDE_CODE_MAX_OUTPUT_TOKENS` when it is set low
 - [ ] **Retries in the CSV.** `output_retries` and `output_retry_cost_usd` columns

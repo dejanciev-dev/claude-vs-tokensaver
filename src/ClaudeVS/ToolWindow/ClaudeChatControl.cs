@@ -623,6 +623,14 @@ namespace ClaudeVS.ToolWindow
                 int dot = tip.IndexOf(". ", StringComparison.Ordinal); // first sentence as the label ("1.2k" has no space after its dot)
                 entries.Add(new ChatPopup.Entry { Group = "Tips", Glyph = ChatTheme.IconLightbulb, Label = dot < 0 ? tip : tip.Substring(0, dot), Description = dot < 0 ? null : tip.Substring(dot + 2) });
             }
+            if (_costlySettings != null && _costlySettings.Count > 0)
+                entries.Add(new ChatPopup.Entry
+                {
+                    Group = "Tips", Glyph = ChatTheme.IconLightbulb,
+                    Label = $"{_costlySettings.Count} Claude Code {(_costlySettings.Count == 1 ? "setting makes" : "settings make")} turns dearer",
+                    Description = string.Join("; ", _costlySettings.Select(c => c.Setting)) + ". Click for where and why",
+                    Run = ShowSettingsCheck,
+                });
             if (u.Percentage >= 30)
                 entries.Add(new ChatPopup.Entry { Group = "Tips", Glyph = ChatTheme.IconCompact, Label = "Compact now", Description = "Summarize the conversation to free space", Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); SendText("/compact", routed: false); } });
 
@@ -778,6 +786,7 @@ namespace ClaudeVS.ToolWindow
                 new ChatPopup.Entry { Group = "Context", Label = "Context usage", Description = "What fills the context window", Run = ShowContextBreakdown },
                 new ChatPopup.Entry { Group = "Context", Label = "Skills…", Description = "Turn skills on or off, with what each costs", Run = ShowSkills },
                 new ChatPopup.Entry { Group = "Context", Label = "MCP servers…", Description = "Turn servers on or off, reconnect", Run = ShowMcpServers },
+                new ChatPopup.Entry { Group = "Context", Label = "Settings that cost", Description = "Claude Code settings that make turns dearer, and where to change them", Run = ShowSettingsCheck },
                 new ChatPopup.Entry { Group = "Context", Label = "Compact conversation", Description = "Summarize to shrink the context", Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); SendText("/compact", routed: false); } },
                 new ChatPopup.Entry { Group = "Context", Label = "Resume a session…", Run = ShowHistoryMenu },
                 new ChatPopup.Entry { Group = "Context", Label = "Rename session", Run = StartTitleEdit },

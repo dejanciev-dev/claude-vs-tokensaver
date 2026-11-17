@@ -12,6 +12,32 @@ namespace ClaudeVS.ToolWindow
     /// </summary>
     public sealed partial class ClaudeChatControl
     {
+        /// <summary>The Claude Code settings that make turns dearer, as read at the process's start (for the context breakdown).</summary>
+        private System.Collections.Generic.List<CostlySetting> _costlySettings;
+
+        /// <summary>
+        /// / → Settings that cost: reads Claude Code's settings now (starting it if needed, no model call) and says in the
+        /// chat which make turns dearer, where each is set and how to change it.
+        /// </summary>
+        private void ShowSettingsCheck()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            EnsureSession(WorkFolder);
+            var s = _session;
+            if (s == null) return;
+            Jtf.RunAsync(async () =>
+            {
+                ClaudeSettings settings = null;
+                try { settings = await s.GetSettingsAsync(start: true); }
+                catch (InvalidOperationException ex) { ClaudeOutputPane.WriteLine("Claude Code's settings not available: " + ex.Message); }
+                await Jtf.SwitchToMainThreadAsync();
+                if (s != _session) return;
+                if (settings == null) { Append("\nClaude Code didn't answer with its settings (an older Claude Code may not offer them). Try again once it runs.\n"); return; }
+                _costlySettings = settings.Costly;
+                Append("\n" + SettingsCheck.Text(settings.Costly) + "\n");
+            }).FileAndForget("ClaudeVS/ChatControl/SettingsCheck");
+        }
+
         /// <summary>Claude Code's <c>maxEffortLevel</c>, once read; null when not set or not known yet.</summary>
         private EffortChoice? _effortCap;
 
@@ -29,6 +55,7 @@ namespace ClaudeVS.ToolWindow
                 await Jtf.SwitchToMainThreadAsync();
                 if (s != _session || settings == null) return;
                 ApplyEffortCap(settings.MaxEffort);
+                _costlySettings = settings.Costly;
                 bool off = settings.PromptSuggestionEnabled == false;
                 if (off && !_claudeSuggestionsOff) ClaudeOutputPane.WriteLine("Suggested next prompts are off: promptSuggestionEnabled is false in Claude Code's settings");
                 _claudeSuggestionsOff = off;
