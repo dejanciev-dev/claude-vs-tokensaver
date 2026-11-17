@@ -521,7 +521,8 @@ namespace ClaudeVS.Core.Tests
         private static void Test_PermissionModes()
         {
             Eq("auto", PermissionModeChoice.Auto.ToCli(), "auto flag");
-            Eq(null, PermissionModeChoice.Default.ToCli(), "manual = no flag");
+            Eq("default", PermissionModeChoice.Default.ToCli(), "Manual is spelled out: with no flag 2.1.326 can start in auto");
+            True(ClaudeArgsBuilder.Build(new ClaudeLaunchOptions { PermissionMode = PermissionModeChoice.Default }).Contains("--permission-mode default"), "Manual launch flag");
             Eq("default", PermissionModeChoice.Default.ToControl(), "control needs 'default'");
             Eq("plan", PermissionModeChoice.Plan.ToControl(), "plan");
             Eq("Edit automatically", PermissionModeChoice.AcceptEdits.Describe().Label, "label");

@@ -49,9 +49,8 @@ namespace ClaudeVS.ToolWindow
         }
 
         /// <summary>
-        /// On a process's first init: when the CLI started in another mode than the chat asked for, say so (unless
-        /// Manual was asked, where your settings' default mode applies) and make the mode picker show the real one,
-        /// without sending a switch back.
+        /// On a process's first init: when the CLI started in another mode than the chat asked for, say so and make
+        /// the mode picker show the real one, without sending a switch back.
         /// </summary>
         private void SyncPermissionMode(JObject init)
         {

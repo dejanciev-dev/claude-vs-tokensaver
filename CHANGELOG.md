@@ -90,6 +90,9 @@ All notable changes to this project are listed here. The format follows
   stopped, 1 API error)`.
 
 ### Fixed
+- **Manual stays Manual**: Manual mode was started with no `--permission-mode`, and Claude Code 2.1.326 can then
+  start in auto mode (for some organizations, or while the organization's policy hasn't loaded). It is now asked for
+  by name, and if Claude Code still starts in another mode, the chat says so, as for the other modes.
 - **Blurry text in the chat's menus** (mode, model, +, actions, context breakdown, sessions, folder): the drop
   shadow was drawn on the menu itself, which turned its text into a bitmap. The shadow is now drawn behind the
   menu, with ClearType and display text formatting like Visual Studio's own menus.
