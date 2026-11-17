@@ -1285,10 +1285,10 @@ namespace ClaudeVS.Core.Tests
             Eq(2, UsageCsv.Write(recs, sw), "rows");
             var lines = sw.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None);
             Eq(string.Join(",", UsageCsv.Columns), lines[0], "header");
-            Eq(t.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") + @",C:\src\a\,claude-opus-5-5,1,,,,5,1200,300,9000,100,100,10405,0,0,,0.25,0.0001,4200,0,134,multi-file,,,,,,,,,640,120,2,", lines[1], "oldest first, invariant numbers; fast_tokens, large_context_tokens, agent_tokens and agent_types after the cache columns");
-            True(lines[2].EndsWith(",0,,0.001235,0,0,0,0,,\"'=SUM(A1) say \"\"hi\"\", ok\",,,,,,,,0,0,0,"), "quoted, formula-guarded prompt: " + lines[2]);
+            Eq(t.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") + @",C:\src\a\,claude-opus-5-5,1,,,,5,1200,300,9000,100,100,10405,0,0,,0.25,0.0001,4200,0,134,multi-file,,,,,,,,,640,120,2,,,", lines[1], "oldest first, invariant numbers; fast_tokens, large_context_tokens, agent_tokens and agent_types after the cache columns");
+            True(lines[2].EndsWith(",0,,0.001235,0,0,0,0,,\"'=SUM(A1) say \"\"hi\"\", ok\",,,,,,,,0,0,0,,,"), "quoted, formula-guarded prompt: " + lines[2]);
             Eq("", lines[3], "ends with a line break");
-            Eq("session,effort,tools,turn,cache_rewrite,end_reason,pause_s,prompt_chars,attached_lines,attached_files,suggestion", string.Join(",", UsageCsv.Columns.Skip(UsageCsv.Columns.Length - 11)), "session id … pause_s, then what was sent, then the suggestion shown before it, last");
+            Eq("session,effort,tools,turn,cache_rewrite,end_reason,pause_s,prompt_chars,attached_lines,attached_files,suggestion,side,side_cost_usd", string.Join(",", UsageCsv.Columns.Skip(UsageCsv.Columns.Length - 13)), "session id … pause_s, then what was sent, the suggestion shown before it, and Claude Code's own requests billed with the turn, last");
             var withSession = new StringWriter();
             UsageCsv.Write(new[]
             {
@@ -1297,9 +1297,9 @@ namespace ClaudeVS.Core.Tests
                 new UsageRecord { Timestamp = t.AddMinutes(1), SessionId = "other" },
             }, withSession);
             var sessionLines = withSession.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None);
-            True(sessionLines[1].EndsWith(",,abc-123,high,Read:1200;Shell:400,1,,,,0,0,0,"), "after the prompt; its first turn: " + withSession);
-            True(sessionLines[2].EndsWith(",other,,,1,,,,0,0,0,"), "another conversation counts from 1: " + sessionLines[2]);
-            True(sessionLines[3].EndsWith(",abc-123,,,2,,,120,0,0,0,"), "its second turn, by time, 2 minutes after the first: " + sessionLines[3]);
+            True(sessionLines[1].EndsWith(",,abc-123,high,Read:1200;Shell:400,1,,,,0,0,0,,,"), "after the prompt; its first turn: " + withSession);
+            True(sessionLines[2].EndsWith(",other,,,1,,,,0,0,0,,,"), "another conversation counts from 1: " + sessionLines[2]);
+            True(sessionLines[3].EndsWith(",abc-123,,,2,,,120,0,0,0,,,"), "its second turn, by time, 2 minutes after the first: " + sessionLines[3]);
 
             // cache_rewrite: the cause on the turns that wrote their conversation to the cache again
             var rewrites = new StringWriter();
@@ -1311,8 +1311,8 @@ namespace ClaudeVS.Core.Tests
                 new UsageRecord { Timestamp = t.AddMinutes(31), SessionId = "s", ModelUsed = "claude-opus-5-5", CacheWriteTokens = 30_000, IsError = true, EndReason = "aborted_streaming" },
             }, rewrites);
             var rewriteLines = rewrites.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None);
-            Eq(",model,pause,other", string.Join(",", rewriteLines.Skip(1).Take(4).Select(l => l.Split(',').Reverse().Skip(6).First())), "first turn empty, then each cause");
-            True(rewriteLines[4].EndsWith(",4,other,aborted_streaming,60,0,0,0,"), "end_reason as logged, then the pause: " + rewriteLines[4]);
+            Eq(",model,pause,other", string.Join(",", rewriteLines.Skip(1).Take(4).Select(l => l.Split(',').Reverse().Skip(8).First())), "first turn empty, then each cause");
+            True(rewriteLines[4].EndsWith(",4,other,aborted_streaming,60,0,0,0,,,"), "end_reason as logged, then the pause: " + rewriteLines[4]);
 
             var one = new StringWriter();
             Eq(1, UsageCsv.Write(recs, one, solution: @"c:\SRC\a"), "one solution, any case or trailing slash");
@@ -1536,13 +1536,18 @@ namespace ClaudeVS.Core.Tests
             Eq("", UsageCsv.Suggestion(recs[6]), "csv: none");
             Eq("", UsageCsv.Suggestion(new UsageRecord { Suggestion = "=evil" }), "csv: unknown kind left out");
 
-            // Claude Code's suggestions, estimated, outside the totals
-            recs[4].SuggestionCostUsd = 0.03;
-            recs[6].SuggestionCostUsd = 0.012; // one came while you typed: paid, never shown
+            // Claude Code's suggestions, as billed with the turns after them: part of the cost
+            recs[4].CostUsd = 0.05; recs[4].SideKind = UsageRecord.SideSuggestion; recs[4].SideCostUsd = 0.03;
+            recs[6].CostUsd = 0.02; recs[6].SideKind = UsageRecord.SideSuggestion; recs[6].SideCostUsd = 0.012; // came while you typed: billed, never shown
+            recs[5].CostUsd = 0.04; recs[5].SideKind = UsageRecord.SideCompact; recs[5].SideCostUsd = 0.04;
             rep = SavingsReport.Build(recs, new PriceTable());
-            Eq("before 6 prompts: from the answer 4, taken 1 (25%); Claude Code's 2, taken 2 (100%), ~$0.042 (estimated, not in the cost above)", rep.SuggestionsLine());
-            Eq(0.0, rep.ActualCostUsd, "not in the actual cost");
-            Eq("Claude Code's cost ~$0.012 (estimated, not in the cost above)", SavingsReport.Build(recs.Skip(6), new PriceTable()).SuggestionsLine(), "only a cost");
+            Eq("before 6 prompts: from the answer 4, taken 1 (25%); Claude Code's 2, taken 2 (100%), $0.042 of the cost above", rep.SuggestionsLine());
+            Eq(0.11, Math.Round(rep.ActualCostUsd, 6), "in the actual cost, once");
+            Eq("Claude Code's cost $0.012 of the cost above", SavingsReport.Build(recs.Skip(6), new PriceTable()).SuggestionsLine(), "only a cost");
+            Eq("$0.040 for 1 summary, of the cost above", rep.CompactLine(), "compaction apart from suggestions");
+            True(rep.ToText().Contains("Compacting:                 $0.040 for 1 summary"), rep.ToText());
+            Eq(null, SavingsReport.Build(recs.Take(4), new PriceTable()).CompactLine(), "no /compact: no line");
+            Eq("suggestion", UsageCsv.Text(recs[4].SideKind), "csv: the kind");
         }
 
         private static void Test_SuggestionCost()
@@ -1555,8 +1560,8 @@ namespace ClaudeVS.Core.Tests
             True(SuggestionCost.EstimateUsd(28058, "claude-opus-5-5", prices) > 10 * est, "Opus: far dearer");
             Eq(SuggestionCost.EstimateUsd(1000, "claude-sonnet-5-5", prices), SuggestionCost.EstimateUsd(1000, "some-new-model", prices), "unknown model: Sonnet's prices");
             True(SuggestionCost.EstimateUsd(100_000, "claude-haiku-5-5", prices) > 4 * SuggestionCost.EstimateUsd(99_000, "claude-haiku-5-5", prices), "Haiku over 100k: 5x");
-            Eq("Claude Code's suggestions: ~$0.012 for 4 in this conversation (estimated; not in the costs above)", SuggestionCost.Line(4, 0.0123));
-            Eq("Claude Code's suggestions: <$0.001 for 1 in this conversation (estimated; not in the costs above)", SuggestionCost.Line(1, 0.0004));
+            Eq("Claude Code's own requests in this conversation: suggestions $0.012, /compact $0.030 (in its cost, billed with the turn after them)", SuggestionCost.Line(0.0123, 0.03));
+            Eq("Claude Code's own requests in this conversation: suggestions <$0.001 (in its cost, billed with the turn after them)", SuggestionCost.Line(0.0004, 0));
             Eq(null, SuggestionCost.Line(0, 0), "none");
         }
 

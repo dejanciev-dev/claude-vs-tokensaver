@@ -17,12 +17,13 @@ All notable changes to this project are listed here. The format follows
   you'd like", "Want to see …?" (`Yes, show me …`), and a closing "Which do you prefer?" over a numbered list
   (`Option 1: Split into two PRs`). Read from the answer, with no model call (Options → Chat → *Suggest
   the next prompt*, on by default). Options → CLI → *Ask Claude Code for suggestions* (off by default) uses Claude
-  Code's own prediction (`--prompt-suggestions`, 2.1.325) instead, at a model call per turn that its cost doesn't show.
-- **What Claude Code's suggestions cost**: Claude Code doesn't report it, so it is estimated: each suggestion is a
-  request on the conversation's model that reads the whole conversation from the cache (seen in Claude Code
-  2.1.326's debug log). The meter's tooltip shows the conversation's total (`Claude Code's suggestions: ~$0.012 for 4
-  in this conversation (estimated; not in the costs above)`), and the savings report adds it to the suggested
-  prompts line, outside the totals.
+  Code's own prediction (`--prompt-suggestions`, 2.1.325) instead, at a model call per turn, billed with the next turn.
+- **What Claude Code's own requests cost**: each suggestion (with *Ask Claude Code for suggestions* on) and each
+  `/compact` summary is a request on the conversation's model that reads the whole conversation from the cache,
+  billed with the turn after it. The meter's tooltip shows what they have cost in the conversation (`Claude Code's
+  own requests in this conversation: suggestions $0.012, /compact $0.030`); the savings report adds the suggestions'
+  cost to the suggested prompts line and a *Compacting* line, both part of the actual cost; the usage CSV gets the
+  last columns `side` and `side_cost_usd`.
 - **Month pace in the meter**: from the 3rd, the meter's tooltip says where this month's spend is heading at its pace
   so far (`this month $41.20, ~$137.33 by Nov 30 at this pace`), as the savings report's month line does.
 - **Pace warning**: once a month, from the 7th and while 3 days or more are left, the chat says when this month's
