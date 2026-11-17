@@ -7,6 +7,12 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **What to do after a failed turn**, in the empty input box, as Claude Code 2.1.326 does in the terminal: from why
+  the turn failed (the error kind and status Claude Code sends, or its message), the grey text says what to do, and
+  Tab puts the prompt in: the same prompt again after an overloaded or server error, a Stop, a rate or usage limit,
+  a sign-in or a missing model (`The API is overloaded: try again · Tab puts your prompt back`); `/compact` when
+  the conversation no longer fits; going on in smaller parts after the output limit. A usage-policy block offers no
+  prompt, only rewinding the message or a New chat. Shown also with suggestions turned off; no model call.
 - **Token tip when Claude Code's suggestions don't pay**: with *Ask Claude Code for suggestions* on, once 20 or more
   have come since Visual Studio started, under 1 in 10 was taken and they cost $0.10 or more, the chat says so once,
   with how to turn them off (the suggestions read from the answer stay, at no cost).

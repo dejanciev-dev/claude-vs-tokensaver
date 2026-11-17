@@ -2,6 +2,24 @@ using System;
 
 namespace ClaudeVS.Core.Cli
 {
+    /// <summary>After a failed turn: what to do, and the prompt Tab puts in the box for it (null: nothing to send).</summary>
+    public sealed class NextStep
+    {
+        public string Hint { get; set; }
+        public string Prompt { get; set; }
+        /// <summary><see cref="Prompt"/> is the prompt that failed, sent again as it was or edited.</summary>
+        public bool PromptIsLast { get; set; }
+
+        /// <summary>
+        /// The grey text in the empty box: "The API is overloaded: try again · Tab puts your prompt back",
+        /// "… · Tab: /compact", or the hint alone.
+        /// </summary>
+        public string Display() =>
+            Prompt == null ? Hint
+            : PromptIsLast ? Hint + " · Tab puts your prompt back"
+            : Hint + " · Tab: " + Prompt;
+    }
+
     /// <summary>Turns raw CLI/API error text into an actionable hint for the user.</summary>
     public static class ClaudeErrorHints
     {
@@ -28,6 +46,43 @@ namespace ClaudeVS.Core.Cli
             if (Has(e, "is not recognized as an internal or external command", "enoent", "cannot find the path"))
                 return "Claude Code CLI could not be started. Install it or set its path under Tools > Options > Claude Code.";
             return null;
+        }
+
+        /// <summary>
+        /// What to do after a failed turn, for the empty input box (as Claude Code 2.1.326's "hint in the empty prompt
+        /// that says what to do after a request fails"): from why it ended (<paramref name="endReason"/>), the error kind
+        /// and HTTP status Claude Code sent, and its message. Null for a turn that didn't fail.
+        /// </summary>
+        /// <param name="lastPrompt">The prompt that failed: what Tab puts back when trying again is the step.</param>
+        public static NextStep NextStep(bool isError, string endReason, string errorKind, int? apiStatus, string text, string lastPrompt)
+        {
+            if (!isError) return null;
+            string e = (text ?? "").ToLowerInvariant();
+            string kind = errorKind ?? "";
+            string again = string.IsNullOrWhiteSpace(lastPrompt) ? null : lastPrompt.Trim();
+            NextStep Step(string hint, string prompt) => new NextStep { Hint = hint, Prompt = prompt, PromptIsLast = prompt != null && prompt == again };
+
+            if ((endReason ?? "").StartsWith("aborted", StringComparison.Ordinal)) return Step("Stopped", again);
+            if (endReason == "max_turns" || endReason == "error_max_turns") return Step("Stopped at the turn limit", "Continue");
+            if (endReason == "error_max_budget_usd") return Step("Stopped at the budget limit", null);
+            if (Has(e, "usage policy", "violate"))
+                return Step("Blocked by the usage policy: rewind your message to change it, or start a New chat", null);
+            if (kind == "max_output_tokens" || Has(e, "output token maximum", "max_output_tokens"))
+                return Step("The answer hit the output limit", "Go on from where you stopped, in smaller parts");
+            if (Has(e, "prompt is too long", "context window", "context_length"))
+                return Step("The conversation is too long for the context window", "/compact");
+            if (kind == "authentication_failed" || apiStatus == 401 || SignInExpiry.IsExpiredError(text)
+                || Has(e, "not logged in", "please run /login", "invalid api key", "authentication_error", "oauth token"))
+                return Step("Sign in again, then send it again", again);
+            if (kind == "billing_error" || apiStatus == 402 || Has(e, "credit balance", "insufficient_quota", "billing"))
+                return Step("Out of credit: send it again once you have more", again);
+            if (kind == "rate_limit" || apiStatus == 429 || Has(e, "rate_limit", "rate limit", "too many requests", "usage limit", "limit reached"))
+                return Step("Rate or usage limit: send it again once it resets", again);
+            if (kind == "model_not_found" || Has(e, "issue with the selected model"))
+                return Step("That model isn't available: pick another in the model menu, then send it again", again);
+            if (kind == "server_error" || apiStatus >= 500 || Has(e, "overloaded", "timed out", "timeout", "connection error", "econnreset", "socket"))
+                return Step(Has(e, "overloaded") || apiStatus == 529 ? "The API is overloaded: try again" : "The request failed on the way: try again", again);
+            return Step("The request failed", again);
         }
 
         private static bool Has(string text, params string[] needles)

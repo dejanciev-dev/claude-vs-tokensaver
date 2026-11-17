@@ -2,6 +2,7 @@ using System;
 using System.Windows.Automation;
 using System.Windows.Input;
 using ClaudeVS.Core.Chat;
+using ClaudeVS.Core.Cli;
 using ClaudeVS.Core.Tokens;
 using ClaudeVS.Diagnostics;
 using Microsoft.VisualStudio.Shell;
@@ -30,15 +31,33 @@ namespace ClaudeVS.ToolWindow
         private string SuggestionsCostLine() =>
             _meterModel == null ? null : SuggestionCost.Line(_meterModel.SessionSuggestionsUsd, _meterModel.SessionCompactUsd);
 
-        /// <summary>After a turn ends: the local rule's suggestion, if any.</summary>
-        private void SuggestFromAnswer(string answer, bool isError)
+        /// <summary>After a turn ends: the local rule's suggestion, if any; after a failed one, what to do next.</summary>
+        private void SuggestFromAnswer(string answer, ClaudeEvent result, string prompt)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            if (isError) { ClearSuggestion(); return; }
+            if (result.IsError) { ShowNextStep(ClaudeErrorHints.NextStep(true, UsageRecord.EndOf(true, result.TerminalReason, result.ResultSubtype), result.ErrorKind, result.ApiErrorStatus, result.Text, prompt)); return; }
             ShowSuggestion(NextPrompt.FromAnswer(answer), UsageRecord.SuggestionLocal);
         }
 
-        /// <summary>Claude Code's suggestion (it comes just after the turn's result): it knows the conversation, so it wins.</summary>
+        /// <summary>The hint after a failed turn is showing (with or without a prompt for Tab): Claude Code's suggestion doesn't replace it.</summary>
+        private bool _stepShown;
+
+        /// <summary>
+        /// After a failed turn, the empty box says what to do (<see cref="ClaudeErrorHints.NextStep"/>), as Claude Code
+        /// 2.1.326 does; Tab puts in the step's prompt, if it has one. Shown also with suggestions turned off: it says
+        /// what went wrong, it doesn't guess what you want.
+        /// </summary>
+        private void ShowNextStep(NextStep step)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            ClearSuggestion();
+            if (step == null || _busy || _waitingForUser || _prompt.Text.Length > 0) return;
+            _suggestion = step.Prompt; // null: the hint alone, nothing for Tab
+            _stepShown = true;
+            _placeholder.Text = step.Display();
+            AutomationProperties.SetHelpText(_prompt, "The last request failed. " + step.Hint + (step.Prompt != null ? ". Press Tab to put in: " + step.Prompt : "."));
+        }
+
         /// <summary>
         /// Claude Code's suggestion. Its cost is billed with the next turn (the meter measures it there,
         /// <see cref="TokenMeter.LastTurnSide"/>).
@@ -110,6 +129,7 @@ namespace ClaudeVS.ToolWindow
             // Not while Claude works or waits on a card, not over what you typed, not when turned off.
             if (string.IsNullOrWhiteSpace(text) || !(Options?.SuggestNextPrompt ?? true) || _busy || _waitingForUser || _prompt.Text.Length > 0)
                 return;
+            if (_stepShown) return; // what to do after a failed turn stays
             _offeredSource = source;
             _offeredTaken = false;
             _suggestion = text.Trim();
@@ -120,8 +140,9 @@ namespace ClaudeVS.ToolWindow
         private void ClearSuggestion()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            if (_suggestion == null) return;
+            if (_suggestion == null && !_stepShown) return;
             _suggestion = null;
+            _stepShown = false;
             _placeholder.Text = PlaceholderText;
             AutomationProperties.SetHelpText(_prompt, "");
         }

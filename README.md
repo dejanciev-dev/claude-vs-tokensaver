@@ -108,7 +108,7 @@ This extension attacks all three, and shows the numbers so you can see the effec
 | **Claude Code dialogs** | `/` → *Claude Code*: **Status**, **Account & usage** (plan, every usage limit with its reset time, this session's cost), **Memory & instructions** (CLAUDE.md files and saved memories, with what each costs per request; click to open or create), **Output style** (switch for this project), **Permission rules** and **Hooks** (with the settings file each comes from). Read from Claude Code with no model call. |
 | **Screen readers** | Announcements through a UIA live region when Claude finishes (with the start of the answer), asks for permission, has a question or a plan, wants an edit reviewed, stops responding, or hits a usage limit. **Focus last message** (`Ctrl+Alt+K, M`) puts the keyboard at the start of Claude's last answer; `Esc` returns to the prompt box. |
 | **Several chat windows** | Each window has its own conversation, meter and model. |
-| **Prompt box helpers** | A suggested next prompt in grey once an answer ends with an offer (Tab takes it; no model call); `Ctrl+Up/Down` prompt history; typing `/` opens a list of commands above the box (`/compact` and your own `.claude/commands`), each with what it does; Tab or Enter puts it in the box for its arguments. Your skills (project, user and plugin skills, as Claude Code reports them) are in the `/` button menu under Skills; `@` picks a file (each with its size in tokens, `~3.2k tok`). |
+| **Prompt box helpers** | A suggested next prompt in grey once an answer ends with an offer (Tab takes it; no model call), and after a failed turn what to do next (try again, /compact, go on in parts, rewind); `Ctrl+Up/Down` prompt history; typing `/` opens a list of commands above the box (`/compact` and your own `.claude/commands`), each with what it does; Tab or Enter puts it in the box for its arguments. Your skills (project, user and plugin skills, as Claude Code reports them) are in the `/` button menu under Skills; `@` picks a file (each with its size in tokens, `~3.2k tok`). |
 | **Diagnostics** | An **Output → Claude Code** pane with route decisions, errors and plain-language hints (not logged in, sign-in expired, answer cut off at the output limit, rate limited, context too long…), plus optional raw CLI traffic. If Claude Code is older than 2.1.318, the chat says so once. |
 
 ## How it works
@@ -272,7 +272,7 @@ In the prompt box:
 | `Ctrl+Up` / `Ctrl+Down` | Previous / next prompt (your unsent text is kept) |
 | `@` + name | Pick a solution file to attach (`↑ ↓`, `Enter` or `Tab`, `Esc`) |
 | `/` | A list of matching commands above the box (`/compact` and your `.claude/commands/*.md`; skills are in the `/` button menu): ↑ ↓ to choose, Tab or Enter to insert, Esc to close |
-| `Tab` or `→` in the empty box | Take the suggested next prompt shown in grey, to edit or send |
+| `Tab` or `→` in the empty box | Take the suggested next prompt shown in grey (after a failed turn: your prompt again, or the next step), to edit or send |
 | `Esc` | Remove attachments |
 
 Editor commands go to the chat window you used last.

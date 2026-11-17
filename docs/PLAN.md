@@ -1332,11 +1332,14 @@ model (no tokens billed) shows what a failed turn sends: a synthetic assistant m
       `api_error_status` on the turn's result. Capture: `Fixtures/cli-2.1.326-unknown-model.jsonl`.
       `ClaudeEvent.ErrorKind`, `ApiErrorStatus`; a subagent's error isn't the turn's, and the kind doesn't carry over
       to the next turn
-- [ ] **The next step in the input box.** After a failed turn, the grey text says what to do, from the kind, the
+- [x] **The next step in the input box.** After a failed turn, the grey text says what to do, from the kind, the
       status and the message (no model call): try the same prompt again after an overloaded or server error, a
       stop or a limit (**Tab** puts it back); `/compact` when the prompt is too long; go on in shorter parts after
       the output limit; rewind or a new chat after a policy block; sign in, add credits or pick another model when
-      that is the cause. Typing clears it, as a suggestion
+      that is the cause. Typing clears it, as a suggestion. `ClaudeErrorHints.NextStep` (`NextStep.Display`:
+      `… · Tab puts your prompt back`, `… · Tab: /compact`, or the hint alone); `ClaudeChatControl.ShowNextStep`.
+      Shown also with *Suggest the next prompt* off; Claude Code's own suggestion doesn't replace it; not logged as a
+      suggestion; screen readers get it as the box's help text. Builds clean; not yet run in VS
 - [ ] **Manual checks for Phase 54.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
 
 ---
