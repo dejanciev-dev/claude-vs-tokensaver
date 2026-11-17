@@ -237,7 +237,18 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | **Options → CLI → Extra arguments** can't set the limit, so start VS from a command prompt with `set CLAUDE_CODE_MAX_OUTPUT_TOKENS=400`, then ask *Use one general-purpose agent to write a 700-word essay about LINQ and return it in full* | The agent's row says `cut off …×`; a turn footer says `· cut off …× ($… to go on)`; **Show Savings Report** has `Cut off, asked to go on:` |
 | With `set ANTHROPIC_API_KEY=sk-ant-invalid` before starting VS, any prompt | The box says `Invalid API key: fix or unset ANTHROPIC_API_KEY, then send it again · Tab puts your prompt back`, and the chat's explanation names the key |
 
-## 19. Release (Phase 5)
+## 19. The effort Claude Code really uses, and settings that cost (Phase 56)
+
+| Do | Expect |
+|---|---|
+| Model and effort on **Auto**, a simple prompt, then a hard one (*Refactor this class for thread safety…*) | The two footers show different efforts (e.g. `low effort`, then `high effort`); the second turn thinks noticeably more. The usage CSV's `effort` matches the footers |
+| Effort picker **Low**, a prompt; then **Max**, the same prompt | The second footer says `max effort` and shows more thinking tokens |
+| `.claude/settings.local.json` with `{"model": "opus", "alwaysThinkingEnabled": true, "env": {"DISABLE_PROMPT_CACHING": "1"}}`; `/` → **Settings that cost** | The chat lists the three, each with `(.claude/settings.local.json)` and what it does. Remove the file afterwards |
+| With such a setting, **New chat**, a prompt, then the meter → context breakdown | Under *Tips*: `N Claude Code settings make turns dearer`; clicking it shows the list in the chat |
+| No such settings, `/` → **Settings that cost** | `none of the settings known to make turns dearer is set` |
+| With `set CLAUDE_CODE_MAX_OUTPUT_TOKENS=400` before starting VS, ask for long answers until going on has cost $0.05 | One token tip: `Answers cut off at the output limit … CLAUDE_CODE_MAX_OUTPUT_TOKENS is 400 …`; the usage CSV's last columns `output_retries` and `output_retry_cost_usd` are filled |
+
+## 20. Release (Phase 5)
 
 These need you rather than a check list:
 
