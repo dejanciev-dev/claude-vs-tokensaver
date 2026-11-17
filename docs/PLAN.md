@@ -1263,6 +1263,33 @@ reads the whole conversation from the cache ($0.00036 there, an eighth of the $0
       *Manual mode and the suggestions' worth*: Manual stays Manual, the new closing offers, the CSV column, the
       report line and the cost estimate in the tooltip; Release is now 16
 
+## Phase 53 — Side requests, counted where they belong
+
+Planned on 2026-11-17. A probe with 2.1.326 (two Haiku turns and `/compact`, `--prompt-suggestions true`,
+`--debug-file`) shows Phases 50 and 52 had it wrong: Claude Code *does* bill its suggestions in `total_cost_usd`, one
+result late. The growth of `modelUsage` over turn 2, less turn 2's own `usage`, is exactly the suggestion after turn 1
+in the debug log (input 506, output 4, cache read 27,517, cache write 52), even one that was never sent to the stream
+(4 output tokens: none came). The `/compact` result's growth is the compact request (`[reactive-compact]`) plus the
+suggestion after turn 2. The 2.1.325 capture shows the same. So today:
+the meter counts these side requests as **subagents** (in the meter, the usage log's `agents` and the report), and
+Phase 52's estimate adds them a second time, saying "not in the costs above". Only a suggestion after a
+conversation's last turn is never reported.
+
+- [ ] **Side requests apart from subagents.** On the main model, the part of `modelUsage`'s growth that no streamed
+      subagent message explains is a side request: the summary on a turn that compacted (`compact_boundary`), else
+      Claude Code's suggestions. Kept out of the subagent counts; its cost stays in the turn's. Tests from the
+      2.1.326 probe (sanitized capture) and the 2.1.325 one
+- [ ] **Measured, not estimated.** The usage record keeps the side request's tokens and cost (`side`), replacing
+      Phase 52's estimate; the meter's tooltip and the savings report show suggestions and compaction as part of the
+      cost ("of the cost above"), and the CSV gets their cost
+- [ ] **A tip when Claude Code's suggestions don't pay.** With *Ask Claude Code for suggestions* on, once 20 or more
+      came and under 1 in 10 was taken while they cost $0.10 or more, the chat says so once per VS session, with what
+      they cost and how to turn them off
+- [ ] **The last suggestion.** The one after a conversation's last turn is never reported: when a chat ends (New
+      chat, another conversation, closing the window) after a suggestion came, its estimated cost is logged as a
+      record with no turn, which the turn counts leave out
+- [ ] **Manual checks for Phase 53.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
+
 ---
 
 ## Working in Visual Studio — daily loop
