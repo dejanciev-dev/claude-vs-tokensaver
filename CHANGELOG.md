@@ -6,6 +6,28 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-17
+
+Still a **preview**, for Claude Code 2.1.318 or newer (tested with 2.1.326). This release makes the numbers right and
+the effort switch work, and adds help for the moment between two prompts.
+
+### Highlights
+
+- **Effort changes now take effect:** switching the effort of a running conversation (the router's choice per
+  prompt, or the effort picker) did nothing before: every turn ran at the effort the chat started with. The footer
+  and the usage log now show the effort Claude Code really applies, under any cap from your settings or organization.
+- **Costs counted where they belong:** a resumed conversation's first turn no longer takes the whole conversation's
+  cost; Claude Code's own requests (its suggestions, the `/compact` summary) are no longer counted as subagents;
+  answers cut off at the output limit show what going on cost.
+- **Between two prompts:** a suggested next prompt in the empty box when an answer ends with an offer, and after a
+  failed turn what to do next (Tab puts the prompt back). Both without a model call.
+- **Settings that cost:** `/` → *Settings that cost* lists the Claude Code settings that make turns dearer, and the
+  chat follows `maxEffortLevel` and `promptSuggestionEnabled`.
+- **Spend across conversations and time:** weekly warnings and a month pace, this conversation against your
+  others, long conversations, failed turns, the 1-hour cache, time waited and more in the savings report and the CSV.
+
+The full list follows.
+
 ### Added
 - **Settings that cost**: `/` → *Settings that cost* asks Claude Code for its settings (no model call) and says in
   the chat which make turns dearer, where each is set (managed, the project's, yours) and how to change it: a default

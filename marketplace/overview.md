@@ -43,13 +43,16 @@ warm, and shows what every turn costs.
   projection and last month, this week and last week, spend per day, per solution, per model and per effort, the
   costliest turns and conversations, and what rewriting the cache cost. For one period if you like, saved as
   Markdown, or exported as CSV.
+- **Settings that cost:** `/` → *Settings that cost* lists the Claude Code settings that make turns dearer (a default
+  model of Opus, thinking always on, the prompt cache off …), with where each is set and how to change it.
 - **Agents panel** for subagents and background tasks, with Stop and Run in background. It shows each agent's
   model and cost, turns a row amber past a cost you set, and can stop an agent automatically.
 - **Sessions list** with each conversation's cost.
 
 ## Chat
 
-Markdown answers with syntax-colored code blocks (Copy, Insert), diffs for Claude's edits and per-change review,
+A suggested next prompt in the empty box when an answer ends with an offer, and after a failed turn what to do next
+(Tab takes it; no model call). Markdown answers with syntax-colored code blocks (Copy, Insert), diffs for Claude's edits and per-change review,
 question and plan cards, Manual / Edit automatically / Plan / Auto modes, sessions with resume, rename and fork,
 rewind, images, bookmarks, export, Claude Code dialogs (status, usage, memory, output style, rules, hooks) and
 screen reader announcements.
