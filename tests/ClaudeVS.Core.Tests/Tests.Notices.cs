@@ -112,12 +112,31 @@ namespace ClaudeVS.Core.Tests
             Eq(null, ClaudeSettings.Effort("ultra"), "an unknown level");
         }
 
+        /// <summary>Real failed turns from 2.1.326: an invalid ANTHROPIC_API_KEY, and an empty CLAUDE_CONFIG_DIR (not logged in).</summary>
+        private static void Test_ErrorHints_RealAuthErrors_2_1_326()
+        {
+            ClaudeEvent Done(string file) { var parser = new ClaudeStreamParser(); return File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", file))
+                .SelectMany(l => parser.Parse(l)).Single(e => e.Kind == ClaudeEventKind.TurnCompleted); }
+            var key = Done("cli-2.1.326-invalid-api-key.jsonl");
+            Eq("authentication_failed", key.ErrorKind); Eq(401, key.ApiErrorStatus); Eq("Invalid API key · Fix external API key", key.Text);
+            Eq("Invalid API key: fix or unset ANTHROPIC_API_KEY, then send it again · Tab puts your prompt back",
+                ClaudeErrorHints.NextStep(key.IsError, key.TerminalReason, key.ErrorKind, key.ApiErrorStatus, key.Text, "hi").Display());
+            True(ClaudeErrorHints.Explain(key.Text).Contains("ANTHROPIC_API_KEY"), "the transcript's explanation names the key, not the sign-in");
+
+            var signedOut = Done("cli-2.1.326-not-logged-in.jsonl");
+            Eq("authentication_failed", signedOut.ErrorKind); Eq(null, signedOut.ApiErrorStatus, "no request was made"); Eq("Not logged in · Please run /login", signedOut.Text);
+            Eq("Sign in again, then send it again · Tab puts your prompt back",
+                ClaudeErrorHints.NextStep(signedOut.IsError, signedOut.TerminalReason, signedOut.ErrorKind, signedOut.ApiErrorStatus, signedOut.Text, "hi").Display());
+            True(ClaudeErrorHints.Explain(signedOut.Text).Contains("not logged in"), ClaudeErrorHints.Explain(signedOut.Text));
+        }
+
         private static void Test_ErrorHints_NextStep()
         {
             const string p = "Add a test for the parser";
             // The real failed turn (2.1.326, unknown model)
+            var parser = new ClaudeStreamParser();
             var done = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.326-unknown-model.jsonl"))
-                .SelectMany(l => new ClaudeStreamParser().Parse(l)).Single(e => e.Kind == ClaudeEventKind.TurnCompleted);
+                .SelectMany(l => parser.Parse(l)).Single(e => e.Kind == ClaudeEventKind.TurnCompleted);
             var model = ClaudeErrorHints.NextStep(done.IsError, done.TerminalReason, done.ErrorKind, done.ApiErrorStatus, done.Text, p);
             Eq("That model isn't available: pick another in the model menu, then send it again · Tab puts your prompt back", model.Display());
             Eq(p, model.Prompt, "Tab puts the failed prompt back");

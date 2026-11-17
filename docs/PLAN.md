@@ -1379,8 +1379,12 @@ way the extension runs it:
       answers each, at its model's price; a subagent's streamed output can be low); `AgentTask.OutputRetries`;
       `UsageRecord.OutputRetries`, `OutputRetryCostUsd`; `SavingsReport.OutputRetriesLine`; `TurnFooter.Retries`.
       Builds clean; not yet run in VS
-- [ ] **Failed-turn texts from real errors.** The invalid key and the signed-out captures as tests; an invalid API
-      key gets its own step (fix or unset `ANTHROPIC_API_KEY`) instead of "sign in again"
+- [x] **Failed-turn texts from real errors.** The invalid key and the signed-out captures as tests; an invalid API
+      key gets its own step (fix or unset `ANTHROPIC_API_KEY`) instead of "sign in again". Captures:
+      `Fixtures/cli-2.1.326-invalid-api-key.jsonl`, `cli-2.1.326-not-logged-in.jsonl`. `ClaudeErrorHints.Explain` says
+      the same; the older "Invalid API key · Please run /login" still reads as a sign-in. Found on the way: Phase 54's
+      unknown-model test parsed each line with a new parser, so the kind was lost and only the text matched; it now
+      keeps one
 - [ ] **Manual checks for Phase 55.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
 
 ---
