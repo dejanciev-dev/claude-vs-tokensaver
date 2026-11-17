@@ -1418,8 +1418,10 @@ keeps setting keys as written (even unknown ones), so the settings check must kn
       `effortLevel` high or more. Fast mode left out: the debug log says it isn't available in this kind of session.
       `ClaudeSettings.Costly`; `/` → *Settings that cost* (starts Claude Code if needed); the breakdown's *Tips*
       count them. Builds clean; not yet run in VS
-- [ ] **Tip after costly cut-offs.** Once per conversation, when answers cut off at the output limit cost $0.05 or
-      more: ask for smaller steps, and name `CLAUDE_CODE_MAX_OUTPUT_TOKENS` when it is set low
+- [x] **Tip after costly cut-offs.** Once per conversation, when answers cut off at the output limit cost $0.05 or
+      more: ask for smaller steps, and name `CLAUDE_CODE_MAX_OUTPUT_TOKENS` when it is set low.
+      `SessionNotices.CutOffTip` (`CutOffTipFromUsd`; "low" is under `SettingsCheck.LowOutputLimit`, 8000); the limit
+      from Visual Studio's environment or Claude Code's settings. A token tip. Builds clean; not yet run in VS
 - [ ] **Retries in the CSV.** `output_retries` and `output_retry_cost_usd` columns
 - [ ] **Manual checks for Phase 56.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
 

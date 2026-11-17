@@ -257,6 +257,25 @@ namespace ClaudeVS.Core.Cli
         /// <summary>Subagents that cost less than this in a turn get no tip, however small the main agent's share.</summary>
         public const double SubagentTipFromUsd = 0.05;
 
+        /// <summary>From this much spent going on after cut-off answers, a conversation gets the tip once.</summary>
+        public const double CutOffTipFromUsd = 0.05;
+
+        /// <summary>
+        /// Once per conversation, when answers cut off at the output limit have cost <see cref="CutOffTipFromUsd"/> or
+        /// more to go on: ask for smaller steps, and raise <c>CLAUDE_CODE_MAX_OUTPUT_TOKENS</c> when it is set low
+        /// (<paramref name="outputLimit"/>, from Claude Code's settings or Visual Studio's environment). Null otherwise.
+        /// </summary>
+        public static string CutOffTip(int retries, double retriesUsd, int? outputLimit)
+        {
+            if (retries <= 0 || retriesUsd < CutOffTipFromUsd) return null;
+            var c = System.Globalization.CultureInfo.InvariantCulture;
+            string limit = outputLimit is int l && l > 0 && l < SettingsCheck.LowOutputLimit
+                ? $" CLAUDE_CODE_MAX_OUTPUT_TOKENS is {l.ToString(c)}: a higher limit cuts off less."
+                : "";
+            return $"Answers cut off at the output limit {retries} {(retries == 1 ? "time" : "times")} in this conversation, and going on cost ${retriesUsd.ToString("0.00", c)}: "
+                + "each retry reads the whole context again. Ask for smaller steps, one file or one part at a time." + limit;
+        }
+
         /// <summary>From this cost a turn that ended in an error gets a note saying it was paid for.</summary>
         public const double FailedTurnNoteFromUsd = 0.05;
 
