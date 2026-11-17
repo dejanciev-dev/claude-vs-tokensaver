@@ -49,6 +49,10 @@ namespace ClaudeVS.Core.Cli
             }
         }
 
+        /// <summary>
+        /// The <c>--permission-mode</c> value. Manual is spelled out ("default") too: with no flag, Claude Code 2.1.326
+        /// can start in auto mode for some organizations, or while the organization's policy hasn't loaded.
+        /// </summary>
         public static string ToCli(this PermissionModeChoice p)
         {
             switch (p)
@@ -57,15 +61,12 @@ namespace ClaudeVS.Core.Cli
                 case PermissionModeChoice.Plan: return "plan";
                 case PermissionModeChoice.BypassPermissions: return "bypassPermissions";
                 case PermissionModeChoice.Auto: return "auto";
-                default: return null;
+                default: return "default";
             }
         }
 
-        /// <summary>
-        /// Name for the <c>set_permission_mode</c> control request. Unlike the command-line flag, which omits the
-        /// default, it needs "default" spelled out (verified with Claude Code 2.1.316).
-        /// </summary>
-        public static string ToControl(this PermissionModeChoice p) => p.ToCli() ?? "default";
+        /// <summary>Name for the <c>set_permission_mode</c> control request: the same as the flag (verified "default" with 2.1.316).</summary>
+        public static string ToControl(this PermissionModeChoice p) => p.ToCli();
 
         /// <summary>The CLI's mode name ("default", "acceptEdits", "plan", "bypassPermissions", "auto") as a choice; null when unknown.</summary>
         public static PermissionModeChoice? FromCli(string mode)
@@ -190,8 +191,7 @@ namespace ClaudeVS.Core.Cli
             string effort = o.Effort.ToCli();
             if (effort != null) { parts.Add("--effort"); parts.Add(effort); }
 
-            string perm = o.PermissionMode.ToCli();
-            if (perm != null) { parts.Add("--permission-mode"); parts.Add(perm); }
+            parts.Add("--permission-mode"); parts.Add(o.PermissionMode.ToCli());
 
             if (!string.IsNullOrWhiteSpace(o.ResumeSessionId))
             {

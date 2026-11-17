@@ -1214,10 +1214,12 @@ opt-in, since they cost tokens the stream doesn't report.
 Checked on 2026-11-17 with 2.1.326 installed. The 2.1.326 section read for what the extension sends or reads;
 terminal, cloud, Remote Control, Claude Tag, gateway, sandbox and plugin entries are left out.
 
-- [ ] **Manual stays Manual** (2.1.326: sessions can start in auto mode by default for some organizations, and "in
+- [x] **Manual stays Manual** (2.1.326: sessions can start in auto mode by default for some organizations, and "in
       auto mode, not Manual mode, when your organization's policy hasn't loaded"). Manual is launched with no
       `--permission-mode`, so it would start in auto there with no word. Send `--permission-mode default` for it, and
-      say so when the CLI still starts in another mode, as for the other modes
+      say so when the CLI still starts in another mode, as for the other modes. Here both start in `default` (no
+      flag and the flag), so the flag changes nothing where auto isn't the default. `PermissionModeChoice.ToCli`
+      gives "default"; `SessionNotices.PermissionMode` no longer skips Manual
 - [ ] **No bare-tag suggestions** (2.1.326 fixes "the suggested next prompt sometimes being a bare tag, such as
       `<signal type="empty" />`"). The parser drops a `prompt_suggestion` that is only tags, so an older CLI can't
       show one in the input box

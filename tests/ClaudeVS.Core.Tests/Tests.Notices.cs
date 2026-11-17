@@ -113,9 +113,11 @@ namespace ClaudeVS.Core.Tests
         {
             var accept = Init("\"permissionMode\":\"acceptEdits\""); // as 2.1.319 reported for --permission-mode acceptEdits
             Eq(null, SessionNotices.PermissionMode(accept, PermissionModeChoice.AcceptEdits), "as asked");
-            Eq("Claude Code started in Manual mode, not Auto: your settings, account or provider don't allow Auto here. The mode picker now shows Manual.",
+            Eq("Claude Code started in Manual mode, not Auto: your settings, organization, account or provider don't allow Auto here. The mode picker now shows Manual.",
                 SessionNotices.PermissionMode(Init("\"permissionMode\":\"default\""), PermissionModeChoice.Auto), "auto refused");
-            Eq(null, SessionNotices.PermissionMode(accept, PermissionModeChoice.Default), "Manual: your settings' defaultMode decides");
+            Eq("Claude Code started in Auto mode, not Manual: your settings, organization, account or provider don't allow Manual here. The mode picker now shows Auto.",
+                SessionNotices.PermissionMode(Init("\"permissionMode\":\"auto\""), PermissionModeChoice.Default), "Manual asked, auto by the organization's default (2.1.326)");
+            Eq(null, SessionNotices.PermissionMode(Init("\"permissionMode\":\"default\""), PermissionModeChoice.Default), "Manual as asked");
             Eq(null, SessionNotices.PermissionMode(Init("\"permissionMode\":\"somethingNew\""), PermissionModeChoice.Auto), "unknown mode");
             Eq(PermissionModeChoice.BypassPermissions, ChoiceNames.FromCli("bypassPermissions"));
 
