@@ -290,7 +290,7 @@ Editor commands go to the chat window you used last.
 | Chat | Screen reader announcements | On | Narrator, NVDA or JAWS announce finished answers (their start), permission requests, questions, plans, edits to review, stalls and usage limits. Nothing is sent without a screen reader. |
 | Chat | Show message timestamps | On | Time above each prompt and at the end of each answer line; a date line where the day changes. |
 | Chat | Suggest the next prompt | On | When an answer ends with an offer ("tell me and I'll split them out"), the empty box shows the reply in grey; Tab takes it. Read from the answer, no model call. |
-| CLI | Ask Claude Code for suggestions | Off | Claude Code predicts the next prompt after each turn (`--prompt-suggestions`) and replaces the one read from the answer. An extra model call whose cost isn't in the turn's cost; not after every turn. Applies to new sessions. |
+| CLI | Ask Claude Code for suggestions | Off | Claude Code predicts the next prompt after each turn (`--prompt-suggestions`) and replaces the one read from the answer. An extra model call that reads the whole conversation from the cache; Claude Code doesn't report its cost, so the meter's tooltip and the savings report show an estimate. Not after every turn. Applies to new sessions. |
 | CLI | File checkpoints (rewind) | On | Claude Code keeps a copy of each file before Claude changes it, so prompts can be rewound. Applies to new sessions. |
 | CLI | No forks | Off | Claude can't start forks (subagents that start with a copy of the whole conversation). Sets `CLAUDE_CODE_FORK_SUBAGENT=0`. Applies to new sessions. |
 | CLI | Extra arguments | | Appended to the `claude` command line, e.g. `--add-dir ..\shared`. |

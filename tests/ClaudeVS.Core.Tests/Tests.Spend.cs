@@ -1533,6 +1533,29 @@ namespace ClaudeVS.Core.Tests
             Eq("cli taken", UsageCsv.Suggestion(recs[4]), "csv: Claude Code's");
             Eq("", UsageCsv.Suggestion(recs[6]), "csv: none");
             Eq("", UsageCsv.Suggestion(new UsageRecord { Suggestion = "=evil" }), "csv: unknown kind left out");
+
+            // Claude Code's suggestions, estimated, outside the totals
+            recs[4].SuggestionCostUsd = 0.03;
+            recs[6].SuggestionCostUsd = 0.012; // one came while you typed: paid, never shown
+            rep = SavingsReport.Build(recs, new PriceTable());
+            Eq("before 6 prompts: from the answer 4, taken 1 (25%); Claude Code's 2, taken 2 (100%), ~$0.042 (estimated, not in the cost above)", rep.SuggestionsLine());
+            Eq(0.0, rep.ActualCostUsd, "not in the actual cost");
+            Eq("Claude Code's cost ~$0.012 (estimated, not in the cost above)", SavingsReport.Build(recs.Skip(6), new PriceTable()).SuggestionsLine(), "only a cost");
+        }
+
+        private static void Test_SuggestionCost()
+        {
+            var prices = new PriceTable();
+            // The 2.1.326 debug log's suggestion on Haiku: input=506 output=16 cacheRead=28058 cacheCreate=133 → $0.000356
+            double measured = (506 * prices.Haiku.Input + 16 * prices.Haiku.Output + 133 * prices.Haiku.CacheWrite + 28058 * prices.Haiku.CacheRead) / 1_000_000.0;
+            double est = SuggestionCost.EstimateUsd(28058, "claude-haiku-5-5", prices);
+            True(Math.Abs(est - measured) / measured < 0.05, $"within 5% of the measured one: {est} vs {measured}");
+            True(SuggestionCost.EstimateUsd(28058, "claude-opus-5-5", prices) > 10 * est, "Opus: far dearer");
+            Eq(SuggestionCost.EstimateUsd(1000, "claude-sonnet-5-5", prices), SuggestionCost.EstimateUsd(1000, "some-new-model", prices), "unknown model: Sonnet's prices");
+            True(SuggestionCost.EstimateUsd(100_000, "claude-haiku-5-5", prices) > 4 * SuggestionCost.EstimateUsd(99_000, "claude-haiku-5-5", prices), "Haiku over 100k: 5x");
+            Eq("Claude Code's suggestions: ~$0.012 for 4 in this conversation (estimated; not in the costs above)", SuggestionCost.Line(4, 0.0123));
+            Eq("Claude Code's suggestions: <$0.001 for 1 in this conversation (estimated; not in the costs above)", SuggestionCost.Line(1, 0.0004));
+            Eq(null, SuggestionCost.Line(0, 0), "none");
         }
 
         private static void Test_SavingsReport_TurnSpread()

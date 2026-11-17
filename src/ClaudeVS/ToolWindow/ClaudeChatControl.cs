@@ -1255,6 +1255,7 @@ namespace ClaudeVS.ToolWindow
                     Solution = dir,
                     Suggestion = offered.Source,
                     SuggestionTaken = offered.Taken,
+                    SuggestionCostUsd = offered.CostUsd,
                     Routed = decision != null,
                     RouteModel = decision != null ? model.ToCli() : null,
                     RouteEffort = decision != null ? effort.ToCli() : null,
@@ -1966,7 +1967,7 @@ namespace ClaudeVS.ToolWindow
                         AppendError("[claude] ", ev.Text);
                         break;
                     case ClaudeEventKind.PromptSuggestion:
-                        SuggestFromCli(ev.Text); // only with "Ask Claude Code for suggestions" on
+                        SuggestFromCli(ev.Text, ev.SessionId); // only with "Ask Claude Code for suggestions" on
                         break;
                 }
                 OnActivityEvent(ev);
@@ -2126,6 +2127,7 @@ namespace ClaudeVS.ToolWindow
         {
             string tip = _contextUsage != null ? ContextTooltip(_contextUsage) : "Click for what fills the context window";
             if (_meterModel?.CacheSavedLine() is string cache) tip += "\n\n" + cache;
+            if (SuggestionsCostLine() is string suggestions) tip += "\n" + suggestions;
             DailyCost.StepUsd = Options?.DailyCostWarningUsd ?? 20;
             MonthlyCost.StepUsd = Options?.MonthlyCostWarningUsd ?? 200;
             WeeklyCost.StepUsd = Options?.WeeklyCostWarningUsd ?? 0;

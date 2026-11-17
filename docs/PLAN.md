@@ -1237,7 +1237,8 @@ terminal, cloud, Remote Control, Claude Tag, gateway, sandbox and plugin entries
 Planned on 2026-11-17. Phase 50 shows a suggested next prompt; is it used, and what do Claude Code's own cost? The
 2.1.326 debug log (`--debug-file`) shows each one as a forked request on the conversation's model:
 `Forked agent [prompt_suggestion] finished: … totalUsage: input=506 output=16 cacheRead=28058 cacheCreate=133`, so it
-reads the whole conversation from the cache, about as much as a small turn, and none of it is in `total_cost_usd`.
+reads the whole conversation from the cache ($0.00036 there, an eighth of the $0.0028 turn), and none of it is in
+`total_cost_usd`.
 
 - [x] **A better local rule.** `NextPrompt.FromAnswer` takes more closing forms: "Should I go ahead and …?", "Happy to
       … if you'd like", "Want to …?", and a last paragraph that asks which of a numbered list you want ("Which do you
@@ -1250,10 +1251,14 @@ reads the whole conversation from the cache, about as much as a small turn, and 
       `cli`, `cli taken`). `UsageRecord.Suggestion`, `SuggestionTaken`; `SavingsReport.SuggestionsLine`;
       `UsageCsv.Suggestion`. Shown means it was in the box, so not one that came while you typed; typing over it
       still counts it as shown. Builds clean; not yet run in VS
-- [ ] **What Claude Code's suggestions cost.** An estimate for each one that comes: a request on the turn's model
+- [x] **What Claude Code's suggestions cost.** An estimate for each one that comes: a request on the turn's model
       that reads the conversation's context from the cache, plus about 500 input, 150 cache-write and 20 output tokens
       (from the debug log). The meter's tooltip shows the conversation's total, marked as an estimate; the next
-      turn's record keeps it, and the savings report adds it to the suggestions line, outside the totals
+      turn's record keeps it, and the savings report adds it to the suggestions line, outside the totals.
+      `SuggestionCost.EstimateUsd` (within 5% of the measured one; Haiku over 100k at 5x), `UsageRecord.SuggestionCostUsd`
+      (`suggestionCost`), `SavingsReport.CliSuggestionsUsd`. Counted also when one comes while you type and isn't
+      shown; only the ones that come, since a turn with none may still have made the call. Each one goes to the
+      Output pane. Option description and README say so. Builds clean; not yet run in VS
 - [ ] **Manual checks for Phases 51–52.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
 
 ---
