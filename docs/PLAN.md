@@ -1318,6 +1318,25 @@ conversation's last turn is never reported.
       *Claude Code's own requests, and resumed conversations*: a resumed turn's cost, a suggestion that isn't a
       subagent, the last unbilled suggestion and the tip; Release is now 17
 
+## Phase 54 — What to do after a failed turn
+
+Planned on 2026-11-17, from the Claude Code changelog: 2.1.326 "Added a hint in the empty prompt that says what to
+do after a request fails", and 2.1.325's line under a policy block ("run `/rewind` and change the message, or run
+`/clear`"). In the chat, a failed turn leaves the input box saying *Ask Claude to edit…*. A probe with an unknown
+model (no tokens billed) shows what a failed turn sends: a synthetic assistant message with `"error":
+"model_not_found"`, then a result with `terminal_reason: "api_error"`, `api_error_status: 404` and the message as
+`result`. The Agent SDK's error kinds: `authentication_failed`, `billing_error`, `rate_limit`, `invalid_request`,
+`server_error`, `max_output_tokens`, `unknown`.
+
+- [ ] **Read why it failed.** The parser keeps the assistant message's `error` kind and the result's
+      `api_error_status` on the turn's result. Capture: `Fixtures/cli-2.1.326-unknown-model.jsonl`
+- [ ] **The next step in the input box.** After a failed turn, the grey text says what to do, from the kind, the
+      status and the message (no model call): try the same prompt again after an overloaded or server error, a
+      stop or a limit (**Tab** puts it back); `/compact` when the prompt is too long; go on in shorter parts after
+      the output limit; rewind or a new chat after a policy block; sign in, add credits or pick another model when
+      that is the cause. Typing clears it, as a suggestion
+- [ ] **Manual checks for Phase 54.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
+
 ---
 
 ## Working in Visual Studio — daily loop
