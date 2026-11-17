@@ -1340,7 +1340,9 @@ model (no tokens billed) shows what a failed turn sends: a synthetic assistant m
       `… · Tab puts your prompt back`, `… · Tab: /compact`, or the hint alone); `ClaudeChatControl.ShowNextStep`.
       Shown also with *Suggest the next prompt* off; Claude Code's own suggestion doesn't replace it; not logged as a
       suggestion; screen readers get it as the box's help text. Builds clean; not yet run in VS
-- [ ] **Manual checks for Phase 54.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
+- [x] **Manual checks for Phase 54.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md). Section 17,
+      *What to do after a failed turn*: Stop, an unknown model, typing over it, with suggestions off, beside Claude
+      Code's suggestions, and Narrator; Release is now 18
 
 ---
 
