@@ -1389,6 +1389,31 @@ way the extension runs it:
       *Claude Code's settings, and answers cut off*: the effort cap in the menu, the router and the footer,
       `promptSuggestionEnabled`, a cut-off agent and an invalid API key; Release is now 19
 
+## Phase 56 — The effort Claude Code really uses, and settings that cost
+
+Planned on 2026-11-17. Probing `get_settings`' `applied.effort` with 2.1.326 found a bug from Phase 1: the effort
+switch on a running process (`apply_flag_settings` with `{"effort": …}`) is accepted but changes nothing. The same
+puzzle on Haiku thought 250–300 tokens launched at `--effort max`, about 90 launched at `low`, and about 90 launched at
+`low` then switched to max that way. Switched with `{"effortLevel": "max"}` (the settings key) it thought 218 and
+311, and `applied.effort` said `max` (with `effort` it still said `low`). So since Phase 1, every effort after the
+process's launch (the router's per prompt, and the picker's) ran at the launch effort, while the footer and the log
+said the one asked for. Other findings: `--effort` at launch wins over a project's `effortLevel`; `get_settings`
+keeps setting keys as written (even unknown ones), so the settings check must know the real keys.
+
+- [ ] **Effort switches that take effect.** `apply_flag_settings` sends `effortLevel`; after a switch, `applied.effort`
+      says it took. `--live-session` checks it
+- [ ] **Effort as Claude Code applied it.** After launch and after each switch, read `applied.effort`: the footer and
+      the usage log show it (it also covers caps the settings don't show), and a difference from the one asked for is
+      said once
+- [ ] **Settings that cost.** A check of the Claude Code settings that change what turns cost, from `get_settings`
+      (no model call): where each is set, what it does and how to change it (a default model of Opus or Fable,
+      thinking always on, a long output style, fast mode, prompt caching off, `MAX_THINKING_TOKENS`, a low
+      `CLAUDE_CODE_MAX_OUTPUT_TOKENS`, all project MCP servers on). In the context breakdown and as a `/` command
+- [ ] **Tip after costly cut-offs.** Once per conversation, when answers cut off at the output limit cost $0.05 or
+      more: ask for smaller steps, and name `CLAUDE_CODE_MAX_OUTPUT_TOKENS` when it is set low
+- [ ] **Retries in the CSV.** `output_retries` and `output_retry_cost_usd` columns
+- [ ] **Manual checks for Phase 56.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
+
 ---
 
 ## Working in Visual Studio — daily loop
