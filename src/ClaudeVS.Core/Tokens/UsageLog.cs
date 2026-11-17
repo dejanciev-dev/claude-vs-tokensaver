@@ -44,11 +44,6 @@ namespace ClaudeVS.Core.Tokens
         [JsonProperty("suggestion", NullValueHandling = NullValueHandling.Ignore)] public string Suggestion { get; set; }
         /// <summary>With <see cref="Suggestion"/>: Tab or → took it into the box, then it was sent as is or edited.</summary>
         [JsonProperty("suggestionTaken", DefaultValueHandling = DefaultValueHandling.Ignore)] public bool SuggestionTaken { get; set; }
-        /// <summary>
-        /// What Claude Code's suggestions since the previous prompt cost, estimated (<see cref="SuggestionCost"/>): not in
-        /// <see cref="CostUsd"/>, which is what Claude Code reported. 0 when none came (and in older lines).
-        /// </summary>
-        [JsonProperty("suggestionCost", DefaultValueHandling = DefaultValueHandling.Ignore)] public double SuggestionCostUsd { get; set; }
         public const string SuggestionLocal = "local";
         public const string SuggestionCli = "cli";
 
@@ -82,6 +77,17 @@ namespace ClaudeVS.Core.Tokens
         /// <summary>Of <see cref="TotalTokens"/>: tokens of requests over 100k input tokens (Haiku bills those 5x); 0 in older lines.</summary>
         [JsonProperty("largeContextTokens", DefaultValueHandling = DefaultValueHandling.Ignore)] public long LargeContextTokens { get; set; }
         [JsonProperty("cost")] public double CostUsd { get; set; }
+        /// <summary>
+        /// Claude Code's own requests billed with this turn (<see cref="TokenMeter.LastTurnSide"/>): <see cref="SideCompact"/>
+        /// (the summary of a /compact) or <see cref="SideSuggestion"/> (its suggested next prompt after the turn before);
+        /// null when none (and in older lines). Their cost is part of <see cref="CostUsd"/>; their tokens are in
+        /// <see cref="SideTokens"/>, not in the counts above.
+        /// </summary>
+        [JsonProperty("side", NullValueHandling = NullValueHandling.Ignore)] public string SideKind { get; set; }
+        [JsonProperty("sideTokens", DefaultValueHandling = DefaultValueHandling.Ignore)] public long SideTokens { get; set; }
+        [JsonProperty("sideCost", DefaultValueHandling = DefaultValueHandling.Ignore)] public double SideCostUsd { get; set; }
+        public const string SideCompact = "compact";
+        public const string SideSuggestion = "suggestion";
         [JsonProperty("ms")] public long DurationMs { get; set; }
         [JsonProperty("error")] public bool IsError { get; set; }
         /// <summary>

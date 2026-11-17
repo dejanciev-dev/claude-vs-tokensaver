@@ -1255,7 +1255,6 @@ namespace ClaudeVS.ToolWindow
                     Solution = dir,
                     Suggestion = offered.Source,
                     SuggestionTaken = offered.Taken,
-                    SuggestionCostUsd = offered.CostUsd,
                     Routed = decision != null,
                     RouteModel = decision != null ? model.ToCli() : null,
                     RouteEffort = decision != null ? effort.ToCli() : null,
@@ -1967,7 +1966,7 @@ namespace ClaudeVS.ToolWindow
                         AppendError("[claude] ", ev.Text);
                         break;
                     case ClaudeEventKind.PromptSuggestion:
-                        SuggestFromCli(ev.Text, ev.SessionId); // only with "Ask Claude Code for suggestions" on
+                        SuggestFromCli(ev.Text); // only with "Ask Claude Code for suggestions" on
                         break;
                 }
                 OnActivityEvent(ev);
@@ -2015,6 +2014,10 @@ namespace ClaudeVS.ToolWindow
             // Prompts sent while Claude is still answering are queued by the CLI and finish in order.
             _lastTurnEffort = null;
             _lastTurnPromptChars = 0;
+            var side = _meterModel?.LastTurnSide ?? default;
+            if (!side.IsEmpty)
+                ClaudeOutputPane.WriteLine($"Claude Code's own request{(_meterModel.LastTurnSideIsCompact ? " (/compact summary)" : " (suggested prompt)")} billed with this turn: "
+                    + $"{TokenMeter.Format(side.Total)} tok, ${_meterModel.LastTurnSideCostUsd:0.0000}");
             if (_pendingUsages.Count == 0) return;
             var rec = _pendingUsages.Dequeue();
             _lastTurnEffort = rec.Effort; // for the tips and the footer, kept also without the log
@@ -2038,6 +2041,12 @@ namespace ClaudeVS.ToolWindow
             rec.DurationMs = ev.DurationMs;
             rec.IsError = ev.IsError;
             rec.EndReason = UsageRecord.EndOf(ev.IsError, ev.TerminalReason, ev.ResultSubtype);
+            if (!side.IsEmpty)
+            {
+                rec.SideKind = _meterModel.LastTurnSideIsCompact ? UsageRecord.SideCompact : UsageRecord.SideSuggestion;
+                rec.SideTokens = side.Total;
+                rec.SideCostUsd = _meterModel.LastTurnSideCostUsd;
+            }
             _ = System.Threading.Tasks.Task.Run(() =>
             {
                 try { Usage.KeepMonths = Options?.KeepUsageMonths ?? 3; Usage.Append(rec); }

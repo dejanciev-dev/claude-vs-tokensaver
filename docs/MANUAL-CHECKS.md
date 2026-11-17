@@ -202,7 +202,8 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | An answer that ends with a numbered list and *Which do you prefer?* | `Option 1: …   Tab ⇥`, the first item's bold title or its text up to a dash or colon |
 | With the usage log on: take one suggestion with **Tab** and send it, then type over the next one and send that | **Export Usage as CSV…**: the last column `suggestion` says `local taken`, then `local` |
 | **Show Savings Report** | `Suggested prompts:          before … prompts: from the answer …, taken … (…%)` under the attachments line |
-| **Options → CLI → Ask Claude Code for suggestions** on, **New chat**, two prompts | The Output pane says `Suggestion from Claude Code: ~$… estimated` after each one that comes; the meter's tooltip adds `Claude Code's suggestions: ~$… for … in this conversation (estimated; not in the costs above)`; the report's suggestions line adds Claude Code's count and `~$… (estimated, not in the cost above)` |
+| **Options → CLI → Ask Claude Code for suggestions** on, **New chat**, two prompts | After the second, the Output pane says `Claude Code's own request (suggested prompt) billed with this turn: … tok, $…`; the meter's tooltip adds `Claude Code's own requests in this conversation: suggestions $… (in its cost, billed with the turn after them)`; the report's suggestions line adds Claude Code's count and `$… of the cost above`. The turn footer shows no agents for it |
+| Then **/compact** | The Output pane says `(/compact summary)`; the tooltip adds `/compact $…`; the report has `Compacting:                 $… for 1 summary, of the cost above` |
 | **New chat** after that | The tooltip no longer has the suggestions line |
 
 ## 16. Release (Phase 5)

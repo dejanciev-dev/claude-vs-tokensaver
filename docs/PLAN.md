@@ -1284,9 +1284,13 @@ conversation's last turn is never reported.
       stream didn't show goes to the side request when there is one (streamed output can be low); input and cache
       split exactly. Capture: `Fixtures/cli-2.1.326-side-requests.jsonl` (results, the suggestion and the compact
       boundary only, no paths)
-- [ ] **Measured, not estimated.** The usage record keeps the side request's tokens and cost (`side`), replacing
+- [x] **Measured, not estimated.** The usage record keeps the side request's tokens and cost (`side`), replacing
       Phase 52's estimate; the meter's tooltip and the savings report show suggestions and compaction as part of the
-      cost ("of the cost above"), and the CSV gets their cost
+      cost ("of the cost above"), and the CSV gets their cost. `UsageRecord.SideKind` (`suggestion` or `compact`),
+      `SideTokens`, `SideCostUsd`; `SavingsReport.CliSuggestionsUsd`, `CompactLine`; `SuggestionCost.Line`; CSV
+      `side`, `side_cost_usd`; each one in the Output pane. The record's token counts stay the main agent's; its
+      cost includes the side request, as Claude Code billed it. Option description, README, CHANGELOG and the
+      Phase 52 manual check corrected. Builds clean; not yet run in VS
 - [ ] **A tip when Claude Code's suggestions don't pay.** With *Ask Claude Code for suggestions* on, once 20 or more
       came and under 1 in 10 was taken while they cost $0.10 or more, the chat says so once per VS session, with what
       they cost and how to turn them off
