@@ -76,6 +76,11 @@ namespace ClaudeVS.Core.Tokens
         public int Turns { get; private set; }
         public double SessionCostUsd => _costOffset + _lastReportedCost;
         public double LastTurnCostUsd { get; private set; }
+        /// <summary>
+        /// <see cref="LastTurnCostUsd"/> is what Claude Code billed since its last result (model_usage_since_last_result), not the growth of
+        /// <see cref="SessionCostUsd"/>: on a resumed conversation's first turn the two differ by everything before.
+        /// </summary>
+        public bool LastTurnCostBilled { get; private set; }
         /// <summary>What the prompt cache saved in the last turn and in the whole conversation (USD at <see cref="Prices"/>; can be negative for a turn that only wrote the cache).</summary>
         public double LastTurnCacheSavedUsd { get; private set; }
         public double SessionCacheSavedUsd { get; private set; }
@@ -203,7 +208,7 @@ namespace ClaudeVS.Core.Tokens
         public void Reset()
         {
             SessionTotal = default; LastTurn = default; ContextTokens = 0; ContextWindow = 0; Turns = 0;
-            _costOffset = 0; _lastReportedCost = 0; LastTurnCostUsd = 0; LargestToolResultChars = 0; LargestToolResultTool = null;
+            _costOffset = 0; _lastReportedCost = 0; LastTurnCostUsd = 0; LastTurnCostBilled = false; LargestToolResultChars = 0; LargestToolResultTool = null;
             _toolNames.Clear();
             _resultCharsByTool.Clear();
             _turnResultCharsByTool.Clear(); LastTurnResultTokensByTool = null;
@@ -281,7 +286,7 @@ namespace ClaudeVS.Core.Tokens
                     LastTurn = turn;
                     // A /compact turn has no request of its own in usage: its summary ran on the conversation's model
                     string mainModel = _turnModel ?? LastModel ?? (ev.ModelUsage?.Count == 1 ? ev.ModelUsage.Keys.First() : null);
-                    LastTurnSubagents = _subagents.TurnCompleted(ev.ModelUsage, mainModel, turn);
+                    LastTurnSubagents = _subagents.TurnCompleted(ev.ModelUsage, mainModel, turn, ev.ModelUsageSinceLastResult);
                     var pt = Prices ?? DefaultPrices;
                     LastTurnSide = _subagents.LastSide;
                     LastTurnSideIsCompact = _turnCompacted && !LastTurnSide.IsEmpty;
@@ -312,6 +317,11 @@ namespace ClaudeVS.Core.Tokens
                         _lastReportedCost = reported;
                         LastTurnCostUsd = Math.Max(0, SessionCostUsd - before);
                     }
+                    // Claude Code says what was billed since the last result (model_usage_since_last_result, sent since 2.1.316). It is the turn's cost even on a resumed
+                    // conversation's first turn, where the total carries on the earlier processes' (all of it would
+                    // otherwise count as this turn's) and the last suggestion an earlier process made but never billed.
+                    LastTurnCostBilled = ev.ModelUsageSinceLastResult != null && ev.ModelUsageSinceLastResult.Count > 0;
+                    if (LastTurnCostBilled) LastTurnCostUsd = ev.ModelUsageSinceLastResult.Values.Sum(m => m.CostUsd);
                     break;
                 default:
                     return;

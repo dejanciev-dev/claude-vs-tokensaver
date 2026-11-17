@@ -1297,6 +1297,15 @@ conversation's last turn is never reported.
       over all chat windows since VS started: those that came, those taken with Tab or →, and the measured cost (also
       of ones made but never sent). A token tip, so Options → Token tips off sends it to the Output pane. Builds
       clean; not yet run in VS
+- [x] **A resumed conversation's first turn** (found while checking the next item). After `--resume`, the new
+      process's `total_cost_usd` and `modelUsage` carry on the earlier processes', the last suggestion included, and
+      the chat starts a new meter for a conversation picked under Sessions: so its first turn took the conversation's
+      whole cost so far as its own (in the footer, the usage log, the report and today's and this month's spend).
+      Every result also says what was billed since the last one, per model with its cost
+      (`model_usage_since_last_result`, in the captures since 2.1.316): that is now the turn's cost, and the growth the
+      subagent and side split start from, exact without an earlier reading. `ClaudeEvent.ModelUsageSinceLastResult`,
+      `TokenMeter.LastTurnCostBilled`; spend adds the turn's cost. Capture: `Fixtures/cli-2.1.326-resume-after-
+      suggestion.jsonl` (a turn, its suggestion, then the resumed turn: $0.00048 billed, $0.0043 carried)
 - [ ] **The last suggestion.** The one after a conversation's last turn is never reported: when a chat ends (New
       chat, another conversation, closing the window) after a suggestion came, its estimated cost is logged as a
       record with no turn, which the turn counts leave out

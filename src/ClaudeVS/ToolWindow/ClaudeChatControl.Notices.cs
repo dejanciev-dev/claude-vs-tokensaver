@@ -166,8 +166,9 @@ namespace ClaudeVS.ToolWindow
             MonthlyCost.StepUsd = Options?.MonthlyCostWarningUsd ?? 200;
             WeeklyCost.StepUsd = Options?.WeeklyCostWarningUsd ?? 0;
             LoadSpend();
-            // The change in the conversation's total: a result without a cost adds nothing.
-            double total = _meterModel.SessionCostUsd, added = Math.Max(0, total - _dailyCounted);
+            // What the turn billed (2.1.326), else the change in the conversation's total: a result without a cost adds
+            // nothing. A resumed conversation's total carries on what was spent before, already counted then.
+            double total = _meterModel.SessionCostUsd, added = _meterModel.LastTurnCostBilled ? _meterModel.LastTurnCostUsd : Math.Max(0, total - _dailyCounted);
             _dailyCounted = total;
             var now = DateTime.UtcNow;
             CostWarning(DailyCost.Add(added, now));

@@ -253,6 +253,13 @@ namespace ClaudeVS.Core.Cli
         public SubagentStats Subagents { get; set; }
         /// <summary>TurnCompleted: the result's <c>modelUsage</c>, cumulative per model for the process (subagents included).</summary>
         public Dictionary<string, ModelUsageEntry> ModelUsage { get; set; }
+        /// <summary>
+        /// TurnCompleted: the result's <c>model_usage_since_last_result</c> (sent since 2.1.316 at least), per model: everything billed since
+        /// this process's last result: the turn, its subagents, and Claude Code's own requests in between (a suggestion,
+        /// a /compact summary), each model with its <c>costUSD</c>. Unlike <see cref="ModelUsage"/> and <c>total_cost_usd</c>,
+        /// it doesn't carry on what an earlier process of a resumed session billed. Empty when not sent (older CLIs).
+        /// </summary>
+        public Dictionary<string, ModelUsageEntry> ModelUsageSinceLastResult { get; set; }
         /// <summary>AssistantUsage of a subagent: the Agent call it runs under (<c>parent_tool_use_id</c>).</summary>
         public string ParentToolUseId { get; set; }
 

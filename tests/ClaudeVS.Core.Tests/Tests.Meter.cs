@@ -124,6 +124,43 @@ namespace ClaudeVS.Core.Tests
             True(only.LastSide.IsEmpty, "nothing on the side");
         }
 
+        /// <summary>
+        /// 2.1.326: one Haiku turn with --prompt-suggestions (a suggestion came after it), the process closed, then the
+        /// session resumed in a new process for one more turn. The resumed result's total_cost_usd and modelUsage carry on
+        /// the first process's, its last suggestion included (input 4 + 506 + 2); model_usage_since_last_result has
+        /// only the new turn.
+        /// </summary>
+        private static void Test_Meter_ResumedFirstTurn_RealCli_2_1_326()
+        {
+            var events = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.326-resume-after-suggestion.jsonl"))
+                .SelectMany(l => new ClaudeStreamParser().Parse(l)).ToList();
+            var results = events.Where(e => e.Kind == ClaudeEventKind.TurnCompleted).ToList();
+            Eq(2, results.Count, "a turn, then the resumed one");
+            Eq(1, events.Count(e => e.Kind == ClaudeEventKind.PromptSuggestion), "the suggestion after the first");
+            var resumed = results[1];
+            Eq(512L, resumed.ModelUsage["claude-haiku-5-5"].Usage.Input, "modelUsage carries on, the suggestion included");
+            Eq(2L, resumed.ModelUsageSinceLastResult["claude-haiku-5-5"].Usage.Input, "since the last result: this turn only");
+
+            // The chat resumes with a new meter: the turn costs what it billed, not the conversation's carried total
+            var meter = new TokenMeter();
+            meter.ResumedSession(null);
+            meter.Observe(resumed);
+            True(meter.LastTurnCostBilled, "billed since the last result");
+            Eq(0.0004764, Math.Round(meter.LastTurnCostUsd, 7), "this turn's cost");
+            Eq(resumed.TotalCostUsd.Value, meter.SessionCostUsd, "the conversation's total, as billed");
+            True(meter.LastTurnSide.IsEmpty && meter.LastTurnSubagents.Count == 0, "no side request, no subagent: the earlier process's suggestion isn't this turn's");
+            // So the first process's last suggestion was billed only in the carried total: the turn costs leave it out
+            double firstTurn = results[0].TotalCostUsd.Value;
+            True(resumed.TotalCostUsd.Value - firstTurn - meter.LastTurnCostUsd > 0.0003, "the unbilled suggestion, about $0.0004, is in the carried total only");
+
+            // An older CLI without the field: the growth of the total, as before
+            var old = new TokenMeter();
+            old.Observe(new ClaudeEvent { Kind = ClaudeEventKind.TurnCompleted, TotalCostUsd = 0.01 });
+            old.Observe(new ClaudeEvent { Kind = ClaudeEventKind.TurnCompleted, TotalCostUsd = 0.015 });
+            True(!old.LastTurnCostBilled, "no field");
+            Eq(0.005, Math.Round(old.LastTurnCostUsd, 6), "the growth of the total");
+        }
+
         private static void Test_Meter_DefaultWindowIs1M()
         {
             // Every current model reports 1M, and 2.1.323 assumes 1M for an unknown model ID.

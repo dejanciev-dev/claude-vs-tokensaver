@@ -105,6 +105,10 @@ All notable changes to this project are listed here. The format follows
   stopped, 1 API error)`.
 
 ### Fixed
+- **A resumed conversation's first turn cost all of it**: Claude Code's running total carries on after `--resume`,
+  so the first turn of a conversation picked under Sessions counted everything the conversation had cost before, in
+  the turn footer, the usage log, the savings report and today's, this week's and this month's spend. A turn's cost is
+  now what Claude Code says it billed since the last result.
 - **Suggestions and /compact were counted as subagents**: Claude Code bills its own requests, a suggested next prompt
   (with *Ask Claude Code for suggestions* on) and the summary `/compact` writes, with the next turn's cost, and only
   in its per-model totals. The meter took them for subagents, so the turn footer, the usage log and the savings
