@@ -127,7 +127,7 @@ namespace ClaudeVS.ToolWindow
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             // Not while Claude works or waits on a card, not over what you typed, not when turned off.
-            if (string.IsNullOrWhiteSpace(text) || !(Options?.SuggestNextPrompt ?? true) || _busy || _waitingForUser || _prompt.Text.Length > 0)
+            if (string.IsNullOrWhiteSpace(text) || !(Options?.SuggestNextPrompt ?? true) || _claudeSuggestionsOff || _busy || _waitingForUser || _prompt.Text.Length > 0)
                 return;
             if (_stepShown) return; // what to do after a failed turn stays
             _offeredSource = source;
