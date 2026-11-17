@@ -206,7 +206,16 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Then **/compact** | The Output pane says `(/compact summary)`; the tooltip adds `/compact $…`; the report has `Compacting:                 $… for 1 summary, of the cost above` |
 | **New chat** after that | The tooltip no longer has the suggestions line |
 
-## 16. Release (Phase 5)
+## 16. Claude Code's own requests, and resumed conversations (Phase 53)
+
+| Do | Expect |
+|---|---|
+| A conversation of a few turns, then **Sessions** → pick it again (resume), one short prompt | The turn footer shows that turn's cost (a cent or so), not the conversation's total; the meter's tooltip shows the conversation's whole cost; the Output pane's usage line and **Show Savings Report** count that turn at its own cost |
+| **Options → CLI → Ask Claude Code for suggestions** on, **New chat**, a prompt that asks for a subagent (*Use an Explore agent to list the .cs files*), then another prompt | The first turn's footer shows the agent; the second's shows none, and the Output pane says `Claude Code's own request (suggested prompt) billed with this turn` for it; the report's *Subagents* line counts only the Explore agent |
+| A Claude Code suggestion shows, then **New chat** before sending anything | The Output pane says `Claude Code's last suggestion in the conversation, never billed with a turn: ~$… estimated`; **Export Usage as CSV…** has a row with `suggestion` in `side`, no turn number and that cost; the report's suggestions line adds `(… estimated: a conversation's last, which no turn billed)`; the turn count is unchanged |
+| With the option on, 20 or more Claude Code suggestions in one VS session, taking at most one with Tab | Once they cost $0.10 or more, the chat gives the tip `Claude Code's suggestions: you took … of … since Visual Studio started, and they cost $…`, once |
+
+## 17. Release (Phase 5)
 
 These need you rather than a check list:
 
