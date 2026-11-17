@@ -1223,10 +1223,11 @@ terminal, cloud, Remote Control, Claude Tag, gateway, sandbox and plugin entries
 - [x] **No bare-tag suggestions** (2.1.326 fixes "the suggested next prompt sometimes being a bare tag, such as
       `<signal type="empty" />`"). The parser drops a `prompt_suggestion` that is only tags, so an older CLI can't
       show one in the input box. A tag among words (`use <T> here`) is kept
-- [ ] **Nothing to change for the rest.** The startup warning for an `--allowedTools` entry that "doesn't look like a
+- [x] **Nothing to change for the rest.** The startup warning for an `--allowedTools` entry that "doesn't look like a
       complete rule": none in the stream for the extension's MCP tool names (`mcp__visualstudio__…`), nor for a broken
       `Bash(git`. Hooks whose `"decision": "block"` now holds in more cases: the extension's hooks print none.
-      `--bare` limits: not used. PowerShell asking about more commands: the permission card shows them as any other
+      `--bare` limits: not used. PowerShell asking about more commands: the permission card shows them as any other.
+      Probed with stream-json the way the extension runs it, 2.1.326, nothing on stderr either
 - [ ] **Verify with 2.1.326 and raise `CliVersion.Tested`.** The live tests with 2.1.326; README, Marketplace
       overview, CONTRIBUTING and the plan-mode notes
 
