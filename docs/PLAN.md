@@ -1428,6 +1428,15 @@ keeps setting keys as written (even unknown ones), so the settings check must kn
       effort Claude Code really uses, and settings that cost*: routed and picked efforts that change the thinking,
       the settings check and its breakdown line, the cut-off tip and the CSV columns; Release is now 20
 
+## Release 0.11.0
+
+- [x] **Version 0.11.0.** 0.10.0 was prepared on 2026-11-11 but never tagged; this release takes everything since
+      (Phases 35–56). Manifest, assembly and package registration at 0.11.0, still a preview; the Unreleased changelog
+      becomes `## [0.11.0]` with highlights (the Release workflow takes the notes from there), and the Marketplace
+      overview adds the settings check and the suggested next prompt. After merging: `git tag v0.11.0 && git push
+      origin v0.11.0`, which builds the VSIX and makes a draft GitHub release; publishing it starts the Marketplace
+      upload, which waits for approval
+
 ---
 
 ## Working in Visual Studio — daily loop
