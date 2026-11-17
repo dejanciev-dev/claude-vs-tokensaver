@@ -1314,7 +1314,9 @@ conversation's last turn is never reported.
       spend, not in any turn count, per-model row or cache-rewrite check); `UsageSummary` and `ConversationStats`
       count no turn for it; the CSV row has no turn number. A suggestion Claude Code made but never sent (the next
       prompt was already in) can't be seen, so isn't logged. Builds clean; not yet run in VS
-- [ ] **Manual checks for Phase 53.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
+- [x] **Manual checks for Phase 53.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md). Section 16,
+      *Claude Code's own requests, and resumed conversations*: a resumed turn's cost, a suggestion that isn't a
+      subagent, the last unbilled suggestion and the tip; Release is now 17
 
 ---
 
