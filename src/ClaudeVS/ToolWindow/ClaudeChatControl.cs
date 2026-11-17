@@ -1305,8 +1305,10 @@ namespace ClaudeVS.ToolWindow
                 else turn.Render();
 
                 _requestedFamilies.Enqueue(model == ModelChoice.Auto ? null : model.ToCli());
+                var sentRecord = _pendingUsages.LastOrDefault();
                 await _session.SetModelAsync(model);
                 await _session.SetEffortAsync(effort);
+                ConfirmEffort(sentRecord); // the effort Claude Code says it applies, when the process already runs
                 // Its real token count teaches the size estimate: text-only prompts that start a turn now (a queued one
                 // would be measured against another request)
                 if (!queued && routed && images.Count == 0) _meterModel?.Learner.PromptSent(built.Text.Length);
@@ -1933,7 +1935,7 @@ namespace ClaudeVS.ToolWindow
                         OnSignInExpiry(ev);
                         string used = _turnModel != null ? " · " + _turnModel : "";
                         // The effort this turn was sent with: its record is next in line (RecordUsage takes it below)
-                        if (TurnFooter.Effort(ClaudeSettings.Cap(_pendingUsages.Count > 0 ? _pendingUsages.Peek().Effort : null, _effortCap)) is string effortSent) used += " · " + effortSent; // as used: no higher than maxEffortLevel
+                        if (TurnFooter.Effort(_pendingUsages.Count > 0 ? EffortUsed(_pendingUsages.Peek()) : null) is string effortSent) used += " · " + effortSent; // as Claude Code applied it
                         if (TurnFooter.Agents(ev.Subagents, _meterModel?.LastTurnSubagentTotal.Total ?? 0) is string agents) used += " · " + agents;
                         used += TurnFooter.Retries(_meterModel?.LastTurnOutputRetries ?? 0, _meterModel?.LastTurnOutputRetryCostUsd ?? 0); // answers cut off at the output limit
                         if (ev.Subagents?.Warning() is string agentTrouble)
@@ -2036,7 +2038,7 @@ namespace ClaudeVS.ToolWindow
             CountSuggestionCost(); // and the tip when Claude Code's suggestions don't pay
             if (_pendingUsages.Count == 0) return;
             var rec = _pendingUsages.Dequeue();
-            rec.Effort = ClaudeSettings.Cap(rec.Effort, _effortCap); // as used: Claude Code answers no higher than maxEffortLevel (read after the first prompt went out)
+            rec.Effort = EffortUsed(rec); // as Claude Code applied it (read after the first prompt of a process went out)
             _lastTurnEffort = rec.Effort; // for the tips and the footer, kept also without the log
             _lastTurnPromptChars = rec.PromptChars;
             if (Options?.KeepUsageLog == false) return;
@@ -2813,6 +2815,7 @@ namespace ClaudeVS.ToolWindow
             _requestedFamilies.Clear();
             ClearTurns();
             _warnedModelMismatch = false;
+            _saidEffortDiffers = false;
             ResetNotices();
             _contextUsage = null;
             UpdateMeterTooltip();

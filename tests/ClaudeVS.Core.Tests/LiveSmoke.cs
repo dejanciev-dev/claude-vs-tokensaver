@@ -187,7 +187,7 @@ namespace ClaudeVS.Core.Tests
                 s1.SetModelAsync(ModelChoice.Sonnet).Wait();
                 s1.SetEffortAsync(EffortChoice.Medium).Wait();
                 // The switch must take: Claude Code says the effort it applies (sent as "effort", 2.1.326 kept the launch one)
-                var applied = s1.GetSettingsAsync().Result?.AppliedEffort;
+                var applied = s1.AppliedEffort; // read by the switch itself (get_settings), as the chat uses it
                 Check(applied == "medium", "effort switched mid-session: applied.effort = " + (applied ?? "(none)"));
                 Check(Turn(s1, "Reply with the single word: two"), "turn after switching finished");
                 Check(turnModel?.Contains("sonnet") == true, "set_model mid-session: answered by " + turnModel);

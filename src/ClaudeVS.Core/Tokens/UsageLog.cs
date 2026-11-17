@@ -25,6 +25,8 @@ namespace ClaudeVS.Core.Tokens
         /// default applied (and in older lines, where <see cref="RouteEffort"/> may say it for routed turns).
         /// </summary>
         [JsonProperty("effort", NullValueHandling = NullValueHandling.Ignore)] public string Effort { get; set; }
+        /// <summary><see cref="Effort"/> is what Claude Code said it applied (<c>get_settings</c>), not only the one asked for. Not logged.</summary>
+        [JsonIgnore] public bool EffortFromClaudeCode { get; set; }
         [JsonProperty("promptChars")] public int PromptChars { get; set; }
         [JsonProperty("attachedLines")] public int AttachedLines { get; set; }
         [JsonProperty("attachedFiles")] public int AttachedFiles { get; set; }

@@ -14,7 +14,9 @@ All notable changes to this project are listed here. The format follows
 - **The effort cap from Claude Code's settings**: with `maxEffortLevel` set (by you, the project or your
   organization), Claude Code answers at no higher effort and says so only in its debug log. The chat now reads it
   when Claude Code starts (no model call): the effort picker greys out what is above it, the router stays under it,
-  and the turn footer and the usage log show the effort really used.
+  and the turn footer and the usage log show the effort really used. After each model or effort switch the chat
+  also reads the effort Claude Code applies, which covers a cap your organization sets per model: the footer and
+  the usage log show that one, and the chat says once when it isn't the effort asked for.
 - **`promptSuggestionEnabled` in Claude Code's settings**: `false` turns the chat's suggested next prompt off too, so
   one switch covers the terminal and Visual Studio. Claude Code then makes no suggestions of its own either, even with
   *Ask Claude Code for suggestions* on (none are requested, so none are billed).
