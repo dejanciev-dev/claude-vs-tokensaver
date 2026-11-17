@@ -215,7 +215,18 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | A Claude Code suggestion shows, then **New chat** before sending anything | The Output pane says `Claude Code's last suggestion in the conversation, never billed with a turn: ~$… estimated`; **Export Usage as CSV…** has a row with `suggestion` in `side`, no turn number and that cost; the report's suggestions line adds `(… estimated: a conversation's last, which no turn billed)`; the turn count is unchanged |
 | With the option on, 20 or more Claude Code suggestions in one VS session, taking at most one with Tab | Once they cost $0.10 or more, the chat gives the tip `Claude Code's suggestions: you took … of … since Visual Studio started, and they cost $…`, once |
 
-## 17. Release (Phase 5)
+## 17. What to do after a failed turn (Phase 54)
+
+| Do | Expect |
+|---|---|
+| Send a long prompt, then **Stop** (Esc) while Claude answers | The empty box says `Stopped · Tab puts your prompt back`; Tab puts the whole prompt in, not sent |
+| **Options → CLI → Extra arguments** `--model claude-nonexistent-9-9`, **New chat**, any prompt (no tokens billed) | `That model isn't available: pick another in the model menu, then send it again · Tab puts your prompt back`. If Claude answers anyway, the model picker or the router replaced the model: skip this row. Clear the extra argument afterwards |
+| With such a hint showing, type a letter and delete it | *Ask Claude to edit…* is back; the hint doesn't return |
+| **Options → Chat → Suggest the next prompt** off, then Stop a turn again | The hint still shows |
+| With **Ask Claude Code for suggestions** on, Stop a turn | The hint stays, even if Claude Code sends a suggestion afterwards |
+| With Narrator, Tab into the box while a hint shows | It reads *The last request failed. Stopped. Press Tab to put in: …* |
+
+## 18. Release (Phase 5)
 
 These need you rather than a check list:
 
