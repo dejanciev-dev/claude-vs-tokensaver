@@ -226,7 +226,18 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | With **Ask Claude Code for suggestions** on, Stop a turn | The hint stays, even if Claude Code sends a suggestion afterwards |
 | With Narrator, Tab into the box while a hint shows | It reads *The last request failed. Stopped. Press Tab to put in: …* |
 
-## 18. Release (Phase 5)
+## 18. Claude Code's settings, and answers cut off (Phase 55)
+
+| Do | Expect |
+|---|---|
+| In the solution folder, `.claude/settings.local.json` with `{"maxEffortLevel": "medium"}`; **New chat**, effort set to **High**, any prompt | Once Claude Code starts, a note says your settings cap the effort at medium and the effort chip shows Medium; the effort menu greys out High, XHigh and Max with *Above your Claude Code settings' cap (medium, maxEffortLevel)*; the footer says `medium effort` |
+| Same file, effort **Auto**, a prompt the router sends to Opus at high effort | The route note and the footer say medium, not high; the usage CSV's `effort` is `medium` |
+| `{"promptSuggestionEnabled": false}` in the same file, **New chat**, an answer that ends with an offer | No grey suggestion; the Output pane says suggested next prompts are off. Stop a turn: the hint after a failed turn still shows |
+| Remove those settings afterwards, **New chat** | The full effort menu and suggestions are back |
+| **Options → CLI → Extra arguments** can't set the limit, so start VS from a command prompt with `set CLAUDE_CODE_MAX_OUTPUT_TOKENS=400`, then ask *Use one general-purpose agent to write a 700-word essay about LINQ and return it in full* | The agent's row says `cut off …×`; a turn footer says `· cut off …× ($… to go on)`; **Show Savings Report** has `Cut off, asked to go on:` |
+| With `set ANTHROPIC_API_KEY=sk-ant-invalid` before starting VS, any prompt | The box says `Invalid API key: fix or unset ANTHROPIC_API_KEY, then send it again · Tab puts your prompt back`, and the chat's explanation names the key |
+
+## 19. Release (Phase 5)
 
 These need you rather than a check list:
 
