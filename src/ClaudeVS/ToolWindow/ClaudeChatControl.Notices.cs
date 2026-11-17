@@ -25,7 +25,7 @@ namespace ClaudeVS.ToolWindow
             Notice(SessionNotices.ApiKey(init), important: true);
             Notice(SessionNotices.McpServers(init));
             Tip(SessionNotices.OutputStyle(init));
-            if (ev.IsFirstInit) { SyncPermissionMode(init); CheckAuth(); }
+            if (ev.IsFirstInit) { SyncPermissionMode(init); CheckAuth(); ReadClaudeSettings(); }
         }
 
         /// <summary>

@@ -76,6 +76,7 @@
     <Compile Include="ToolWindow\ClaudeChatControl.Folder.cs" />
     <Compile Include="ToolWindow\ClaudeChatControl.NextPrompt.cs" />
     <Compile Include="ToolWindow\ClaudeChatControl.SlashPicker.cs" />
+    <Compile Include="ToolWindow\ClaudeChatControl.Settings.cs" />
     <Compile Include="ToolWindow\TranscriptView.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

@@ -1357,9 +1357,14 @@ way the extension runs it:
 - An invalid `ANTHROPIC_API_KEY`: `"error": "authentication_failed"`, status 401, "Invalid API key · Fix external
   API key"; an empty `CLAUDE_CONFIG_DIR`: `authentication_failed`, no status, "Not logged in · Please run /login"
 
-- [ ] **Respect the effort cap.** Read `maxEffortLevel` from Claude Code's settings (managed, the project's local and
+- [x] **Respect the effort cap.** Read `maxEffortLevel` from Claude Code's settings (managed, the project's local and
       shared, the user's). The effort picker offers nothing above it, the router doesn't pick above it, and the
-      footer and the usage log say the effort really used
+      footer and the usage log say the effort really used. Read with the control request `get_settings` (no model
+      call; 2.1.326 answers `effective`, the merged settings, `sources` and `applied`, the effort in use), once per
+      process start, so no settings files are read here. `ClaudeSettings` (`Parse`, `Cap`, `Above`),
+      `ClaudeSession.GetSettingsAsync`, `ClaudeChatControl.Settings.cs`. A choice above the cap is set down to it,
+      with a note; the first prompt's effort is capped in the log when the answer comes after it went out. Builds
+      clean; not yet run in VS
 - [ ] **Honour `promptSuggestionEnabled`.** `false` in Claude Code's settings turns the extension's suggested next
       prompt off too (Options decide when the setting isn't there); *Ask Claude Code for suggestions* then sends
       nothing either
