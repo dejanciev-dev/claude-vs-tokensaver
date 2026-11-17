@@ -51,6 +51,20 @@ namespace ClaudeVS.Core.Tokens
         public double LastTurnSubagentCostUsd { get; private set; }
         /// <summary>Subagent tokens in the whole conversation.</summary>
         public long SessionSubagentTokens { get; private set; }
+
+        /// <summary>
+        /// Claude Code's own requests billed with the last turn (<see cref="SubagentUsageTracker.LastSide"/>): the
+        /// summary when the turn compacted (<see cref="LastTurnSideIsCompact"/>), else the suggested next prompt(s) made
+        /// after the turn before. Already in <see cref="LastTurnCostUsd"/>; not in <see cref="LastTurn"/>.
+        /// </summary>
+        public TokenUsage LastTurnSide { get; private set; }
+        public double LastTurnSideCostUsd { get; private set; }
+        public bool LastTurnSideIsCompact { get; private set; }
+        /// <summary>The conversation's side requests so far, at <see cref="Prices"/>: suggestions, and compaction summaries.</summary>
+        public double SessionSuggestionsUsd { get; private set; }
+        public int SessionSuggestionTurns { get; private set; }
+        public double SessionCompactUsd { get; private set; }
+        private bool _turnCompacted;
         private readonly SubagentUsageTracker _subagents = new SubagentUsageTracker();
         /// <summary>The last turn's subagent cost by kind of agent, costliest first; null when none ran.</summary>
         public List<AgentTypeCost> LastTurnAgentTypes { get; private set; }
@@ -199,6 +213,7 @@ namespace ClaudeVS.Core.Tokens
             _breaks.Reset(); _pendingBreak = null;
             Learner.Reset();
             _subagents.Reset(); _agentTypes.Reset(); LastTurnAgentTypes = null; SessionAgentCostByType.Clear(); LastTurnSubagents = new Dictionary<string, TokenUsage>(); LastTurnSubagentCostUsd = 0; SessionSubagentTokens = 0;
+            LastTurnSide = default; LastTurnSideCostUsd = 0; LastTurnSideIsCompact = false; SessionSuggestionsUsd = 0; SessionSuggestionTurns = 0; SessionCompactUsd = 0; _turnCompacted = false;
             _turnLargeByMessage.Clear();
             LastTurnCacheSavedUsd = 0; SessionCacheSavedUsd = 0; _turnModel = null; LastModel = null;
             Changed?.Invoke(this, EventArgs.Empty);
@@ -247,6 +262,7 @@ namespace ClaudeVS.Core.Tokens
                     return;
                 case ClaudeEventKind.Compacted:
                     CompactionsSaved++;
+                    _turnCompacted = true;
                     _breaks.Compacted();
                     ContextTokens = 0;
                     break;
@@ -263,8 +279,16 @@ namespace ClaudeVS.Core.Tokens
                     _turnResultCharsByTool.Clear();
                     LastTurnToolCalls = _turnToolCalls; _turnToolCalls = 0;
                     LastTurn = turn;
-                    LastTurnSubagents = _subagents.TurnCompleted(ev.ModelUsage, _turnModel, turn);
+                    // A /compact turn has no request of its own in usage: its summary ran on the conversation's model
+                    string mainModel = _turnModel ?? LastModel ?? (ev.ModelUsage?.Count == 1 ? ev.ModelUsage.Keys.First() : null);
+                    LastTurnSubagents = _subagents.TurnCompleted(ev.ModelUsage, mainModel, turn);
                     var pt = Prices ?? DefaultPrices;
+                    LastTurnSide = _subagents.LastSide;
+                    LastTurnSideIsCompact = _turnCompacted && !LastTurnSide.IsEmpty;
+                    _turnCompacted = false;
+                    LastTurnSideCostUsd = LastTurnSide.IsEmpty ? 0 : (pt.For(mainModel) ?? pt.Sonnet).Cost(LastTurnSide.AsRequest());
+                    if (LastTurnSideIsCompact) SessionCompactUsd += LastTurnSideCostUsd;
+                    else if (!LastTurnSide.IsEmpty) { SessionSuggestionsUsd += LastTurnSideCostUsd; SessionSuggestionTurns++; }
                     LastTurnSubagentCostUsd = LastTurnSubagents.Sum(kv => (pt.For(kv.Key) ?? pt.Sonnet).Cost(kv.Value)); // a sum of requests: no per-request tier
                     SessionSubagentTokens += LastTurnSubagentTotal.Total;
                     LastTurnAgentTypes = _agentTypes.TurnCompleted(LastTurnSubagentCostUsd);

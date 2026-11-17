@@ -101,6 +101,11 @@ All notable changes to this project are listed here. The format follows
   stopped, 1 API error)`.
 
 ### Fixed
+- **Suggestions and /compact were counted as subagents**: Claude Code bills its own requests, a suggested next prompt
+  (with *Ask Claude Code for suggestions* on) and the summary `/compact` writes, with the next turn's cost, and only
+  in its per-model totals. The meter took them for subagents, so the turn footer, the usage log and the savings
+  report's *Subagents* line counted them there. They are now told apart: what no subagent message explains is
+  Claude Code's own request, still in the turn's cost.
 - **Manual stays Manual**: Manual mode was started with no `--permission-mode`, and Claude Code 2.1.326 can then
   start in auto mode (for some organizations, or while the organization's policy hasn't loaded). It is now asked for
   by name, and if Claude Code still starts in another mode, the chat says so, as for the other modes.

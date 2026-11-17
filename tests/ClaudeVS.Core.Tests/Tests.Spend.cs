@@ -950,6 +950,8 @@ namespace ClaudeVS.Core.Tests
             var u1 = new Dictionary<string, ModelUsageEntry> { ["claude-haiku-5-5"] = new ModelUsageEntry { Usage = new TokenUsage { Input = 4, Output = 204, CacheRead = 38_169, CacheCreation = 12_175 } } };
             Eq(0, tr.TurnCompleted(u1, "claude-haiku-5-5", new TokenUsage { Input = 4, Output = 204, CacheRead = 38_169, CacheCreation = 12_175 }).Count, "a turn without agents");
             var u2 = new Dictionary<string, ModelUsageEntry> { ["claude-haiku-5-5"] = new ModelUsageEntry { Usage = new TokenUsage { Input = 12, Output = 539, CacheRead = 100_255, CacheCreation = 24_812 } } };
+            // its subagent's message streamed, as with --verbose (output low); without one the growth is a side request
+            tr.ObserveSubagent(new ClaudeEvent { Kind = ClaudeEventKind.AssistantUsage, IsSubagent = true, MessageId = "f1", Model = "claude-haiku-5-5", Usage = new TokenUsage { Input = 4, Output = 2, CacheRead = 23_917, CacheCreation = 462 } });
             var agents = tr.TurnCompleted(u2, "claude-haiku-5-5", new TokenUsage { Input = 4, Output = 204, CacheRead = 38_169, CacheCreation = 12_175 });
             var a = agents["claude-haiku-5-5"];
             Eq(4L, a.Input); Eq(131L, a.Output, "output exact"); Eq(23_917L, a.CacheRead); Eq(462L, a.CacheCreation);
