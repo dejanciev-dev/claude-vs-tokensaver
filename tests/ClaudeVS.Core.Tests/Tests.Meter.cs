@@ -63,6 +63,67 @@ namespace ClaudeVS.Core.Tests
             Eq(null, SubagentStats.Parse(null), "older CLIs");
         }
 
+        /// <summary>
+        /// Two Haiku turns and /compact with --prompt-suggestions (2.1.326). The debug log of that run showed the
+        /// suggestion after turn 1 (input 506, output 4, cache read 27,517, cache write 52), the one after turn 2
+        /// (506, 83, 30,217, 53) and the compact summary (2,133, 1,223, 29,697, 384); each is billed with the next result.
+        /// </summary>
+        private static void Test_Meter_SideRequests_RealCli_2_1_326()
+        {
+            var meter = new TokenMeter();
+            meter.FreshSession();
+            var turns = new List<(TokenUsage Side, bool Compact, int Agents, double Cost, double SideCost)>();
+            foreach (var e in File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.326-side-requests.jsonl")).SelectMany(l => new ClaudeStreamParser().Parse(l)))
+            {
+                meter.Observe(e);
+                if (e.Kind == ClaudeEventKind.TurnCompleted)
+                    turns.Add((meter.LastTurnSide, meter.LastTurnSideIsCompact, meter.LastTurnSubagents.Count, meter.LastTurnCostUsd, meter.LastTurnSideCostUsd));
+            }
+            Eq(3, turns.Count, "two turns and /compact");
+            True(turns[0].Side.IsEmpty && turns[0].Agents == 0, "turn 1: nothing before it");
+            var s1 = turns[1].Side;
+            Eq("506/4/27517/52", $"{s1.Input}/{s1.Output}/{s1.CacheRead}/{s1.CacheCreation}", "turn 2 carries the suggestion after turn 1, exactly as the debug log has it");
+            Eq(0, turns[1].Agents, "not a subagent");
+            True(!turns[1].Compact, "a suggestion");
+            var s2 = turns[2].Side;
+            Eq("2639/1306/59914/437", $"{s2.Input}/{s2.Output}/{s2.CacheRead}/{s2.CacheCreation}", "the compact summary plus the suggestion after turn 2");
+            True(turns[2].Compact, "the turn compacted");
+            Eq(0, turns[2].Agents, "not a subagent either");
+            // Priced at Haiku's list prices, as Claude Code bills it: the side request is part of the turn's reported cost
+            var h = new PriceTable().Haiku;
+            Eq(Math.Round((506 * h.Input + 4 * h.Output + 27517 * h.CacheRead + 52 * 2 * h.Input) / 1e6, 9), Math.Round(turns[1].SideCost, 9), "suggestion priced (its cache write is 1-hour: twice the input price)");
+            True(turns[1].SideCost < turns[1].Cost, $"inside the turn's cost: {turns[1].SideCost} of {turns[1].Cost}");
+            True(Math.Abs(turns[2].Cost - turns[2].SideCost) < 1e-6, $"/compact's whole cost is the side requests: {turns[2].SideCost} of {turns[2].Cost}");
+            Eq(turns[1].SideCost, meter.SessionSuggestionsUsd, "the compact turn's share goes to compaction, not suggestions");
+            Eq(1, meter.SessionSuggestionTurns);
+            Eq(turns[2].SideCost, meter.SessionCompactUsd);
+
+            // The 2.1.325 capture (Phase 50) shows the same: turn 2 carries a suggestion (506 in, as every one so far)
+            var old = new TokenMeter();
+            old.FreshSession();
+            foreach (var e in File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.325-prompt-suggestion.jsonl")).SelectMany(l => new ClaudeStreamParser().Parse(l))) old.Observe(e);
+            Eq(506L, old.LastTurnSide.Input, "2.1.325: the suggestion's input");
+            Eq(0, old.LastTurnSubagents.Count, "2.1.325: not a subagent");
+
+            // A subagent and a suggestion on the main model in the same turn: the agent's streamed message (output low)
+            // takes its part, the rest is the side request; a leftover of output alone stays the agent's
+            var tr = new SubagentUsageTracker();
+            tr.StartsFromZero();
+            var main = new TokenUsage { Input = 4, Output = 300, CacheRead = 40_000, CacheCreation = 1_000 };
+            var agent = new TokenUsage { Input = 3, Output = 120, CacheRead = 20_000, CacheCreation = 400 };
+            var suggestion = new TokenUsage { Input = 506, Output = 9, CacheRead = 30_000, CacheCreation = 60 };
+            tr.ObserveSubagent(new ClaudeEvent { Kind = ClaudeEventKind.AssistantUsage, IsSubagent = true, MessageId = "a", Model = "m", Usage = new TokenUsage { Input = 3, Output = 2, CacheRead = 20_000, CacheCreation = 400 } });
+            var agents = tr.TurnCompleted(new Dictionary<string, ModelUsageEntry> { ["m"] = new ModelUsageEntry { Usage = main + agent + suggestion } }, "m", main);
+            Eq("506/127/30000/60", $"{tr.LastSide.Input}/{tr.LastSide.Output}/{tr.LastSide.CacheRead}/{tr.LastSide.CacheCreation}", "the side request takes the output the agent's stream didn't show");
+            Eq("3/2/20000/400", $"{agents["m"].Input}/{agents["m"].Output}/{agents["m"].CacheRead}/{agents["m"].CacheCreation}", "the agent: its streamed counts");
+            var only = new SubagentUsageTracker();
+            only.StartsFromZero();
+            only.ObserveSubagent(new ClaudeEvent { Kind = ClaudeEventKind.AssistantUsage, IsSubagent = true, MessageId = "a", Model = "m", Usage = new TokenUsage { Input = 3, Output = 2, CacheRead = 20_000, CacheCreation = 400 } });
+            var alone = only.TurnCompleted(new Dictionary<string, ModelUsageEntry> { ["m"] = new ModelUsageEntry { Usage = main + agent } }, "m", main);
+            Eq(120L, alone["m"].Output, "no side request: the agent's output is exact");
+            True(only.LastSide.IsEmpty, "nothing on the side");
+        }
+
         private static void Test_Meter_DefaultWindowIs1M()
         {
             // Every current model reports 1M, and 2.1.323 assumes 1M for an unknown model ID.

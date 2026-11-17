@@ -52,11 +52,22 @@ namespace ClaudeVS.Core.Tokens
         }
 
         /// <summary>
+        /// Claude Code's own requests on the main model since the last result, which neither the result's <c>usage</c>
+        /// nor any subagent message reports: its suggested next prompt (<c>--prompt-suggestions</c>, billed with the
+        /// <i>next</i> result) and the summary of a <c>/compact</c> (Fixtures/cli-2.1.326-side-requests.jsonl: exactly
+        /// what the debug log shows for <c>[prompt_suggestion]</c> and <c>[reactive-compact]</c>). Empty when there were
+        /// none, or the growth isn't known (a resumed session's first turn without a reading).
+        /// </summary>
+        public TokenUsage LastSide { get; private set; }
+
+        /// <summary>
         /// The turn ended: the subagents' usage per model (empty when none). <paramref name="mainModel"/> answered the
-        /// main agent's <paramref name="mainUsage"/>.
+        /// main agent's <paramref name="mainUsage"/>; the rest of its growth that no subagent message explains is
+        /// <see cref="LastSide"/>.
         /// </summary>
         public Dictionary<string, TokenUsage> TurnCompleted(Dictionary<string, ModelUsageEntry> modelUsage, string mainModel, TokenUsage mainUsage)
         {
+            LastSide = default;
             var streamed = new Dictionary<string, TokenUsage>(StringComparer.Ordinal);
             foreach (var g in _streamed.Values.GroupBy(s => s.Model))
             {
@@ -74,10 +85,22 @@ namespace ClaudeVS.Core.Tokens
             {
                 var now = kv.Value.Usage;
                 var grew = _previous.TryGetValue(kv.Key, out var before) && !Lower(now, before) ? TokenUsage.Minus(now, before) : now; // lower: counting started again
-                if (kv.Key == mainModel) grew = TokenUsage.Minus(grew, mainUsage);
+                if (kv.Key == mainModel)
+                {
+                    grew = TokenUsage.Minus(grew, mainUsage);
+                    // What the subagents' own messages don't explain is Claude Code's side requests. Their input and
+                    // cache counts are exact, their output can be low: a leftover of output alone stays the subagents'.
+                    var side = TokenUsage.Minus(grew, streamed.TryGetValue(kv.Key, out var agents) ? agents : default);
+                    side.Output = side.Input + side.CacheRead + side.CacheCreation > 0 ? side.Output : 0;
+                    side.CacheCreation1h = Math.Min(side.CacheCreation1h, side.CacheCreation);
+                    side.CacheCreation5m = Math.Min(side.CacheCreation5m, side.CacheCreation);
+                    side.Thinking = Math.Min(side.Thinking, side.Output);
+                    LastSide = side;
+                    grew = TokenUsage.Minus(grew, side);
+                }
                 if (grew.Total > 0) result[kv.Key] = grew;
             }
-            if (exact && check && !Agrees(result, streamed)) result = streamed; // the saved reading is out of date
+            if (exact && check && !Agrees(result, streamed)) { result = streamed; LastSide = default; } // the saved reading is out of date
             if (modelUsage != null) foreach (var kv in modelUsage) _previous[kv.Key] = kv.Value.Usage;
             return result;
         }
