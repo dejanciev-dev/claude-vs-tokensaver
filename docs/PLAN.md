@@ -1422,7 +1422,8 @@ keeps setting keys as written (even unknown ones), so the settings check must kn
       more: ask for smaller steps, and name `CLAUDE_CODE_MAX_OUTPUT_TOKENS` when it is set low.
       `SessionNotices.CutOffTip` (`CutOffTipFromUsd`; "low" is under `SettingsCheck.LowOutputLimit`, 8000); the limit
       from Visual Studio's environment or Claude Code's settings. A token tip. Builds clean; not yet run in VS
-- [ ] **Retries in the CSV.** `output_retries` and `output_retry_cost_usd` columns
+- [x] **Retries in the CSV.** `output_retries` and `output_retry_cost_usd` columns, last (the count always, the cost
+      when there is one)
 - [ ] **Manual checks for Phase 56.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
 
 ---

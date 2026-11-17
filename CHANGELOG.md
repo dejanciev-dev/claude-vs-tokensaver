@@ -17,7 +17,8 @@ All notable changes to this project are listed here. The format follows
   the context again. The turn footer says so with what the retries cost (`· cut off 2× ($0.004 to go on)`), the
   agent's row says `cut off 2×`, and the savings report adds a *Cut off, asked to go on* line. Once going on has
   cost $0.05 or more in a conversation, a token tip says to ask for smaller steps, and names
-  `CLAUDE_CODE_MAX_OUTPUT_TOKENS` when it is set low.
+  `CLAUDE_CODE_MAX_OUTPUT_TOKENS` when it is set low. The usage CSV gets the last columns `output_retries` and
+  `output_retry_cost_usd`.
 - **The effort cap from Claude Code's settings**: with `maxEffortLevel` set (by you, the project or your
   organization), Claude Code answers at no higher effort and says so only in its debug log. The chat now reads it
   when Claude Code starts (no model call): the effort picker greys out what is above it, the router stays under it,
