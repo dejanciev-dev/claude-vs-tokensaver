@@ -1291,9 +1291,12 @@ conversation's last turn is never reported.
       `side`, `side_cost_usd`; each one in the Output pane. The record's token counts stay the main agent's; its
       cost includes the side request, as Claude Code billed it. Option description, README, CHANGELOG and the
       Phase 52 manual check corrected. Builds clean; not yet run in VS
-- [ ] **A tip when Claude Code's suggestions don't pay.** With *Ask Claude Code for suggestions* on, once 20 or more
+- [x] **A tip when Claude Code's suggestions don't pay.** With *Ask Claude Code for suggestions* on, once 20 or more
       came and under 1 in 10 was taken while they cost $0.10 or more, the chat says so once per VS session, with what
-      they cost and how to turn them off
+      they cost and how to turn them off. `SuggestionCost.Tip` (`TipAfter`, `TipTakenBelow`, `TipFromUsd`); counted
+      over all chat windows since VS started: those that came, those taken with Tab or →, and the measured cost (also
+      of ones made but never sent). A token tip, so Options → Token tips off sends it to the Output pane. Builds
+      clean; not yet run in VS
 - [ ] **The last suggestion.** The one after a conversation's last turn is never reported: when a chat ends (New
       chat, another conversation, closing the window) after a suggestion came, its estimated cost is logged as a
       record with no turn, which the turn counts leave out

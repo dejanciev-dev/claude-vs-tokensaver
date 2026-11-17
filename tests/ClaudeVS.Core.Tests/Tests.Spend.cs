@@ -1563,6 +1563,14 @@ namespace ClaudeVS.Core.Tests
             Eq("Claude Code's own requests in this conversation: suggestions $0.012, /compact $0.030 (in its cost, billed with the turn after them)", SuggestionCost.Line(0.0123, 0.03));
             Eq("Claude Code's own requests in this conversation: suggestions <$0.001 (in its cost, billed with the turn after them)", SuggestionCost.Line(0.0004, 0));
             Eq(null, SuggestionCost.Line(0, 0), "none");
+
+            // The tip when they don't pay: 20 or more, under 1 in 10 taken, $0.10 or more
+            Eq("Claude Code's suggestions: you took 1 of 25 since Visual Studio started, and they cost $0.14: each one reads the whole conversation again. "
+                + "Options → Claude Code → CLI → Ask Claude Code for suggestions turns them off; the ones read from the answer stay, at no cost.", SuggestionCost.Tip(25, 1, 0.14));
+            Eq(null, SuggestionCost.Tip(19, 0, 1.0), "too few yet");
+            Eq(null, SuggestionCost.Tip(20, 2, 1.0), "1 in 10 taken: they pay");
+            True(SuggestionCost.Tip(21, 2, 1.0) != null, "2 of 21: under 1 in 10");
+            Eq(null, SuggestionCost.Tip(40, 0, 0.09), "cheap enough");
         }
 
         private static void Test_SavingsReport_TurnSpread()

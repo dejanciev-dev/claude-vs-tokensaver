@@ -7,6 +7,9 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Token tip when Claude Code's suggestions don't pay**: with *Ask Claude Code for suggestions* on, once 20 or more
+  have come since Visual Studio started, under 1 in 10 was taken and they cost $0.10 or more, the chat says so once,
+  with how to turn them off (the suggestions read from the answer stay, at no cost).
 - **Suggested prompts in the savings report**: how often a prompt went out while a suggested next prompt showed, and
   how often Tab or → took it, for each kind (`Suggested prompts: before 40 prompts: from the answer 30, taken 8
   (27%); Claude Code's 10, taken 4 (40%)`). The usage CSV gets a last `suggestion` column (`local`, `local taken`,

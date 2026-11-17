@@ -2011,6 +2011,7 @@ namespace ClaudeVS.ToolWindow
         /// <summary>Completes the record started in SendText and appends it to the local usage log (off the UI thread).</summary>
         private void RecordUsage(ClaudeEvent ev, string modelUsed)
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
             // Prompts sent while Claude is still answering are queued by the CLI and finish in order.
             _lastTurnEffort = null;
             _lastTurnPromptChars = 0;
@@ -2018,6 +2019,7 @@ namespace ClaudeVS.ToolWindow
             if (!side.IsEmpty)
                 ClaudeOutputPane.WriteLine($"Claude Code's own request{(_meterModel.LastTurnSideIsCompact ? " (/compact summary)" : " (suggested prompt)")} billed with this turn: "
                     + $"{TokenMeter.Format(side.Total)} tok, ${_meterModel.LastTurnSideCostUsd:0.0000}");
+            CountSuggestionCost(); // and the tip when Claude Code's suggestions don't pay
             if (_pendingUsages.Count == 0) return;
             var rec = _pendingUsages.Dequeue();
             _lastTurnEffort = rec.Effort; // for the tips and the footer, kept also without the log
