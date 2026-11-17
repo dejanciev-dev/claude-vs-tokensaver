@@ -17,6 +17,8 @@ namespace ClaudeVS.Core.Cli
     public sealed class ClaudeStreamParser
     {
         private static readonly IReadOnlyList<ClaudeEvent> None = Array.Empty<ClaudeEvent>();
+        /// <summary>Only markup tags, such as <c>&lt;signal type="empty" /&gt;</c>.</summary>
+        private static readonly System.Text.RegularExpressions.Regex BareTags = new System.Text.RegularExpressions.Regex(@"^(?:\s*</?[A-Za-z][^<>]*>\s*)+$");
         private readonly HashSet<string> _streamedMessageIds = new HashSet<string>();
         private string _currentStreamMessageId;
         private TokenUsage _lastMainUsage;
@@ -58,7 +60,8 @@ namespace ClaudeVS.Core.Cli
                     } };
                 case "prompt_suggestion":
                     string suggestion = ((string)json["suggestion"])?.Trim();
-                    return string.IsNullOrEmpty(suggestion) ? None : new[] { new ClaudeEvent { Kind = ClaudeEventKind.PromptSuggestion, Text = suggestion, SessionId = (string)json["session_id"] } };
+                    // Before 2.1.326 a suggestion could be a bare tag such as <signal type="empty" />: nothing to suggest.
+                    return string.IsNullOrEmpty(suggestion) || BareTags.IsMatch(suggestion) ? None : new[] { new ClaudeEvent { Kind = ClaudeEventKind.PromptSuggestion, Text = suggestion, SessionId = (string)json["session_id"] } };
                 case "rate_limit_event":
                     return json["rate_limit_info"] is JObject limits ? new[] { new ClaudeEvent { Kind = ClaudeEventKind.RateLimit, Payload = limits } } : None;
                 case "control_response":

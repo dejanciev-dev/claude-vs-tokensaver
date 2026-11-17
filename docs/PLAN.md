@@ -1220,9 +1220,9 @@ terminal, cloud, Remote Control, Claude Tag, gateway, sandbox and plugin entries
       say so when the CLI still starts in another mode, as for the other modes. Here both start in `default` (no
       flag and the flag), so the flag changes nothing where auto isn't the default. `PermissionModeChoice.ToCli`
       gives "default"; `SessionNotices.PermissionMode` no longer skips Manual
-- [ ] **No bare-tag suggestions** (2.1.326 fixes "the suggested next prompt sometimes being a bare tag, such as
+- [x] **No bare-tag suggestions** (2.1.326 fixes "the suggested next prompt sometimes being a bare tag, such as
       `<signal type="empty" />`"). The parser drops a `prompt_suggestion` that is only tags, so an older CLI can't
-      show one in the input box
+      show one in the input box. A tag among words (`use <T> here`) is kept
 - [ ] **Nothing to change for the rest.** The startup warning for an `--allowedTools` entry that "doesn't look like a
       complete rule": none in the stream for the extension's MCP tool names (`mcp__visualstudio__…`), nor for a broken
       `Bash(git`. Hooks whose `"decision": "block"` now holds in more cases: the extension's hooks print none.

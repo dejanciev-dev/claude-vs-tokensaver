@@ -670,6 +670,10 @@ namespace ClaudeVS.Core.Tests
             Eq("show me the notes file", events[3].Text, "second suggestion");
             True(!string.IsNullOrEmpty(events[1].SessionId), "session id");
             Eq(0, parser.Parse("{\"type\":\"prompt_suggestion\",\"suggestion\":\"  \"}").Count, "blank suggestion ignored");
+            // Fixed in 2.1.326: "the suggested next prompt sometimes being a bare tag, such as <signal type="empty" />"
+            Eq(0, parser.Parse("{\"type\":\"prompt_suggestion\",\"suggestion\":\"<signal type=\\\"empty\\\" />\"}").Count, "bare tag ignored");
+            Eq(0, parser.Parse("{\"type\":\"prompt_suggestion\",\"suggestion\":\"<empty></empty>\"}").Count, "tags only ignored");
+            Eq("use <T> here", parser.Parse("{\"type\":\"prompt_suggestion\",\"suggestion\":\"use <T> here\"}").Single().Text, "a tag inside words is kept");
 
             True(ClaudeArgsBuilder.Build(new ClaudeLaunchOptions { PromptSuggestions = true }).Contains("--prompt-suggestions true"), "flag when on");
             True(!ClaudeArgsBuilder.Build(new ClaudeLaunchOptions()).Contains("--prompt-suggestions"), "off by default");
