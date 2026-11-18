@@ -1680,6 +1680,21 @@ hand-made events and two captures; one live run checks what they assume. Then th
       approval. The three batches of *Added* entries are one list now; the overview adds the setup check and where
       reading goes
 
+## Phase 65 — Tidy up what Phases 59–64 added
+
+Planned on 2026-11-18, after 0.12.0 was prepared, on the same branch. Phases 59–64 added six lines to the savings
+report, folder lists to each usage line and seven CSV columns; this phase keeps that readable and the tests easy to
+extend. (Checked first: a turn Claude Code starts when a background agent finishes already gets its own usage
+record, so a background agent's reads are logged.)
+
+- [ ] **One section in the report.** *References read*, *Read again*, *Subagents re-reading*, *Quiet-build hook*,
+      *Loud builds and logs* and *Folders read most* were spread over the report; they become one *Reads and
+      commands* section after *Tool results*, shown only when one of them has something to say
+- [ ] **Shorter usage lines.** A turn's `readFolders` keeps its 10 largest folders and adds the rest up as
+      `(other)`, so a turn that reads all over a large repository doesn't write a long line
+- [ ] **CSV tests by column name.** The CSV tests compare row endings (`…,0,,,,,`) and count columns from the end, so
+      each new column meant fixing seven of them by hand; they read cells by the header's name instead
+
 ---
 
 ## Working in Visual Studio — daily loop
