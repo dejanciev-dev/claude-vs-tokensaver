@@ -157,10 +157,10 @@ namespace ClaudeVS.ToolWindow
         /// Once per conversation, when a turn read 2k+ tokens from build output or vendored code: the tip, with a link
         /// that adds the read-deny rule to the project's settings. Not when a settings file already has the rule.
         /// </summary>
-        private void NoiseReadTip(System.Collections.Generic.IReadOnlyDictionary<string, long> readFolders)
+        private void NoiseReadTip(System.Collections.Generic.IReadOnlyDictionary<string, long> readFolders, System.Collections.Generic.IReadOnlyDictionary<string, long> readFiles)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            if (_gaveNoiseReadTip || !(SessionNotices.NoiseReadTip(readFolders) is var (rule, text))) return;
+            if (_gaveNoiseReadTip || !(SessionNotices.NoiseReadTip(readFolders, readFiles) is var (rule, text))) return;
             string root = WorkFolder;
             if (Core.Setup.TokenSaverSetup.HasDenyRule(root, rule)) return;
             _gaveNoiseReadTip = true;

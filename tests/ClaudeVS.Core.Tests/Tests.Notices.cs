@@ -427,6 +427,17 @@ namespace ClaudeVS.Core.Tests
             Eq(null, SessionNotices.NoiseReadTip(new Dictionary<string, long> { ["src/App/obj"] = 1500 }), "under 2k");
             Eq(null, SessionNotices.NoiseReadTip(new Dictionary<string, long> { ["src/Core"] = 90000 }), "no build output");
 
+            var files = new Dictionary<string, long> { [@"C:\repo\web\js\app.min.js"] = 1800, [@"C:\repo\web\js\lib.min.js"] = 900, [@"C:\repo\web\obj\x.min.js"] = 9000 };
+            var gen = SessionNotices.NoiseReadTip(new Dictionary<string, long> { ["web/js"] = 2700 }, files);
+            Eq("Read(./**/*.min.js)", gen?.Rule, "minified files, by their rule");
+            True(gen.Value.Text.Contains("~2.7k tokens of *.min.js files (app.min.js…)"), gen.Value.Text);
+            Eq("Read(./**/*.map)", SessionNotices.GeneratedFileRule("site.css.map"));
+            Eq("Read(./**/*.min.css)", SessionNotices.GeneratedFileRule(@"C:\a\b.MIN.css"));
+            Eq(null, SessionNotices.GeneratedFileRule(".map"), "the extension alone is not a file");
+            Eq(null, SessionNotices.GeneratedFileRule("app.js"));
+            var both = SessionNotices.NoiseReadTip(new Dictionary<string, long> { ["web/obj"] = 9000 }, new Dictionary<string, long> { [@"C:\repo\web\obj\x.min.js"] = 9000 });
+            Eq("Read(./**/obj/**)", both?.Rule, "a minified file in obj counts for obj only");
+
             string dir = Path.Combine(Path.GetTempPath(), "cvs-deny-" + Guid.NewGuid().ToString("N"));
             try
             {
