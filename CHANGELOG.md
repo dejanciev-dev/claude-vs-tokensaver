@@ -17,6 +17,10 @@ All notable changes to this project are listed here. The format follows
 - **Folders read most**: the savings report lists the folders whose reads brought the most into the context (two
   levels below the working folder), and for build output or vendored code (`obj`, `node_modules`…) the read-deny
   rule that keeps Claude out. Reads outside the working folder are grouped; their paths are not logged.
+- **Keep Claude out of build output**: when a turn reads 2k+ tokens from build output or vendored code (`obj`,
+  `node_modules`…), a token tip says so once per conversation, with **Add `Read(./**/obj/**)`**, which merges the
+  rule into the project's `.claude/settings.json` (from the next New chat). *Folders read most* now finds such
+  folders at any depth (`src/App/obj`), not only in the first two levels.
 - **Fix from the setup check**: when *Check token-saving setup* finds problems, links under it **Reinstall** the
   setup for this folder (when that fixes one) and **Open** each settings file that overrides it.
 

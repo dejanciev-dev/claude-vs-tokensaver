@@ -138,6 +138,39 @@ namespace ClaudeVS.ToolWindow
             Tip(tip);
         }
 
+        // ---------------- Reads from build output ----------------
+
+        private bool _gaveNoiseReadTip;
+
+        /// <summary>
+        /// Once per conversation, when a turn read 2k+ tokens from build output or vendored code: the tip, with a link
+        /// that adds the read-deny rule to the project's settings. Not when a settings file already has the rule.
+        /// </summary>
+        private void NoiseReadTip(System.Collections.Generic.IReadOnlyDictionary<string, long> readFolders)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (_gaveNoiseReadTip || !(SessionNotices.NoiseReadTip(readFolders) is var (rule, text))) return;
+            string root = WorkFolder;
+            if (Core.Setup.TokenSaverSetup.HasDenyRule(root, rule)) return;
+            _gaveNoiseReadTip = true;
+            Tip(text);
+            if (!TipsOn) return; // the tip went to the Output pane only
+            _view.AppendActions(new System.Collections.Generic.List<(string, string, Action)>
+            {
+                ("Add " + rule, "Adds it to permissions.deny in " + System.IO.Path.Combine(root, ".claude", "settings.json") + "; applies from the next New chat",
+                    (Action)(() => AddDenyRule(root, rule))),
+            });
+        }
+
+        private void AddDenyRule(string root, string rule)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            string said;
+            try { said = Core.Setup.TokenSaverSetup.AddDenyRule(root, rule) ? $"Added {rule} to .claude/settings.json. It applies from the next New chat." : $"{rule} is already in .claude/settings.json."; }
+            catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException || ex is Newtonsoft.Json.JsonException) { said = "Could not add the rule: " + ex.Message; }
+            Append("\n" + said + "\n");
+        }
+
         // ---------------- Base context ----------------
 
         private bool _gaveBaseContextTip;
@@ -448,6 +481,7 @@ namespace ClaudeVS.ToolWindow
             _gaveOverkillTip = false;
             _gaveHeavyThinkingTip = false;
             _gaveLongAnswerTip = false;
+            _gaveNoiseReadTip = false;
             _reads.Reset();
         }
     }

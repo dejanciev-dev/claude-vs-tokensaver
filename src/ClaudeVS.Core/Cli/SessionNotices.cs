@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 
@@ -379,6 +380,25 @@ namespace ClaudeVS.Core.Cli
             return hookInstalled
                 ? size + " Asking Claude to filter it (only errors, the first lines, a quieter flag) keeps it small."
                 : size + " Tools → Claude Code → Install Token-Saving Settings and Hooks caps shell output and runs dotnet build / test, msbuild and git log quietly.";
+        }
+
+        /// <summary>Reads from build output or vendored code worth a tip (tokens in one turn).</summary>
+        public const long NoiseReadTokens = 2000;
+
+        /// <summary>
+        /// The build-output or vendored folder a turn's reads (<see cref="Tokens.UsageRecord.ReadFolders"/>) took the most
+        /// from, when 2k+ tokens: its read-deny rule and the tip; null otherwise.
+        /// </summary>
+        public static (string Rule, string Text)? NoiseReadTip(IReadOnlyDictionary<string, long> readFolders)
+        {
+            if (readFolders == null) return null;
+            var worst = readFolders.Select(kv => (Folder: kv.Key, Tokens: kv.Value, Rule: Tokens.SavingsReport.NoiseRule(kv.Key)))
+                .Where(x => x.Rule != null).GroupBy(x => x.Rule)
+                .Select(g => (Rule: g.Key, Folder: g.OrderByDescending(x => x.Tokens).First().Folder, Tokens: g.Sum(x => x.Tokens)))
+                .OrderByDescending(x => x.Tokens).FirstOrDefault();
+            if (worst.Rule == null || worst.Tokens < NoiseReadTokens) return null;
+            return (worst.Rule, $"Claude read ~{Tokens.TokenMeter.Format(worst.Tokens)} tokens from {worst.Folder}, which holds build output or vendored code: "
+                + $"rarely worth the context. {worst.Rule} in the project's settings keeps Claude out of such folders.");
         }
 
         /// <summary>A fixed part of the context this large (tokens) earns the tip.</summary>

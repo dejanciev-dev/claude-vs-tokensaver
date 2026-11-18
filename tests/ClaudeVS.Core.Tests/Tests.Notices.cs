@@ -417,6 +417,37 @@ namespace ClaudeVS.Core.Tests
         /// The token-saving setup against <c>get_settings</c> as 2.1.327 answers it (shape from a real answer: the
         /// project's hook and rules, a local file raising <c>bashOutputMaxChars</c> to 200,000 and adding a Write hook).
         /// </summary>
+        /// <summary>The tip for reads from build output, and adding its rule to the project's settings.</summary>
+        private static void Test_NoiseReadTip_AndDenyRule()
+        {
+            var tip = SessionNotices.NoiseReadTip(new Dictionary<string, long> { ["src/App/obj"] = 1500, ["src/Lib/obj"] = 900, ["src/Core"] = 9000 });
+            True(tip != null, "obj folders together pass 2k");
+            Eq("Read(./**/obj/**)", tip.Value.Rule);
+            True(tip.Value.Text.Contains("~2.4k tokens from src/App/obj"), tip.Value.Text);
+            Eq(null, SessionNotices.NoiseReadTip(new Dictionary<string, long> { ["src/App/obj"] = 1500 }), "under 2k");
+            Eq(null, SessionNotices.NoiseReadTip(new Dictionary<string, long> { ["src/Core"] = 90000 }), "no build output");
+
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-deny-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(dir, ".claude"));
+                File.WriteAllText(Path.Combine(dir, ".claude", "settings.json"), "{\"model\":\"sonnet\",\"permissions\":{\"allow\":[\"Bash(ls)\"]}}");
+                True(!TokenSaverSetup.HasDenyRule(dir, "Read(./**/obj/**)"), "not there yet");
+                True(TokenSaverSetup.AddDenyRule(dir, "Read(./**/obj/**)"), "added");
+                var s = JObject.Parse(File.ReadAllText(Path.Combine(dir, ".claude", "settings.json")));
+                Eq("sonnet", (string)s["model"], "other settings kept");
+                Eq("Bash(ls)", (string)s.SelectToken("permissions.allow[0]"), "allow rules kept");
+                Eq("Read(./**/obj/**)", (string)s.SelectToken("permissions.deny[0]"));
+                True(TokenSaverSetup.HasDenyRule(dir, "Read(./**/obj/**)"), "there now");
+                True(!TokenSaverSetup.AddDenyRule(dir, "Read(./**/obj/**)"), "not twice");
+                File.WriteAllText(Path.Combine(dir, ".claude", "settings.local.json"), "{\"permissions\":{\"deny\":[\"Read(./**/node_modules/**)\"]}}");
+                True(TokenSaverSetup.HasDenyRule(dir, "Read(./**/node_modules/**)"), "the local file counts too");
+                File.WriteAllText(Path.Combine(dir, ".claude", "settings.local.json"), "{ not json");
+                True(!TokenSaverSetup.HasDenyRule(dir, "Read(./**/dist/**)"), "a broken file is skipped");
+            }
+            finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
+        }
+
         /// <summary>The setup check's fixes: which settings files to open, and whether reinstalling helps.</summary>
         private static void Test_SetupCheck_Fixes()
         {
