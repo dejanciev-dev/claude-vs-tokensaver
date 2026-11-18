@@ -25,7 +25,7 @@ warm, and shows what every turn costs.
   context would cost more than it saves.
 - **Smart selection context.** Small selections are inlined; large ones are sent as `path:L10-200` references.
   Whole files are never pasted.
-- **File references and a compact Error List.** Attach the current file or pick one with `@` (path only).
+- **File references and a compact Error List.** Attach the current file, pick one with `@`, or right-click files and folders in Solution Explorer (paths only).
   Errors go as one `file:line` + message line each, capped at 20. Claude can also read the Error List itself.
 - **One warm process per chat**, so the prompt cache is reused between prompts.
 - **Lean `CLAUDE.md` generator** and **token-saving settings and hooks** that block `bin/obj/node_modules`, cap

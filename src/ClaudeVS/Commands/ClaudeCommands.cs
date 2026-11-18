@@ -50,6 +50,21 @@ namespace ClaudeVS.Commands
                 ((OleMenuCommand)s).Enabled = VsContext.GetActiveDocumentPath() != null;
             };
 
+            // Solution Explorer → right-click → "Add to Claude Code Chat": the selected files and folders as references (paths only).
+            var addToChat = Add(mcs, PackageIds.AddToChat, (s, e) => Run(async () =>
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                var paths = VsContext.GetSolutionExplorerSelection();
+                if (paths.Count == 0) throw new InvalidOperationException("Select files or folders that are on disk first.");
+                var chat = await _package.ShowChatAsync();
+                foreach (var p in paths) chat.AttachFile(p);
+            }));
+            addToChat.BeforeQueryStatus += (s, e) =>
+            {
+                ThreadHelper.ThrowIfNotOnUIThread();
+                ((OleMenuCommand)s).Enabled = VsContext.GetSolutionExplorerSelection().Count > 0;
+            };
+
             Add(mcs, PackageIds.AttachErrorList, (s, e) => Run(async () =>
             {
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();

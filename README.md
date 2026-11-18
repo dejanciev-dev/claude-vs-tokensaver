@@ -60,7 +60,7 @@ This extension attacks all three, and shows the numbers so you can see the effec
 | **Route with Haiku** (optional, off) | Instead of the local keyword rules, a small Haiku call picks model and effort for each Auto prompt, with a short reason: about $0.0001 and 1–2 s per prompt. It runs in a separate, trimmed Claude Code process (no tools, no project files, ~1.3k tokens instead of ~25k), started when the chat opens because it takes ~14 s to start. No answer within 4 s: the local rules decide. The savings report shows how often both agree and what the router cost. |
 | **Cache-aware routing** | The prompt cache is per model. Once a conversation is large (30k tokens by default), routing never switches to a cheaper model, because re-caching the whole context would cost more than it saves. |
 | **Smart selection context** | Small selections are inlined and dedented. Large ones are sent as `path:L10-200` references, so Claude reads only that range. Whole files are never pasted. |
-| **File references** | **Attach Current File** and the **`@` file picker** send only a path. Claude reads what it needs. |
+| **File references** | **Attach Current File**, the **`@` file picker** and **Add to Claude Code Chat** (right-click files, folders or projects in Solution Explorer) send only a path. Claude reads what it needs. |
 | **Compact error list** | **Attach Error List** sends errors only (no warnings), one `file:line` + message line each, de-duplicated and capped at 20. |
 | **Claude reads the Error List itself** | A read-only `get_error_list` tool (an MCP server inside the extension) lets Claude check errors and warnings after an edit instead of running a verbose full build. One line per row, errors first; its listing costs almost nothing until Claude uses it. |
 | **One warm process per chat** | The `claude` process stays alive between prompts, so the prompt cache is reused (verified: 18k cache-read tokens on the second turn). Model and effort switch live without a restart. |
@@ -256,6 +256,7 @@ First run:
 | New chat window | Tools → Claude Code | `Ctrl+Alt+K, N` |
 | Ask Claude about the selection | Editor right-click | `Ctrl+Alt+K, S` |
 | Attach current file as a reference | Tools → Claude Code · editor right-click | `Ctrl+Alt+K, F` |
+| Add files, folders or projects as references | Solution Explorer right-click | |
 | Attach Error List | Tools → Claude Code | `Ctrl+Alt+K, E` |
 | Focus last message (keyboard to Claude's last answer; `Esc` goes back) | Tools → Claude Code · `/` | `Ctrl+Alt+K, M` |
 | Show Savings Report | Tools → Claude Code | |

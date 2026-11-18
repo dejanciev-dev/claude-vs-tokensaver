@@ -23,5 +23,6 @@ namespace ClaudeVS
         public const int ExportUsageCsv = 0x0109;
         public const int SaveSavingsReport = 0x010A;
         public const int OpenUsageLogFolder = 0x010B;
+        public const int AddToChat = 0x010C;
     }
 }
