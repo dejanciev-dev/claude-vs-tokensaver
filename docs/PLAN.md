@@ -1637,7 +1637,9 @@ they don't show yet.
       `TurnFileActivity.SubagentRereadTokens` (the main agent's reads kept across turns, cleared by a compaction and
       `ResetConversation`), `UsageRecord.SubagentRereadTokens` (`agentReread`), CSV `agent_reread_tokens`,
       `SavingsReport.SubagentRereadsLine`, `ConversationReads`. Builds clean; not yet run in VS
-- [ ] **Manual checks for Phase 62.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
+- [x] **Manual checks for Phase 62.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md). Section 25, *Reads
+      across solutions and agents*: folder rows by solution, a reference sent before its size showed, subagent
+      re-reads in the report, the summary and the CSV; Release is now 26
 
 ---
 

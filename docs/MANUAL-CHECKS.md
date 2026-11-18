@@ -305,7 +305,15 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Token tips off (Options → Token saving), the same | The tips go to the Output pane, no links in the chat |
 | **Export Usage as CSV…** | The last column `read_folders` lists folders with tokens, largest first |
 
-## 25. Release (Phase 5)
+## 25. Reads across solutions and agents (Phase 62)
+
+| Do | Expect |
+|---|---|
+| Use the chat in two solutions that both have a `src` folder, then **Show Savings Report** over all solutions | *Folders read most* rows start with the solution's name (`Shop: src/Core`); a report for one solution has none |
+| Right-click a large solution → **Add to Claude Code Chat** and send at once, before its size shows | The turn's footer tooltip still has the *References* line once the size is known |
+| Ask Claude to read a file, then *Use an Explore agent to summarize that same file* | **Show Savings Report**: *Subagents re-reading: ~… tok*; **Copy session summary**: *Subagents re-reading what the conversation had*; the CSV's `agent_reread_tokens` |
+
+## 26. Release (Phase 5)
 
 These need you rather than a check list:
 
