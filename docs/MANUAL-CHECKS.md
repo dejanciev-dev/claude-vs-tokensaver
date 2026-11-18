@@ -284,7 +284,18 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Delete `.claude/hooks/trim-output.ps1` (the installer writes it again), check again | **Reinstall** shows; clicking it says what was written and to start a New chat; after a New chat the check says *all in effect* |
 | The meter → context breakdown → *Token-saving setup: … isn't in effect* | Runs the check: the same message and links |
 
-## 23. Release (Phase 5)
+## 23. Reads and loud commands: from numbers to fixes (Phase 60)
+
+| Do | Expect |
+|---|---|
+| A solution without the token-saving setup and with a built project; ask *Read obj/project.assets.json and tell me the package count* | After the turn, a token tip: `Claude read ~… tokens from …/obj, which holds build output …`, with **Add Read(./\*\*/obj/\*\*)** under it |
+| Click **Add Read(./\*\*/obj/\*\*)** | *Added … to .claude/settings.json*; the file has the rule and your other settings. **New chat**, ask the same: Claude can't read it, and no tip |
+| Ask Claude to read the same unchanged file twice in two turns, then **Show Savings Report** and **Export Usage as CSV…** | *Read again, unchanged: ~… tok in 1 turn*; the second turn's `repeat_read_tokens` is filled |
+| With the setup installed, ask Claude to run `dotnet build -v detailed` | One tip: the command put ~… tokens into the context, *the quiet-build hook left it alone because it named a verbosity; ask Claude for the plain `dotnet build`*. No second, general large-output tip. The report has *Loud builds and logs: 1 (dotnet build 1)*, the CSV `loud_runs` |
+| Without the setup, a large `git log` | The tip says to install the hook instead |
+| After the above, `/` → **Copy session summary**, paste it | Lines *Reads by folder: …*, *References: …* (if something was attached), *Read again, unchanged: …*, *Builds and logs: …*. **New chat**, copy again: none of these lines |
+
+## 24. Release (Phase 5)
 
 These need you rather than a check list:
 
