@@ -1955,6 +1955,7 @@ namespace ClaudeVS.ToolWindow
                 if (ev.Kind == ClaudeEventKind.ToolResult && _turnFiles.LastReread is var (rereadId, agentId, rereadPath, rereadTokens) && rereadId == ev.ToolUseId)
                 {
                     if (_tasks.AddReread(agentId, rereadTokens)) RefreshAgentsPanel();
+                    SubagentRereadTip(_tasks.SubagentTypeOf(agentId), rereadPath, rereadTokens);
                 }
                 if (ev.Kind == ClaudeEventKind.AssistantUsage && !ev.IsSubagent) Tip(SessionNotices.HaikuLongContext(ev.Model, ev.Usage.ContextTokens));
                 switch (ev.Kind)

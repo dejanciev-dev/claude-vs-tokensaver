@@ -153,6 +153,20 @@ namespace ClaudeVS.ToolWindow
             if (TipsOn) TipAction("Tell Claude it has " + System.IO.Path.GetFileName(path), Core.Tokens.ReadTracker.AlreadyHaveRequest(path));
         }
 
+        /// <summary>Subagent re-reads of the conversation's files so far, for the tip; reset with the conversation.</summary>
+        private long _subagentRereadTotal;
+        private bool _gaveSubagentRereadTip;
+
+        /// <summary>Once per conversation, when subagents have re-read 5k+ tokens of files the conversation already had.</summary>
+        private void SubagentRereadTip(string agentKind, string path, long tokens)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            _subagentRereadTotal += tokens;
+            if (_gaveSubagentRereadTip || !(SessionNotices.SubagentRereadTip(_subagentRereadTotal, agentKind, path) is string tip)) return;
+            _gaveSubagentRereadTip = true;
+            Tip(tip);
+        }
+
         /// <summary>A link under a tip that puts <paramref name="request"/> in the input box (after anything typed), to edit or send.</summary>
         private void TipAction(string label, string request)
         {
@@ -523,6 +537,8 @@ namespace ClaudeVS.ToolWindow
             _repeatReadBase = 0;
             _conversationReads.Reset();
             _turnFiles.ResetConversation();
+            _subagentRereadTotal = 0;
+            _gaveSubagentRereadTip = false;
         }
     }
 }
