@@ -334,6 +334,24 @@ namespace ClaudeVS.Core.Tests
             True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",git log:1,6000,,"), "csv: " + csv);
         }
 
+        /// <summary>A subagent's tool result carries its Agent call, and its re-reads count on that agent's task.</summary>
+        private static void Test_SubagentReread_OnAgentRow()
+        {
+            var ev = new ClaudeStreamParser().Parse("{\"type\":\"user\",\"parent_tool_use_id\":\"toolu_agent1\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"toolu_r1\",\"content\":\"x\"}]}}")
+                .Single(e => e.Kind == ClaudeEventKind.ToolResult);
+            True(ev.IsSubagent, "a subagent's");
+            Eq("toolu_agent1", ev.ParentToolUseId, "its Agent call");
+            Eq(null, new ClaudeStreamParser().Parse("{\"type\":\"user\",\"parent_tool_use_id\":null,\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"t\",\"content\":\"x\"}]}}")
+                .Single().ParentToolUseId, "the main agent's: none");
+
+            var tasks = new AgentTaskList();
+            tasks.Apply(JObject.Parse("{\"type\":\"system\",\"subtype\":\"task_started\",\"task_id\":\"a1\",\"tool_use_id\":\"toolu_agent1\",\"description\":\"Look\",\"task_type\":\"local_agent\",\"subagent_type\":\"Explore\"}"));
+            True(tasks.AddReread("toolu_agent1", 3000) && tasks.AddReread("toolu_agent1", 1000), "counted");
+            True(!tasks.AddReread("toolu_other", 3000) && !tasks.AddReread(null, 3000), "no such task");
+            Eq(4000L, tasks.Tasks.Single().RereadTokens);
+            Eq("Explore", tasks.SubagentTypeOf("toolu_agent1"));
+        }
+
         /// <summary>Subagents reading files the main agent already read: kept across turns, cleared by a compaction or a new conversation.</summary>
         private static void Test_SubagentRereads()
         {
@@ -351,6 +369,8 @@ namespace ClaudeVS.Core.Tests
             files.Reset();                                  // the next turn
             Read(@"C:\repo\a.cs", 6000, subagent: true);    // the main agent had it (path case aside)
             Eq((long)TokenEstimate.FromChars(6000), files.SubagentRereadTokens, "re-read in a later turn");
+            Eq(@"C:\repo\a.cs", files.LastReread?.Path, "the last re-read, for the agent's row and the tip");
+            Eq("r" + n, files.LastReread?.ReadToolUseId, "matched by the Read call");
             files.Observe(new ClaudeEvent { Kind = ClaudeEventKind.Compacted });
             files.Reset();
             Read(@"C:\repo\A.cs", 6000, subagent: true);

@@ -271,6 +271,7 @@ namespace ClaudeVS.ToolWindow
             if (cost != null) parts.Add(cost);
             if (t.ToolUses > 0) parts.Add(t.ToolUses + (t.ToolUses == 1 ? " tool" : " tools"));
             if (t.OutputRetries > 0) parts.Add($"cut off {t.OutputRetries}×"); // past the output limit, asked to go on
+            if (t.RereadTokens > 0) parts.Add("re-read ~" + TokenMeter.Format(t.RereadTokens)); // files the conversation already had
             var elapsed = t.Elapsed(nowUtc);
             parts.Add(elapsed.TotalHours >= 1 ? elapsed.ToString(@"h\:mm\:ss") : elapsed.ToString(@"m\:ss"));
             return string.Join(" · ", parts);

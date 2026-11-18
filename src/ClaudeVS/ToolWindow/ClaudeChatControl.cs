@@ -1951,6 +1951,11 @@ namespace ClaudeVS.ToolWindow
                 ThreadHelper.ThrowIfNotOnUIThread();
                 _meterModel?.Observe(ev);
                 _turnFiles.Observe(ev); // reads and quiet commands, for the usage log
+                // A subagent read a file the conversation already had (seen by _turnFiles for this very result)
+                if (ev.Kind == ClaudeEventKind.ToolResult && _turnFiles.LastReread is var (rereadId, agentId, rereadPath, rereadTokens) && rereadId == ev.ToolUseId)
+                {
+                    if (_tasks.AddReread(agentId, rereadTokens)) RefreshAgentsPanel();
+                }
                 if (ev.Kind == ClaudeEventKind.AssistantUsage && !ev.IsSubagent) Tip(SessionNotices.HaikuLongContext(ev.Model, ev.Usage.ContextTokens));
                 switch (ev.Kind)
                 {

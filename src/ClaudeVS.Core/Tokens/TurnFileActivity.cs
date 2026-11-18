@@ -45,12 +45,19 @@ namespace ClaudeVS.Core.Tokens
         /// </summary>
         public long SubagentRereadTokens { get; private set; }
 
+        /// <summary>
+        /// The last subagent re-read: the Read call's id (to match the event that caused it), the subagent's Agent call,
+        /// the file and its tokens. Null until one happens in the turn.
+        /// </summary>
+        public (string ReadToolUseId, string AgentToolUseId, string Path, long Tokens)? LastReread { get; private set; }
+
         /// <summary>A new conversation: forgets what the main agent read, and the turn.</summary>
         public void ResetConversation() { _mainRead.Clear(); Reset(); }
 
         public void Reset()
         {
             SubagentRereadTokens = 0;
+            LastReread = null;
             _pendingReads.Clear(); _shellCommands.Clear(); _quietAsked.Clear();
             ReadTokensByFile.Clear(); QuietRuns.Clear(); QuietTokens = 0;
             LoudRuns.Clear(); LoudTokens = 0; LastLoud = null;
@@ -84,7 +91,11 @@ namespace ClaudeVS.Core.Tokens
                             ReadTokensByFile.TryGetValue(path, out var t);
                             ReadTokensByFile[path] = t + tokens;
                             if (!ev.IsSubagent) _mainRead.Add(path);
-                            else if (_mainRead.Contains(path)) SubagentRereadTokens += tokens;
+                            else if (_mainRead.Contains(path))
+                            {
+                                SubagentRereadTokens += tokens;
+                                LastReread = (ev.ToolUseId, ev.ParentToolUseId, path, tokens);
+                            }
                         }
                     }
                     else if (_shellCommands.TryGetValue(ev.ToolUseId, out var command))
