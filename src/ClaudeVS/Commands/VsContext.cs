@@ -128,6 +128,35 @@ namespace ClaudeVS.Commands
         }
 
         /// <summary>
+        /// The files and folders selected in Solution Explorer, as full paths: a file's path, a project's or the
+        /// solution's folder. Items with no path on disk (virtual folders, references) are left out.
+        /// </summary>
+        public static IReadOnlyList<string> GetSolutionExplorerSelection()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var paths = new List<string>();
+            try
+            {
+                if (!(Dte?.ToolWindows?.SolutionExplorer?.SelectedItems is Array items)) return paths;
+                foreach (var o in items)
+                {
+                    string path = null;
+                    switch ((o as UIHierarchyItem)?.Object)
+                    {
+                        case ProjectItem pi: path = pi.FileCount > 0 ? pi.FileNames[1] : null; break;
+                        case Project p: path = string.IsNullOrEmpty(p.FullName) ? null : Path.GetDirectoryName(p.FullName); break;
+                        case Solution s: path = string.IsNullOrEmpty(s.FullName) ? null : Path.GetDirectoryName(s.FullName); break;
+                    }
+                    if (string.IsNullOrEmpty(path)) continue;
+                    path = path.TrimEnd('\\', '/');
+                    if ((File.Exists(path) || Directory.Exists(path)) && !paths.Contains(path, StringComparer.OrdinalIgnoreCase)) paths.Add(path);
+                }
+            }
+            catch (Exception) { }
+            return paths;
+        }
+
+        /// <summary>
         /// Inserts text at the caret of the active text document, replacing any selection, as one undo step.
         /// Returns false when no text editor is active.
         /// </summary>

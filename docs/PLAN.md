@@ -1450,9 +1450,12 @@ the way the extension runs it (Haiku, two runs, under $0.02).
       it; other reasons ("This command requires approval", type `other`) say nothing and stay hidden. Capture:
       `Fixtures/cli-2.1.327-hook-ask-reason.jsonl`, `Test_PermissionPrompt_RealCli_HookReason_2_1_327`;
       `PermissionPrompt.HookReason`. Builds clean; not yet run in VS
-- [ ] **Add to Chat from Solution Explorer** (2.1.327's VS Code "Add to Chat" in the Explorer's right-click menu).
-      Right-click files, folders or projects in Solution Explorer → *Add to Claude Code chat* puts `@path` references
-      (relative to the working folder) into the input box, like the `@` picker: paths only, no contents. VS-only
+- [x] **Add to Chat from Solution Explorer** (2.1.327's VS Code "Add to Chat" in the Explorer's right-click menu).
+      Right-click files, folders or projects in Solution Explorer → *Add to Claude Code Chat* attaches them as
+      references, like *Attach Current File*: paths only (relative to the working folder), no contents. VS-only.
+      `VsContext.GetSolutionExplorerSelection` (a file's path, a project's or the solution's folder; items not on
+      disk left out); on file, folder, project, solution and multi-selection menus; menu resource version 2 so VS
+      reloads the menus. Builds clean; not yet run in VS
 - [ ] **Verify with 2.1.327 and raise `CliVersion.Tested`.** The live tests with 2.1.327; README, Marketplace
       overview, CONTRIBUTING and the plan-mode notes
 

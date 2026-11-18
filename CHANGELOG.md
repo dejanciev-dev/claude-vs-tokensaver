@@ -10,6 +10,8 @@ All notable changes to this project are listed here. The format follows
 - **Why a hook asks**: when one of your PreToolUse hooks asks for confirmation with a reason, the permission card
   shows it under Claude's description (`ⓘ PreToolUse hook (settings): …`), and screen readers hear it. Claude Code
   sends the reason since 2.1.327.
+- **Add to Claude Code Chat** in Solution Explorer: right-click files, folders, projects or the solution (several at
+  once too) and they are attached to the chat as references, paths only, like *Attach Current File*.
 
 ## [0.11.0] - 2026-11-17
 

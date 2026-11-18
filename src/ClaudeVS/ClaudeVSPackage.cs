@@ -12,7 +12,7 @@ namespace ClaudeVS
     [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
     [InstalledProductRegistration("Claude Code for Visual Studio — Token Saver", "Token-efficient Claude Code chat for Visual Studio. Community project, not affiliated with Anthropic.", "0.11.0")]
     [Guid(PackageIds.PackageGuidString)]
-    [ProvideMenuResource("Menus.ctmenu", 1)]
+    [ProvideMenuResource("Menus.ctmenu", 2)]
     // Docked next to Solution Explorer by default.
     [ProvideToolWindow(typeof(ClaudeToolWindow), Style = VsDockStyle.Tabbed, Window = "3ae79031-e1bc-11d0-8f78-00a0c9110057", MultiInstances = true)]
     [ProvideOptionPage(typeof(ClaudeOptionsPage), "Claude Code", "General", 0, 0, true)]
