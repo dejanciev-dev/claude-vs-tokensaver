@@ -1501,10 +1501,15 @@ tool row reads only `source: "config"`, so it says nothing about hooks.
       `ReferenceSize.Measure` (the `@` picker's `FileIndex` walk, binaries left out, up to 5,000 files: `5000+
       files`); measured off the UI thread once per attachment; the tooltip explains the amber. Builds clean; not yet
       run in VS
-- [ ] **Check the token-saving setup.** Like the problem list 2.1.327 added to `/status`: after *Install Token-Saving
+- [x] **Check the token-saving setup.** Like the problem list 2.1.327 added to `/status`: after *Install Token-Saving
       Settings and Hooks*, check from `get_settings` (no model call) that the read-deny rules, `bashOutputMaxChars` and
       the quiet-build hook are still in effect, and that the hook's matcher still matches `Bash` and `PowerShell`.
-      Missing or overridden parts are listed with where to fix them; in the context breakdown and as a `/` command
+      Missing or overridden parts are listed with where to fix them; in the context breakdown and as a `/` command.
+      Probed with 2.1.327 (no model call): `effective` joins hook lists and deny rules from every source and takes
+      `bashOutputMaxChars` from the highest one (a local 200,000 over the project's 15,000). `SetupCheck.Find`
+      (null when not installed; also `disableAllHooks` and a missing script), `ClaudeSettings.Response`; `/` →
+      *Check token-saving setup*, a *Tips* line in the breakdown, the Output pane at start. Builds clean; not yet
+      run in VS
 - [ ] **Cut off twice: capture and test.** 2.1.327: subagent answers that hit the output limit twice "now more often
       come back whole or say up front that they are partial". Capture a subagent cut off twice
       (`CLAUDE_CODE_MAX_OUTPUT_TOKENS`), check the retry count and cost, and that a partial answer's text is kept

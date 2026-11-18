@@ -631,6 +631,14 @@ namespace ClaudeVS.ToolWindow
                     Description = string.Join("; ", _costlySettings.Select(c => c.Setting)) + ". Click for where and why",
                     Run = ShowSettingsCheck,
                 });
+            if (_setupProblems != null && _setupProblems.Count > 0)
+                entries.Add(new ChatPopup.Entry
+                {
+                    Group = "Tips", Glyph = ChatTheme.IconLightbulb,
+                    Label = $"Token-saving setup: {_setupProblems.Count} {(_setupProblems.Count == 1 ? "part isn't" : "parts aren't")} in effect",
+                    Description = string.Join("; ", _setupProblems.Select(c => c.Setting)) + ". Click for where and how to fix",
+                    Run = ShowSetupCheck,
+                });
             if (u.Percentage >= 30)
                 entries.Add(new ChatPopup.Entry { Group = "Tips", Glyph = ChatTheme.IconCompact, Label = "Compact now", Description = "Summarize the conversation to free space", Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); SendText("/compact", routed: false); } });
 
@@ -787,6 +795,7 @@ namespace ClaudeVS.ToolWindow
                 new ChatPopup.Entry { Group = "Context", Label = "Skills…", Description = "Turn skills on or off, with what each costs", Run = ShowSkills },
                 new ChatPopup.Entry { Group = "Context", Label = "MCP servers…", Description = "Turn servers on or off, reconnect", Run = ShowMcpServers },
                 new ChatPopup.Entry { Group = "Context", Label = "Settings that cost", Description = "Claude Code settings that make turns dearer, and where to change them", Run = ShowSettingsCheck },
+                new ChatPopup.Entry { Group = "Context", Label = "Check token-saving setup", Description = "Is the quiet-build hook, the read-deny rules and the shell output cap still in effect?", Run = ShowSetupCheck },
                 new ChatPopup.Entry { Group = "Context", Label = "Compact conversation", Description = "Summarize to shrink the context", Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); SendText("/compact", routed: false); } },
                 new ChatPopup.Entry { Group = "Context", Label = "Resume a session…", Run = ShowHistoryMenu },
                 new ChatPopup.Entry { Group = "Context", Label = "Rename session", Run = StartTitleEdit },

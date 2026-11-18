@@ -13,6 +13,11 @@ All notable changes to this project are listed here. The format follows
   read it whole (`src/Big.cs (reference, ~3.2k tok if read)`, `src (reference, 12 files, ~40.0k tok if read)`), in
   amber from 20k tokens. Only the path is sent, so it's a ceiling; folders count text files only, as the `@` picker
   lists them.
+- **Check token-saving setup**: `/` → *Check token-saving setup* asks Claude Code for its settings (no model call)
+  and says whether the token-saving setup still applies: the quiet-build hook for Bash and PowerShell (not dropped,
+  not narrowed to one shell, hooks not turned off), the read-deny rules and the shell output cap (not raised in
+  another settings file). Each problem says where to fix it; the context breakdown and the Output pane say when
+  there are some.
 
 ### Added
 - **Why a hook asks**: when one of your PreToolUse hooks asks for confirmation with a reason, the permission card
