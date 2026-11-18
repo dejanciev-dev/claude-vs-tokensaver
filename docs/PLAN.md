@@ -1641,6 +1641,19 @@ they don't show yet.
       across solutions and agents*: folder rows by solution, a reference sent before its size showed, subagent
       re-reads in the report, the summary and the CSV; Release is now 26
 
+## Phase 63 — Subagent re-reads, where you see them
+
+Planned on 2026-11-18, after Phase 62, on the same branch. Phase 62 logs what subagents re-read of the conversation;
+this phase shows it while it happens.
+
+- [ ] **On the agent's row.** The Agents panel's row says how much of the conversation's files the agent read again
+      (`re-read ~6.0k`). The parser gives a subagent's tool results their Agent call (`ParentToolUseId`), as it does
+      for usage and cut-off retries
+- [ ] **A tip once it adds up.** Once per conversation, when subagents have re-read 5k+ tokens of files the
+      conversation already had: which agent and file, and that a subagent starts without the conversation, so for
+      files Claude already read, asking it directly (or naming the lines the agent needs) is cheaper
+- [ ] **Manual checks for Phase 63.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
+
 ---
 
 ## Working in Visual Studio — daily loop
