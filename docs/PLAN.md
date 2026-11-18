@@ -1687,9 +1687,11 @@ report, folder lists to each usage line and seven CSV columns; this phase keeps 
 extend. (Checked first: a turn Claude Code starts when a background agent finishes already gets its own usage
 record, so a background agent's reads are logged.)
 
-- [ ] **One section in the report.** *References read*, *Read again*, *Subagents re-reading*, *Quiet-build hook*,
+- [x] **One section in the report.** *References read*, *Read again*, *Subagents re-reading*, *Quiet-build hook*,
       *Loud builds and logs* and *Folders read most* were spread over the report; they become one *Reads and
-      commands* section after *Tool results*, shown only when one of them has something to say
+      commands* section after *Tool results*, shown only when one of them has something to say.
+      `SavingsReport.AppendReadsSection` (values in the report's column). Not yet released, so 0.12.0's notes stay as
+      they are
 - [ ] **Shorter usage lines.** A turn's `readFolders` keeps its 10 largest folders and adds the rest up as
       `(other)`, so a turn that reads all over a large repository doesn't write a long line
 - [ ] **CSV tests by column name.** The CSV tests compare row endings (`…,0,,,,,`) and count columns from the end, so
