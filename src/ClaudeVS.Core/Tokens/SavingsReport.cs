@@ -779,6 +779,14 @@ namespace ClaudeVS.Core.Tokens
             return null;
         }
 
+        /// <summary>Tokens spent re-reading unchanged files Claude already had, and the turns they were in.</summary>
+        public long RepeatReadTokens { get; set; }
+        public int RepeatReadTurns { get; set; }
+
+        /// <summary>"~14.0k tok in 5 turns"; null when none was logged.</summary>
+        public string RepeatReadsLine() =>
+            RepeatReadTokens <= 0 ? null : $"~{TokenMeter.Format(RepeatReadTokens)} tok in {RepeatReadTurns} {(RepeatReadTurns == 1 ? "turn" : "turns")}";
+
         /// <summary>Commands the token-saving hook made quiet, by kind, and the tokens they brought in.</summary>
         public Dictionary<string, int> QuietRuns { get; } = new Dictionary<string, int>(StringComparer.Ordinal);
         public long QuietTokens { get; set; }
@@ -1075,6 +1083,8 @@ namespace ClaudeVS.Core.Tokens
             rep.RefTurns = list.Count(r => r.RefCeilingTokens > 0);
             rep.RefCeilingTokens = list.Sum(r => r.RefCeilingTokens);
             rep.RefReadTokens = list.Where(r => r.RefCeilingTokens > 0).Sum(r => r.RefReadTokens);
+            rep.RepeatReadTokens = list.Sum(r => r.RepeatReadTokens);
+            rep.RepeatReadTurns = list.Count(r => r.RepeatReadTokens > 0);
             foreach (var r in list.Where(r => r.ReadFolders != null))
                 foreach (var kv in r.ReadFolders) { rep.ReadFolders.TryGetValue(kv.Key, out var t); rep.ReadFolders[kv.Key] = t + kv.Value; }
             foreach (var r in list.Where(r => r.QuietRuns != null))
@@ -1337,6 +1347,8 @@ namespace ClaudeVS.Core.Tokens
                 sb.AppendLine($"  by model:                 {byModel}");
             if (ToolResultsLine() is string tools)
                 sb.AppendLine($"Tool results:               {tools} tokens  (into the context, read again by each later request until /compact)");
+            if (RepeatReadsLine() is string repeated)
+                sb.AppendLine($"Read again, unchanged:      {repeated}  (files Claude already had; \"you already have it\" saves them)");
             var folders = TopReadFolders();
             if (folders.Count > 0)
             {

@@ -104,6 +104,8 @@ namespace ClaudeVS.ToolWindow
 
         private readonly Core.Tokens.ReadTracker _reads = new Core.Tokens.ReadTracker();
         private bool _gaveRepeatReadTip;
+        /// <summary><see cref="Core.Tokens.ReadTracker.RepeatedTokens"/> at the last logged turn, for each turn's share.</summary>
+        private long _repeatReadBase;
 
         // The main agent's shell calls waiting for their result: tool_use_id → tool name.
         private readonly Dictionary<string, string> _shellCalls = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -483,6 +485,7 @@ namespace ClaudeVS.ToolWindow
             _gaveLongAnswerTip = false;
             _gaveNoiseReadTip = false;
             _reads.Reset();
+            _repeatReadBase = 0;
         }
     }
 }

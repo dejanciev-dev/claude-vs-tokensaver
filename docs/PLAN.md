@@ -1577,8 +1577,10 @@ turns that into fixes in the chat and keeps what was only a passing tip.
       Found on the way: Phase 59's `ByFolder` cut every path at two levels, so `src/App/obj/…` became `src/App` and
       build output below the second level was never flagged; it now ends a folder at a noise folder at any depth.
       Builds clean; not yet run in VS
-- [ ] **Repeated reads over time.** The usage log keeps each turn's tokens from re-reading an unchanged file
-      (`ReadTracker`, until now only a tip); a savings report line and a `repeat_read_tokens` CSV column
+- [x] **Repeated reads over time.** The usage log keeps each turn's tokens from re-reading an unchanged file
+      (`ReadTracker`, until now only a tip); a savings report line and a `repeat_read_tokens` CSV column.
+      `UsageRecord.RepeatReadTokens` (`repeatRead`: the tracker's growth since the last logged turn, reset with the
+      conversation), `SavingsReport.RepeatReadsLine`. Builds clean; not yet run in VS
 - [ ] **Loud commands the hook skipped.** Builds, tests and `git log` that the hook leaves alone (a verbosity given,
       a pipe or chain, a count) and that brought 2k+ tokens: counted by kind in the usage log, the report and the CSV,
       and once per conversation a tip with the form that runs quiet (the plain command)
