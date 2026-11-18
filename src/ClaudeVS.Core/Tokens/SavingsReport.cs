@@ -792,6 +792,14 @@ namespace ClaudeVS.Core.Tokens
             return $"{n} ({kinds}), ~{TokenMeter.Format(LoudTokens)} tok";
         }
 
+        /// <summary>Tokens subagents spent reading files the conversation already had, and the turns they were in.</summary>
+        public long SubagentRereadTokens { get; set; }
+        public int SubagentRereadTurns { get; set; }
+
+        /// <summary>"~30.0k tok in 4 turns"; null when none was logged.</summary>
+        public string SubagentRereadsLine() =>
+            SubagentRereadTokens <= 0 ? null : $"~{TokenMeter.Format(SubagentRereadTokens)} tok in {SubagentRereadTurns} {(SubagentRereadTurns == 1 ? "turn" : "turns")}";
+
         /// <summary>Tokens spent re-reading unchanged files Claude already had, and the turns they were in.</summary>
         public long RepeatReadTokens { get; set; }
         public int RepeatReadTurns { get; set; }
@@ -1101,6 +1109,8 @@ namespace ClaudeVS.Core.Tokens
                 foreach (var kv in r.LoudRuns) { rep.LoudRuns.TryGetValue(kv.Key, out var n); rep.LoudRuns[kv.Key] = n + kv.Value; }
                 rep.LoudTokens += r.LoudTokens;
             }
+            rep.SubagentRereadTokens = list.Sum(r => r.SubagentRereadTokens);
+            rep.SubagentRereadTurns = list.Count(r => r.SubagentRereadTokens > 0);
             rep.RepeatReadTokens = list.Sum(r => r.RepeatReadTokens);
             rep.RepeatReadTurns = list.Count(r => r.RepeatReadTokens > 0);
             // Folders are relative to each working folder: over several solutions, say which one each row is from
@@ -1377,6 +1387,8 @@ namespace ClaudeVS.Core.Tokens
                 sb.AppendLine($"Loud builds and logs:       {loud}  (in full: a verbosity, a pipe or a count; the plain command runs quiet)");
             if (RepeatReadsLine() is string repeated)
                 sb.AppendLine($"Read again, unchanged:      {repeated}  (files Claude already had; \"you already have it\" saves them)");
+            if (SubagentRereadsLine() is string agentReread)
+                sb.AppendLine($"Subagents re-reading:       {agentReread}  (files the conversation already had; a subagent starts without them, so naming the lines it needs helps)");
             var folders = TopReadFolders();
             if (folders.Count > 0)
             {

@@ -36,8 +36,21 @@ namespace ClaudeVS.Core.Tokens
         /// <summary>The last loud command seen, for the tip: its call, Claude's command, its kind and tokens.</summary>
         public (string ToolUseId, string Command, string Kind, long Tokens)? LastLoud { get; private set; }
 
+        /// <summary>Files the main agent read in this conversation (since its last compaction); kept across turns.</summary>
+        private readonly HashSet<string> _mainRead = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// This turn's tokens of subagents reading files the main agent had already read in the conversation: a subagent
+        /// starts without that context, so it reads them again.
+        /// </summary>
+        public long SubagentRereadTokens { get; private set; }
+
+        /// <summary>A new conversation: forgets what the main agent read, and the turn.</summary>
+        public void ResetConversation() { _mainRead.Clear(); Reset(); }
+
         public void Reset()
         {
+            SubagentRereadTokens = 0;
             _pendingReads.Clear(); _shellCommands.Clear(); _quietAsked.Clear();
             ReadTokensByFile.Clear(); QuietRuns.Clear(); QuietTokens = 0;
             LoudRuns.Clear(); LoudTokens = 0; LastLoud = null;
@@ -53,6 +66,9 @@ namespace ClaudeVS.Core.Tokens
                     else if ((ev.ToolName == "Bash" || ev.ToolName == "PowerShell") && ev.ToolInput?["command"]?.Type == Newtonsoft.Json.Linq.JTokenType.String)
                         _shellCommands[ev.ToolUseId] = (string)ev.ToolInput["command"];
                     break;
+                case ClaudeEventKind.Compacted:
+                    _mainRead.Clear(); // the summary replaced what the main agent read
+                    break;
                 case ClaudeEventKind.PermissionRequest when ev.ToolUseId != null:
                     // The hook rewrote it and asks (its default): the request says so in its reason (verified with 2.1.327).
                     string reason = ev.Payload?["decision_reason"]?.Type == Newtonsoft.Json.Linq.JTokenType.String ? (string)ev.Payload["decision_reason"] : null;
@@ -64,8 +80,11 @@ namespace ClaudeVS.Core.Tokens
                         _pendingReads.Remove(ev.ToolUseId);
                         if (!ev.IsError && ev.ResultChars > 0)
                         {
+                            int tokens = TokenEstimate.FromChars(ev.ResultChars);
                             ReadTokensByFile.TryGetValue(path, out var t);
-                            ReadTokensByFile[path] = t + TokenEstimate.FromChars(ev.ResultChars);
+                            ReadTokensByFile[path] = t + tokens;
+                            if (!ev.IsSubagent) _mainRead.Add(path);
+                            else if (_mainRead.Contains(path)) SubagentRereadTokens += tokens;
                         }
                     }
                     else if (_shellCommands.TryGetValue(ev.ToolUseId, out var command))

@@ -522,6 +522,7 @@ namespace ClaudeVS.ToolWindow
             _reads.Reset();
             _repeatReadBase = 0;
             _conversationReads.Reset();
+            _turnFiles.ResetConversation();
         }
     }
 }

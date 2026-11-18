@@ -25,6 +25,9 @@ All notable changes to this project are listed here. The format follows
   rule into the project's `.claude/settings.json` (from the next New chat). *Folders read most* now finds such
   folders at any depth (`src/App/obj`), not only in the first two levels. Minified files and source maps
   (`*.min.js`, `*.min.css`, `*.map`) count too, with their own rule (`Read(./**/*.min.js)`).
+- **Subagents re-reading what the conversation has**: a subagent starts without the conversation, so it reads
+  files the main agent already read again. Those tokens are logged per turn: a *Subagents re-reading* line in the
+  savings report, an `agent_reread_tokens` CSV column and a line in *Copy session summary*.
 - **Reads by folder in the CSV**: a `read_folders` column (`src/Core:40000;src/App/obj:2000`, largest first).
 - **Tips you can act on**: the loud-command tip has **Ask for the plain `dotnet build`**, and the repeated-read tip
   **Tell Claude it has `Foo.cs`**; each puts the request into the input box (after anything typed), to edit or send.

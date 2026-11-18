@@ -2138,6 +2138,7 @@ namespace ClaudeVS.ToolWindow
                 rec.RefReadTokens = readTokens;
                 _lastTurnReferences = TurnFooter.References(readFiles, readTokens, rec.RefFiles, rec.RefCeilingTokens);
             }
+            rec.SubagentRereadTokens = _turnFiles.SubagentRereadTokens;
             rec.RepeatReadTokens = _reads.RepeatedTokens - _repeatReadBase; // this turn's share of the conversation's
             _repeatReadBase = _reads.RepeatedTokens;
             if (_turnFiles.ReadTokensByFile.Count > 0)

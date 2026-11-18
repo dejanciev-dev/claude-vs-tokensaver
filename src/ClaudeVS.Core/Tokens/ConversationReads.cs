@@ -11,13 +11,13 @@ namespace ClaudeVS.Core.Tokens
     public sealed class ConversationReads
     {
         private readonly Dictionary<string, long> _folders = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
-        private long _refCeiling, _refRead, _repeat, _quietTokens, _loudTokens;
+        private long _refCeiling, _refRead, _repeat, _quietTokens, _loudTokens, _agentReread;
         private int _quiet, _loud;
 
         public void Reset()
         {
             _folders.Clear();
-            _refCeiling = _refRead = _repeat = _quietTokens = _loudTokens = 0;
+            _refCeiling = _refRead = _repeat = _quietTokens = _loudTokens = _agentReread = 0;
             _quiet = _loud = 0;
         }
 
@@ -32,6 +32,7 @@ namespace ClaudeVS.Core.Tokens
             }
             if (r.RefCeilingTokens > 0) { _refCeiling += r.RefCeilingTokens; _refRead += r.RefReadTokens; }
             _repeat += r.RepeatReadTokens;
+            _agentReread += r.SubagentRereadTokens;
             _quiet += r.QuietRuns?.Values.Sum() ?? 0;
             _quietTokens += r.QuietTokens;
             _loud += r.LoudRuns?.Values.Sum() ?? 0;
@@ -53,6 +54,7 @@ namespace ClaudeVS.Core.Tokens
             if (_refCeiling > 0)
                 lines.Add($"References: Claude read ~{TokenMeter.Format(_refRead)} of the ~{TokenMeter.Format(_refCeiling)} tok attached ({Math.Round(100.0 * Math.Min(_refRead, _refCeiling) / _refCeiling):0}%)");
             if (_repeat > 0) lines.Add($"Read again, unchanged: ~{TokenMeter.Format(_repeat)} tok");
+            if (_agentReread > 0) lines.Add($"Subagents re-reading what the conversation had: ~{TokenMeter.Format(_agentReread)} tok");
             var runs = new List<string>();
             if (_quiet > 0) runs.Add($"{_quiet} made quiet (~{TokenMeter.Format(_quietTokens)} tok back)");
             if (_loud > 0) runs.Add($"{_loud} loud (~{TokenMeter.Format(_loudTokens)} tok)");
