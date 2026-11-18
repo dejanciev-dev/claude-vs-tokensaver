@@ -1519,7 +1519,9 @@ tool row reads only `source: "config"`, so it says nothing about hooks.
       Already handled; now tested: the three retries count and are priced in the failed turn, and the box says what
       to do. `Fixtures/cli-2.1.327-cut-off-then-failed.jsonl` (init line left out),
       `Test_Meter_CutOffThenFailed_RealCli_2_1_327`. The retry text still starts "Output token limit hit."
-- [ ] **Manual checks for Phase 58.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
+- [x] **Manual checks for Phase 58.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md). Section 21, *Hooks
+      that decide, what references cost, and the setup check*: hook deny and allow on rows, reference sizes for a file,
+      a project and a large solution, the setup check fine, raised, narrowed and not installed; Release is now 22
 
 ---
 
