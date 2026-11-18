@@ -283,7 +283,7 @@ namespace ClaudeVS.Core.Tests
                 new UsageRecord { Timestamp = t0, CostUsd = 0.01, QuietRuns = new Dictionary<string, int> { ["dotnet build"] = 7, ["git log"] = 2 }, QuietTokens = 300 },
             }, new PriceTable());
             Eq("12 commands made quiet (dotnet build 9, git log 3), ~1.2k tok came back", rep.QuietRunsLine());
-            True(rep.ToText().Contains("Quiet-build hook:           12 commands"), rep.ToText());
+            True(rep.ToText().Contains("Reads and commands:") && rep.ToText().Contains("  Quiet-build hook:         12 commands"), rep.ToText());
             var csv = new StringWriter();
             UsageCsv.Write(new[] { new UsageRecord { Timestamp = t0, QuietRuns = new Dictionary<string, int> { ["git log"] = 1, ["dotnet build"] = 2 }, QuietTokens = 40 } }, csv);
             True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",dotnet build:2;git log:1,40,,,,,"), "csv: " + csv);
@@ -328,7 +328,7 @@ namespace ClaudeVS.Core.Tests
                 new UsageRecord { Timestamp = t0, CostUsd = 0.01, LoudRuns = new Dictionary<string, int> { ["git log"] = 1 }, LoudTokens = 6000 },
             }, new PriceTable());
             Eq("3 (dotnet build 2, git log 1), ~18.0k tok", rep.LoudRunsLine());
-            True(rep.ToText().Contains("Loud builds and logs:       3"), rep.ToText());
+            True(rep.ToText().Contains("  Loud builds and logs:     3"), rep.ToText());
             var csv = new StringWriter();
             UsageCsv.Write(new[] { new UsageRecord { Timestamp = t0, LoudRuns = new Dictionary<string, int> { ["git log"] = 1 }, LoudTokens = 6000 } }, csv);
             True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",git log:1,6000,,"), "csv: " + csv);
@@ -394,7 +394,7 @@ namespace ClaudeVS.Core.Tests
                 new UsageRecord { Timestamp = t0, CostUsd = 0.01, SubagentRereadTokens = 10000 },
             }, new PriceTable());
             Eq("~30.0k tok in 2 turns", rep.SubagentRereadsLine());
-            True(rep.ToText().Contains("Subagents re-reading:       ~30.0k tok"), rep.ToText());
+            True(rep.ToText().Contains("  Subagents re-reading:     ~30.0k tok"), rep.ToText());
             var reads = new ConversationReads();
             reads.Add(new UsageRecord { SubagentRereadTokens = 4000 });
             Eq("Subagents re-reading what the conversation had: ~4.0k tok", reads.Lines().Single());
@@ -444,8 +444,11 @@ namespace ClaudeVS.Core.Tests
                 new UsageRecord { Timestamp = t0, CostUsd = 0.01 },
             }, new PriceTable());
             Eq("~14.0k tok in 2 turns", rep.RepeatReadsLine());
-            True(rep.ToText().Contains("Read again, unchanged:      ~14.0k tok in 2 turns"), rep.ToText());
+            True(rep.ToText().Contains("  Read again, unchanged:    ~14.0k tok in 2 turns"), rep.ToText());
             Eq(null, SavingsReport.Build(new[] { new UsageRecord { Timestamp = t0, CostUsd = 0.01 } }, new PriceTable()).RepeatReadsLine(), "none");
+            True(!SavingsReport.Build(new[] { new UsageRecord { Timestamp = t0, CostUsd = 0.01 } }, new PriceTable()).ToText().Contains("Reads and commands:"), "nothing read: no section");
+            string text = rep.ToText();
+            True(text.IndexOf("Tool results", StringComparison.Ordinal) < 0 || text.IndexOf("Reads and commands:", StringComparison.Ordinal) > text.IndexOf("Tool results", StringComparison.Ordinal), "the section comes after Tool results");
             var csv = new StringWriter();
             UsageCsv.Write(new[] { new UsageRecord { Timestamp = t0, RepeatReadTokens = 9000 } }, csv);
             True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",9000,,,,"), "csv: repeat_read_tokens: " + csv);
@@ -545,7 +548,7 @@ namespace ClaudeVS.Core.Tests
                 new UsageRecord { Timestamp = t0, CostUsd = 0.01 },
             }, new PriceTable());
             Eq("in 2 turns Claude read ~10.0k of the ~50.0k tok attached (20%)", rep.ReferencesReadLine());
-            True(rep.ToText().Contains("References read:            in 2 turns"), rep.ToText());
+            True(rep.ToText().Contains("  References read:          in 2 turns"), rep.ToText());
             Eq(null, SavingsReport.Build(new[] { new UsageRecord { Timestamp = t0, CostUsd = 0.01 } }, new PriceTable()).ReferencesReadLine(), "none: no line");
 
             var csv = new StringWriter();

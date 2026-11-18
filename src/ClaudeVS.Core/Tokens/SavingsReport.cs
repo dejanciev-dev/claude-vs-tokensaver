@@ -792,6 +792,30 @@ namespace ClaudeVS.Core.Tokens
             return $"{n} ({kinds}), ~{TokenMeter.Format(LoudTokens)} tok";
         }
 
+        /// <summary>
+        /// "Reads and commands:" with what reading and shell commands brought into the context, each line only when there
+        /// is something to say; nothing when there is none.
+        /// </summary>
+        private void AppendReadsSection(System.Text.StringBuilder sb)
+        {
+            var lines = new List<string>();
+            void Line(string label, string value, string why) { if (value != null) lines.Add($"  {label,-26}{value}  ({why})"); }
+            Line("References read:", ReferencesReadLine(), "a reference sends its path; Claude reads what it needs");
+            Line("Read again, unchanged:", RepeatReadsLine(), "files Claude already had; \"you already have it\" saves them");
+            Line("Subagents re-reading:", SubagentRereadsLine(), "files the conversation already had; a subagent starts without them, so naming the lines it needs helps");
+            Line("Quiet-build hook:", QuietRunsLine(), "in full, a build prints several times more; git log far more");
+            Line("Loud builds and logs:", LoudRunsLine(), "in full: a verbosity, a pipe or a count; the plain command runs quiet");
+            var folders = TopReadFolders();
+            if (folders.Count > 0)
+            {
+                lines.Add("  Folders read most:        (what reads brought into the context, by folder)");
+                lines.AddRange(folders.Select(f => "    " + f));
+            }
+            if (lines.Count == 0) return;
+            sb.AppendLine("Reads and commands:");
+            foreach (var l in lines) sb.AppendLine(l);
+        }
+
         /// <summary>Tokens subagents spent reading files the conversation already had, and the turns they were in.</summary>
         public long SubagentRereadTokens { get; set; }
         public int SubagentRereadTurns { get; set; }
@@ -1347,10 +1371,6 @@ namespace ClaudeVS.Core.Tokens
             sb.AppendLine($"Saved by file references:   ~{TokenMeter.Format(TokensAvoided)} tokens ≈ ${ReferencesSavedUsd:0.00}");
             if (AttachmentsLine() is string attached)
                 sb.AppendLine($"With attachments:           {attached}");
-            if (ReferencesReadLine() is string refsRead)
-                sb.AppendLine($"References read:            {refsRead}  (a reference sends its path; Claude reads what it needs)");
-            if (QuietRunsLine() is string quiet)
-                sb.AppendLine($"Quiet-build hook:           {quiet}  (in full, a build prints several times more; git log far more)");
             if (SuggestionsLine() is string suggested)
                 sb.AppendLine($"Suggested prompts:          {suggested}");
             if (OutputRetriesLine() is string retried)
@@ -1383,18 +1403,7 @@ namespace ClaudeVS.Core.Tokens
                 sb.AppendLine($"  by model:                 {byModel}");
             if (ToolResultsLine() is string tools)
                 sb.AppendLine($"Tool results:               {tools} tokens  (into the context, read again by each later request until /compact)");
-            if (LoudRunsLine() is string loud)
-                sb.AppendLine($"Loud builds and logs:       {loud}  (in full: a verbosity, a pipe or a count; the plain command runs quiet)");
-            if (RepeatReadsLine() is string repeated)
-                sb.AppendLine($"Read again, unchanged:      {repeated}  (files Claude already had; \"you already have it\" saves them)");
-            if (SubagentRereadsLine() is string agentReread)
-                sb.AppendLine($"Subagents re-reading:       {agentReread}  (files the conversation already had; a subagent starts without them, so naming the lines it needs helps)");
-            var folders = TopReadFolders();
-            if (folders.Count > 0)
-            {
-                sb.AppendLine("Folders read most:          (what reads brought into the context, by folder)");
-                foreach (var f in folders) sb.AppendLine("  " + f);
-            }
+            AppendReadsSection(sb);
             if (LongContextTurns > 0)
                 sb.AppendLine($"Paid extra over 100k:       ${LongContextExtraUsd:0.00}  ({LongContextTurns} Haiku {(LongContextTurns == 1 ? "turn" : "turns")} over 100k tokens, above Haiku's normal price; /compact keeps it under)");
             if (HaikuRouted > 0 || RouterCostUsd > 0)
