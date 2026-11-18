@@ -6,6 +6,26 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-11-18
+
+Still a **preview**, for Claude Code 2.1.318 or newer (tested with 2.1.327). This release shows where tokens go when
+Claude reads and runs things, and turns that into fixes you can click.
+
+### Highlights
+
+- **What reading really costs:** attached references against what Claude read of them, the folders reads fill the
+  context from, files read again (by Claude or by its subagents), and builds and logs that ran loud: in the footer,
+  the Agents panel, the savings report, the CSV and the session summary.
+- **Tips you can act on:** add a read-deny rule for build output or minified files, put the plain command or "you
+  already have it" in the box, reinstall the token-saving setup or open the settings file that overrides it.
+- **Check token-saving setup:** `/` → *Check token-saving setup* says whether the quiet-build hook, the read-deny rules
+  and the output cap still apply.
+- **Hooks you can see:** why a hook asks on the permission card, and `allowed by a hook` / `denied by a hook` on tool
+  rows.
+- **Add to Claude Code Chat** from Solution Explorer, with what each reference may cost before you send.
+
+The full list follows.
+
 ### Added
 - **What references really cost**: after a turn with attached files or folders, the footer's tooltip says how much
   of them Claude read against reading them whole (`References: Claude read 2 of 12 files, ~8.0k of ~40.0k tok
@@ -45,7 +65,6 @@ All notable changes to this project are listed here. The format follows
 - **Fix from the setup check**: when *Check token-saving setup* finds problems, links under it **Reinstall** the
   setup for this folder (when that fixes one) and **Open** each settings file that overrides it.
 
-### Added
 - **Hook decisions on tool rows**: a call that one of your PreToolUse hooks allowed or denied without asking says
   `· allowed by a hook` or `· denied by a hook`, with the hook's reason in the tooltip, as rules already do.
 - **What a reference may cost**: the attachment line says what each attached file or folder would cost if Claude
@@ -58,7 +77,6 @@ All notable changes to this project are listed here. The format follows
   another settings file). Each problem says where to fix it; the context breakdown and the Output pane say when
   there are some.
 
-### Added
 - **Why a hook asks**: when one of your PreToolUse hooks asks for confirmation with a reason, the permission card
   shows it under Claude's description (`ⓘ PreToolUse hook (settings): …`), and screen readers hear it. Claude Code
   sends the reason since 2.1.327.

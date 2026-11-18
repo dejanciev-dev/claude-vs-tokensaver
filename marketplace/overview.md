@@ -45,6 +45,10 @@ warm, and shows what every turn costs.
   Markdown, or exported as CSV.
 - **Settings that cost:** `/` → *Settings that cost* lists the Claude Code settings that make turns dearer (a default
   model of Opus, thinking always on, the prompt cache off …), with where each is set and how to change it.
+  *Check token-saving setup* says whether the quiet-build hook, the read-deny rules and the output cap still apply.
+- **Where reading goes:** how much of the attached references Claude read, the folders reads fill the context from,
+  files read again (by Claude or its subagents) and builds that ran loud, with tips you can act on in one click: add
+  a read-deny rule for build output, or put the plain command in the box.
 - **Agents panel** for subagents and background tasks, with Stop and Run in background. It shows each agent's
   model and cost, turns a row amber past a cost you set, and can stop an agent automatically.
 - **Sessions list** with each conversation's cost.
