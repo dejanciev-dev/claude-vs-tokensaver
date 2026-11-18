@@ -1560,7 +1560,9 @@ and what came back, not as a guessed total.
       override in `settings.local.json` or yours needs **Open**), with the option for auto-approved rewrites; then
       says to start a New chat. `SetupCheck.FilesToOpen` (each once, managed settings left out). Builds clean; not yet
       run in VS
-- [ ] **Manual checks for Phase 59.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
+- [x] **Manual checks for Phase 59.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md). Section 22, *What
+      references, the quiet-build hook and reads really cost*: the footer's references line, the quiet-build line and
+      CSV columns, the folders section, Open and Reinstall from the setup check; Release is now 23
 
 ---
 
