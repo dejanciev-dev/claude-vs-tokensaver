@@ -119,6 +119,8 @@ namespace ClaudeVS.Core.Tokens
         [JsonProperty("loudTokens", DefaultValueHandling = DefaultValueHandling.Ignore)] public long LoudTokens { get; set; }
         /// <summary>Tokens the main agent spent re-reading files it already had, unchanged (<see cref="ReadTracker"/>); 0 when none.</summary>
         [JsonProperty("repeatRead", DefaultValueHandling = DefaultValueHandling.Ignore)] public long RepeatReadTokens { get; set; }
+        /// <summary>References not measured yet when the prompt went out; their sizes are added when the turn is logged. Not logged.</summary>
+        [JsonIgnore] public List<string> RefPending { get; set; }
         /// <summary>The attached references' full paths, to match reads against; not logged.</summary>
         [JsonIgnore] public List<string> RefPaths { get; set; }
         [JsonProperty("side", NullValueHandling = NullValueHandling.Ignore)] public string SideKind { get; set; }

@@ -1298,7 +1298,10 @@ namespace ClaudeVS.ToolWindow
             var refSizes = refPaths.Select(p => _referenceSizes.TryGetValue(p, out var sz) ? sz : null).Where(sz => sz != null).ToList();
             int refFiles = refSizes.Sum(sz => sz.Files);
             long refCeiling = refSizes.Sum(sz => (long)sz.Tokens);
+            // Still being measured (a large folder): their sizes land in the cache later and count when the turn is logged
+            var refPending = refPaths.Where(p => !_referenceSizes.TryGetValue(p, out var sz) || sz == null).ToList();
             ClearAttachments();
+            foreach (var p in refPending) _referenceSizes[p] = null; // keep the slot, so the background measurement is kept
             SetEmptyState(false);
             if (_title.Text == DefaultTitle && routed) SetTitle(userText.Length > 0 ? userText : images.Count == 1 ? images[0].Image.Name : "Images");
             bool queued = _busy;
@@ -1350,6 +1353,7 @@ namespace ClaudeVS.ToolWindow
                     RefPaths = refPaths.Count > 0 ? refPaths : null,
                     RefFiles = refFiles,
                     RefCeilingTokens = refCeiling,
+                    RefPending = refPending.Count > 0 ? refPending : null,
                     PromptPreview = decision != null && Options?.LogPromptPreview == true ? UsageRecord.Preview(userText) : null,
                     CharsAvoided = built.CharsAvoided,
                     Router = decision != null && decision != local ? "haiku" : null,
@@ -2121,6 +2125,12 @@ namespace ClaudeVS.ToolWindow
             _lastTurnReferences = null;
             if (_pendingUsages.Count == 0) return;
             var rec = _pendingUsages.Dequeue();
+            foreach (var p in rec.RefPending ?? new List<string>())
+            {
+                // measured since the prompt went out; taken out of the cache, so a later attach measures it afresh
+                if (_referenceSizes.TryGetValue(p, out var late) && late != null) { rec.RefFiles += late.Files; rec.RefCeilingTokens += late.Tokens; }
+                if (late != null && !_attachedFiles.Contains(p, StringComparer.OrdinalIgnoreCase)) _referenceSizes.Remove(p);
+            }
             if (rec.RefPaths != null && rec.RefPaths.Count > 0)
             {
                 var (readFiles, readTokens) = _turnFiles.ReadUnder(rec.RefPaths);
