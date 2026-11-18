@@ -1588,8 +1588,10 @@ turns that into fixes in the chat and keeps what was only a passing tip.
       run as written; without the hook: install it). The tip replaces the general large-output tip for that command.
       `UsageRecord.LoudRuns` (`loud`), CSV `loud_runs`, `loud_tokens`; `SavingsReport.LoudRunsLine`. Builds clean;
       not yet run in VS
-- [ ] **Reads in the session summary.** *Copy session summary* adds the conversation's reads: the top folders, the
-      attached references read against their ceiling, repeated reads, and commands made quiet or left loud
+- [x] **Reads in the session summary.** *Copy session summary* adds the conversation's reads: the top folders, the
+      attached references read against their ceiling, repeated reads, and commands made quiet or left loud.
+      `ConversationReads` (each turn's usage record added, also with the usage log off; reset with the
+      conversation), `SessionSummary.Format(…, reads)`. Builds clean; not yet run in VS
 - [ ] **Manual checks for Phase 60.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
 
 ---

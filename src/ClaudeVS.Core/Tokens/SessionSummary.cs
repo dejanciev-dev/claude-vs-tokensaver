@@ -11,7 +11,7 @@ namespace ClaudeVS.Core.Tokens
     /// </summary>
     public static class SessionSummary
     {
-        public static string Format(TokenMeter m, string title = null, string sessionId = null)
+        public static string Format(TokenMeter m, string title = null, string sessionId = null, ConversationReads reads = null)
         {
             if (m == null) return "";
             var s = m.SessionTotal;
@@ -42,6 +42,7 @@ namespace ClaudeVS.Core.Tokens
                 sb.Append("By effort: ").Append(string.Join(" · ", m.SessionByEffort
                     .OrderBy(kv => EffortRank(kv.Key)).ThenBy(kv => kv.Key, System.StringComparer.Ordinal)
                     .Select(kv => $"{kv.Key} {kv.Value.Turns} {(kv.Value.Turns == 1 ? "turn" : "turns")} ${kv.Value.CostUsd.ToString("0.00", c)}"))).Append('\n');
+            foreach (var line in reads?.Lines() ?? new System.Collections.Generic.List<string>()) sb.Append(line).Append('\n'); // what it read and ran
             if (m.CompactionsSaved > 0) sb.Append($"Compactions: {m.CompactionsSaved}\n");
             if (!string.IsNullOrEmpty(sessionId)) sb.Append($"Session: {sessionId}\n");
             return sb.ToString().TrimEnd('\n');

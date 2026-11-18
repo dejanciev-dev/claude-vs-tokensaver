@@ -28,6 +28,8 @@ All notable changes to this project are listed here. The format follows
   hook leaves commands with a verbosity, a pipe or a count alone) gets a token tip, once per conversation, saying why
   and that the plain command runs quiet (or to install the hook). The savings report counts them by kind, and the
   usage CSV adds `loud_runs` and `loud_tokens`.
+- **Reads in the session summary**: *Copy session summary* adds what the conversation read and ran: reads by folder,
+  the attached references read against their ceiling, repeated reads, and builds made quiet or run loud.
 - **Fix from the setup check**: when *Check token-saving setup* finds problems, links under it **Reinstall** the
   setup for this folder (when that fixes one) and **Open** each settings file that overrides it.
 
