@@ -7,6 +7,12 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **What references really cost**: after a turn with attached files or folders, the footer's tooltip says how much
+  of them Claude read against reading them whole (`References: Claude read 2 of 12 files, ~8.0k of ~40.0k tok
+  (20%)`), its subagents' reads included. The savings report adds a *References read* line, and the usage CSV
+  `ref_ceiling_tokens` and `ref_read_tokens` columns.
+
+### Added
 - **Hook decisions on tool rows**: a call that one of your PreToolUse hooks allowed or denied without asking says
   `· allowed by a hook` or `· denied by a hook`, with the hook's reason in the tooltip, as rules already do.
 - **What a reference may cost**: the attachment line says what each attached file or folder would cost if Claude

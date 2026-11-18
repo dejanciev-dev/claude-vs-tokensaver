@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using ClaudeVS.Core.Cli;
 
@@ -56,6 +57,18 @@ namespace ClaudeVS.Core.Tokens
         {
             if (retries <= 0) return "";
             return $" · cut off {retries}×" + (usd >= 0.001 ? " ($" + usd.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture) + " to go on)" : "");
+        }
+
+        /// <summary>
+        /// For the footer's tooltip: "References: Claude read 2 of 12 files, ~8.0k of ~40.0k tok (20%)". Null when nothing
+        /// was attached or measured.
+        /// </summary>
+        public static string References(int readFiles, long readTokens, int files, long ceilingTokens)
+        {
+            if (files <= 0 || ceilingTokens <= 0) return null;
+            if (readFiles == 0) return $"References: Claude read none of the {files} {(files == 1 ? "file" : "files")} (~{TokenMeter.Format(ceilingTokens)} tok if read whole)";
+            int pct = (int)Math.Round(100.0 * Math.Min(readTokens, ceilingTokens) / ceilingTokens);
+            return $"References: Claude read {readFiles} of {files} {(files == 1 ? "file" : "files")}, ~{TokenMeter.Format(readTokens)} of ~{TokenMeter.Format(ceilingTokens)} tok ({pct}%)";
         }
 
         public static string Extras(TokenUsage turn, double cacheSavedUsd = 0)

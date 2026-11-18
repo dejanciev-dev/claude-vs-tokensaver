@@ -996,6 +996,14 @@ namespace ClaudeVS.ToolWindow
             MeasureReference(path);
         }
 
+        /// <summary>The turn's reads and quiet commands (main agent and subagents), reset after each turn's footer.</summary>
+        private readonly TurnFileActivity _turnFiles = new TurnFileActivity();
+        /// <summary>"References: Claude read 2 of 12 files, …" for the last turn's footer tooltip; null when none attached.</summary>
+        private string _lastTurnReferences;
+
+        private static string JoinLines(params string[] parts) =>
+            parts.Any(p => !string.IsNullOrEmpty(p)) ? string.Join("\n", parts.Where(p => !string.IsNullOrEmpty(p))) : null;
+
         /// <summary>What each reference would cost if read whole, by path; measured once, off the UI thread.</summary>
         private readonly System.Collections.Generic.Dictionary<string, ReferenceSize> _referenceSizes =
             new System.Collections.Generic.Dictionary<string, ReferenceSize>(StringComparer.OrdinalIgnoreCase);
@@ -1283,6 +1291,11 @@ namespace ClaudeVS.ToolWindow
             int attachedFiles = routed ? _attachedFiles.Count : 0;
             if (routed && _browseWeb) built.Text = "You may search the web if it helps with this request.\n\n" + built.Text;
             var images = routed ? _images.ToList() : new List<ImageAttachment>(); // slash commands take no images
+            // The references and what reading them whole would cost (those measured by now), before they are cleared
+            var refPaths = routed ? _attachedFiles.ToList() : new List<string>();
+            var refSizes = refPaths.Select(p => _referenceSizes.TryGetValue(p, out var sz) ? sz : null).Where(sz => sz != null).ToList();
+            int refFiles = refSizes.Sum(sz => sz.Files);
+            long refCeiling = refSizes.Sum(sz => (long)sz.Tokens);
             ClearAttachments();
             SetEmptyState(false);
             if (_title.Text == DefaultTitle && routed) SetTitle(userText.Length > 0 ? userText : images.Count == 1 ? images[0].Image.Name : "Images");
@@ -1332,6 +1345,9 @@ namespace ClaudeVS.ToolWindow
                     PromptChars = userText.Length,
                     AttachedLines = attachedLines,
                     AttachedFiles = attachedFiles,
+                    RefPaths = refPaths.Count > 0 ? refPaths : null,
+                    RefFiles = refFiles,
+                    RefCeilingTokens = refCeiling,
                     PromptPreview = decision != null && Options?.LogPromptPreview == true ? UsageRecord.Preview(userText) : null,
                     CharsAvoided = built.CharsAvoided,
                     Router = decision != null && decision != local ? "haiku" : null,
@@ -1928,6 +1944,7 @@ namespace ClaudeVS.ToolWindow
             {
                 ThreadHelper.ThrowIfNotOnUIThread();
                 _meterModel?.Observe(ev);
+                _turnFiles.Observe(ev); // reads and quiet commands, for the usage log
                 if (ev.Kind == ClaudeEventKind.AssistantUsage && !ev.IsSubagent) Tip(SessionNotices.HaikuLongContext(ev.Model, ev.Usage.ContextTokens));
                 switch (ev.Kind)
                 {
@@ -2027,7 +2044,9 @@ namespace ClaudeVS.ToolWindow
                         string usual = PastConversations.TurnNote(_meterModel?.LastTurnCostUsd ?? 0) is string u ? " · " + u : "";
                         _view.AppendTurnFooter($"✓ {ev.DurationMs / 1000.0:0.0}s · {TokenMeter.Format(ev.Usage.Total)} tok · {TurnFooter.Cost(_meterModel?.LastTurnCostUsd ?? 0, _meterModel?.LastTurnSubagentCostUsd ?? 0)}{usual}{used}{TurnFooter.Extras(ev.Usage, _meterModel?.LastTurnCacheSavedUsd ?? 0)}",
                             string.IsNullOrWhiteSpace(answer) ? null : BookmarkToggle(turn.Prompt, answer, turn.Anchor), answer,
-                            tooltip: _meterModel == null ? null : TurnFooter.CostBreakdown(_meterModel.LastModel, _meterModel.LastTurn, _meterModel.LastTurnSubagentCostUsd, _meterModel.LastTurnCostUsd, _meterModel.Prices));
+                            tooltip: JoinLines(_meterModel == null ? null : TurnFooter.CostBreakdown(_meterModel.LastModel, _meterModel.LastTurn, _meterModel.LastTurnSubagentCostUsd, _meterModel.LastTurnCostUsd, _meterModel.Prices),
+                                _lastTurnReferences));
+                        _turnFiles.Reset(); // the next turn's reads
                         if (!string.IsNullOrWhiteSpace(answer)) _lastAnswer = answer;
                         SuggestFromAnswer(answer, ev, turn.Prompt); // grey text in the input box (after a failed turn: what to do); not while queued prompts run
                         ShowTurnChanges(); // "Files changed" with Diff links
@@ -2097,8 +2116,16 @@ namespace ClaudeVS.ToolWindow
                 ClaudeOutputPane.WriteLine($"Claude Code's own request{(_meterModel.LastTurnSideIsCompact ? " (/compact summary)" : " (suggested prompt)")} billed with this turn: "
                     + $"{TokenMeter.Format(side.Total)} tok, ${_meterModel.LastTurnSideCostUsd:0.0000}");
             CountSuggestionCost(); // and the tip when Claude Code's suggestions don't pay
+            _lastTurnReferences = null;
             if (_pendingUsages.Count == 0) return;
             var rec = _pendingUsages.Dequeue();
+            if (rec.RefPaths != null && rec.RefPaths.Count > 0)
+            {
+                var (readFiles, readTokens) = _turnFiles.ReadUnder(rec.RefPaths);
+                rec.RefReadFiles = readFiles;
+                rec.RefReadTokens = readTokens;
+                _lastTurnReferences = TurnFooter.References(readFiles, readTokens, rec.RefFiles, rec.RefCeilingTokens);
+            }
             rec.Effort = EffortUsed(rec); // as Claude Code applied it (read after the first prompt of a process went out)
             _lastTurnEffort = rec.Effort; // for the tips and the footer, kept also without the log
             _lastTurnPromptChars = rec.PromptChars;

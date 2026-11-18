@@ -1533,9 +1533,13 @@ says `source: "hook"` (Phase 58). Full against quiet output measured on this rep
 characters, `git log` 100,490 against 5,823; it depends on the repository, so the hook's saving is shown as counts
 and what came back, not as a guessed total.
 
-- [ ] **What references really cost.** After a turn with attached references: how much of them Claude actually read
+- [x] **What references really cost.** After a turn with attached references: how much of them Claude actually read
       against what reading them whole would have cost (`read 2 of 12 files, ~8.0k of ~40.0k tok`), in the footer's
-      tooltip, the usage log and the savings report. `TurnFileActivity` (reads of the main agent and its subagents)
+      tooltip, the usage log and the savings report. `TurnFileActivity` (reads of the main agent and its subagents).
+      `TurnFileActivity.ReadUnder`, `TurnFooter.References`, `SavingsReport.ReferencesReadLine`; `UsageRecord`
+      `refFiles`, `refCeiling`, `refReadFiles`, `refRead` (the paths are not logged); CSV `ref_ceiling_tokens`,
+      `ref_read_tokens`, last. Only references measured by the time the prompt goes out count. Builds clean; not yet
+      run in VS
 - [ ] **What the quiet-build hook did.** Count the commands the hook made quiet, by kind, and the tokens they returned:
       the usage log, the CSV and a savings report line (`12 commands made quiet: dotnet build 9, git log 3 · ~1.2k tok
       came back`)

@@ -729,6 +729,19 @@ namespace ClaudeVS.Core.Tokens
                 + $"{(OutputRetryUsd < 0.001 ? "<$0.001" : "$" + OutputRetryUsd.ToString("0.000", c))} for the requests that went on";
         }
 
+        /// <summary>Turns with measured references, what reading those whole would have cost, and what Claude read of them.</summary>
+        public int RefTurns { get; set; }
+        public long RefCeilingTokens { get; set; }
+        public long RefReadTokens { get; set; }
+
+        /// <summary>"in 6 turns Claude read ~12.0k of the ~140.0k tok attached (9%)"; null when none was logged.</summary>
+        public string ReferencesReadLine()
+        {
+            if (RefTurns == 0 || RefCeilingTokens <= 0) return null;
+            int pct = (int)Math.Round(100.0 * Math.Min(RefReadTokens, RefCeilingTokens) / RefCeilingTokens);
+            return $"in {RefTurns} {(RefTurns == 1 ? "turn" : "turns")} Claude read ~{TokenMeter.Format(RefReadTokens)} of the ~{TokenMeter.Format(RefCeilingTokens)} tok attached ({pct}%)";
+        }
+
         /// <summary>"$0.040 for 3 summaries, of the cost above"; null when no /compact was logged with its cost.</summary>
         public string CompactLine()
         {
@@ -1009,6 +1022,9 @@ namespace ClaudeVS.Core.Tokens
             rep.OutputRetries = list.Sum(r => r.OutputRetries);
             rep.OutputRetryTurns = list.Count(r => r.OutputRetries > 0);
             rep.OutputRetryUsd = list.Sum(r => r.OutputRetryCostUsd);
+            rep.RefTurns = list.Count(r => r.RefCeilingTokens > 0);
+            rep.RefCeilingTokens = list.Sum(r => r.RefCeilingTokens);
+            rep.RefReadTokens = list.Where(r => r.RefCeilingTokens > 0).Sum(r => r.RefReadTokens);
             foreach (var r in list.Where(r => r.Suggestion != null))
             {
                 bool cli = r.Suggestion == UsageRecord.SuggestionCli;
@@ -1228,6 +1244,8 @@ namespace ClaudeVS.Core.Tokens
             sb.AppendLine($"Saved by file references:   ~{TokenMeter.Format(TokensAvoided)} tokens ≈ ${ReferencesSavedUsd:0.00}");
             if (AttachmentsLine() is string attached)
                 sb.AppendLine($"With attachments:           {attached}");
+            if (ReferencesReadLine() is string refsRead)
+                sb.AppendLine($"References read:            {refsRead}  (a reference sends its path; Claude reads what it needs)");
             if (SuggestionsLine() is string suggested)
                 sb.AppendLine($"Suggested prompts:          {suggested}");
             if (OutputRetriesLine() is string retried)

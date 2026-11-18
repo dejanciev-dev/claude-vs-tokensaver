@@ -237,7 +237,51 @@ namespace ClaudeVS.Core.Tests
             Eq(null, SavingsReport.Build(new[] { new UsageRecord { Timestamp = t0, CostUsd = 0.01 } }, new PriceTable()).OutputRetriesLine(), "none: no line");
             var csv = new StringWriter();
             UsageCsv.Write(new[] { new UsageRecord { Timestamp = t0, CostUsd = 0.05, OutputRetries = 3, OutputRetryCostUsd = 0.0123 } }, csv);
-            True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",3,0.0123"), "csv: output_retries, output_retry_cost_usd last: " + csv);
+            True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].Contains(",3,0.0123,"), "csv: output_retries, output_retry_cost_usd: " + csv);
+        }
+
+        /// <summary>A turn's reads against its attached references: the footer's tooltip, the report and the CSV.</summary>
+        private static void Test_References_ReadAgainstCeiling()
+        {
+            var files = new TurnFileActivity();
+            void Read(string id, string path, int chars, bool subagent = false, bool error = false)
+            {
+                files.Observe(new ClaudeEvent { Kind = ClaudeEventKind.ToolUse, ToolUseId = id, ToolName = "Read", ToolInput = new JObject { ["file_path"] = path }, IsSubagent = subagent });
+                files.Observe(new ClaudeEvent { Kind = ClaudeEventKind.ToolResult, ToolUseId = id, ResultChars = chars, IsError = error, IsSubagent = subagent });
+            }
+            Read("a", @"C:\repo\src\Core\A.cs", 9000);
+            Read("b", @"C:\repo\src\Core\Deep\B.cs", 3000, subagent: true); // a subagent's read is paid too
+            Read("c", @"C:\repo\docs\README.md", 6000);                     // not under a reference
+            Read("d", @"C:\repo\src\Core\Gone.cs", 500, error: true);       // failed: nothing came in
+            Read("e", @"C:\repo\src\Core\A.cs", 9000);                      // read again: counted again
+
+            var (n, tok) = files.ReadUnder(new[] { @"C:\repo\src\Core\", @"C:\repo\Other.cs" });
+            Eq(2, n, "two files under the references");
+            Eq((long)(TokenEstimate.FromChars(9000) * 2 + TokenEstimate.FromChars(3000)), tok, "their tokens, each read");
+            Eq(0, files.ReadUnder(new[] { @"C:\repo\src\Co" }).Files, "a folder name's prefix is not the folder");
+
+            Eq("References: Claude read 2 of 12 files, ~8.0k of ~40.0k tok (20%)", TurnFooter.References(2, 8000, 12, 40000));
+            Eq("References: Claude read none of the 1 file (~3.2k tok if read whole)", TurnFooter.References(0, 0, 1, 3200));
+            Eq(null, TurnFooter.References(0, 0, 0, 0), "nothing attached");
+
+            var t0 = DateTime.UtcNow.AddDays(-1);
+            var rep = SavingsReport.Build(new[]
+            {
+                new UsageRecord { Timestamp = t0, CostUsd = 0.05, RefFiles = 12, RefCeilingTokens = 40000, RefReadFiles = 2, RefReadTokens = 8000 },
+                new UsageRecord { Timestamp = t0, CostUsd = 0.03, RefFiles = 1, RefCeilingTokens = 10000, RefReadFiles = 1, RefReadTokens = 2000 },
+                new UsageRecord { Timestamp = t0, CostUsd = 0.01 },
+            }, new PriceTable());
+            Eq("in 2 turns Claude read ~10.0k of the ~50.0k tok attached (20%)", rep.ReferencesReadLine());
+            True(rep.ToText().Contains("References read:            in 2 turns"), rep.ToText());
+            Eq(null, SavingsReport.Build(new[] { new UsageRecord { Timestamp = t0, CostUsd = 0.01 } }, new PriceTable()).ReferencesReadLine(), "none: no line");
+
+            var csv = new StringWriter();
+            UsageCsv.Write(new[] { new UsageRecord { Timestamp = t0, CostUsd = 0.05, RefCeilingTokens = 40000, RefReadTokens = 8000 } }, csv);
+            var lines = csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None);
+            True(lines[0].EndsWith(",ref_ceiling_tokens,ref_read_tokens"), "header: " + lines[0]);
+            True(lines[1].EndsWith(",40000,8000"), "row: " + lines[1]);
+            True(new UsageRecord { RefPaths = new List<string> { "x" } }.RefPaths != null
+                 && !Newtonsoft.Json.JsonConvert.SerializeObject(new UsageRecord { RefPaths = new List<string> { "x" } }).Contains("\"x\""), "paths are not logged");
         }
 
         private static void Test_Meter_DefaultWindowIs1M()
