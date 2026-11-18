@@ -286,7 +286,7 @@ namespace ClaudeVS.Core.Tests
             True(rep.ToText().Contains("Quiet-build hook:           12 commands"), rep.ToText());
             var csv = new StringWriter();
             UsageCsv.Write(new[] { new UsageRecord { Timestamp = t0, QuietRuns = new Dictionary<string, int> { ["git log"] = 1, ["dotnet build"] = 2 }, QuietTokens = 40 } }, csv);
-            True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",dotnet build:2;git log:1,40,,,"), "csv: " + csv);
+            True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",dotnet build:2;git log:1,40,,,,"), "csv: " + csv);
         }
 
         /// <summary>Builds, tests and git logs the hook left alone and that ran loud: counted, the tip, the report and the CSV.</summary>
@@ -331,7 +331,7 @@ namespace ClaudeVS.Core.Tests
             True(rep.ToText().Contains("Loud builds and logs:       3"), rep.ToText());
             var csv = new StringWriter();
             UsageCsv.Write(new[] { new UsageRecord { Timestamp = t0, LoudRuns = new Dictionary<string, int> { ["git log"] = 1 }, LoudTokens = 6000 } }, csv);
-            True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",git log:1,6000"), "csv: " + csv);
+            True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",git log:1,6000,"), "csv: " + csv);
         }
 
         /// <summary>Copy session summary's reads: the conversation's turns added up.</summary>
@@ -379,7 +379,7 @@ namespace ClaudeVS.Core.Tests
             Eq(null, SavingsReport.Build(new[] { new UsageRecord { Timestamp = t0, CostUsd = 0.01 } }, new PriceTable()).RepeatReadsLine(), "none");
             var csv = new StringWriter();
             UsageCsv.Write(new[] { new UsageRecord { Timestamp = t0, RepeatReadTokens = 9000 } }, csv);
-            True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",9000,,"), "csv: repeat_read_tokens: " + csv);
+            True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",9000,,,"), "csv: repeat_read_tokens: " + csv);
         }
 
         /// <summary>Reads by folder: grouping under the working folder, the report's top folders and the deny-rule hint.</summary>
@@ -424,6 +424,11 @@ namespace ClaudeVS.Core.Tests
             True(top[1].Contains("add Read(./**/node_modules/**) to permissions.deny"), top[1]);
             True(rep.ToText().Contains("Folders read most:"), rep.ToText());
             Eq(0, SavingsReport.Build(new[] { new UsageRecord { Timestamp = t0, CostUsd = 0.01 } }, new PriceTable()).TopReadFolders().Count, "none: no section");
+            var csv = new StringWriter();
+            UsageCsv.Write(new[] { new UsageRecord { Timestamp = t0, ReadFolders = new Dictionary<string, long> { ["src/App/obj"] = 2000, ["src/Core"] = 40000 } } }, csv);
+            var lines = csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None);
+            True(lines[0].EndsWith(",read_folders"), "header: " + lines[0]);
+            True(lines[1].EndsWith(",src/Core:40000;src/App/obj:2000"), "largest first: " + lines[1]);
         }
 
         /// <summary>A turn's reads against its attached references: the footer's tooltip, the report and the CSV.</summary>
@@ -464,8 +469,8 @@ namespace ClaudeVS.Core.Tests
             var csv = new StringWriter();
             UsageCsv.Write(new[] { new UsageRecord { Timestamp = t0, CostUsd = 0.05, RefCeilingTokens = 40000, RefReadTokens = 8000 } }, csv);
             var lines = csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None);
-            True(lines[0].EndsWith(",ref_ceiling_tokens,ref_read_tokens,quiet_runs,quiet_tokens,repeat_read_tokens,loud_runs,loud_tokens"), "header: " + lines[0]);
-            True(lines[1].EndsWith(",40000,8000,,,,,"), "row: " + lines[1]);
+            True(lines[0].EndsWith(",ref_ceiling_tokens,ref_read_tokens,quiet_runs,quiet_tokens,repeat_read_tokens,loud_runs,loud_tokens,read_folders"), "header: " + lines[0]);
+            True(lines[1].EndsWith(",40000,8000,,,,,,"), "row: " + lines[1]);
             True(new UsageRecord { RefPaths = new List<string> { "x" } }.RefPaths != null
                  && !Newtonsoft.Json.JsonConvert.SerializeObject(new UsageRecord { RefPaths = new List<string> { "x" } }).Contains("\"x\""), "paths are not logged");
         }
