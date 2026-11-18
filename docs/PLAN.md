@@ -1523,6 +1523,30 @@ tool row reads only `source: "config"`, so it says nothing about hooks.
       that decide, what references cost, and the setup check*: hook deny and allow on rows, reference sizes for a file,
       a project and a large solution, the setup check fine, raised, narrowed and not installed; Release is now 22
 
+## Phase 59 — What references, the quiet-build hook and reads really cost
+
+Planned on 2026-11-18, after Phase 58. Phase 58 shows what a reference *may* cost; this phase measures what Claude
+really read, what the token-saving hook did, and where reads go. `--live-setup` with a raw log (2.1.327, $0.005): with
+the hook asking (its default), the permission request carries the quiet command and the hook's reason ("Quiet output
+to save tokens: dotnet build -v q -nologo"), while the `tool_use` keeps Claude's command; with auto-approve the result
+says `source: "hook"` (Phase 58). Full against quiet output measured on this repository: a small build 450 against 82
+characters, `git log` 100,490 against 5,823; it depends on the repository, so the hook's saving is shown as counts
+and what came back, not as a guessed total.
+
+- [ ] **What references really cost.** After a turn with attached references: how much of them Claude actually read
+      against what reading them whole would have cost (`read 2 of 12 files, ~8.0k of ~40.0k tok`), in the footer's
+      tooltip, the usage log and the savings report. `TurnFileActivity` (reads of the main agent and its subagents)
+- [ ] **What the quiet-build hook did.** Count the commands the hook made quiet, by kind, and the tokens they returned:
+      the usage log, the CSV and a savings report line (`12 commands made quiet: dotnet build 9, git log 3 · ~1.2k tok
+      came back`)
+- [ ] **Folders Claude reads most.** The usage log keeps each turn's read tokens by folder (two levels below the
+      working folder); the savings report lists the top folders, and points out generated or vendored ones (`bin`,
+      `obj`, `node_modules`, `packages`, `dist`, `wwwroot/lib`, `*.Designer.cs`-only…) with a read-deny rule to add
+- [ ] **Fix from the setup check.** When the setup check finds a problem, the breakdown's line and the chat's message
+      offer **Reinstall** (the installer for this folder, then a New chat) and **Open file** for the settings file that
+      overrides it
+- [ ] **Manual checks for Phase 59.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
+
 ---
 
 ## Working in Visual Studio — daily loop
