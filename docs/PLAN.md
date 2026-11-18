@@ -1592,7 +1592,9 @@ turns that into fixes in the chat and keeps what was only a passing tip.
       attached references read against their ceiling, repeated reads, and commands made quiet or left loud.
       `ConversationReads` (each turn's usage record added, also with the usage log off; reset with the
       conversation), `SessionSummary.Format(…, reads)`. Builds clean; not yet run in VS
-- [ ] **Manual checks for Phase 60.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
+- [x] **Manual checks for Phase 60.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md). Section 23, *Reads
+      and loud commands: from numbers to fixes*: the build-output tip and its rule, repeated reads in the report and
+      the CSV, the loud-command tip with and without the hook, the session summary's lines; Release is now 24
 
 ---
 
