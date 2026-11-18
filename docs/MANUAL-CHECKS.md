@@ -295,7 +295,17 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Without the setup, a large `git log` | The tip says to install the hook instead |
 | After the above, `/` → **Copy session summary**, paste it | Lines *Reads by folder: …*, *References: …* (if something was attached), *Read again, unchanged: …*, *Builds and logs: …*. **New chat**, copy again: none of these lines |
 
-## 24. Release (Phase 5)
+## 24. Tips you can act on, and generated files (Phase 61)
+
+| Do | Expect |
+|---|---|
+| A web project with a large `wwwroot/js/*.min.js`; ask Claude to read it | The build-output tip names `*.min.js files` with **Add Read(./\*\*/\*.min.js)** |
+| With the setup installed, ask Claude to run `git log -n 400` | The loud tip with **Ask for the plain `git log`**; clicking it puts the request in the input box, nothing is sent; with text already typed, it goes on a new line after it |
+| Ask Claude to read the same unchanged large file twice | The repeated-read tip with **Tell Claude it has …**; clicking it fills the box the same way |
+| Token tips off (Options → Token saving), the same | The tips go to the Output pane, no links in the chat |
+| **Export Usage as CSV…** | The last column `read_folders` lists folders with tokens, largest first |
+
+## 25. Release (Phase 5)
 
 These need you rather than a check list:
 
