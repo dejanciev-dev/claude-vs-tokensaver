@@ -272,7 +272,19 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | In `.claude/settings.json` change the hook's matcher to `Bash`, then check again | `quiet-build hook skips PowerShell`. Reinstall afterwards; it is fixed |
 | A folder without the setup, `/` → **Check token-saving setup** | *not installed in this folder* |
 
-## 22. Release (Phase 5)
+## 22. What references, the quiet-build hook and reads really cost (Phase 59)
+
+| Do | Expect |
+|---|---|
+| Right-click a project → **Add to Claude Code Chat**, wait for its size, then ask *What does the Program class do?* | Hover the turn's footer: `References: Claude read 1 of N files, ~… of ~… tok (…%)` under the cost lines |
+| Attach a file and ask something that needs no file | `References: Claude read none of the 1 file (~… tok if read whole)` |
+| With the token-saving setup installed, ask Claude to run `dotnet build`, Allow the quiet form; then **Show Savings Report** | `Quiet-build hook: 1 command made quiet (dotnet build 1), ~… tok came back`; **Export Usage as CSV…**: `quiet_runs` is `dotnet build:1`, `ref_ceiling_tokens` / `ref_read_tokens` filled on the earlier turns |
+| After a few turns that read files, **Show Savings Report** | *Folders read most* lists the folders, largest first, with their share; a read under `obj` or `node_modules` (if any) says which `Read(./**/…/**)` rule to add |
+| Set `{"bashOutputMaxChars": 200000}` in `.claude/settings.local.json`, **New chat**, `/` → **Check token-saving setup** | Under the problem: **Open .claude/settings.local.json** (opens it); no **Reinstall**, since that wouldn't fix it |
+| Delete `.claude/hooks/trim-output.ps1` (keep a copy of nothing: it's generated), check again | **Reinstall** shows; clicking it says what was written and to start a New chat; after a New chat the check says *all in effect* |
+| The meter → context breakdown → *Token-saving setup: … isn't in effect* | Runs the check: the same message and links |
+
+## 23. Release (Phase 5)
 
 These need you rather than a check list:
 
