@@ -47,6 +47,41 @@ namespace ClaudeVS.Core.Setup
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { return false; }
         }
 
+        /// <summary>True when the project's <c>.claude/settings.json</c> or <c>settings.local.json</c> already denies <paramref name="rule"/>.</summary>
+        public static bool HasDenyRule(string rootDir, string rule)
+        {
+            if (string.IsNullOrEmpty(rootDir) || string.IsNullOrEmpty(rule)) return false;
+            foreach (var name in new[] { "settings.json", "settings.local.json" })
+            {
+                try
+                {
+                    string path = Path.Combine(rootDir, ".claude", name);
+                    if (!File.Exists(path)) continue;
+                    if ((JObject.Parse(File.ReadAllText(path)).SelectToken("permissions.deny") as JArray)?.Any(t => string.Equals((string)t, rule, StringComparison.OrdinalIgnoreCase)) == true)
+                        return true;
+                }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is JsonException) { }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Merges one read-deny rule into the project's <c>.claude/settings.json</c> (created if missing; everything else
+        /// kept). False when it was already there.
+        /// </summary>
+        public static bool AddDenyRule(string rootDir, string rule)
+        {
+            string claudeDir = Path.Combine(rootDir, ".claude");
+            Directory.CreateDirectory(claudeDir);
+            string settingsPath = Path.Combine(claudeDir, "settings.json");
+            JObject settings = File.Exists(settingsPath) ? JObject.Parse(File.ReadAllText(settingsPath)) : new JObject();
+            var deny = GetOrAdd<JArray>(GetOrAdd<JObject>(settings, "permissions"), "deny");
+            if (deny.Any(t => string.Equals((string)t, rule, StringComparison.OrdinalIgnoreCase))) return false;
+            deny.Add(rule);
+            File.WriteAllText(settingsPath, settings.ToString(Formatting.Indented) + Environment.NewLine, new UTF8Encoding(false));
+            return true;
+        }
+
         public static SetupResult Apply(string rootDir, bool autoApproveRewrites = false)
         {
             var result = new SetupResult();

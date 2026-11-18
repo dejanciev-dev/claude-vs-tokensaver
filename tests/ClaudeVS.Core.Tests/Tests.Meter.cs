@@ -302,10 +302,17 @@ namespace ClaudeVS.Core.Tests
             };
             var folders = TurnFileActivity.ByFolder(byFile, @"C:\repo\");
             Eq(10000L, folders["src/Core"], "two levels: Deep is counted in src/Core");
-            Eq(4000L, folders["src/App"], "src/App");
+            Eq(4000L, folders["src/App/obj"], "build output keeps its obj, deeper than two levels");
             Eq(500L, folders["."], "the working folder's top");
             Eq(300L, folders[TurnFileActivity.OutsideFolder], "outside: grouped, its path not kept");
             True(!folders.Keys.Any(k => k.Contains("elsewhere")), "no outside paths");
+            var noisy = TurnFileActivity.ByFolder(new Dictionary<string, long>
+            {
+                [@"C:\repo\node_modules\react\index.js"] = 10,
+                [@"C:\repo\web\wwwroot\lib\jquery\jquery.js"] = 20,
+                [@"C:\repo\web\wwwroot\css\site.css"] = 30,
+            }, @"C:\repo");
+            Eq("node_modules,web/wwwroot,web/wwwroot/lib", string.Join(",", noisy.Keys.OrderBy(k => k, StringComparer.Ordinal)), "cut at the vendored folder; other wwwroot files by depth");
 
             Eq("Read(./**/obj/**)", SavingsReport.NoiseRule("src/App/obj"), "build output");
             Eq("Read(./**/wwwroot/lib/**)", SavingsReport.NoiseRule("web/wwwroot/lib"), "a two-part noise folder");

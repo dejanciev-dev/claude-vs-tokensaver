@@ -111,20 +111,33 @@ namespace ClaudeVS.Core.Tokens
                 string path = (kv.Key ?? "").Replace('\\', '/');
                 string folder;
                 if (full != null && path.StartsWith(full, StringComparison.OrdinalIgnoreCase))
-                {
-                    var parts = path.Substring(full.Length).Split('/');
-                    folder = parts.Length <= 1 ? "." : string.Join("/", parts.Take(Math.Min(depth, parts.Length - 1)));
-                }
+                    folder = Group(path.Substring(full.Length).Split('/'), depth);
                 else if (full == null && !Path.IsPathRooted(path))
-                {
-                    var parts = path.Split('/');
-                    folder = parts.Length <= 1 ? "." : string.Join("/", parts.Take(Math.Min(depth, parts.Length - 1)));
-                }
+                    folder = Group(path.Split('/'), depth);
                 else folder = OutsideFolder;
                 result.TryGetValue(folder, out var t);
                 result[folder] = t + kv.Value;
             }
             return result;
+        }
+
+        /// <summary>
+        /// A file's folder for <see cref="ByFolder"/> (<paramref name="parts"/>: its path's segments, the name last): the
+        /// first <paramref name="depth"/> folders, or down to a build-output or vendored folder at any depth
+        /// ("src/App/obj"), so it is told apart from the code around it.
+        /// </summary>
+        private static string Group(string[] parts, int depth)
+        {
+            if (parts.Length <= 1) return ".";
+            int dirs = parts.Length - 1;
+            for (int k = 1; k <= dirs; k++)
+            {
+                string prefix = string.Join("/", parts.Take(k));
+                // the noise folder ends here: "obj", or the second part of "wwwroot/lib"
+                if (SavingsReport.NoiseRule(parts[k - 1]) != null || (k >= 2 && SavingsReport.NoiseRule(parts[k - 2] + "/" + parts[k - 1]) != null && SavingsReport.NoiseRule(parts[k - 2]) == null))
+                    return prefix;
+            }
+            return string.Join("/", parts.Take(Math.Min(depth, dirs)));
         }
 
         /// <summary>

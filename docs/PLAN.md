@@ -1569,10 +1569,14 @@ and what came back, not as a guessed total.
 Planned on 2026-11-18, after Phase 59. Phase 59 logs where reads go and what the quiet-build hook did; this phase
 turns that into fixes in the chat and keeps what was only a passing tip.
 
-- [ ] **Add a deny rule from a tip.** When a turn's reads brought 2k+ tokens from build output or vendored code
+- [x] **Add a deny rule from a tip.** When a turn's reads brought 2k+ tokens from build output or vendored code
       (`obj`, `node_modules`… as in *Folders read most*), once per conversation: a tip naming the folder and what it
       cost, with **Add `Read(./**/obj/**)`**, which merges the rule into the project's `.claude/settings.json` (not
-      when a settings file already has it)
+      when a settings file already has it). `SessionNotices.NoiseReadTip` (folders with the same rule added up),
+      `TokenSaverSetup.HasDenyRule` / `AddDenyRule`; with token tips off, the tip goes to the Output pane, no link.
+      Found on the way: Phase 59's `ByFolder` cut every path at two levels, so `src/App/obj/…` became `src/App` and
+      build output below the second level was never flagged; it now ends a folder at a noise folder at any depth.
+      Builds clean; not yet run in VS
 - [ ] **Repeated reads over time.** The usage log keeps each turn's tokens from re-reading an unchanged file
       (`ReadTracker`, until now only a tip); a savings report line and a `repeat_read_tokens` CSV column
 - [ ] **Loud commands the hook skipped.** Builds, tests and `git log` that the hook leaves alone (a verbosity given,
