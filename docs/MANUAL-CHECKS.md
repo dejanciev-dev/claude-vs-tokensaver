@@ -258,7 +258,21 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Select two files and a folder (Ctrl+click), right-click → **Add to Claude Code Chat**; then right-click a project and the solution | All of them are attached as references (the project and solution as their folders); send a prompt: it says `Relevant files: …` with paths only |
 | Right-click a virtual item (a solution folder, *Dependencies*) | **Add to Claude Code Chat** is greyed out |
 
-## 21. Release (Phase 5)
+## 21. Hooks that decide, what references cost, and the setup check (Phase 58)
+
+| Do | Expect |
+|---|---|
+| A PreToolUse hook on `Bash` in `.claude/settings.local.json` that prints `{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"No writes here"}}`; **New chat**, *run `echo hi > a.txt`* | The Bash row ends `· denied by a hook` in red; its tooltip says *Its reason: No writes here* |
+| The same hook with `"allow"` | The row says `· allowed by a hook` (gray), and no card was shown. Remove the hook afterwards |
+| Attach a small file (**Attach Current File**) | After a moment the attachment line says `(reference, ~… tok if read)` |
+| Solution Explorer → right-click a project → **Add to Claude Code Chat** | The line says `(reference, N files, ~… tok if read)`; when 20k+ it is amber and its tooltip explains; `bin`/`obj` are not counted |
+| Right-click the solution of a large repository | The count ends at `5000+ files`, without freezing VS |
+| **Install Token-Saving Settings and Hooks**, **New chat**, `/` → **Check token-saving setup** | *Token-saving setup: all in effect …* |
+| `.claude/settings.local.json` with `{"bashOutputMaxChars": 200000}`, **New chat**, the meter → context breakdown | Under *Tips*: *Token-saving setup: 1 part isn't in effect*; clicking it lists `bashOutputMaxChars: 200,000 (.claude/settings.local.json)`. The Output pane says so at start |
+| In `.claude/settings.json` change the hook's matcher to `Bash`, then check again | `quiet-build hook skips PowerShell`. Reinstall afterwards; it is fixed |
+| A folder without the setup, `/` → **Check token-saving setup** | *not installed in this folder* |
+
+## 22. Release (Phase 5)
 
 These need you rather than a check list:
 
