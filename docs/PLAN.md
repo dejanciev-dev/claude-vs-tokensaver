@@ -11,7 +11,7 @@ Tick the boxes as you go. Each phase ends with something you can run.
 |---|---|
 | `ClaudeVS.Core` (CLI session, parser, router, meter, context, setup) | ✅ Written, 16/16 tests pass |
 | `ClaudeVS` VSIX (package, tool window, commands, options) | ✅ Builds clean (0 warnings); not yet run in the experimental instance |
-| Real end-to-end run against `claude` CLI | ⚠️ Core verified against CLI 2.1.316 (`--live` smoke test): sessions, streaming, usage, cost, cache OK; Haiku routing works in acceptEdits ($0.002 vs $0.042 per turn on Sonnet); in plan mode the CLI answers with Sonnet even when Haiku is requested (still so in 2.1.326, where all other live smoke tests pass). VS UI not run yet |
+| Real end-to-end run against `claude` CLI | ⚠️ Core verified against CLI 2.1.316 (`--live` smoke test): sessions, streaming, usage, cost, cache OK; Haiku routing works in acceptEdits ($0.002 vs $0.042 per turn on Sonnet); in plan mode the CLI answers with Sonnet even when Haiku is requested (still so in 2.1.327, where all other live smoke tests pass). VS UI not run yet |
 | Markdown transcript, diffs, history, question cards | ❌ Not started |
 
 ---
@@ -1456,8 +1456,11 @@ the way the extension runs it (Haiku, two runs, under $0.02).
       `VsContext.GetSolutionExplorerSelection` (a file's path, a project's or the solution's folder; items not on
       disk left out); on file, folder, project, solution and multi-selection menus; menu resource version 2 so VS
       reloads the menus. Builds clean; not yet run in VS
-- [ ] **Verify with 2.1.327 and raise `CliVersion.Tested`.** The live tests with 2.1.327; README, Marketplace
-      overview, CONTRIBUTING and the plan-mode notes
+- [x] **Verify with 2.1.327 and raise `CliVersion.Tested`.** All 12 live tests pass with 2.1.327 ($0.19, 6.3 min;
+      the router's warm routes under 4 s, 41 s including warm-up); 217 offline tests pass. `--live raw.jsonl Plan`
+      still answers with Sonnet. `CliVersion.Tested` is 2.1.327 (`Required` stays 2.1.318); README, Marketplace
+      overview, CONTRIBUTING and the plan-mode notes say so
+- [ ] **Manual checks for Phase 57.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
 
 Checked, nothing to change:
 - Cut-off retries (2.1.327: subagent answers that hit the output limit twice come back whole more often; a reply cut
