@@ -17,6 +17,8 @@ All notable changes to this project are listed here. The format follows
 - **Folders read most**: the savings report lists the folders whose reads brought the most into the context (two
   levels below the working folder), and for build output or vendored code (`obj`, `node_modules`…) the read-deny
   rule that keeps Claude out. Reads outside the working folder are grouped; their paths are not logged.
+- **Fix from the setup check**: when *Check token-saving setup* finds problems, links under it **Reinstall** the
+  setup for this folder (when that fixes one) and **Open** each settings file that overrides it.
 
 ### Added
 - **Hook decisions on tool rows**: a call that one of your PreToolUse hooks allowed or denied without asking says
