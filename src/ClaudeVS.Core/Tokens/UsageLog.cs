@@ -91,6 +91,17 @@ namespace ClaudeVS.Core.Tokens
         /// </summary>
         [JsonProperty("outputRetries", DefaultValueHandling = DefaultValueHandling.Ignore)] public int OutputRetries { get; set; }
         [JsonProperty("outputRetryCost", DefaultValueHandling = DefaultValueHandling.Ignore)] public double OutputRetryCostUsd { get; set; }
+        /// <summary>
+        /// Attached references (files and folders, paths only): their text files and what reading them whole would
+        /// cost (<see cref="Context.ReferenceSize"/>), and what Claude actually read of them in the turn (main agent and
+        /// subagents). 0 when nothing was attached or not measured yet (and in older lines).
+        /// </summary>
+        [JsonProperty("refFiles", DefaultValueHandling = DefaultValueHandling.Ignore)] public int RefFiles { get; set; }
+        [JsonProperty("refCeiling", DefaultValueHandling = DefaultValueHandling.Ignore)] public long RefCeilingTokens { get; set; }
+        [JsonProperty("refReadFiles", DefaultValueHandling = DefaultValueHandling.Ignore)] public int RefReadFiles { get; set; }
+        [JsonProperty("refRead", DefaultValueHandling = DefaultValueHandling.Ignore)] public long RefReadTokens { get; set; }
+        /// <summary>The attached references' full paths, to match reads against; not logged.</summary>
+        [JsonIgnore] public List<string> RefPaths { get; set; }
         [JsonProperty("side", NullValueHandling = NullValueHandling.Ignore)] public string SideKind { get; set; }
         [JsonProperty("sideTokens", DefaultValueHandling = DefaultValueHandling.Ignore)] public long SideTokens { get; set; }
         [JsonProperty("sideCost", DefaultValueHandling = DefaultValueHandling.Ignore)] public double SideCostUsd { get; set; }
