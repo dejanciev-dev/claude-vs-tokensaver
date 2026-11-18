@@ -111,6 +111,12 @@ namespace ClaudeVS.Core.Tokens
         /// <see cref="TurnFileActivity.OutsideFolder"/> for the rest); null when nothing was read (and in older lines).
         /// </summary>
         [JsonProperty("readFolders", NullValueHandling = NullValueHandling.Ignore)] public Dictionary<string, long> ReadFolders { get; set; }
+        /// <summary>
+        /// Builds, tests and git logs that ran in full with 2k+ tokens of output (a form the hook leaves alone, or no
+        /// hook), by kind, and their tokens (<see cref="TurnFileActivity.LoudRuns"/>). Null / 0 when none.
+        /// </summary>
+        [JsonProperty("loud", NullValueHandling = NullValueHandling.Ignore)] public Dictionary<string, int> LoudRuns { get; set; }
+        [JsonProperty("loudTokens", DefaultValueHandling = DefaultValueHandling.Ignore)] public long LoudTokens { get; set; }
         /// <summary>Tokens the main agent spent re-reading files it already had, unchanged (<see cref="ReadTracker"/>); 0 when none.</summary>
         [JsonProperty("repeatRead", DefaultValueHandling = DefaultValueHandling.Ignore)] public long RepeatReadTokens { get; set; }
         /// <summary>The attached references' full paths, to match reads against; not logged.</summary>

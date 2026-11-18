@@ -1285,10 +1285,10 @@ namespace ClaudeVS.Core.Tests
             Eq(2, UsageCsv.Write(recs, sw), "rows");
             var lines = sw.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None);
             Eq(string.Join(",", UsageCsv.Columns), lines[0], "header");
-            Eq(t.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") + @",C:\src\a\,claude-opus-5-5,1,,,,5,1200,300,9000,100,100,10405,0,0,,0.25,0.0001,4200,0,134,multi-file,,,,,,,,,640,120,2,,,,0,,,,,,", lines[1], "oldest first, invariant numbers; fast_tokens, large_context_tokens, agent_tokens and agent_types after the cache columns");
-            True(lines[2].EndsWith(",0,,0.001235,0,0,0,0,,\"'=SUM(A1) say \"\"hi\"\", ok\",,,,,,,,0,0,0,,,,0,,,,,,"), "quoted, formula-guarded prompt: " + lines[2]);
+            Eq(t.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") + @",C:\src\a\,claude-opus-5-5,1,,,,5,1200,300,9000,100,100,10405,0,0,,0.25,0.0001,4200,0,134,multi-file,,,,,,,,,640,120,2,,,,0,,,,,,,,", lines[1], "oldest first, invariant numbers; fast_tokens, large_context_tokens, agent_tokens and agent_types after the cache columns");
+            True(lines[2].EndsWith(",0,,0.001235,0,0,0,0,,\"'=SUM(A1) say \"\"hi\"\", ok\",,,,,,,,0,0,0,,,,0,,,,,,,,"), "quoted, formula-guarded prompt: " + lines[2]);
             Eq("", lines[3], "ends with a line break");
-            Eq("session,effort,tools,turn,cache_rewrite,end_reason,pause_s,prompt_chars,attached_lines,attached_files,suggestion,side,side_cost_usd,output_retries,output_retry_cost_usd,ref_ceiling_tokens,ref_read_tokens,quiet_runs,quiet_tokens,repeat_read_tokens", string.Join(",", UsageCsv.Columns.Skip(UsageCsv.Columns.Length - 20)), "session id … pause_s, then what was sent, the suggestion shown before it, Claude Code's own requests billed with the turn, the cut-off retries and the references read, last");
+            Eq("session,effort,tools,turn,cache_rewrite,end_reason,pause_s,prompt_chars,attached_lines,attached_files,suggestion,side,side_cost_usd,output_retries,output_retry_cost_usd,ref_ceiling_tokens,ref_read_tokens,quiet_runs,quiet_tokens,repeat_read_tokens,loud_runs,loud_tokens", string.Join(",", UsageCsv.Columns.Skip(UsageCsv.Columns.Length - 22)), "session id … pause_s, then what was sent, the suggestion shown before it, Claude Code's own requests billed with the turn, the cut-off retries and the references read, last");
             var withSession = new StringWriter();
             UsageCsv.Write(new[]
             {
@@ -1297,9 +1297,9 @@ namespace ClaudeVS.Core.Tests
                 new UsageRecord { Timestamp = t.AddMinutes(1), SessionId = "other" },
             }, withSession);
             var sessionLines = withSession.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None);
-            True(sessionLines[1].EndsWith(",,abc-123,high,Read:1200;Shell:400,1,,,,0,0,0,,,,0,,,,,,"), "after the prompt; its first turn: " + withSession);
-            True(sessionLines[2].EndsWith(",other,,,1,,,,0,0,0,,,,0,,,,,,"), "another conversation counts from 1: " + sessionLines[2]);
-            True(sessionLines[3].EndsWith(",abc-123,,,2,,,120,0,0,0,,,,0,,,,,,"), "its second turn, by time, 2 minutes after the first: " + sessionLines[3]);
+            True(sessionLines[1].EndsWith(",,abc-123,high,Read:1200;Shell:400,1,,,,0,0,0,,,,0,,,,,,,,"), "after the prompt; its first turn: " + withSession);
+            True(sessionLines[2].EndsWith(",other,,,1,,,,0,0,0,,,,0,,,,,,,,"), "another conversation counts from 1: " + sessionLines[2]);
+            True(sessionLines[3].EndsWith(",abc-123,,,2,,,120,0,0,0,,,,0,,,,,,,,"), "its second turn, by time, 2 minutes after the first: " + sessionLines[3]);
 
             // cache_rewrite: the cause on the turns that wrote their conversation to the cache again
             var rewrites = new StringWriter();
@@ -1311,8 +1311,8 @@ namespace ClaudeVS.Core.Tests
                 new UsageRecord { Timestamp = t.AddMinutes(31), SessionId = "s", ModelUsed = "claude-opus-5-5", CacheWriteTokens = 30_000, IsError = true, EndReason = "aborted_streaming" },
             }, rewrites);
             var rewriteLines = rewrites.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None);
-            Eq(",model,pause,other", string.Join(",", rewriteLines.Skip(1).Take(4).Select(l => l.Split(',').Reverse().Skip(15).First())), "first turn empty, then each cause");
-            True(rewriteLines[4].EndsWith(",4,other,aborted_streaming,60,0,0,0,,,,0,,,,,,"), "end_reason as logged, then the pause: " + rewriteLines[4]);
+            Eq(",model,pause,other", string.Join(",", rewriteLines.Skip(1).Take(4).Select(l => l.Split(',').Reverse().Skip(17).First())), "first turn empty, then each cause");
+            True(rewriteLines[4].EndsWith(",4,other,aborted_streaming,60,0,0,0,,,,0,,,,,,,,"), "end_reason as logged, then the pause: " + rewriteLines[4]);
 
             var one = new StringWriter();
             Eq(1, UsageCsv.Write(recs, one, solution: @"c:\SRC\a"), "one solution, any case or trailing slash");
@@ -1563,7 +1563,7 @@ namespace ClaudeVS.Core.Tests
             var csv = new StringWriter();
             UsageCsv.Write(new[] { new UsageRecord { Timestamp = t, SessionId = "s1" }, last }, csv);
             var csvLines = csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None);
-            True(csvLines[2].EndsWith(",s1,,,,,,,0,0,0,,suggestion,0.0004,0,,,,,,"), "csv: no turn number, the kind and the cost: " + csvLines[2]);
+            True(csvLines[2].EndsWith(",s1,,,,,,,0,0,0,,suggestion,0.0004,0,,,,,,,,"), "csv: no turn number, the kind and the cost: " + csvLines[2]);
         }
 
         private static void Test_SuggestionCost()

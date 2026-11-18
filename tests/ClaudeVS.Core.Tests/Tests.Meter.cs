@@ -286,7 +286,50 @@ namespace ClaudeVS.Core.Tests
             True(rep.ToText().Contains("Quiet-build hook:           12 commands"), rep.ToText());
             var csv = new StringWriter();
             UsageCsv.Write(new[] { new UsageRecord { Timestamp = t0, QuietRuns = new Dictionary<string, int> { ["git log"] = 1, ["dotnet build"] = 2 }, QuietTokens = 40 } }, csv);
-            True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",dotnet build:2;git log:1,40,"), "csv: " + csv);
+            True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",dotnet build:2;git log:1,40,,,"), "csv: " + csv);
+        }
+
+        /// <summary>Builds, tests and git logs the hook left alone and that ran loud: counted, the tip, the report and the CSV.</summary>
+        private static void Test_LoudRuns()
+        {
+            var files = new TurnFileActivity();
+            void Run(string id, string command, int chars, string allowedBy = null, bool asked = false)
+            {
+                files.Observe(new ClaudeEvent { Kind = ClaudeEventKind.ToolUse, ToolUseId = id, ToolName = "Bash", ToolInput = new JObject { ["command"] = command } });
+                if (asked) files.Observe(new ClaudeEvent { Kind = ClaudeEventKind.PermissionRequest, ToolUseId = id, Payload = new JObject { ["decision_reason"] = TurnFileActivity.QuietReasonPrefix + " x" } });
+                files.Observe(new ClaudeEvent { Kind = ClaudeEventKind.ToolResult, ToolUseId = id, ResultChars = chars, ResultText = "out", AllowedBy = allowedBy });
+            }
+            Run("1", "dotnet build -v detailed", 40_000);
+            Run("2", "git log | head -500", 30_000);
+            Run("3", "dotnet build -v n", 600);                 // small: not counted
+            Run("4", "dotnet build", 40_000, asked: true);      // made quiet: not loud
+            Run("5", "ls -R", 90_000);                          // not a build, test or log
+            Eq("dotnet build:1;git log:1", UsageCsv.Quiet(files.LoudRuns), "two loud");
+            Eq(TokenEstimate.FromChars(40_000) + TokenEstimate.FromChars(30_000), (int)files.LoudTokens);
+            Eq("2", files.LastLoud?.ToolUseId, "the last one, for the tip");
+
+            Eq("dotnet build", TurnFileActivity.BaseKind("dotnet build -v d | more"));
+            Eq("git log", TurnFileActivity.BaseKind("git log -n 300"));
+            Eq(null, TurnFileActivity.BaseKind("echo dotnet build"));
+
+            string verbosity = TurnFileActivity.LoudTip("dotnet build -v detailed", "dotnet build", 12000, hookInstalled: true);
+            True(verbosity.Contains("~12.0k tokens") && verbosity.Contains("because it named a verbosity") && verbosity.Contains("the plain `dotnet build`"), verbosity);
+            True(TurnFileActivity.LoudTip("git log | head -500", "git log", 9000, true).Contains("piped or chained"), "pipe");
+            True(TurnFileActivity.LoudTip("git log -n 500", "git log", 9000, true).Contains("named a count"), "count");
+            True(TurnFileActivity.LoudTip("dotnet build", "dotnet build", 9000, true).Contains("ran as written"), "plain but not through the hook");
+            True(TurnFileActivity.LoudTip("dotnet build", "dotnet build", 9000, false).Contains("Install Token-Saving Settings and Hooks"), "no hook: install it");
+
+            var t0 = DateTime.UtcNow.AddDays(-1);
+            var rep = SavingsReport.Build(new[]
+            {
+                new UsageRecord { Timestamp = t0, CostUsd = 0.01, LoudRuns = new Dictionary<string, int> { ["dotnet build"] = 2 }, LoudTokens = 12000 },
+                new UsageRecord { Timestamp = t0, CostUsd = 0.01, LoudRuns = new Dictionary<string, int> { ["git log"] = 1 }, LoudTokens = 6000 },
+            }, new PriceTable());
+            Eq("3 (dotnet build 2, git log 1), ~18.0k tok", rep.LoudRunsLine());
+            True(rep.ToText().Contains("Loud builds and logs:       3"), rep.ToText());
+            var csv = new StringWriter();
+            UsageCsv.Write(new[] { new UsageRecord { Timestamp = t0, LoudRuns = new Dictionary<string, int> { ["git log"] = 1 }, LoudTokens = 6000 } }, csv);
+            True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",git log:1,6000"), "csv: " + csv);
         }
 
         /// <summary>Repeated reads over time: the report's line and the CSV column.</summary>
@@ -304,7 +347,7 @@ namespace ClaudeVS.Core.Tests
             Eq(null, SavingsReport.Build(new[] { new UsageRecord { Timestamp = t0, CostUsd = 0.01 } }, new PriceTable()).RepeatReadsLine(), "none");
             var csv = new StringWriter();
             UsageCsv.Write(new[] { new UsageRecord { Timestamp = t0, RepeatReadTokens = 9000 } }, csv);
-            True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",9000"), "csv: repeat_read_tokens last: " + csv);
+            True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",9000,,"), "csv: repeat_read_tokens: " + csv);
         }
 
         /// <summary>Reads by folder: grouping under the working folder, the report's top folders and the deny-rule hint.</summary>
@@ -389,8 +432,8 @@ namespace ClaudeVS.Core.Tests
             var csv = new StringWriter();
             UsageCsv.Write(new[] { new UsageRecord { Timestamp = t0, CostUsd = 0.05, RefCeilingTokens = 40000, RefReadTokens = 8000 } }, csv);
             var lines = csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None);
-            True(lines[0].EndsWith(",ref_ceiling_tokens,ref_read_tokens,quiet_runs,quiet_tokens,repeat_read_tokens"), "header: " + lines[0]);
-            True(lines[1].EndsWith(",40000,8000,,,"), "row: " + lines[1]);
+            True(lines[0].EndsWith(",ref_ceiling_tokens,ref_read_tokens,quiet_runs,quiet_tokens,repeat_read_tokens,loud_runs,loud_tokens"), "header: " + lines[0]);
+            True(lines[1].EndsWith(",40000,8000,,,,,"), "row: " + lines[1]);
             True(new UsageRecord { RefPaths = new List<string> { "x" } }.RefPaths != null
                  && !Newtonsoft.Json.JsonConvert.SerializeObject(new UsageRecord { RefPaths = new List<string> { "x" } }).Contains("\"x\""), "paths are not logged");
         }

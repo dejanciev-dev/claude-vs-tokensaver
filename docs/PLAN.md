@@ -1581,9 +1581,13 @@ turns that into fixes in the chat and keeps what was only a passing tip.
       (`ReadTracker`, until now only a tip); a savings report line and a `repeat_read_tokens` CSV column.
       `UsageRecord.RepeatReadTokens` (`repeatRead`: the tracker's growth since the last logged turn, reset with the
       conversation), `SavingsReport.RepeatReadsLine`. Builds clean; not yet run in VS
-- [ ] **Loud commands the hook skipped.** Builds, tests and `git log` that the hook leaves alone (a verbosity given,
+- [x] **Loud commands the hook skipped.** Builds, tests and `git log` that the hook leaves alone (a verbosity given,
       a pipe or chain, a count) and that brought 2k+ tokens: counted by kind in the usage log, the report and the CSV,
-      and once per conversation a tip with the form that runs quiet (the plain command)
+      and once per conversation a tip with the form that runs quiet (the plain command). `TurnFileActivity.BaseKind`,
+      `LoudRuns` / `LoudTokens` / `LastLoud`, `LoudTip` (why: piped or chained, a count, a verbosity, watch mode, or
+      run as written; without the hook: install it). The tip replaces the general large-output tip for that command.
+      `UsageRecord.LoudRuns` (`loud`), CSV `loud_runs`, `loud_tokens`; `SavingsReport.LoudRunsLine`. Builds clean;
+      not yet run in VS
 - [ ] **Reads in the session summary.** *Copy session summary* adds the conversation's reads: the top folders, the
       attached references read against their ceiling, repeated reads, and commands made quiet or left loud
 - [ ] **Manual checks for Phase 60.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
