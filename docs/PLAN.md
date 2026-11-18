@@ -1483,6 +1483,28 @@ Checked, nothing to change:
 - [VSCode] tools removed from the IDE connection (`openFile`, `saveDocument`, `getOpenEditors`): the extension's MCP
   server has only `get_error_list`
 
+## Phase 58 — Hooks that decide, what references cost, and a setup that still works
+
+Planned on 2026-11-18, after Phase 57. Probed with 2.1.327: a PreToolUse hook that answers `deny` (or `allow`)
+decides without asking; the result's `tool_result_meta` says `permission_decision: {decision: "reject" | "accept",
+source: "hook", reason_type: "hook"}`, and a denied call's result reads "PreToolUse:Bash hook error: <reason>". The
+tool row reads only `source: "config"`, so it says nothing about hooks.
+
+- [ ] **Hook decisions on tool rows.** `· denied by a hook` (red, the hook's reason in the tooltip) and `· allowed by a
+      hook` on shell commands and file changes, as for rules. Capture: `Fixtures/cli-2.1.327-hook-decisions.jsonl`
+- [ ] **What a reference may cost.** The attachment line says what Claude would read for each reference if it read it
+      whole: `~3.2k tok` for a file, `12 files, ~40k tok` for a folder or project (source files only, `bin`/`obj`/
+      `node_modules`… left out, counted up to a limit). A reference costs nothing until read, so it is a ceiling, not a
+      charge; large ones (over 20k) in amber, so attaching a whole project from Solution Explorer isn't a surprise
+- [ ] **Check the token-saving setup.** Like the problem list 2.1.327 added to `/status`: after *Install Token-Saving
+      Settings and Hooks*, check from `get_settings` (no model call) that the read-deny rules, `bashOutputMaxChars` and
+      the quiet-build hook are still in effect, and that the hook's matcher still matches `Bash` and `PowerShell`.
+      Missing or overridden parts are listed with where to fix them; in the context breakdown and as a `/` command
+- [ ] **Cut off twice: capture and test.** 2.1.327: subagent answers that hit the output limit twice "now more often
+      come back whole or say up front that they are partial". Capture a subagent cut off twice
+      (`CLAUDE_CODE_MAX_OUTPUT_TOKENS`), check the retry count and cost, and that a partial answer's text is kept
+- [ ] **Manual checks for Phase 58.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
+
 ---
 
 ## Working in Visual Studio — daily loop
