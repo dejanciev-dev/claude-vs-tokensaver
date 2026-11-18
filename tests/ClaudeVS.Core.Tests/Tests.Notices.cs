@@ -412,5 +412,60 @@ namespace ClaudeVS.Core.Tests
             True(Reached("\"overageStatus\":\"allowed\",\"isUsingOverage\":true,").Banner(now).Text.EndsWith(" Using extra usage."), "reached, carried by extra usage");
             True(!Reached("").Banner(now).Text.Contains("Extra usage"), "older events: as before");
         }
+
+        /// <summary>
+        /// The token-saving setup against <c>get_settings</c> as 2.1.327 answers it (shape from a real answer: the
+        /// project's hook and rules, a local file raising <c>bashOutputMaxChars</c> to 200,000 and adding a Write hook).
+        /// </summary>
+        private static void Test_SetupCheck()
+        {
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-setup-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                Eq(null, SetupCheck.Find(new JObject(), dir), "not installed: nothing to check");
+                TokenSaverSetup.Apply(dir);
+                var project = JObject.Parse(File.ReadAllText(Path.Combine(dir, ".claude", "settings.json")));
+                JObject Response(JObject local)
+                {
+                    var effective = (JObject)project.DeepClone();
+                    if (local != null)
+                    {
+                        effective.Merge(local, new JsonMergeSettings { MergeArrayHandling = MergeArrayHandling.Concat, MergeNullValueHandling = MergeNullValueHandling.Ignore });
+                    }
+                    var sources = new JArray(new JObject { ["source"] = "projectSettings", ["settings"] = project });
+                    if (local != null) sources.Add(new JObject { ["source"] = "localSettings", ["settings"] = local });
+                    return new JObject { ["effective"] = effective, ["sources"] = sources };
+                }
+
+                var ok = SetupCheck.Find(Response(null), dir);
+                Eq(0, ok.Count, "just installed: all in effect. " + SetupCheck.Text(ok));
+                True(SetupCheck.Text(ok).Contains("all in effect"), "text when fine");
+
+                var raised = SetupCheck.Find(Response(JObject.Parse("{\"bashOutputMaxChars\":200000,\"hooks\":{\"PreToolUse\":[{\"matcher\":\"Write\",\"hooks\":[{\"type\":\"command\",\"command\":\"echo x\"}]}]}}")), dir);
+                Eq(1, raised.Count, "only the raised cap: " + SetupCheck.Text(raised));
+                Eq("bashOutputMaxChars: 200,000", raised[0].Setting, "the value");
+                Eq(".claude/settings.local.json", raised[0].Where, "where it is raised");
+
+                var off = SetupCheck.Find(Response(JObject.Parse("{\"disableAllHooks\":true}")), dir);
+                True(off.Any(p => p.Setting == "disableAllHooks: true" && p.Where == ".claude/settings.local.json"), "hooks off");
+
+                ((JArray)project.SelectToken("hooks.PreToolUse"))[0]["matcher"] = "Bash";
+                ((JArray)project.SelectToken("permissions.deny")).RemoveAt(0);
+                var broken = SetupCheck.Find(Response(null), dir);
+                True(broken.Any(p => p.Setting == "quiet-build hook skips PowerShell"), "matcher for Bash only");
+                True(!broken.Any(p => p.Setting == "quiet-build hook skips Bash"), "Bash still matched");
+                True(broken.Any(p => p.Setting.StartsWith("1 of ", StringComparison.Ordinal) && p.Why.Contains("Read(./**/bin/**)")), "a deny rule removed");
+
+                project["hooks"] = new JObject();
+                File.Delete(Path.Combine(dir, ".claude", "hooks", TokenSaverSetup.HookFileName));
+                File.WriteAllText(Path.Combine(dir, ".claude", "hooks", TokenSaverSetup.HookFileName), "# " + TokenSaverSetup.HookMarker);
+                True(SetupCheck.Find(Response(null), dir).Any(p => p.Setting == "quiet-build hook missing"), "hook gone from settings");
+
+                True(SetupCheck.MatcherMatches("", "PowerShell") && SetupCheck.MatcherMatches("*", "Bash"), "empty and * take all");
+                True(SetupCheck.MatcherMatches("Bash|PowerShell", "PowerShell") && !SetupCheck.MatcherMatches("Bash", "PowerShell"), "list and name");
+                True(!SetupCheck.MatcherMatches("Bash", "BashOutput"), "whole name only");
+            }
+            finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
+        }
     }
 }

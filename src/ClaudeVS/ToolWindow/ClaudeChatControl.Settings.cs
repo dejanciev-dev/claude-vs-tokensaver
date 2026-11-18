@@ -38,6 +38,34 @@ namespace ClaudeVS.ToolWindow
             }).FileAndForget("ClaudeVS/ChatControl/SettingsCheck");
         }
 
+        /// <summary>What isn't in effect of the token-saving setup, as read at the process's start; null when not installed.</summary>
+        private System.Collections.Generic.List<CostlySetting> _setupProblems;
+
+        /// <summary>
+        /// / → Check token-saving setup: reads Claude Code's settings now (starting it if needed, no model call) and says
+        /// whether the hook, the read-deny rules and the output cap that Install Token-Saving Settings wrote still apply.
+        /// </summary>
+        private void ShowSetupCheck()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            EnsureSession(WorkFolder);
+            var s = _session;
+            if (s == null) return;
+            string root = WorkFolder;
+            Jtf.RunAsync(async () =>
+            {
+                ClaudeSettings settings = null;
+                try { settings = await s.GetSettingsAsync(start: true); }
+                catch (InvalidOperationException ex) { ClaudeOutputPane.WriteLine("Claude Code's settings not available: " + ex.Message); }
+                var problems = settings == null ? null : await System.Threading.Tasks.Task.Run(() => SetupCheck.Find(settings.Response, root));
+                await Jtf.SwitchToMainThreadAsync();
+                if (s != _session) return;
+                if (settings == null) { Append("\nClaude Code didn't answer with its settings (an older Claude Code may not offer them). Try again once it runs.\n"); return; }
+                _setupProblems = problems;
+                Append("\n" + SetupCheck.Text(problems) + "\n");
+            }).FileAndForget("ClaudeVS/ChatControl/SetupCheck");
+        }
+
         /// <summary>Claude Code's <c>maxEffortLevel</c>, once read; null when not set or not known yet.</summary>
         private EffortChoice? _effortCap;
 
@@ -56,6 +84,9 @@ namespace ClaudeVS.ToolWindow
                 if (s != _session || settings == null) return;
                 ApplyEffortCap(settings.MaxEffort);
                 _costlySettings = settings.Costly;
+                _setupProblems = SetupCheck.Find(settings.Response, WorkFolder);
+                if (_setupProblems != null && _setupProblems.Count > 0)
+                    ClaudeOutputPane.WriteLine(SetupCheck.Text(_setupProblems));
                 bool off = settings.PromptSuggestionEnabled == false;
                 if (off && !_claudeSuggestionsOff) ClaudeOutputPane.WriteLine("Suggested next prompts are off: promptSuggestionEnabled is false in Claude Code's settings");
                 _claudeSuggestionsOff = off;
