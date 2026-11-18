@@ -286,7 +286,25 @@ namespace ClaudeVS.Core.Tests
             True(rep.ToText().Contains("Quiet-build hook:           12 commands"), rep.ToText());
             var csv = new StringWriter();
             UsageCsv.Write(new[] { new UsageRecord { Timestamp = t0, QuietRuns = new Dictionary<string, int> { ["git log"] = 1, ["dotnet build"] = 2 }, QuietTokens = 40 } }, csv);
-            True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",dotnet build:2;git log:1,40"), "csv: " + csv);
+            True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",dotnet build:2;git log:1,40,"), "csv: " + csv);
+        }
+
+        /// <summary>Repeated reads over time: the report's line and the CSV column.</summary>
+        private static void Test_RepeatReads_InReport()
+        {
+            var t0 = DateTime.UtcNow.AddDays(-1);
+            var rep = SavingsReport.Build(new[]
+            {
+                new UsageRecord { Timestamp = t0, CostUsd = 0.01, RepeatReadTokens = 9000 },
+                new UsageRecord { Timestamp = t0, CostUsd = 0.01, RepeatReadTokens = 5000 },
+                new UsageRecord { Timestamp = t0, CostUsd = 0.01 },
+            }, new PriceTable());
+            Eq("~14.0k tok in 2 turns", rep.RepeatReadsLine());
+            True(rep.ToText().Contains("Read again, unchanged:      ~14.0k tok in 2 turns"), rep.ToText());
+            Eq(null, SavingsReport.Build(new[] { new UsageRecord { Timestamp = t0, CostUsd = 0.01 } }, new PriceTable()).RepeatReadsLine(), "none");
+            var csv = new StringWriter();
+            UsageCsv.Write(new[] { new UsageRecord { Timestamp = t0, RepeatReadTokens = 9000 } }, csv);
+            True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",9000"), "csv: repeat_read_tokens last: " + csv);
         }
 
         /// <summary>Reads by folder: grouping under the working folder, the report's top folders and the deny-rule hint.</summary>
@@ -371,8 +389,8 @@ namespace ClaudeVS.Core.Tests
             var csv = new StringWriter();
             UsageCsv.Write(new[] { new UsageRecord { Timestamp = t0, CostUsd = 0.05, RefCeilingTokens = 40000, RefReadTokens = 8000 } }, csv);
             var lines = csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None);
-            True(lines[0].EndsWith(",ref_ceiling_tokens,ref_read_tokens,quiet_runs,quiet_tokens"), "header: " + lines[0]);
-            True(lines[1].EndsWith(",40000,8000,,"), "row: " + lines[1]);
+            True(lines[0].EndsWith(",ref_ceiling_tokens,ref_read_tokens,quiet_runs,quiet_tokens,repeat_read_tokens"), "header: " + lines[0]);
+            True(lines[1].EndsWith(",40000,8000,,,"), "row: " + lines[1]);
             True(new UsageRecord { RefPaths = new List<string> { "x" } }.RefPaths != null
                  && !Newtonsoft.Json.JsonConvert.SerializeObject(new UsageRecord { RefPaths = new List<string> { "x" } }).Contains("\"x\""), "paths are not logged");
         }

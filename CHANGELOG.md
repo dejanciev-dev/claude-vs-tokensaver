@@ -21,6 +21,9 @@ All notable changes to this project are listed here. The format follows
   `node_modules`…), a token tip says so once per conversation, with **Add `Read(./**/obj/**)`**, which merges the
   rule into the project's `.claude/settings.json` (from the next New chat). *Folders read most* now finds such
   folders at any depth (`src/App/obj`), not only in the first two levels.
+- **Repeated reads over time**: tokens Claude spent re-reading files it already had, unchanged, are now logged per
+  turn (until now only a tip in the chat): a *Read again, unchanged* line in the savings report and a
+  `repeat_read_tokens` CSV column.
 - **Fix from the setup check**: when *Check token-saving setup* finds problems, links under it **Reinstall** the
   setup for this folder (when that fixes one) and **Open** each settings file that overrides it.
 

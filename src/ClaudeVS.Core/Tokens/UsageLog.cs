@@ -111,6 +111,8 @@ namespace ClaudeVS.Core.Tokens
         /// <see cref="TurnFileActivity.OutsideFolder"/> for the rest); null when nothing was read (and in older lines).
         /// </summary>
         [JsonProperty("readFolders", NullValueHandling = NullValueHandling.Ignore)] public Dictionary<string, long> ReadFolders { get; set; }
+        /// <summary>Tokens the main agent spent re-reading files it already had, unchanged (<see cref="ReadTracker"/>); 0 when none.</summary>
+        [JsonProperty("repeatRead", DefaultValueHandling = DefaultValueHandling.Ignore)] public long RepeatReadTokens { get; set; }
         /// <summary>The attached references' full paths, to match reads against; not logged.</summary>
         [JsonIgnore] public List<string> RefPaths { get; set; }
         [JsonProperty("side", NullValueHandling = NullValueHandling.Ignore)] public string SideKind { get; set; }
