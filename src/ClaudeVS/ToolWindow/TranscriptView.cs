@@ -120,6 +120,30 @@ namespace ClaudeVS.ToolWindow
             ScrollToEndIfNear();
         }
 
+        /// <summary>A row of links under a chat message ("Reinstall · Open .claude/settings.local.json"); nothing when empty.</summary>
+        public void AppendActions(IReadOnlyList<(string Text, string Tip, Action OnClick)> actions)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            EndAnswer();
+            if (actions == null || actions.Count == 0) return;
+            _plain = null; // the next plain text starts its own paragraph
+            var a = ChatTheme.Accents(Box);
+            var p = new Paragraph { FontSize = 11.5, Margin = new Thickness(0, 0, 0, 6) };
+            for (int i = 0; i < actions.Count; i++)
+            {
+                if (i > 0)
+                {
+                    var sep = new Run("  ·  ");
+                    sep.SetResourceReference(TextElement.ForegroundProperty, EnvironmentColors.SystemGrayTextBrushKey);
+                    p.Inlines.Add(sep);
+                }
+                var act = actions[i];
+                p.Inlines.Add(Link(act.Text, act.Tip, () => { ThreadHelper.ThrowIfNotOnUIThread(); act.OnClick(); }, a));
+            }
+            _doc.Blocks.Add(p);
+            ScrollToEndIfNear();
+        }
+
         /// <summary>
         /// Your prompt as a rounded bubble, with an optional muted line (route, attachments) under it.
         /// <paramref name="onRewind"/> adds a Rewind button, shown while the mouse is over the bubble.

@@ -417,6 +417,26 @@ namespace ClaudeVS.Core.Tests
         /// The token-saving setup against <c>get_settings</c> as 2.1.327 answers it (shape from a real answer: the
         /// project's hook and rules, a local file raising <c>bashOutputMaxChars</c> to 200,000 and adding a Write hook).
         /// </summary>
+        /// <summary>The setup check's fixes: which settings files to open, and whether reinstalling helps.</summary>
+        private static void Test_SetupCheck_Fixes()
+        {
+            var problems = new List<CostlySetting>
+            {
+                new CostlySetting { Setting = "bashOutputMaxChars: 200,000", Where = ".claude/settings.local.json" },
+                new CostlySetting { Setting = "disableAllHooks: true", Where = "~/.claude/settings.json" },
+                new CostlySetting { Setting = "x", Where = "managed settings" },
+                new CostlySetting { Setting = "y", Where = ".claude/settings.local.json" },
+            };
+            var files = SetupCheck.FilesToOpen(problems, @"C:\repo", @"C:\home");
+            Eq(2, files.Count, "each file once, managed left out");
+            Eq(Path.Combine(@"C:\repo", ".claude", "settings.local.json"), files[0]);
+            Eq(Path.Combine(@"C:\home", ".claude", "settings.json"), files[1]);
+            True(!SetupCheck.ReinstallHelps(problems), "overrides elsewhere: reinstalling the project's files doesn't fix them");
+            True(SetupCheck.ReinstallHelps(new[] { new CostlySetting { Where = ".claude/hooks" } }), "a missing script: it does");
+            True(SetupCheck.ReinstallHelps(new[] { new CostlySetting { Where = ".claude/settings.json" } }), "the project's file: it does");
+            Eq(0, SetupCheck.FilesToOpen(null, @"C:\repo", null).Count, "none");
+        }
+
         private static void Test_SetupCheck()
         {
             string dir = Path.Combine(Path.GetTempPath(), "cvs-setup-" + Guid.NewGuid().ToString("N"));

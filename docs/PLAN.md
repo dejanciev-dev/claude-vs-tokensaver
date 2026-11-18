@@ -1553,9 +1553,13 @@ and what came back, not as a guessed total.
       `UsageRecord.ReadFolders` (`readFolders`), `TurnFileActivity.ByFolder` (reads outside the working folder
       grouped as one, no paths kept), `SavingsReport.TopReadFolders` (top 5) and `NoiseRule` (the scanner's noise
       folders; `*.Designer.cs` left out, as it isn't a folder). Builds clean; not yet run in VS
-- [ ] **Fix from the setup check.** When the setup check finds a problem, the breakdown's line and the chat's message
+- [x] **Fix from the setup check.** When the setup check finds a problem, the breakdown's line and the chat's message
       offer **Reinstall** (the installer for this folder, then a New chat) and **Open file** for the settings file that
-      overrides it
+      overrides it. The breakdown's line runs the check, whose message carries the links (`TranscriptView.AppendActions`).
+      **Reinstall** only when it fixes something (`SetupCheck.ReinstallHelps`: the project's file or the script; an
+      override in `settings.local.json` or yours needs **Open**), with the option for auto-approved rewrites; then
+      says to start a New chat. `SetupCheck.FilesToOpen` (each once, managed settings left out). Builds clean; not yet
+      run in VS
 - [ ] **Manual checks for Phase 59.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
 
 ---

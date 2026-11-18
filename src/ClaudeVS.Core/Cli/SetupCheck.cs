@@ -112,6 +112,31 @@ namespace ClaudeVS.Core.Cli
             return null;
         }
 
+        /// <summary>
+        /// The settings files the problems name, as full paths to open (".claude/settings.local.json" under
+        /// <paramref name="rootDir"/>, "~/.claude/settings.json" under <paramref name="userHome"/>), each once, in order;
+        /// managed settings and folders are left out.
+        /// </summary>
+        public static List<string> FilesToOpen(IEnumerable<CostlySetting> problems, string rootDir, string userHome)
+        {
+            var files = new List<string>();
+            foreach (var p in problems ?? Enumerable.Empty<CostlySetting>())
+            {
+                string where = p?.Where;
+                string path = null;
+                if (where == ".claude/settings.json" || where == ".claude/settings.local.json")
+                    path = string.IsNullOrEmpty(rootDir) ? null : Path.Combine(rootDir, ".claude", Path.GetFileName(where));
+                else if (where == "~/.claude/settings.json")
+                    path = string.IsNullOrEmpty(userHome) ? null : Path.Combine(userHome, ".claude", "settings.json");
+                if (path != null && !files.Contains(path, StringComparer.OrdinalIgnoreCase)) files.Add(path);
+            }
+            return files;
+        }
+
+        /// <summary>True when reinstalling the setup fixes at least one problem (it rewrites the project's files only).</summary>
+        public static bool ReinstallHelps(IEnumerable<CostlySetting> problems) =>
+            (problems ?? Enumerable.Empty<CostlySetting>()).Any(p => p.Where == ".claude/settings.json" || p.Where == ".claude/hooks");
+
         public static string Text(IReadOnlyCollection<CostlySetting> problems)
         {
             if (problems == null)

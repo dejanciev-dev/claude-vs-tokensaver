@@ -63,7 +63,47 @@ namespace ClaudeVS.ToolWindow
                 if (settings == null) { Append("\nClaude Code didn't answer with its settings (an older Claude Code may not offer them). Try again once it runs.\n"); return; }
                 _setupProblems = problems;
                 Append("\n" + SetupCheck.Text(problems) + "\n");
+                if (problems != null && problems.Count > 0) _view.AppendActions(SetupFixes(problems, root));
             }).FileAndForget("ClaudeVS/ChatControl/SetupCheck");
+        }
+
+        /// <summary>
+        /// Links under the setup check's problems: Reinstall (when that fixes one: the project's files) and Open for
+        /// each settings file that overrides the setup.
+        /// </summary>
+        private System.Collections.Generic.List<(string Text, string Tip, Action OnClick)> SetupFixes(System.Collections.Generic.List<CostlySetting> problems, string root)
+        {
+            var actions = new System.Collections.Generic.List<(string, string, Action)>();
+            if (SetupCheck.ReinstallHelps(problems))
+                actions.Add(("Reinstall", "Install Token-Saving Settings and Hooks again for " + root + " (merges into .claude/settings.json; yours stay)", (Action)(() => ReinstallSetup(root))));
+            string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            foreach (var file in SetupCheck.FilesToOpen(problems, root, home))
+            {
+                string shown = file.StartsWith(root ?? "\0", StringComparison.OrdinalIgnoreCase) ? file.Substring(root.Length).TrimStart('\\', '/').Replace('\\', '/') : file;
+                actions.Add(("Open " + shown, file, (Action)(() => { ThreadHelper.ThrowIfNotOnUIThread(); if (System.IO.File.Exists(file)) Commands.VsContext.OpenFile(file); })));
+            }
+            return actions;
+        }
+
+        private void ReinstallSetup(string root)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            bool autoApprove = Options?.AutoApproveHookRewrites ?? false;
+            Jtf.RunAsync(async () =>
+            {
+                string said;
+                try
+                {
+                    var result = await System.Threading.Tasks.Task.Run(() => Core.Setup.TokenSaverSetup.Apply(root, autoApprove));
+                    said = result.Written.Count == 0 ? "Token-saving setup: nothing to change in the project's files." : "Token-saving setup reinstalled: " + string.Join(", ", result.Written) + ".";
+                }
+                catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException || ex is Newtonsoft.Json.JsonException)
+                {
+                    said = "Could not reinstall the token-saving setup: " + ex.Message;
+                }
+                await Jtf.SwitchToMainThreadAsync();
+                Append("\n" + said + " Start a New chat for Claude Code to load it, then check again.\n");
+            }).FileAndForget("ClaudeVS/ChatControl/ReinstallSetup");
         }
 
         /// <summary>Claude Code's <c>maxEffortLevel</c>, once read; null when not set or not known yet.</summary>
