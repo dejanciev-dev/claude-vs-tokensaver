@@ -240,6 +240,55 @@ namespace ClaudeVS.Core.Tests
             True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].Contains(",3,0.0123,"), "csv: output_retries, output_retry_cost_usd: " + csv);
         }
 
+        /// <summary>
+        /// The quiet-build hook from `--live-setup` with 2.1.327: Claude asks for `dotnet build`, the hook rewrites it and
+        /// asks with its reason, the quiet build runs. Counted as one quiet `dotnet build`; also the auto-approve path,
+        /// refused and unrelated commands, the rules, the report line and the CSV.
+        /// </summary>
+        private static void Test_QuietRuns_RealCli_2_1_327()
+        {
+            var parser = new ClaudeStreamParser();
+            var files = new TurnFileActivity();
+            foreach (var e in File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.327-quiet-build-hook.jsonl")).SelectMany(l => parser.Parse(l)))
+                files.Observe(e);
+            Eq("dotnet build:1", UsageCsv.Quiet(files.QuietRuns), "one quiet dotnet build");
+            True(files.QuietTokens > 0 && files.QuietTokens < 100, "its short output: " + files.QuietTokens);
+
+            void Run(string id, string command, string allowedBy = null, bool asked = false, string result = "ok", bool error = false)
+            {
+                files.Observe(new ClaudeEvent { Kind = ClaudeEventKind.ToolUse, ToolUseId = id, ToolName = "PowerShell", ToolInput = new JObject { ["command"] = command } });
+                if (asked) files.Observe(new ClaudeEvent { Kind = ClaudeEventKind.PermissionRequest, ToolUseId = id, Payload = new JObject { ["decision_reason"] = TurnFileActivity.QuietReasonPrefix + " x" } });
+                files.Observe(new ClaudeEvent { Kind = ClaudeEventKind.ToolResult, ToolUseId = id, ResultChars = result.Length, ResultText = result, AllowedBy = allowedBy, IsError = error });
+            }
+            files.Reset();
+            Run("1", "git log", allowedBy: ClaudeStreamParser.HookDecision);               // auto-approve: allowed by the hook
+            Run("2", "git log --oneline", allowedBy: "rule");                              // a rule ran it as written
+            Run("3", "dotnet test", asked: true, error: true, result: "The user doesn't want to proceed with this tool use."); // refused
+            Run("4", "ls", asked: true);                                                   // not a kind the hook rewrites
+            Eq("git log:1", UsageCsv.Quiet(files.QuietRuns), "only the run the hook made quiet");
+
+            Eq("dotnet build", TurnFileActivity.QuietKind("dotnet build src/A.csproj"));
+            Eq("dotnet test", TurnFileActivity.QuietKind("  dotnet test"));
+            Eq("msbuild", TurnFileActivity.QuietKind("msbuild.exe x.sln"));
+            Eq("npm test", TurnFileActivity.QuietKind("npm run test"));
+            Eq(null, TurnFileActivity.QuietKind("dotnet build -v q"), "verbosity given");
+            Eq(null, TurnFileActivity.QuietKind("git log -n 5"), "a count given");
+            Eq(null, TurnFileActivity.QuietKind("dotnet build | tail"), "a pipe");
+            Eq(null, TurnFileActivity.QuietKind("npm test --watch"), "watch");
+
+            var t0 = DateTime.UtcNow.AddDays(-1);
+            var rep = SavingsReport.Build(new[]
+            {
+                new UsageRecord { Timestamp = t0, CostUsd = 0.01, QuietRuns = new Dictionary<string, int> { ["dotnet build"] = 2, ["git log"] = 1 }, QuietTokens = 900 },
+                new UsageRecord { Timestamp = t0, CostUsd = 0.01, QuietRuns = new Dictionary<string, int> { ["dotnet build"] = 7, ["git log"] = 2 }, QuietTokens = 300 },
+            }, new PriceTable());
+            Eq("12 commands made quiet (dotnet build 9, git log 3), ~1.2k tok came back", rep.QuietRunsLine());
+            True(rep.ToText().Contains("Quiet-build hook:           12 commands"), rep.ToText());
+            var csv = new StringWriter();
+            UsageCsv.Write(new[] { new UsageRecord { Timestamp = t0, QuietRuns = new Dictionary<string, int> { ["git log"] = 1, ["dotnet build"] = 2 }, QuietTokens = 40 } }, csv);
+            True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",dotnet build:2;git log:1,40"), "csv: " + csv);
+        }
+
         /// <summary>A turn's reads against its attached references: the footer's tooltip, the report and the CSV.</summary>
         private static void Test_References_ReadAgainstCeiling()
         {
@@ -278,8 +327,8 @@ namespace ClaudeVS.Core.Tests
             var csv = new StringWriter();
             UsageCsv.Write(new[] { new UsageRecord { Timestamp = t0, CostUsd = 0.05, RefCeilingTokens = 40000, RefReadTokens = 8000 } }, csv);
             var lines = csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None);
-            True(lines[0].EndsWith(",ref_ceiling_tokens,ref_read_tokens"), "header: " + lines[0]);
-            True(lines[1].EndsWith(",40000,8000"), "row: " + lines[1]);
+            True(lines[0].EndsWith(",ref_ceiling_tokens,ref_read_tokens,quiet_runs,quiet_tokens"), "header: " + lines[0]);
+            True(lines[1].EndsWith(",40000,8000,,"), "row: " + lines[1]);
             True(new UsageRecord { RefPaths = new List<string> { "x" } }.RefPaths != null
                  && !Newtonsoft.Json.JsonConvert.SerializeObject(new UsageRecord { RefPaths = new List<string> { "x" } }).Contains("\"x\""), "paths are not logged");
         }

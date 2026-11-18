@@ -100,6 +100,12 @@ namespace ClaudeVS.Core.Tokens
         [JsonProperty("refCeiling", DefaultValueHandling = DefaultValueHandling.Ignore)] public long RefCeilingTokens { get; set; }
         [JsonProperty("refReadFiles", DefaultValueHandling = DefaultValueHandling.Ignore)] public int RefReadFiles { get; set; }
         [JsonProperty("refRead", DefaultValueHandling = DefaultValueHandling.Ignore)] public long RefReadTokens { get; set; }
+        /// <summary>
+        /// Shell commands the token-saving hook made quiet in this turn, by kind ("dotnet build" → 2), and the tokens
+        /// their output brought in (<see cref="TurnFileActivity"/>). Null / 0 when none (and in older lines).
+        /// </summary>
+        [JsonProperty("quiet", NullValueHandling = NullValueHandling.Ignore)] public Dictionary<string, int> QuietRuns { get; set; }
+        [JsonProperty("quietTokens", DefaultValueHandling = DefaultValueHandling.Ignore)] public long QuietTokens { get; set; }
         /// <summary>The attached references' full paths, to match reads against; not logged.</summary>
         [JsonIgnore] public List<string> RefPaths { get; set; }
         [JsonProperty("side", NullValueHandling = NullValueHandling.Ignore)] public string SideKind { get; set; }

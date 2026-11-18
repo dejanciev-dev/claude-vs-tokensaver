@@ -1540,9 +1540,13 @@ and what came back, not as a guessed total.
       `refFiles`, `refCeiling`, `refReadFiles`, `refRead` (the paths are not logged); CSV `ref_ceiling_tokens`,
       `ref_read_tokens`, last. Only references measured by the time the prompt goes out count. Builds clean; not yet
       run in VS
-- [ ] **What the quiet-build hook did.** Count the commands the hook made quiet, by kind, and the tokens they returned:
+- [x] **What the quiet-build hook did.** Count the commands the hook made quiet, by kind, and the tokens they returned:
       the usage log, the CSV and a savings report line (`12 commands made quiet: dotnet build 9, git log 3 · ~1.2k tok
-      came back`)
+      came back`). `TurnFileActivity.QuietKind` (the script's rules in C#); quiet when the hook asked with its reason
+      or allowed it (auto-approve), not when refused. `UsageRecord.QuietRuns` / `QuietTokens`, CSV `quiet_runs`
+      (`dotnet build:2;git log:1`), `quiet_tokens`; `SavingsReport.QuietRunsLine`. Capture:
+      `Fixtures/cli-2.1.327-quiet-build-hook.jsonl` from `--live-setup`, `Test_QuietRuns_RealCli_2_1_327`. Builds
+      clean; not yet run in VS
 - [ ] **Folders Claude reads most.** The usage log keeps each turn's read tokens by folder (two levels below the
       working folder); the savings report lists the top folders, and points out generated or vendored ones (`bin`,
       `obj`, `node_modules`, `packages`, `dist`, `wwwroot/lib`, `*.Designer.cs`-only…) with a read-deny rule to add

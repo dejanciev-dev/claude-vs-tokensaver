@@ -16,7 +16,7 @@ namespace ClaudeVS.Core.Tokens
         {
             "time", "solution", "model", "routed", "route_model", "route_effort", "router",
             "input", "output", "thinking", "cache_read", "cache_write", "cache_write_1h", "fast_tokens", "large_context_tokens", "agent_tokens", "agent_types",
-            "cost_usd", "router_cost_usd", "duration_ms", "error", "tokens_avoided", "route_reason", "prompt", "session", "effort", "tools", "turn", "cache_rewrite", "end_reason", "pause_s", "prompt_chars", "attached_lines", "attached_files", "suggestion", "side", "side_cost_usd", "output_retries", "output_retry_cost_usd", "ref_ceiling_tokens", "ref_read_tokens",
+            "cost_usd", "router_cost_usd", "duration_ms", "error", "tokens_avoided", "route_reason", "prompt", "session", "effort", "tools", "turn", "cache_rewrite", "end_reason", "pause_s", "prompt_chars", "attached_lines", "attached_files", "suggestion", "side", "side_cost_usd", "output_retries", "output_retry_cost_usd", "ref_ceiling_tokens", "ref_read_tokens", "quiet_runs", "quiet_tokens",
         };
 
         /// <summary>Writes the header and one row per record; returns the number of rows.</summary>
@@ -54,7 +54,7 @@ namespace ClaudeVS.Core.Tokens
                     r.InputTokens.ToString(c), r.OutputTokens.ToString(c), r.ThinkingTokens.ToString(c),
                     r.CacheReadTokens.ToString(c), r.CacheWriteTokens.ToString(c), r.CacheWrite1hTokens.ToString(c), r.FastTokens.ToString(c), r.LargeContextTokens.ToString(c), r.AgentTokensTotal.ToString(c), Text(AgentTypes(r.AgentTypes)),
                     r.CostUsd.ToString("0.######", c), r.RouterCostUsd.ToString("0.######", c), r.DurationMs.ToString(c),
-                    r.IsError ? "1" : "0", TokenEstimate.FromChars(r.CharsAvoided).ToString(c), Text(r.RouteReason), Text(r.PromptPreview), Text(r.SessionId), Text(r.Effort), Text(Tools(r.ToolResultTokens)), turn, rewrites.TryGetValue(r, out var cause) ? cause : "", Text(r.EndReason), pause, r.PromptChars.ToString(c), r.AttachedLines.ToString(c), r.AttachedFiles.ToString(c), Suggestion(r), Text(r.SideKind), r.SideCostUsd > 0 ? r.SideCostUsd.ToString("0.######", c) : "", r.OutputRetries.ToString(c), r.OutputRetryCostUsd > 0 ? r.OutputRetryCostUsd.ToString("0.######", c) : "", r.RefCeilingTokens > 0 ? r.RefCeilingTokens.ToString(c) : "", r.RefCeilingTokens > 0 ? r.RefReadTokens.ToString(c) : "",
+                    r.IsError ? "1" : "0", TokenEstimate.FromChars(r.CharsAvoided).ToString(c), Text(r.RouteReason), Text(r.PromptPreview), Text(r.SessionId), Text(r.Effort), Text(Tools(r.ToolResultTokens)), turn, rewrites.TryGetValue(r, out var cause) ? cause : "", Text(r.EndReason), pause, r.PromptChars.ToString(c), r.AttachedLines.ToString(c), r.AttachedFiles.ToString(c), Suggestion(r), Text(r.SideKind), r.SideCostUsd > 0 ? r.SideCostUsd.ToString("0.######", c) : "", r.OutputRetries.ToString(c), r.OutputRetryCostUsd > 0 ? r.OutputRetryCostUsd.ToString("0.######", c) : "", r.RefCeilingTokens > 0 ? r.RefCeilingTokens.ToString(c) : "", r.RefCeilingTokens > 0 ? r.RefReadTokens.ToString(c) : "", Text(Quiet(r.QuietRuns)), r.QuietTokens > 0 ? r.QuietTokens.ToString(c) : "",
                 };
                 w.Write(string.Join(",", cells));
                 w.Write("\r\n");
@@ -77,6 +77,12 @@ namespace ClaudeVS.Core.Tokens
         /// </summary>
         public static string Tools(Dictionary<string, long> tools) =>
             tools == null ? "" : string.Join(";", tools.Where(kv => !string.IsNullOrEmpty(kv.Key) && kv.Value > 0)
+                .OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal)
+                .Select(kv => kv.Key + ":" + kv.Value.ToString(CultureInfo.InvariantCulture)));
+
+        /// <summary>"dotnet build:2;git log:1": the commands the token-saving hook made quiet, most first; "" when none.</summary>
+        public static string Quiet(Dictionary<string, int> runs) =>
+            runs == null ? "" : string.Join(";", runs.Where(kv => !string.IsNullOrEmpty(kv.Key) && kv.Value > 0)
                 .OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal)
                 .Select(kv => kv.Key + ":" + kv.Value.ToString(CultureInfo.InvariantCulture)));
 
