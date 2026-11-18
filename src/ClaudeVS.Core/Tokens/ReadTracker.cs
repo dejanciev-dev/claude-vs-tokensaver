@@ -59,6 +59,10 @@ namespace ClaudeVS.Core.Tokens
 
         public void Reset() { _pendingReads.Clear(); _contentOf.Clear(); RepeatedTokens = 0; }
 
+        /// <summary>What the repeated-read tip's link puts in the input box.</summary>
+        public static string AlreadyHaveRequest(string path) =>
+            $"You already have {System.IO.Path.GetFileName(path)} from earlier in this conversation, unchanged; use that instead of reading it again.";
+
         /// <summary>The tip for a repeated read, worth giving from about 2k tokens; null for small files.</summary>
         public static string Tip(string path, int tokens)
         {

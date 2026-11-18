@@ -22,6 +22,8 @@ All notable changes to this project are listed here. The format follows
   rule into the project's `.claude/settings.json` (from the next New chat). *Folders read most* now finds such
   folders at any depth (`src/App/obj`), not only in the first two levels. Minified files and source maps
   (`*.min.js`, `*.min.css`, `*.map`) count too, with their own rule (`Read(./**/*.min.js)`).
+- **Tips you can act on**: the loud-command tip has **Ask for the plain `dotnet build`**, and the repeated-read tip
+  **Tell Claude it has `Foo.cs`**; each puts the request into the input box (after anything typed), to edit or send.
 - **Repeated reads over time**: tokens Claude spent re-reading files it already had, unchanged, are now logged per
   turn (until now only a tip in the chat): a *Read again, unchanged* line in the savings report and a
   `repeat_read_tokens` CSV column.
