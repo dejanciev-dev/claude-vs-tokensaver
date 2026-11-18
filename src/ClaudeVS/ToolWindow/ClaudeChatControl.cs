@@ -998,6 +998,8 @@ namespace ClaudeVS.ToolWindow
 
         /// <summary>The turn's reads and quiet commands (main agent and subagents), reset after each turn's footer.</summary>
         private readonly TurnFileActivity _turnFiles = new TurnFileActivity();
+        /// <summary>This conversation's reads and runs, turn by turn, for Copy session summary; reset with the conversation.</summary>
+        private readonly ConversationReads _conversationReads = new ConversationReads();
         /// <summary>"References: Claude read 2 of 12 files, …" for the last turn's footer tooltip; null when none attached.</summary>
         private string _lastTurnReferences;
 
@@ -2146,6 +2148,7 @@ namespace ClaudeVS.ToolWindow
             rec.Effort = EffortUsed(rec); // as Claude Code applied it (read after the first prompt of a process went out)
             _lastTurnEffort = rec.Effort; // for the tips and the footer, kept also without the log
             _lastTurnPromptChars = rec.PromptChars;
+            _conversationReads.Add(rec); // for Copy session summary, kept also without the log
             if (Options?.KeepUsageLog == false) return;
             rec.Timestamp = DateTime.UtcNow;
             rec.SessionId = ev.SessionId;
@@ -2483,7 +2486,7 @@ namespace ClaudeVS.ToolWindow
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             if (_meterModel == null || _meterModel.Turns == 0) { Append("No turns in this conversation yet."); return; }
-            string text = SessionSummary.Format(_meterModel, _fullTitle ?? _sessionName, _session?.SessionId ?? _resumeId);
+            string text = SessionSummary.Format(_meterModel, _fullTitle ?? _sessionName, _session?.SessionId ?? _resumeId, _conversationReads);
             try { Clipboard.SetText(text); Append("Copied the session summary."); }
             catch (Exception) { Append("The clipboard is busy; try again."); }
         }

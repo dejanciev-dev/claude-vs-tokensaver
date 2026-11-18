@@ -332,6 +332,36 @@ namespace ClaudeVS.Core.Tests
             True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",git log:1,6000"), "csv: " + csv);
         }
 
+        /// <summary>Copy session summary's reads: the conversation's turns added up.</summary>
+        private static void Test_ConversationReads_InSummary()
+        {
+            var reads = new ConversationReads();
+            reads.Add(new UsageRecord
+            {
+                ReadFolders = new Dictionary<string, long> { ["src/Core"] = 30000, ["src/App/obj"] = 2000 },
+                RefCeilingTokens = 40000, RefReadTokens = 8000, RepeatReadTokens = 3000,
+                QuietRuns = new Dictionary<string, int> { ["dotnet build"] = 2 }, QuietTokens = 200,
+            });
+            reads.Add(new UsageRecord
+            {
+                ReadFolders = new Dictionary<string, long> { ["src/Core"] = 10000, ["a"] = 1, ["b"] = 1, ["c"] = 1, ["d"] = 1 },
+                RefCeilingTokens = 10000, RefReadTokens = 2000,
+                LoudRuns = new Dictionary<string, int> { ["git log"] = 1 }, LoudTokens = 9000,
+            });
+            var lines = reads.Lines();
+            Eq("Reads by folder: src/Core 40.0k · src/App/obj 2.0k · a 1 · b 1 · c 1 · other 1", lines[0]);
+            Eq("References: Claude read ~10.0k of the ~50.0k tok attached (20%)", lines[1]);
+            Eq("Read again, unchanged: ~3.0k tok", lines[2]);
+            Eq("Builds and logs: 2 made quiet (~200 tok back) · 1 loud (~9.0k tok)", lines[3]);
+
+            var meter = new TokenMeter();
+            string text = SessionSummary.Format(meter, "t", null, reads);
+            True(text.Contains("\nReads by folder: src/Core 40.0k") && text.Contains("\nBuilds and logs: "), text);
+            Eq(SessionSummary.Format(meter, "t"), SessionSummary.Format(meter, "t", null, new ConversationReads()), "nothing read: no lines");
+            reads.Reset();
+            Eq(0, reads.Lines().Count, "reset with the conversation");
+        }
+
         /// <summary>Repeated reads over time: the report's line and the CSV column.</summary>
         private static void Test_RepeatReads_InReport()
         {

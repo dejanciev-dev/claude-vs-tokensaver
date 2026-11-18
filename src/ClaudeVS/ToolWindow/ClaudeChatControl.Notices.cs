@@ -496,6 +496,7 @@ namespace ClaudeVS.ToolWindow
             _gaveLoudTip = false;
             _reads.Reset();
             _repeatReadBase = 0;
+            _conversationReads.Reset();
         }
     }
 }
