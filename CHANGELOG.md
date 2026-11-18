@@ -7,6 +7,10 @@ All notable changes to this project are listed here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Hook decisions on tool rows**: a call that one of your PreToolUse hooks allowed or denied without asking says
+  `· allowed by a hook` or `· denied by a hook`, with the hook's reason in the tooltip, as rules already do.
+
+### Added
 - **Why a hook asks**: when one of your PreToolUse hooks asks for confirmation with a reason, the permission card
   shows it under Claude's description (`ⓘ PreToolUse hook (settings): …`), and screen readers hear it. Claude Code
   sends the reason since 2.1.327.

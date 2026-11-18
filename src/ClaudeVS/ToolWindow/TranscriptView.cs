@@ -1347,7 +1347,7 @@ namespace ClaudeVS.ToolWindow
                 note.SetResourceReference(TextElement.ForegroundProperty, EnvironmentColors.SystemGrayTextBrushKey);
                 header.Inlines.Add(note);
             }
-            if (Core.Cli.ToolCallView.DeniedNote(deniedBy) is var (deniedText, deniedTip))
+            if (Core.Cli.ToolCallView.DeniedNote(deniedBy, resultText) is var (deniedText, deniedTip))
             {
                 // "· denied by a rule": your settings blocked it, Claude was not refused by you just now.
                 header.Inlines.Add(new Run("  · " + deniedText) { FontSize = 11, ToolTip = deniedTip, Foreground = a.Failure });

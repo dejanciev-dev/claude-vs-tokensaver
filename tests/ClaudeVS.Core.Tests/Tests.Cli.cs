@@ -706,6 +706,34 @@ namespace ClaudeVS.Core.Tests
             Eq(null, ToolCallView.DeniedNote(null), "you denied it (or nothing): no note");
         }
 
+        /// <summary>
+        /// Real calls from Claude Code 2.1.327 that a PreToolUse hook decided without asking: one denied with a
+        /// reason, one allowed. The rows say "denied by a hook" (the reason in the tooltip) and "allowed by a hook".
+        /// </summary>
+        private static void Test_Parser_HookDecisions_RealCli_2_1_327()
+        {
+            var parser = new ClaudeStreamParser();
+            var results = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.327-hook-decisions.jsonl"))
+                .SelectMany(l => parser.Parse(l)).Where(e => e.Kind == ClaudeEventKind.ToolResult).ToList();
+            Eq(2, results.Count, "two tool results");
+
+            var denied = results[0];
+            True(denied.IsError, "the denied call is an error");
+            Eq("hook", denied.DeniedBy, "rejected by a hook");
+            Eq(null, denied.AllowedBy, "not allowed");
+            var note = ToolCallView.DeniedNote(denied.DeniedBy, denied.ResultText);
+            Eq("denied by a hook", note?.Text, "row note");
+            True(note.Value.Tip.Contains("Its reason: Probe hook: no writes here"), "the hook's reason in the tooltip: " + note.Value.Tip);
+
+            var allowed = results[1];
+            Eq("hook", allowed.AllowedBy, "accepted by a hook");
+            Eq(null, allowed.DeniedBy, "not denied");
+            Eq("allowed by a hook", ToolCallView.AllowedNote("Bash", allowed.AllowedBy)?.Text, "row note");
+
+            Eq("No writes", ToolCallView.HookDenyReason("Error: PreToolUse:Bash hook error: No writes"), "with Error: in front");
+            Eq(null, ToolCallView.HookDenyReason("  "), "nothing");
+        }
+
         private static void Test_Parser_AllowedBy_Shapes()
         {
             var meta = JArray.Parse("[{\"id\":\"a\",\"permission_decision\":{\"decision\":\"accept\",\"source\":\"config\",\"reason_type\":\"rule\"}},"
