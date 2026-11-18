@@ -248,7 +248,17 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | No such settings, `/` → **Settings that cost** | `none of the settings known to make turns dearer is set` |
 | With `set CLAUDE_CODE_MAX_OUTPUT_TOKENS=400` before starting VS, ask for long answers until going on has cost $0.05 | One token tip: `Answers cut off at the output limit … CLAUDE_CODE_MAX_OUTPUT_TOKENS is 400 …`; the usage CSV's last columns `output_retries` and `output_retry_cost_usd` are filled |
 
-## 20. Release (Phase 5)
+## 20. Claude Code 2.1.327: hook reasons and Add to Chat (Phase 57)
+
+| Do | Expect |
+|---|---|
+| Mode **Manual**; in the solution folder, `.claude/settings.local.json` with a PreToolUse hook on `Bash` that prints `{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"ask","permissionDecisionReason":"Check before running"}}`; **New chat**, *run `echo hi`* | The permission card shows `ⓘ PreToolUse hook (settings): Check before running` under Claude's description; Narrator reads it with the question. Remove the hook afterwards |
+| A Bash call with no hook | No ⓘ line on the card |
+| Solution Explorer: right-click a file → **Add to Claude Code Chat** | The chat opens; the attachment line shows the file `(reference)` |
+| Select two files and a folder (Ctrl+click), right-click → **Add to Claude Code Chat**; then right-click a project and the solution | All of them are attached as references (the project and solution as their folders); send a prompt: it says `Relevant files: …` with paths only |
+| Right-click a virtual item (a solution folder, *Dependencies*) | **Add to Claude Code Chat** is greyed out |
+
+## 21. Release (Phase 5)
 
 These need you rather than a check list:
 

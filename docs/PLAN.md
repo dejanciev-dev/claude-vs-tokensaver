@@ -1460,7 +1460,9 @@ the way the extension runs it (Haiku, two runs, under $0.02).
       the router's warm routes under 4 s, 41 s including warm-up); 217 offline tests pass. `--live raw.jsonl Plan`
       still answers with Sonnet. `CliVersion.Tested` is 2.1.327 (`Required` stays 2.1.318); README, Marketplace
       overview, CONTRIBUTING and the plan-mode notes say so
-- [ ] **Manual checks for Phase 57.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
+- [x] **Manual checks for Phase 57.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md). Section 20,
+      *Claude Code 2.1.327: hook reasons and Add to Chat*: the hook's reason on the card (and with Narrator), Add to
+      Claude Code Chat on files, several items, projects, the solution and virtual items; Release is now 21
 
 Checked, nothing to change:
 - Cut-off retries (2.1.327: subagent answers that hit the output limit twice come back whole more often; a reply cut
