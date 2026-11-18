@@ -1494,10 +1494,13 @@ tool row reads only `source: "config"`, so it says nothing about hooks.
       hook` on shell commands and file changes, as for rules. Capture: `Fixtures/cli-2.1.327-hook-decisions.jsonl`,
       `Test_Parser_HookDecisions_RealCli_2_1_327`; `ClaudeStreamParser.HookDecision`, `ToolCallView.HookDenyReason`.
       Builds clean; not yet run in VS
-- [ ] **What a reference may cost.** The attachment line says what Claude would read for each reference if it read it
+- [x] **What a reference may cost.** The attachment line says what Claude would read for each reference if it read it
       whole: `~3.2k tok` for a file, `12 files, ~40k tok` for a folder or project (source files only, `bin`/`obj`/
       `node_modules`… left out, counted up to a limit). A reference costs nothing until read, so it is a ceiling, not a
-      charge; large ones (over 20k) in amber, so attaching a whole project from Solution Explorer isn't a surprise
+      charge; large ones (over 20k) in amber, so attaching a whole project from Solution Explorer isn't a surprise.
+      `ReferenceSize.Measure` (the `@` picker's `FileIndex` walk, binaries left out, up to 5,000 files: `5000+
+      files`); measured off the UI thread once per attachment; the tooltip explains the amber. Builds clean; not yet
+      run in VS
 - [ ] **Check the token-saving setup.** Like the problem list 2.1.327 added to `/status`: after *Install Token-Saving
       Settings and Hooks*, check from `get_settings` (no model call) that the read-deny rules, `bashOutputMaxChars` and
       the quiet-build hook are still in effect, and that the hook's matcher still matches `Bash` and `PowerShell`.

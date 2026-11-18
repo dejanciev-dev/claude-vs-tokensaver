@@ -984,6 +984,26 @@ namespace ClaudeVS.ToolWindow
             if (string.IsNullOrEmpty(path)) return;
             if (!_attachedFiles.Contains(path, StringComparer.OrdinalIgnoreCase)) _attachedFiles.Add(path);
             UpdateAttachments(focus: true);
+            MeasureReference(path);
+        }
+
+        /// <summary>What each reference would cost if read whole, by path; measured once, off the UI thread.</summary>
+        private readonly System.Collections.Generic.Dictionary<string, ReferenceSize> _referenceSizes =
+            new System.Collections.Generic.Dictionary<string, ReferenceSize>(StringComparer.OrdinalIgnoreCase);
+
+        private void MeasureReference(string path)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (_referenceSizes.ContainsKey(path)) return;
+            _referenceSizes[path] = null; // being measured
+            Jtf.RunAsync(async () =>
+            {
+                var size = await System.Threading.Tasks.Task.Run(() => ReferenceSize.Measure(path));
+                await Jtf.SwitchToMainThreadAsync();
+                if (size == null) { _referenceSizes.Remove(path); return; }
+                _referenceSizes[path] = size;
+                if (_attachedFiles.Contains(path, StringComparer.OrdinalIgnoreCase)) UpdateAttachments(focus: false);
+            }).FileAndForget("ClaudeVS/ChatControl/ReferenceSize");
         }
 
         /// <summary>Attach error-list entries (one line each, capped when the prompt is built).</summary>
@@ -999,6 +1019,7 @@ namespace ClaudeVS.ToolWindow
             ThreadHelper.ThrowIfNotOnUIThread();
             _selection = null;
             _attachedFiles.Clear();
+            _referenceSizes.Clear(); // files change: measure again when attached again
             _attachedErrors = null;
             _images.Clear();
             RefreshImageStrip();
@@ -1011,6 +1032,7 @@ namespace ClaudeVS.ToolWindow
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             var parts = new System.Collections.Generic.List<string>();
+            var large = new System.Collections.Generic.HashSet<int>(); // indexes of parts shown in amber
             string dir = VsContext.GetSolutionDirectory() == null ? null : WorkFolder; // the folder Claude Code runs in
             if (_selection != null)
             {
@@ -1018,7 +1040,14 @@ namespace ClaudeVS.ToolWindow
                 bool inline = lines <= (Options?.InlineMaxLines ?? 60);
                 parts.Add($"{PromptContextBuilder.Relative(dir, _selection.FilePath)}:L{_selection.StartLine}-{_selection.EndLine} ({lines} lines, {(inline ? "inlined" : "sent as reference")})");
             }
-            foreach (var f in _attachedFiles) parts.Add(PromptContextBuilder.Relative(dir, f) + " (reference)");
+            foreach (var f in _attachedFiles)
+            {
+                // "src/Big.cs (reference, ~3.2k tok if read)": a ceiling, since only the path is sent.
+                _referenceSizes.TryGetValue(f, out var size);
+                string label = size?.Label;
+                if (size != null && size.IsLarge) large.Add(parts.Count);
+                parts.Add(PromptContextBuilder.Relative(dir, f) + (string.IsNullOrEmpty(label) ? " (reference)" : $" (reference, {label} if read)"));
+            }
             if (_attachedErrors != null)
             {
                 int max = Options?.MaxAttachedErrors ?? 20;
@@ -1028,7 +1057,20 @@ namespace ClaudeVS.ToolWindow
             if (_browseWeb) parts.Add("🌐 web search allowed");
 
             if (parts.Count == 0) { _attachment.Visibility = Visibility.Collapsed; UpdateRouteHint(); return; }
-            _attachment.Text = "📎 " + string.Join(" · ", parts) + " — Esc to remove";
+            _attachment.Inlines.Clear();
+            _attachment.Inlines.Add(new System.Windows.Documents.Run("📎 "));
+            var amber = ChatTheme.Accents(this).Running;
+            for (int i = 0; i < parts.Count; i++)
+            {
+                if (i > 0) _attachment.Inlines.Add(new System.Windows.Documents.Run(" · "));
+                var run = new System.Windows.Documents.Run(parts[i]);
+                if (large.Contains(i)) run.Foreground = amber;
+                _attachment.Inlines.Add(run);
+            }
+            _attachment.Inlines.Add(new System.Windows.Documents.Run(" — Esc to remove"));
+            _attachment.ToolTip = large.Count > 0
+                ? $"A reference sends only its path, and Claude reads what it needs. The amber ones would cost {ReferenceSize.LargeTokens / 1000}k+ tokens if read whole: say which part you mean."
+                : null;
             _attachment.Visibility = Visibility.Visible;
             if (focus) _prompt.Focus();
             UpdateRouteHint();

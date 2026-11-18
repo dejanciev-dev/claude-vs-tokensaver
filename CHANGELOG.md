@@ -9,6 +9,10 @@ All notable changes to this project are listed here. The format follows
 ### Added
 - **Hook decisions on tool rows**: a call that one of your PreToolUse hooks allowed or denied without asking says
   `· allowed by a hook` or `· denied by a hook`, with the hook's reason in the tooltip, as rules already do.
+- **What a reference may cost**: the attachment line says what each attached file or folder would cost if Claude
+  read it whole (`src/Big.cs (reference, ~3.2k tok if read)`, `src (reference, 12 files, ~40.0k tok if read)`), in
+  amber from 20k tokens. Only the path is sent, so it's a ceiling; folders count text files only, as the `@` picker
+  lists them.
 
 ### Added
 - **Why a hook asks**: when one of your PreToolUse hooks asks for confirmation with a reason, the permission card

@@ -301,6 +301,40 @@ namespace ClaudeVS.Core.Tests
             finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
         }
 
+        private static void Test_ReferenceSize_FilesAndFolders()
+        {
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-refsize-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(dir, "src"));
+                Directory.CreateDirectory(Path.Combine(dir, "bin"));
+                File.WriteAllText(Path.Combine(dir, "src", "Big.cs"), new string('x', 12_800));
+                File.WriteAllText(Path.Combine(dir, "src", "Small.cs"), new string('x', 3_200));
+                File.WriteAllText(Path.Combine(dir, "src", "logo.png"), new string('x', 90_000));
+                File.WriteAllText(Path.Combine(dir, "bin", "App.cs"), new string('x', 90_000));
+
+                var file = ReferenceSize.Measure(Path.Combine(dir, "src", "Big.cs"));
+                True(!file.IsFolder && file.Files == 1, "a file");
+                Eq("~4.3k tok", file.Label, "a file's label, as in the @ picker");
+
+                var folder = ReferenceSize.Measure(dir);
+                True(folder.IsFolder, "a folder");
+                Eq(2, folder.Files, "text files only, bin left out");
+                Eq("2 files, ~5.3k tok", folder.Label, "folder label");
+                True(!folder.IsLarge, "not large");
+
+                var capped = ReferenceSize.Measure(dir, maxFiles: 1);
+                True(capped.Truncated, "cut short");
+                Eq("1+ files, ~4.3k tok", capped.Label, "says it was cut short (sorted: Big.cs first)");
+
+                Eq("", ReferenceSize.Measure(Path.Combine(dir, "src", "logo.png")).Label, "a binary file: no size");
+                Eq(null, ReferenceSize.Measure(Path.Combine(dir, "gone.cs")), "missing");
+                File.WriteAllText(Path.Combine(dir, "src", "Huge.cs"), new string('x', 70_000));
+                True(ReferenceSize.Measure(Path.Combine(dir, "src", "Huge.cs")).IsLarge, "20k+ tokens is large");
+            }
+            finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
+        }
+
         private static void Test_SlashPicker_Matching()
         {
             var cmds = new List<SlashCommand>
