@@ -350,6 +350,13 @@ namespace ClaudeVS.Core.Tests
             True(!tasks.AddReread("toolu_other", 3000) && !tasks.AddReread(null, 3000), "no such task");
             Eq(4000L, tasks.Tasks.Single().RereadTokens);
             Eq("Explore", tasks.SubagentTypeOf("toolu_agent1"));
+
+            Eq(null, SessionNotices.SubagentRereadTip(4999, "Explore", @"C:\r\A.cs"), "under 5k");
+            string tip = SessionNotices.SubagentRereadTip(6000, "Explore", @"C:\r\A.cs");
+            True(tip.StartsWith("An Explore agent read A.cs again") && tip.Contains("~6.0k tokens") && tip.Contains("asking it directly is cheaper"), tip);
+            True(SessionNotices.SubagentRereadTip(6000, "general-purpose", "B.cs").StartsWith("A general-purpose agent"), "a / an");
+            True(SessionNotices.SubagentRereadTip(6000, "fork", "B.cs").StartsWith("A fork read"), "a fork");
+            True(SessionNotices.SubagentRereadTip(6000, null, "B.cs").StartsWith("A subagent read"), "unknown kind");
         }
 
         /// <summary>Subagents reading files the main agent already read: kept across turns, cleared by a compaction or a new conversation.</summary>

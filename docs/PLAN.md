@@ -1650,9 +1650,11 @@ this phase shows it while it happens.
       (`re-read ~6.0k`). The parser gives a subagent's tool results their Agent call (`ParentToolUseId`), as it does
       for usage and cut-off retries. `TurnFileActivity.LastReread`, `AgentTask.RereadTokens`,
       `AgentTaskList.AddReread` / `SubagentTypeOf`. Builds clean; not yet run in VS
-- [ ] **A tip once it adds up.** Once per conversation, when subagents have re-read 5k+ tokens of files the
+- [x] **A tip once it adds up.** Once per conversation, when subagents have re-read 5k+ tokens of files the
       conversation already had: which agent and file, and that a subagent starts without the conversation, so for
-      files Claude already read, asking it directly (or naming the lines the agent needs) is cheaper
+      files Claude already read, asking it directly (or naming the lines the agent needs) is cheaper.
+      `SessionNotices.SubagentRereadTip` (the conversation's total; "An Explore agent", "A fork"); reset with the
+      conversation. Builds clean; not yet run in VS
 - [ ] **Manual checks for Phase 63.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
 
 ---

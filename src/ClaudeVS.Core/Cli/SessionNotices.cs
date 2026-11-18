@@ -420,6 +420,23 @@ namespace ClaudeVS.Core.Cli
             return null;
         }
 
+        /// <summary>Subagent re-reads of the conversation's files (tokens, over the conversation) worth a tip.</summary>
+        public const long SubagentRereadTipTokens = 5000;
+
+        /// <summary>
+        /// The tip once subagents re-read <see cref="SubagentRereadTipTokens"/>+ of files the conversation already had
+        /// (<paramref name="totalTokens"/>), naming the last agent kind and file; null below that.
+        /// </summary>
+        public static string SubagentRereadTip(long totalTokens, string agentKind, string path)
+        {
+            if (totalTokens < SubagentRereadTipTokens) return null;
+            string who = string.IsNullOrEmpty(agentKind) ? "A subagent"
+                : agentKind == ToolCallView.ForkType ? "A fork"
+                : ("AEIOUaeiou".IndexOf(agentKind[0]) >= 0 ? "An " : "A ") + agentKind + " agent";
+            return $"{who} read {System.IO.Path.GetFileName(path)} again, a file this conversation already has (subagents: ~{Tokens.TokenMeter.Format(totalTokens)} tokens of such reads so far). "
+                + "A subagent starts without the conversation, so for files Claude already read, asking it directly is cheaper, or tell the agent which lines it needs.";
+        }
+
         /// <summary>A fixed part of the context this large (tokens) earns the tip.</summary>
         public const long HeavyPartTokens = 5000;
 

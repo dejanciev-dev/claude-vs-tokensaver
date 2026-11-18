@@ -28,7 +28,8 @@ All notable changes to this project are listed here. The format follows
 - **Subagents re-reading what the conversation has**: a subagent starts without the conversation, so it reads
   files the main agent already read again. Those tokens are logged per turn: a *Subagents re-reading* line in the
   savings report, an `agent_reread_tokens` CSV column and a line in *Copy session summary*. In the Agents panel the
-  agent's row says it (`re-read ~6.0k`).
+  agent's row says it (`re-read ~6.0k`), and once subagents have re-read 5k+ tokens a token tip says so, once per
+  conversation: for files Claude already read, asking it directly is cheaper, or tell the agent which lines it needs.
 - **Reads by folder in the CSV**: a `read_folders` column (`src/Core:40000;src/App/obj:2000`, largest first).
 - **Tips you can act on**: the loud-command tip has **Ask for the plain `dotnet build`**, and the repeated-read tip
   **Tell Claude it has `Foo.cs`**; each puts the request into the input box (after anything typed), to edit or send.
