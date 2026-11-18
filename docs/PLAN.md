@@ -1673,9 +1673,12 @@ hand-made events and two captures; one live run checks what they assume. Then th
       once ("The Explore agent is still running"), so the agent's reads come after the turn's footer and count in
       the turn Claude Code starts with its answer. The test asks for `run_in_background false` and also waits for the
       agent's task to end. CONTRIBUTING says when to run it
-- [ ] **Version 0.12.0.** Manifest, assembly and package registration at 0.12.0, still a preview; the Unreleased
+- [x] **Version 0.12.0.** Manifest, assembly and package registration at 0.12.0, still a preview; the Unreleased
       changelog becomes `## [0.12.0]` with highlights, and the Marketplace overview adds what's new. Tagging stays
-      yours: after merging, `git tag v0.12.0 && git push origin v0.12.0`
+      yours: after merging, `git tag v0.12.0 && git push origin v0.12.0`, which builds the VSIX and makes a draft
+      GitHub release (the notes from `## [0.12.0]`); publishing it starts the Marketplace upload, which waits for
+      approval. The three batches of *Added* entries are one list now; the overview adds the setup check and where
+      reading goes
 
 ---
 
