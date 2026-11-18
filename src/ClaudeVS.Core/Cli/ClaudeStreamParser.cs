@@ -254,13 +254,23 @@ namespace ClaudeVS.Core.Cli
         /// </summary>
         public static string DeniedBy(JToken meta, string toolUseId) => ConfigDecision(meta, toolUseId, "reject");
 
+        /// <summary>
+        /// <see cref="AllowedBy"/> / <see cref="DeniedBy"/> for a call a PreToolUse hook decided. Verified with 2.1.327:
+        /// <c>permission_decision: {decision: "accept" | "reject", source: "hook", reason_type: "hook"}</c>; a denied
+        /// call's result reads "PreToolUse:Bash hook error: &lt;the hook's reason&gt;".
+        /// </summary>
+        public const string HookDecision = "hook";
+
         private static string ConfigDecision(JToken meta, string toolUseId, string decision)
         {
             if (!(meta is JArray entries) || string.IsNullOrEmpty(toolUseId)) return null;
             foreach (var e in entries.OfType<JObject>())
             {
                 if ((string)e["id"] != toolUseId || !(e["permission_decision"] is JObject d)) continue;
-                if ((string)d["decision"] != decision || (string)d["source"] != "config") return null;
+                if ((string)d["decision"] != decision) return null;
+                // A PreToolUse hook's allow or deny (2.1.327: source "hook", reason_type "hook").
+                if ((string)d["source"] == "hook") return HookDecision;
+                if ((string)d["source"] != "config") return null;
                 return d["reason_type"]?.Type == JTokenType.String ? (string)d["reason_type"] : null;
             }
             return null;

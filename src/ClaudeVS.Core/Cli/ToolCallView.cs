@@ -241,6 +241,9 @@ namespace ClaudeVS.Core.Cli
                 case "subcommandResults":
                     return ("allowed by a rule", "Ran without asking: an allow rule in your Claude Code settings (or --allowedTools) covers it."
                         + "\n/ → Claude Code → Permission rules lists them.");
+                case ClaudeStreamParser.HookDecision:
+                    return ("allowed by a hook", "Ran without asking: a PreToolUse hook in your Claude Code settings allowed it."
+                        + "\n/ → Claude Code → Hooks lists them.");
                 case "mode":
                     // Accept edits applies every edit: saying so on each one is noise. A shell command that runs on
                     // the mode alone (auto, bypass) is worth pointing out.
@@ -252,12 +255,17 @@ namespace ClaudeVS.Core.Cli
 
         /// <summary>
         /// "denied by a rule" / "denied by the mode" for any call Claude Code's settings blocked, with a tooltip;
-        /// null for reasons we don't know.
+        /// "denied by a hook" with the hook's reason (from <paramref name="resultText"/>); null for reasons we don't know.
         /// </summary>
-        public static (string Text, string Tip)? DeniedNote(string deniedBy)
+        public static (string Text, string Tip)? DeniedNote(string deniedBy, string resultText = null)
         {
             switch (deniedBy)
             {
+                case ClaudeStreamParser.HookDecision:
+                    string reason = HookDenyReason(resultText);
+                    return ("denied by a hook", "Blocked without asking: a PreToolUse hook in your Claude Code settings denied it."
+                        + (reason == null ? "" : "\nIts reason: " + reason)
+                        + "\n/ → Claude Code → Hooks lists them.");
                 case "rule":
                 case "subcommandResults":
                     return ("denied by a rule", "Blocked without asking: a deny rule in your Claude Code settings covers it."
@@ -267,6 +275,19 @@ namespace ClaudeVS.Core.Cli
                 default:
                     return null;
             }
+        }
+
+        /// <summary>
+        /// The reason in a hook-denied call's result: "PreToolUse:Bash hook error: No writes here" (2.1.327, with
+        /// "Error: " in front in <c>tool_use_result</c>) gives "No writes here". Null when there is none.
+        /// </summary>
+        public static string HookDenyReason(string resultText)
+        {
+            if (string.IsNullOrWhiteSpace(resultText)) return null;
+            const string marker = " hook error: ";
+            int i = resultText.IndexOf(marker, StringComparison.Ordinal);
+            string reason = (i >= 0 ? resultText.Substring(i + marker.Length) : resultText).Trim();
+            return reason.Length == 0 ? null : reason;
         }
 
         /// <summary>A fork subagent: starts with a copy of the conversation so far.</summary>

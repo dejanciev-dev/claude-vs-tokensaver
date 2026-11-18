@@ -1490,8 +1490,10 @@ decides without asking; the result's `tool_result_meta` says `permission_decisio
 source: "hook", reason_type: "hook"}`, and a denied call's result reads "PreToolUse:Bash hook error: <reason>". The
 tool row reads only `source: "config"`, so it says nothing about hooks.
 
-- [ ] **Hook decisions on tool rows.** `· denied by a hook` (red, the hook's reason in the tooltip) and `· allowed by a
-      hook` on shell commands and file changes, as for rules. Capture: `Fixtures/cli-2.1.327-hook-decisions.jsonl`
+- [x] **Hook decisions on tool rows.** `· denied by a hook` (red, the hook's reason in the tooltip) and `· allowed by a
+      hook` on shell commands and file changes, as for rules. Capture: `Fixtures/cli-2.1.327-hook-decisions.jsonl`,
+      `Test_Parser_HookDecisions_RealCli_2_1_327`; `ClaudeStreamParser.HookDecision`, `ToolCallView.HookDenyReason`.
+      Builds clean; not yet run in VS
 - [ ] **What a reference may cost.** The attachment line says what Claude would read for each reference if it read it
       whole: `~3.2k tok` for a file, `12 files, ~40k tok` for a folder or project (source files only, `bin`/`obj`/
       `node_modules`… left out, counted up to a limit). A reference costs nothing until read, so it is a ceiling, not a
