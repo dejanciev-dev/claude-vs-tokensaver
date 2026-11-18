@@ -145,6 +145,82 @@ namespace ClaudeVS.Core.Tests
         /// Sonnet/medium mid-session (set_model, apply_flag_settings) → which model answered; relaunch with --resume →
         /// session cost keeps adding up; /compact → context drops. About $0.05–0.10 (one Sonnet turn writes the cache).
         /// </summary>
+        /// <summary>
+        /// `--live-reads [rawPath]` (not in --live-all, about $0.02 on Haiku): the main agent reads a ~6k-token file, then
+        /// an Explore agent reads it again. Checks what Phases 59–63 assume of the stream: a subagent's tool results
+        /// carry its Agent call (<c>parent_tool_use_id</c>), Read paths match, and <see cref="Tokens.TurnFileActivity"/>
+        /// counts the agent's read as a re-read of the conversation's file, on the agent's task.
+        /// </summary>
+        public static int RunReads(string rawLogPath)
+        {
+            string exe = ClaudeCliLocator.Resolve("");
+            if (exe == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-live-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            var sbFile = new StringBuilder("namespace Probe\n{\n    public class Big\n    {\n");
+            for (int i = 0; i < 300; i++) sbFile.Append($"        public int Method{i:000}(int x) => x * {i} + {i % 7}; // keeps the file large enough to matter\n");
+            sbFile.Append("    }\n}\n");
+            string big = Path.Combine(dir, "Big.cs");
+            File.WriteAllText(big, sbFile.ToString());
+
+            var failures = new List<string>();
+            void Check(bool ok, string what) { Console.WriteLine((ok ? "  ok   " : "  FAIL ") + what); if (!ok) failures.Add(what); }
+            var raw = new StringBuilder();
+            var files = new Tokens.TurnFileActivity();
+            var tasks = new AgentTaskList();
+            var done = new AutoResetEvent(false);
+            int subagentResults = 0, subagentResultsWithParent = 0;
+            string rereadAgent = null;
+            double cost = 0;
+            var options = new ClaudeLaunchOptions { WorkingDirectory = dir, Model = ModelChoice.Haiku, Effort = EffortChoice.Low, PermissionMode = PermissionModeChoice.Default };
+            using (var session = NewSession(options))
+            {
+                session.RawLine += (s, e) => { lock (raw) raw.Append(e.Direction == RawLineDirection.Stdin ? ">> " : "<< ").AppendLine(e.Line); };
+                session.EventReceived += (s, ev) =>
+                {
+                    files.Observe(ev);
+                    if (ev.Kind == ClaudeEventKind.Task) tasks.Apply(ev.Payload);
+                    if (ev.Kind == ClaudeEventKind.ToolResult && ev.IsSubagent) { subagentResults++; if (!string.IsNullOrEmpty(ev.ParentToolUseId)) subagentResultsWithParent++; }
+                    if (ev.Kind == ClaudeEventKind.ToolResult && files.LastReread is var (readId, agentId, _, t) && readId == ev.ToolUseId)
+                    { rereadAgent = agentId; tasks.AddReread(agentId, t); }
+                    if (ev.Kind == ClaudeEventKind.PermissionRequest) session.RespondToPermissionAsync(ev.RequestId, ev.ToolInput, true, null).Wait();
+                    if (ev.Kind == ClaudeEventKind.TurnCompleted) { cost = ev.TotalCostUsd ?? cost; done.Set(); }
+                };
+                try
+                {
+                    session.SendPromptAsync("Use the Read tool to read Big.cs in full, then reply with only the number of methods in it.").Wait();
+                    Check(done.WaitOne(TimeSpan.FromSeconds(180)), "read turn finished");
+                    Check(files.ReadTokensByFile.Keys.Any(k => k.EndsWith("Big.cs", StringComparison.OrdinalIgnoreCase)), "the main agent's read counted: " + string.Join(", ", files.ReadTokensByFile.Keys));
+                    Check(files.SubagentRereadTokens == 0, "no re-read yet");
+                    files.Reset();
+
+                    session.SendPromptAsync("Use the Agent tool with subagent_type Explore and run_in_background false, and wait for its answer. Tell the agent to read Big.cs itself with the Read tool and return the name of its last method. Then reply with that name only.").Wait();
+                    Check(done.WaitOne(TimeSpan.FromSeconds(240)), "agent turn finished");
+                    // 2.1.327 may start the agent in the background anyway (is_backgrounded: true) and end the turn at
+                    // once: wait for the agent to finish, and for the turn Claude Code starts with its answer
+                    var until = DateTime.UtcNow.AddSeconds(150);
+                    while (tasks.Tasks.Any(x => x.IsAgent && x.IsRunning) && DateTime.UtcNow < until) Thread.Sleep(500);
+                    var agentTask = tasks.Tasks.FirstOrDefault(x => x.IsAgent);
+                    Console.WriteLine($"  agent: {agentTask?.SubagentType}, backgrounded {agentTask?.IsBackgrounded}, {agentTask?.Status}");
+                    if (agentTask?.IsBackgrounded == true) done.WaitOne(TimeSpan.FromSeconds(60));
+                    Console.WriteLine($"  subagent tool results: {subagentResults}, with their Agent call: {subagentResultsWithParent}");
+                    Check(subagentResults > 0 && subagentResultsWithParent == subagentResults, "a subagent's tool results carry parent_tool_use_id");
+                    Console.WriteLine($"  subagent re-read: ~{files.SubagentRereadTokens:N0} tok");
+                    Check(files.SubagentRereadTokens > 1000, "the agent's read of Big.cs counted as a re-read of the conversation's file");
+                    var task = tasks.Tasks.FirstOrDefault(x => x.ToolUseId == rereadAgent);
+                    Check(task != null && task.IsAgent && task.RereadTokens > 0, $"on the agent's task ({task?.SubagentType}, re-read ~{task?.RereadTokens:N0})");
+                    Console.WriteLine($"  cost ${cost:0.0000}");
+                }
+                finally
+                {
+                    if (!string.IsNullOrEmpty(rawLogPath)) lock (raw) File.WriteAllText(rawLogPath, raw.ToString());
+                }
+            }
+            try { Directory.Delete(dir, true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+            Console.WriteLine(failures.Count == 0 ? "PASS live reads" : "FAIL live reads");
+            return failures.Count == 0 ? 0 : 1;
+        }
+
         public static int RunSession()
         {
             string exe = ClaudeCliLocator.Resolve("");
