@@ -1510,9 +1510,15 @@ tool row reads only `source: "config"`, so it says nothing about hooks.
       (null when not installed; also `disableAllHooks` and a missing script), `ClaudeSettings.Response`; `/` →
       *Check token-saving setup*, a *Tips* line in the breakdown, the Output pane at start. Builds clean; not yet
       run in VS
-- [ ] **Cut off twice: capture and test.** 2.1.327: subagent answers that hit the output limit twice "now more often
+- [x] **Cut off twice: capture and test.** 2.1.327: subagent answers that hit the output limit twice "now more often
       come back whole or say up front that they are partial". Capture a subagent cut off twice
-      (`CLAUDE_CODE_MAX_OUTPUT_TOKENS`), check the retry count and cost, and that a partial answer's text is kept
+      (`CLAUDE_CODE_MAX_OUTPUT_TOKENS`), check the retry count and cost, and that a partial answer's text is kept.
+      Not reproduced: in three runs (limits 400 and 150) the subagent was cut off once at most, or the main agent was
+      cut off before it started one. Captured instead with 150: the main answer cut off three times, then the turn
+      fails ("API Error: Claude's response exceeded the 150 output token maximum", `terminal_reason: api_error`).
+      Already handled; now tested: the three retries count and are priced in the failed turn, and the box says what
+      to do. `Fixtures/cli-2.1.327-cut-off-then-failed.jsonl` (init line left out),
+      `Test_Meter_CutOffThenFailed_RealCli_2_1_327`. The retry text still starts "Output token limit hit."
 - [ ] **Manual checks for Phase 58.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
 
 ---
