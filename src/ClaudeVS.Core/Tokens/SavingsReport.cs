@@ -742,6 +742,19 @@ namespace ClaudeVS.Core.Tokens
             return $"in {RefTurns} {(RefTurns == 1 ? "turn" : "turns")} Claude read ~{TokenMeter.Format(RefReadTokens)} of the ~{TokenMeter.Format(RefCeilingTokens)} tok attached ({pct}%)";
         }
 
+        /// <summary>Commands the token-saving hook made quiet, by kind, and the tokens they brought in.</summary>
+        public Dictionary<string, int> QuietRuns { get; } = new Dictionary<string, int>(StringComparer.Ordinal);
+        public long QuietTokens { get; set; }
+
+        /// <summary>"12 commands made quiet (dotnet build 9, git log 3), ~1.2k tok came back"; null when none was logged.</summary>
+        public string QuietRunsLine()
+        {
+            int n = QuietRuns.Values.Sum();
+            if (n == 0) return null;
+            string kinds = string.Join(", ", QuietRuns.OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal).Select(kv => $"{kv.Key} {kv.Value}"));
+            return $"{n} {(n == 1 ? "command" : "commands")} made quiet ({kinds}), ~{TokenMeter.Format(QuietTokens)} tok came back";
+        }
+
         /// <summary>"$0.040 for 3 summaries, of the cost above"; null when no /compact was logged with its cost.</summary>
         public string CompactLine()
         {
@@ -1025,6 +1038,11 @@ namespace ClaudeVS.Core.Tokens
             rep.RefTurns = list.Count(r => r.RefCeilingTokens > 0);
             rep.RefCeilingTokens = list.Sum(r => r.RefCeilingTokens);
             rep.RefReadTokens = list.Where(r => r.RefCeilingTokens > 0).Sum(r => r.RefReadTokens);
+            foreach (var r in list.Where(r => r.QuietRuns != null))
+            {
+                foreach (var kv in r.QuietRuns) { rep.QuietRuns.TryGetValue(kv.Key, out var n); rep.QuietRuns[kv.Key] = n + kv.Value; }
+                rep.QuietTokens += r.QuietTokens;
+            }
             foreach (var r in list.Where(r => r.Suggestion != null))
             {
                 bool cli = r.Suggestion == UsageRecord.SuggestionCli;
@@ -1246,6 +1264,8 @@ namespace ClaudeVS.Core.Tokens
                 sb.AppendLine($"With attachments:           {attached}");
             if (ReferencesReadLine() is string refsRead)
                 sb.AppendLine($"References read:            {refsRead}  (a reference sends its path; Claude reads what it needs)");
+            if (QuietRunsLine() is string quiet)
+                sb.AppendLine($"Quiet-build hook:           {quiet}  (in full, a build prints several times more; git log far more)");
             if (SuggestionsLine() is string suggested)
                 sb.AppendLine($"Suggested prompts:          {suggested}");
             if (OutputRetriesLine() is string retried)
