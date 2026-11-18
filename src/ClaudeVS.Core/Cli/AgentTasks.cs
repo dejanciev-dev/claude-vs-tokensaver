@@ -32,6 +32,8 @@ namespace ClaudeVS.Core.Cli
         public int ToolUses { get; set; }
         /// <summary>How often its answer was cut off at the output limit and Claude Code asked for the rest (<see cref="ClaudeEventKind.OutputLimitRetry"/>).</summary>
         public int OutputRetries { get; set; }
+        /// <summary>Tokens it spent reading files the main conversation already had (<see cref="Tokens.TurnFileActivity.LastReread"/>).</summary>
+        public long RereadTokens { get; set; }
         /// <summary>Final summary (task_notification): the agent's answer or the command's description.</summary>
         public string Summary { get; set; }
         public DateTime StartedUtc { get; set; }
@@ -151,6 +153,20 @@ namespace ClaudeVS.Core.Cli
             t.OutputRetries++;
             return true;
         }
+
+        /// <summary>A subagent read a file the conversation already had: counted on its task. True when a task changed.</summary>
+        public bool AddReread(string agentToolUseId, long tokens)
+        {
+            if (string.IsNullOrEmpty(agentToolUseId) || tokens <= 0) return false;
+            var t = _tasks.FirstOrDefault(x => x.ToolUseId == agentToolUseId);
+            if (t == null) return false;
+            t.RereadTokens += tokens;
+            return true;
+        }
+
+        /// <summary>The agent kind of the task started by <paramref name="agentToolUseId"/> ("Explore"), or null.</summary>
+        public string SubagentTypeOf(string agentToolUseId) =>
+            string.IsNullOrEmpty(agentToolUseId) ? null : _tasks.FirstOrDefault(x => x.ToolUseId == agentToolUseId)?.SubagentType;
 
         public static bool IsTaskMessage(JObject json)
         {

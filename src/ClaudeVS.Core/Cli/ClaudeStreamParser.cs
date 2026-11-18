@@ -232,6 +232,7 @@ namespace ClaudeVS.Core.Cli
                     OriginalFile = original,
                     ResultData = data,
                     IsSubagent = json["parent_tool_use_id"] != null && json["parent_tool_use_id"].Type != JTokenType.Null,
+                    ParentToolUseId = json["parent_tool_use_id"]?.Type == JTokenType.String ? (string)json["parent_tool_use_id"] : null, // a subagent's: its Agent call
                     AllowedBy = AllowedBy(json["tool_result_meta"], (string)block["tool_use_id"]),
                     DeniedBy = DeniedBy(json["tool_result_meta"], (string)block["tool_use_id"]),
                 });
