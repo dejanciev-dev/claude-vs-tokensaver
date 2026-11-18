@@ -313,7 +313,15 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Right-click a large solution → **Add to Claude Code Chat** and send at once, before its size shows | The turn's footer tooltip still has the *References* line once the size is known |
 | Ask Claude to read a file, then *Use an Explore agent to summarize that same file* | **Show Savings Report**: *Subagents re-reading: ~… tok*; **Copy session summary**: *Subagents re-reading what the conversation had*; the CSV's `agent_reread_tokens` |
 
-## 26. Release (Phase 5)
+## 26. Subagent re-reads, where you see them (Phase 63)
+
+| Do | Expect |
+|---|---|
+| Ask Claude to read a large file (5k+ tokens), then *Use an Explore agent to find every public method in that file* | The agent's row in the Agents panel says `re-read ~…`; one token tip: *An Explore agent read … again, a file this conversation already has …* |
+| Do it again in the same conversation | The row counts again; no second tip |
+| **New chat**, a small file read twice the same way | The row says `re-read ~…`; no tip under 5k |
+
+## 27. Release (Phase 5)
 
 These need you rather than a check list:
 
