@@ -27,10 +27,20 @@ namespace ClaudeVS.Core.Tokens
         /// <summary>Tokens those quiet commands returned.</summary>
         public long QuietTokens { get; private set; }
 
+        /// <summary>A build, test or git log that ran loud and brought this many tokens or more is counted (<see cref="LoudRuns"/>).</summary>
+        public const int LoudTokensFrom = 2000;
+        /// <summary>Builds, tests and git logs that ran in full (a form the hook leaves alone, or no hook) with 2k+ tokens, by kind.</summary>
+        public Dictionary<string, int> LoudRuns { get; } = new Dictionary<string, int>(StringComparer.Ordinal);
+        /// <summary>Tokens those loud commands brought in.</summary>
+        public long LoudTokens { get; private set; }
+        /// <summary>The last loud command seen, for the tip: its call, Claude's command, its kind and tokens.</summary>
+        public (string ToolUseId, string Command, string Kind, long Tokens)? LastLoud { get; private set; }
+
         public void Reset()
         {
             _pendingReads.Clear(); _shellCommands.Clear(); _quietAsked.Clear();
             ReadTokensByFile.Clear(); QuietRuns.Clear(); QuietTokens = 0;
+            LoudRuns.Clear(); LoudTokens = 0; LastLoud = null;
         }
 
         public void Observe(ClaudeEvent ev)
@@ -72,6 +82,17 @@ namespace ClaudeVS.Core.Tokens
                             QuietRuns[kind] = n + 1;
                             QuietTokens += TokenEstimate.FromChars(ev.ResultChars);
                         }
+                        else if (!quiet && !refused && ev.DeniedBy == null && BaseKind(command) is string loud)
+                        {
+                            long tokens = TokenEstimate.FromChars(ev.ResultChars);
+                            if (tokens >= LoudTokensFrom)
+                            {
+                                LoudRuns.TryGetValue(loud, out var n);
+                                LoudRuns[loud] = n + 1;
+                                LoudTokens += tokens;
+                                LastLoud = (ev.ToolUseId, command, loud, tokens);
+                            }
+                        }
                     }
                     break;
             }
@@ -97,6 +118,47 @@ namespace ClaudeVS.Core.Tokens
 
         /// <summary>Where <see cref="ByFolder"/> puts reads outside the working folder (their paths are not logged).</summary>
         public const string OutsideFolder = "(outside the working folder)";
+
+        /// <summary>
+        /// The kind of build, test or git log a command starts with, whatever its flags, pipes or chains ("dotnet build
+        /// -v d | more" → "dotnet build"); null for other commands.
+        /// </summary>
+        public static string BaseKind(string command)
+        {
+            string first = Regex.Split(command ?? "", "[|;&]")[0];
+            var m = Regex.Match(first, @"^\s*dotnet\s+(build|publish|pack|restore|clean)\b", RegexOptions.IgnoreCase);
+            if (m.Success) return "dotnet " + m.Groups[1].Value.ToLowerInvariant();
+            if (Regex.IsMatch(first, @"^\s*dotnet\s+test\b", RegexOptions.IgnoreCase)) return "dotnet test";
+            if (Regex.IsMatch(first, @"^\s*msbuild(\.exe)?\b", RegexOptions.IgnoreCase)) return "msbuild";
+            if (Regex.IsMatch(first, @"^\s*git\s+log\b", RegexOptions.IgnoreCase)) return "git log";
+            if (Regex.IsMatch(first, @"^\s*(npm|npx)\s+(run\s+)?test\b", RegexOptions.IgnoreCase)) return "npm test";
+            return null;
+        }
+
+        /// <summary>
+        /// The tip after a loud build, test or git log: what it brought, why the hook left it alone, and the form that
+        /// runs quiet. <paramref name="hookInstalled"/> false: suggests installing the hook instead.
+        /// </summary>
+        public static string LoudTip(string command, string kind, long tokens, bool hookInstalled)
+        {
+            string size = $"`{Shorten(command)}` put ~{TokenMeter.Format(tokens)} tokens of output into the context.";
+            if (!hookInstalled)
+                return size + $" Tools → Claude Code → Install Token-Saving Settings and Hooks runs {kind} and the like quietly.";
+            string why = Regex.IsMatch(command ?? "", "[|;&]") ? "it was piped or chained"
+                : kind == "git log" && Regex.IsMatch(command ?? "", @"(\s-n\s*\d)|(--max-count)|(\s-\d+)") ? "it named a count"
+                : Regex.IsMatch(command ?? "", @"(\s-v(erbosity)?[\s:=])|(--verbosity)|(-clp:)", RegexOptions.IgnoreCase) ? "it named a verbosity"
+                : kind == "npm test" ? "it runs in watch mode"
+                : null;
+            return size + (why == null
+                ? $" It ran as written, not through the quiet-build hook; ask Claude for the plain `{kind}` and it runs quiet."
+                : $" The quiet-build hook left it alone because {why}; ask Claude for the plain `{kind}` and it runs quiet.");
+        }
+
+        private static string Shorten(string s)
+        {
+            s = (s ?? "").Replace('\n', ' ').Trim();
+            return s.Length <= 60 ? s : s.Substring(0, 57) + "…";
+        }
 
         /// <summary>
         /// Read tokens by folder: the first <paramref name="depth"/> folders of each file below <paramref name="root"/>

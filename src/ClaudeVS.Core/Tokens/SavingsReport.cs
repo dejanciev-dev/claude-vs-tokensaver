@@ -779,6 +779,19 @@ namespace ClaudeVS.Core.Tokens
             return null;
         }
 
+        /// <summary>Builds, tests and git logs that ran in full with 2k+ tokens, by kind, and their tokens.</summary>
+        public Dictionary<string, int> LoudRuns { get; } = new Dictionary<string, int>(StringComparer.Ordinal);
+        public long LoudTokens { get; set; }
+
+        /// <summary>"3 (dotnet build 2, git log 1), ~18.0k tok"; null when none was logged.</summary>
+        public string LoudRunsLine()
+        {
+            int n = LoudRuns.Values.Sum();
+            if (n == 0) return null;
+            string kinds = string.Join(", ", LoudRuns.OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal).Select(kv => $"{kv.Key} {kv.Value}"));
+            return $"{n} ({kinds}), ~{TokenMeter.Format(LoudTokens)} tok";
+        }
+
         /// <summary>Tokens spent re-reading unchanged files Claude already had, and the turns they were in.</summary>
         public long RepeatReadTokens { get; set; }
         public int RepeatReadTurns { get; set; }
@@ -1083,6 +1096,11 @@ namespace ClaudeVS.Core.Tokens
             rep.RefTurns = list.Count(r => r.RefCeilingTokens > 0);
             rep.RefCeilingTokens = list.Sum(r => r.RefCeilingTokens);
             rep.RefReadTokens = list.Where(r => r.RefCeilingTokens > 0).Sum(r => r.RefReadTokens);
+            foreach (var r in list.Where(r => r.LoudRuns != null))
+            {
+                foreach (var kv in r.LoudRuns) { rep.LoudRuns.TryGetValue(kv.Key, out var n); rep.LoudRuns[kv.Key] = n + kv.Value; }
+                rep.LoudTokens += r.LoudTokens;
+            }
             rep.RepeatReadTokens = list.Sum(r => r.RepeatReadTokens);
             rep.RepeatReadTurns = list.Count(r => r.RepeatReadTokens > 0);
             foreach (var r in list.Where(r => r.ReadFolders != null))
@@ -1347,6 +1365,8 @@ namespace ClaudeVS.Core.Tokens
                 sb.AppendLine($"  by model:                 {byModel}");
             if (ToolResultsLine() is string tools)
                 sb.AppendLine($"Tool results:               {tools} tokens  (into the context, read again by each later request until /compact)");
+            if (LoudRunsLine() is string loud)
+                sb.AppendLine($"Loud builds and logs:       {loud}  (in full: a verbosity, a pipe or a count; the plain command runs quiet)");
             if (RepeatReadsLine() is string repeated)
                 sb.AppendLine($"Read again, unchanged:      {repeated}  (files Claude already had; \"you already have it\" saves them)");
             var folders = TopReadFolders();

@@ -24,6 +24,10 @@ All notable changes to this project are listed here. The format follows
 - **Repeated reads over time**: tokens Claude spent re-reading files it already had, unchanged, are now logged per
   turn (until now only a tip in the chat): a *Read again, unchanged* line in the savings report and a
   `repeat_read_tokens` CSV column.
+- **Loud builds and logs**: a build, test or `git log` that ran in full with 2k+ tokens of output (the quiet-build
+  hook leaves commands with a verbosity, a pipe or a count alone) gets a token tip, once per conversation, saying why
+  and that the plain command runs quiet (or to install the hook). The savings report counts them by kind, and the
+  usage CSV adds `loud_runs` and `loud_tokens`.
 - **Fix from the setup check**: when *Check token-saving setup* finds problems, links under it **Reinstall** the
   setup for this folder (when that fixes one) and **Open** each settings file that overrides it.
 

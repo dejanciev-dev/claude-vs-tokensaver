@@ -110,6 +110,7 @@ namespace ClaudeVS.ToolWindow
         // The main agent's shell calls waiting for their result: tool_use_id → tool name.
         private readonly Dictionary<string, string> _shellCalls = new Dictionary<string, string>(StringComparer.Ordinal);
         private bool _gaveLargeOutputTip;
+        private bool _gaveLoudTip;
 
         /// <summary>Every event: the token tips that watch tool calls (repeated reads, large command output).</summary>
         private void TrackTips(ClaudeEvent ev)
@@ -121,6 +122,14 @@ namespace ClaudeVS.ToolWindow
             else if (ev.Kind == ClaudeEventKind.ToolResult && ev.ToolUseId != null && _shellCalls.TryGetValue(ev.ToolUseId, out var tool))
             {
                 _shellCalls.Remove(ev.ToolUseId);
+                // A build, test or git log that ran loud (seen by _turnFiles just before): the tip with the quiet form
+                if (!_gaveLoudTip && _turnFiles.LastLoud is var (loudId, command, kind, loudTokens) && loudId == ev.ToolUseId)
+                {
+                    _gaveLoudTip = true;
+                    _gaveLargeOutputTip = true; // one tip about this output is enough
+                    Tip(Core.Tokens.TurnFileActivity.LoudTip(command, kind, loudTokens, Core.Setup.TokenSaverSetup.IsInstalled(_sessionDir)));
+                    return;
+                }
                 if (ev.IsError || _gaveLargeOutputTip) return;
                 string tip = SessionNotices.LargeCommandOutput(tool, ev.ResultChars, Core.Setup.TokenSaverSetup.IsInstalled(_sessionDir));
                 if (tip == null) return;
@@ -484,6 +493,7 @@ namespace ClaudeVS.ToolWindow
             _gaveHeavyThinkingTip = false;
             _gaveLongAnswerTip = false;
             _gaveNoiseReadTip = false;
+            _gaveLoudTip = false;
             _reads.Reset();
             _repeatReadBase = 0;
         }
