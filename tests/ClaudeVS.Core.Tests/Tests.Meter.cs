@@ -286,7 +286,7 @@ namespace ClaudeVS.Core.Tests
             True(rep.ToText().Contains("Quiet-build hook:           12 commands"), rep.ToText());
             var csv = new StringWriter();
             UsageCsv.Write(new[] { new UsageRecord { Timestamp = t0, QuietRuns = new Dictionary<string, int> { ["git log"] = 1, ["dotnet build"] = 2 }, QuietTokens = 40 } }, csv);
-            True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",dotnet build:2;git log:1,40,,,,"), "csv: " + csv);
+            True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",dotnet build:2;git log:1,40,,,,,"), "csv: " + csv);
         }
 
         /// <summary>Builds, tests and git logs the hook left alone and that ran loud: counted, the tip, the report and the CSV.</summary>
@@ -331,7 +331,49 @@ namespace ClaudeVS.Core.Tests
             True(rep.ToText().Contains("Loud builds and logs:       3"), rep.ToText());
             var csv = new StringWriter();
             UsageCsv.Write(new[] { new UsageRecord { Timestamp = t0, LoudRuns = new Dictionary<string, int> { ["git log"] = 1 }, LoudTokens = 6000 } }, csv);
-            True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",git log:1,6000,"), "csv: " + csv);
+            True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",git log:1,6000,,"), "csv: " + csv);
+        }
+
+        /// <summary>Subagents reading files the main agent already read: kept across turns, cleared by a compaction or a new conversation.</summary>
+        private static void Test_SubagentRereads()
+        {
+            var files = new TurnFileActivity();
+            int n = 0;
+            void Read(string path, int chars, bool subagent)
+            {
+                string id = "r" + (++n);
+                files.Observe(new ClaudeEvent { Kind = ClaudeEventKind.ToolUse, ToolUseId = id, ToolName = "Read", ToolInput = new JObject { ["file_path"] = path }, IsSubagent = subagent });
+                files.Observe(new ClaudeEvent { Kind = ClaudeEventKind.ToolResult, ToolUseId = id, ResultChars = chars, IsSubagent = subagent });
+            }
+            Read(@"C:\repo\A.cs", 9000, subagent: false);
+            Read(@"C:\repo\B.cs", 9000, subagent: true);   // not read by the main agent: a new read
+            Eq(0L, files.SubagentRereadTokens, "nothing re-read yet");
+            files.Reset();                                  // the next turn
+            Read(@"C:\repo\a.cs", 6000, subagent: true);    // the main agent had it (path case aside)
+            Eq((long)TokenEstimate.FromChars(6000), files.SubagentRereadTokens, "re-read in a later turn");
+            files.Observe(new ClaudeEvent { Kind = ClaudeEventKind.Compacted });
+            files.Reset();
+            Read(@"C:\repo\A.cs", 6000, subagent: true);
+            Eq(0L, files.SubagentRereadTokens, "after a compaction the main agent no longer has it");
+            Read(@"C:\repo\C.cs", 3000, subagent: false);
+            files.ResetConversation();
+            Read(@"C:\repo\C.cs", 3000, subagent: true);
+            Eq(0L, files.SubagentRereadTokens, "a new conversation");
+
+            var t0 = DateTime.UtcNow.AddDays(-1);
+            var rep = SavingsReport.Build(new[]
+            {
+                new UsageRecord { Timestamp = t0, CostUsd = 0.01, SubagentRereadTokens = 20000 },
+                new UsageRecord { Timestamp = t0, CostUsd = 0.01, SubagentRereadTokens = 10000 },
+            }, new PriceTable());
+            Eq("~30.0k tok in 2 turns", rep.SubagentRereadsLine());
+            True(rep.ToText().Contains("Subagents re-reading:       ~30.0k tok"), rep.ToText());
+            var reads = new ConversationReads();
+            reads.Add(new UsageRecord { SubagentRereadTokens = 4000 });
+            Eq("Subagents re-reading what the conversation had: ~4.0k tok", reads.Lines().Single());
+            var csv = new StringWriter();
+            UsageCsv.Write(new[] { new UsageRecord { Timestamp = t0, SubagentRereadTokens = 4000 } }, csv);
+            True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",4000"), "csv: agent_reread_tokens last: " + csv);
         }
 
         /// <summary>Copy session summary's reads: the conversation's turns added up.</summary>
@@ -379,7 +421,7 @@ namespace ClaudeVS.Core.Tests
             Eq(null, SavingsReport.Build(new[] { new UsageRecord { Timestamp = t0, CostUsd = 0.01 } }, new PriceTable()).RepeatReadsLine(), "none");
             var csv = new StringWriter();
             UsageCsv.Write(new[] { new UsageRecord { Timestamp = t0, RepeatReadTokens = 9000 } }, csv);
-            True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",9000,,,"), "csv: repeat_read_tokens: " + csv);
+            True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",9000,,,,"), "csv: repeat_read_tokens: " + csv);
         }
 
         /// <summary>Reads by folder: grouping under the working folder, the report's top folders and the deny-rule hint.</summary>
@@ -440,8 +482,8 @@ namespace ClaudeVS.Core.Tests
             var csv = new StringWriter();
             UsageCsv.Write(new[] { new UsageRecord { Timestamp = t0, ReadFolders = new Dictionary<string, long> { ["src/App/obj"] = 2000, ["src/Core"] = 40000 } } }, csv);
             var lines = csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None);
-            True(lines[0].EndsWith(",read_folders"), "header: " + lines[0]);
-            True(lines[1].EndsWith(",src/Core:40000;src/App/obj:2000"), "largest first: " + lines[1]);
+            True(lines[0].EndsWith(",read_folders,agent_reread_tokens"), "header: " + lines[0]);
+            True(lines[1].EndsWith(",src/Core:40000;src/App/obj:2000,"), "largest first: " + lines[1]);
         }
 
         /// <summary>A turn's reads against its attached references: the footer's tooltip, the report and the CSV.</summary>
@@ -482,8 +524,8 @@ namespace ClaudeVS.Core.Tests
             var csv = new StringWriter();
             UsageCsv.Write(new[] { new UsageRecord { Timestamp = t0, CostUsd = 0.05, RefCeilingTokens = 40000, RefReadTokens = 8000 } }, csv);
             var lines = csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None);
-            True(lines[0].EndsWith(",ref_ceiling_tokens,ref_read_tokens,quiet_runs,quiet_tokens,repeat_read_tokens,loud_runs,loud_tokens,read_folders"), "header: " + lines[0]);
-            True(lines[1].EndsWith(",40000,8000,,,,,,"), "row: " + lines[1]);
+            True(lines[0].EndsWith(",ref_ceiling_tokens,ref_read_tokens,quiet_runs,quiet_tokens,repeat_read_tokens,loud_runs,loud_tokens,read_folders,agent_reread_tokens"), "header: " + lines[0]);
+            True(lines[1].EndsWith(",40000,8000,,,,,,,"), "row: " + lines[1]);
             True(new UsageRecord { RefPaths = new List<string> { "x" } }.RefPaths != null
                  && !Newtonsoft.Json.JsonConvert.SerializeObject(new UsageRecord { RefPaths = new List<string> { "x" } }).Contains("\"x\""), "paths are not logged");
         }

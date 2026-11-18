@@ -1631,9 +1631,12 @@ they don't show yet.
       `UsageRecord.RefPending` (not logged); sending keeps the cache slot for it, and logging adds its size and takes
       it out of the cache (unless it is attached again), so a later attach measures it afresh. Builds clean; not yet
       run in VS
-- [ ] **Subagents re-reading what the conversation has.** Tokens a subagent spends reading a file the main agent
+- [x] **Subagents re-reading what the conversation has.** Tokens a subagent spends reading a file the main agent
       already read in this conversation (a subagent starts without that context, so it reads it again): per turn in
-      the usage log, a savings report line and a CSV column, and in the session summary
+      the usage log, a savings report line and a CSV column, and in the session summary.
+      `TurnFileActivity.SubagentRereadTokens` (the main agent's reads kept across turns, cleared by a compaction and
+      `ResetConversation`), `UsageRecord.SubagentRereadTokens` (`agentReread`), CSV `agent_reread_tokens`,
+      `SavingsReport.SubagentRereadsLine`, `ConversationReads`. Builds clean; not yet run in VS
 - [ ] **Manual checks for Phase 62.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
 
 ---
