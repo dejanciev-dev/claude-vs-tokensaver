@@ -1665,9 +1665,14 @@ Planned on 2026-11-18, after Phase 63, on the same branch. Phases 59–63 count 
 hand-made events and two captures; one live run checks what they assume. Then the unreleased work since 0.11.0
 (Phases 57–63) becomes 0.12.0.
 
-- [ ] **`--live-reads`.** Haiku reads a ~6k-token file, then an Explore agent reads it again: a subagent's tool
+- [x] **`--live-reads`.** Haiku reads a ~6k-token file, then an Explore agent reads it again: a subagent's tool
       results carry its Agent call, the paths match, and the agent's read counts as a re-read on its task. Not in
-      `--live-all` (about $0.02)
+      `--live-all` (about $0.02). Passes with 2.1.327 ($0.010, 39 s): 1 subagent tool result, with its Agent call; the
+      agent's read of the file, ~9.7k tokens, counted as a re-read on the Explore task. Found on the way: asked
+      plainly, 2.1.327 started the Explore agent in the background (`is_backgrounded: true`) and ended the turn at
+      once ("The Explore agent is still running"), so the agent's reads come after the turn's footer and count in
+      the turn Claude Code starts with its answer. The test asks for `run_in_background false` and also waits for the
+      agent's task to end. CONTRIBUTING says when to run it
 - [ ] **Version 0.12.0.** Manifest, assembly and package registration at 0.12.0, still a preview; the Unreleased
       changelog becomes `## [0.12.0]` with highlights, and the Marketplace overview adds what's new. Tagging stays
       yours: after merging, `git tag v0.12.0 && git push origin v0.12.0`

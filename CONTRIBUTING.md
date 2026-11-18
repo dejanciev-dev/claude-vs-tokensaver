@@ -31,6 +31,10 @@ Haiku, Sonnet, Opus and Fable, each turn's usage priced with the default prices 
 (about $0.18, not part of `--live-all`). A FAIL line shows which model is off and by how much; update `PriceTable`
 and the prices fixture.
 
+After a Claude Code update that touches subagents, run `--live-reads [rawPath]` (about $0.01, not part of
+`--live-all`): Haiku reads a large file, then an Explore agent reads it again; it checks that a subagent's tool
+results carry its Agent call and that the agent's read counts as a re-read of the conversation's file.
+
 Each test also runs on its own. `--live [path-for-raw-output.txt] [mode]` runs two short turns, in Accept Edits
 unless a mode is named (`Plan` checks the known Sonnet case on purpose). To capture and answer permission
 requests (questions, plan approval), use `--live-ask <rawPath> <PermissionMode> "<prompt>"`. `--live-edit-review` has Haiku make a two-line edit, applies one line and checks that Claude was told (about
