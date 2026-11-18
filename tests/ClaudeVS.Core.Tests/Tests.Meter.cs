@@ -289,6 +289,43 @@ namespace ClaudeVS.Core.Tests
             True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",dotnet build:2;git log:1,40"), "csv: " + csv);
         }
 
+        /// <summary>Reads by folder: grouping under the working folder, the report's top folders and the deny-rule hint.</summary>
+        private static void Test_ReadFolders()
+        {
+            var byFile = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase)
+            {
+                [@"C:\repo\src\Core\A.cs"] = 9000,
+                [@"C:\repo\src\Core\Deep\B.cs"] = 1000,
+                [@"C:\repo\src\App\obj\Debug\x.g.cs"] = 4000,
+                [@"C:\repo\README.md"] = 500,
+                [@"D:\elsewhere\notes.txt"] = 300,
+            };
+            var folders = TurnFileActivity.ByFolder(byFile, @"C:\repo\");
+            Eq(10000L, folders["src/Core"], "two levels: Deep is counted in src/Core");
+            Eq(4000L, folders["src/App"], "src/App");
+            Eq(500L, folders["."], "the working folder's top");
+            Eq(300L, folders[TurnFileActivity.OutsideFolder], "outside: grouped, its path not kept");
+            True(!folders.Keys.Any(k => k.Contains("elsewhere")), "no outside paths");
+
+            Eq("Read(./**/obj/**)", SavingsReport.NoiseRule("src/App/obj"), "build output");
+            Eq("Read(./**/wwwroot/lib/**)", SavingsReport.NoiseRule("web/wwwroot/lib"), "a two-part noise folder");
+            Eq(null, SavingsReport.NoiseRule("src/Objects"), "a name that only starts like one");
+            Eq(null, SavingsReport.NoiseRule(TurnFileActivity.OutsideFolder));
+
+            var t0 = DateTime.UtcNow.AddDays(-1);
+            var rep = SavingsReport.Build(new[]
+            {
+                new UsageRecord { Timestamp = t0, CostUsd = 0.01, ReadFolders = new Dictionary<string, long> { ["src/Core"] = 6000, ["node_modules/react"] = 3000 } },
+                new UsageRecord { Timestamp = t0, CostUsd = 0.01, ReadFolders = new Dictionary<string, long> { ["src/Core"] = 1000 } },
+            }, new PriceTable());
+            var top = rep.TopReadFolders();
+            Eq(2, top.Count);
+            True(top[0].StartsWith("src/Core") && top[0].Contains("~7.0k tok (70%)"), top[0]);
+            True(top[1].Contains("add Read(./**/node_modules/**) to permissions.deny"), top[1]);
+            True(rep.ToText().Contains("Folders read most:"), rep.ToText());
+            Eq(0, SavingsReport.Build(new[] { new UsageRecord { Timestamp = t0, CostUsd = 0.01 } }, new PriceTable()).TopReadFolders().Count, "none: no section");
+        }
+
         /// <summary>A turn's reads against its attached references: the footer's tooltip, the report and the CSV.</summary>
         private static void Test_References_ReadAgainstCeiling()
         {

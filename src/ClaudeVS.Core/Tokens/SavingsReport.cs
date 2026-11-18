@@ -742,6 +742,43 @@ namespace ClaudeVS.Core.Tokens
             return $"in {RefTurns} {(RefTurns == 1 ? "turn" : "turns")} Claude read ~{TokenMeter.Format(RefReadTokens)} of the ~{TokenMeter.Format(RefCeilingTokens)} tok attached ({pct}%)";
         }
 
+        /// <summary>Tokens reads brought in, by folder (<see cref="UsageRecord.ReadFolders"/>).</summary>
+        public Dictionary<string, long> ReadFolders { get; } = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// The folders whose reads filled the most context, largest first: "src/Core  ~120.0k tok (34%)", and for a
+        /// generated or vendored one (bin, obj, node_modules…) the read-deny rule that keeps Claude out of it.
+        /// </summary>
+        public List<string> TopReadFolders(int max = 5)
+        {
+            long total = ReadFolders.Values.Sum();
+            var lines = new List<string>();
+            if (total <= 0) return lines;
+            int width = Math.Min(40, ReadFolders.Keys.OrderByDescending(k => ReadFolders[k]).Take(max).Max(k => k.Length));
+            foreach (var kv in ReadFolders.OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase).Take(max))
+            {
+                string line = $"{kv.Key.PadRight(width)}  ~{TokenMeter.Format(kv.Value)} tok ({Math.Round(100.0 * kv.Value / total):0}%)";
+                if (NoiseRule(kv.Key) is string rule) line += $"  generated or vendored: add {rule} to permissions.deny";
+                lines.Add(line);
+            }
+            return lines;
+        }
+
+        /// <summary>The read-deny rule for a folder that holds build output or vendored code ("Read(./**/obj/**)"); null for others.</summary>
+        public static string NoiseRule(string folder)
+        {
+            if (string.IsNullOrEmpty(folder) || folder == TurnFileActivity.OutsideFolder) return null;
+            var parts = folder.Replace('\\', '/').Split('/');
+            foreach (var noise in Setup.SolutionScanner.NoiseFolders)
+            {
+                var n = noise.Split('/');
+                for (int i = 0; i + n.Length <= parts.Length; i++)
+                    if (n.Select((s, j) => string.Equals(s, parts[i + j], StringComparison.OrdinalIgnoreCase)).All(b => b))
+                        return $"Read(./**/{noise}/**)";
+            }
+            return null;
+        }
+
         /// <summary>Commands the token-saving hook made quiet, by kind, and the tokens they brought in.</summary>
         public Dictionary<string, int> QuietRuns { get; } = new Dictionary<string, int>(StringComparer.Ordinal);
         public long QuietTokens { get; set; }
@@ -1038,6 +1075,8 @@ namespace ClaudeVS.Core.Tokens
             rep.RefTurns = list.Count(r => r.RefCeilingTokens > 0);
             rep.RefCeilingTokens = list.Sum(r => r.RefCeilingTokens);
             rep.RefReadTokens = list.Where(r => r.RefCeilingTokens > 0).Sum(r => r.RefReadTokens);
+            foreach (var r in list.Where(r => r.ReadFolders != null))
+                foreach (var kv in r.ReadFolders) { rep.ReadFolders.TryGetValue(kv.Key, out var t); rep.ReadFolders[kv.Key] = t + kv.Value; }
             foreach (var r in list.Where(r => r.QuietRuns != null))
             {
                 foreach (var kv in r.QuietRuns) { rep.QuietRuns.TryGetValue(kv.Key, out var n); rep.QuietRuns[kv.Key] = n + kv.Value; }
@@ -1298,6 +1337,12 @@ namespace ClaudeVS.Core.Tokens
                 sb.AppendLine($"  by model:                 {byModel}");
             if (ToolResultsLine() is string tools)
                 sb.AppendLine($"Tool results:               {tools} tokens  (into the context, read again by each later request until /compact)");
+            var folders = TopReadFolders();
+            if (folders.Count > 0)
+            {
+                sb.AppendLine("Folders read most:          (what reads brought into the context, by folder)");
+                foreach (var f in folders) sb.AppendLine("  " + f);
+            }
             if (LongContextTurns > 0)
                 sb.AppendLine($"Paid extra over 100k:       ${LongContextExtraUsd:0.00}  ({LongContextTurns} Haiku {(LongContextTurns == 1 ? "turn" : "turns")} over 100k tokens, above Haiku's normal price; /compact keeps it under)");
             if (HaikuRouted > 0 || RouterCostUsd > 0)

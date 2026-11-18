@@ -95,9 +95,12 @@ namespace ClaudeVS.Core.Tokens
             return null;
         }
 
+        /// <summary>Where <see cref="ByFolder"/> puts reads outside the working folder (their paths are not logged).</summary>
+        public const string OutsideFolder = "(outside the working folder)";
+
         /// <summary>
         /// Read tokens by folder: the first <paramref name="depth"/> folders of each file below <paramref name="root"/>
-        /// ("src/ClaudeVS.Core"), "." for files directly in it, the full folder for files outside it.
+        /// ("src/ClaudeVS.Core"), "." for files directly in it, <see cref="OutsideFolder"/> for files outside it.
         /// </summary>
         public static Dictionary<string, long> ByFolder(IReadOnlyDictionary<string, long> byFile, string root, int depth = 2)
         {
@@ -117,11 +120,7 @@ namespace ClaudeVS.Core.Tokens
                     var parts = path.Split('/');
                     folder = parts.Length <= 1 ? "." : string.Join("/", parts.Take(Math.Min(depth, parts.Length - 1)));
                 }
-                else
-                {
-                    int slash = path.LastIndexOf('/');
-                    folder = slash <= 0 ? path : path.Substring(0, slash);
-                }
+                else folder = OutsideFolder;
                 result.TryGetValue(folder, out var t);
                 result[folder] = t + kv.Value;
             }

@@ -2126,6 +2126,8 @@ namespace ClaudeVS.ToolWindow
                 rec.RefReadTokens = readTokens;
                 _lastTurnReferences = TurnFooter.References(readFiles, readTokens, rec.RefFiles, rec.RefCeilingTokens);
             }
+            if (_turnFiles.ReadTokensByFile.Count > 0)
+                rec.ReadFolders = TurnFileActivity.ByFolder(_turnFiles.ReadTokensByFile, WorkFolder);
             if (_turnFiles.QuietRuns.Count > 0)
             {
                 rec.QuietRuns = new System.Collections.Generic.Dictionary<string, int>(_turnFiles.QuietRuns, StringComparer.Ordinal);

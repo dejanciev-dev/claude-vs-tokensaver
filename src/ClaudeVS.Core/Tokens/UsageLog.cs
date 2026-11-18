@@ -106,6 +106,11 @@ namespace ClaudeVS.Core.Tokens
         /// </summary>
         [JsonProperty("quiet", NullValueHandling = NullValueHandling.Ignore)] public Dictionary<string, int> QuietRuns { get; set; }
         [JsonProperty("quietTokens", DefaultValueHandling = DefaultValueHandling.Ignore)] public long QuietTokens { get; set; }
+        /// <summary>
+        /// Tokens this turn's reads brought in, by folder relative to the working folder ("src/Core", "." for its top,
+        /// <see cref="TurnFileActivity.OutsideFolder"/> for the rest); null when nothing was read (and in older lines).
+        /// </summary>
+        [JsonProperty("readFolders", NullValueHandling = NullValueHandling.Ignore)] public Dictionary<string, long> ReadFolders { get; set; }
         /// <summary>The attached references' full paths, to match reads against; not logged.</summary>
         [JsonIgnore] public List<string> RefPaths { get; set; }
         [JsonProperty("side", NullValueHandling = NullValueHandling.Ignore)] public string SideKind { get; set; }

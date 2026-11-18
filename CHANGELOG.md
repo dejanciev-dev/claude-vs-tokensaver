@@ -14,6 +14,9 @@ All notable changes to this project are listed here. The format follows
 - **What the quiet-build hook did**: the savings report counts the commands the token-saving hook made quiet, by
   kind, and what their output brought in (`12 commands made quiet (dotnet build 9, git log 3), ~1.2k tok came
   back`); the usage CSV adds `quiet_runs` and `quiet_tokens`.
+- **Folders read most**: the savings report lists the folders whose reads brought the most into the context (two
+  levels below the working folder), and for build output or vendored code (`obj`, `node_modules`…) the read-deny
+  rule that keeps Claude out. Reads outside the working folder are grouped; their paths are not logged.
 
 ### Added
 - **Hook decisions on tool rows**: a call that one of your PreToolUse hooks allowed or denied without asking says

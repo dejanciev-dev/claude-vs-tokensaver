@@ -1547,9 +1547,12 @@ and what came back, not as a guessed total.
       (`dotnet build:2;git log:1`), `quiet_tokens`; `SavingsReport.QuietRunsLine`. Capture:
       `Fixtures/cli-2.1.327-quiet-build-hook.jsonl` from `--live-setup`, `Test_QuietRuns_RealCli_2_1_327`. Builds
       clean; not yet run in VS
-- [ ] **Folders Claude reads most.** The usage log keeps each turn's read tokens by folder (two levels below the
+- [x] **Folders Claude reads most.** The usage log keeps each turn's read tokens by folder (two levels below the
       working folder); the savings report lists the top folders, and points out generated or vendored ones (`bin`,
-      `obj`, `node_modules`, `packages`, `dist`, `wwwroot/lib`, `*.Designer.cs`-only…) with a read-deny rule to add
+      `obj`, `node_modules`, `packages`, `dist`, `wwwroot/lib`, `*.Designer.cs`-only…) with a read-deny rule to add.
+      `UsageRecord.ReadFolders` (`readFolders`), `TurnFileActivity.ByFolder` (reads outside the working folder
+      grouped as one, no paths kept), `SavingsReport.TopReadFolders` (top 5) and `NoiseRule` (the scanner's noise
+      folders; `*.Designer.cs` left out, as it isn't a folder). Builds clean; not yet run in VS
 - [ ] **Fix from the setup check.** When the setup check finds a problem, the breakdown's line and the chat's message
       offer **Reinstall** (the installer for this folder, then a New chat) and **Open file** for the settings file that
       overrides it
