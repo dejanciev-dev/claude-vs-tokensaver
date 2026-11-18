@@ -58,6 +58,8 @@ namespace ClaudeVS.Core.Context
 
         public string Root { get; }
         public int Count => _files.Count;
+        /// <summary>The relative paths, '/'-separated, sorted.</summary>
+        public IReadOnlyList<string> Files => _files;
         /// <summary>True when the folder had more files than the cap.</summary>
         public bool Truncated { get; }
 
