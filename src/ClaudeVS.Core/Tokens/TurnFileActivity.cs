@@ -154,6 +154,10 @@ namespace ClaudeVS.Core.Tokens
                 : $" The quiet-build hook left it alone because {why}; ask Claude for the plain `{kind}` and it runs quiet.");
         }
 
+        /// <summary>What the loud-command tip's link puts in the input box: asking for the plain command.</summary>
+        public static string PlainCommandRequest(string kind) =>
+            $"Run the plain `{kind}` instead, with no verbosity, pipe or count, so the quiet-build hook can make it quiet.";
+
         private static string Shorten(string s)
         {
             s = (s ?? "").Replace('\n', ' ').Trim();

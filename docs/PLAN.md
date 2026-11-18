@@ -1605,9 +1605,11 @@ click, and covers generated files the setup's deny rules name but the build-outp
       `*.map`, as in the setup's deny rules) count toward the tip, with their file rule (`Read(./**/*.min.js)`), not
       only build-output folders. `SessionNotices.GeneratedFileRule`; `NoiseReadTip(folders, files)` takes the turn's
       reads by file; one inside a build-output folder counts for the folder only. Builds clean; not yet run in VS
-- [ ] **Prompt-box links on the tips.** The loud-command tip gets **Ask for the plain `dotnet build`**, and the
+- [x] **Prompt-box links on the tips.** The loud-command tip gets **Ask for the plain `dotnet build`**, and the
       repeated-read tip **Tell Claude it has `Foo.cs`**: each puts the request into the input box (after anything
-      typed), to edit or send; nothing is sent by itself
+      typed), to edit or send; nothing is sent by itself. `TurnFileActivity.PlainCommandRequest`,
+      `ReadTracker.AlreadyHaveRequest`; the chat's `TipAction` / `PutInPrompt`. Not with token tips off, and the loud
+      tip's link not without the hook (the plain command would be loud too). Builds clean; not yet run in VS
 - [ ] **Reads by folder in the CSV.** A `read_folders` column (`src/Core:40000;src/App/obj:2000`, largest first)
 - [ ] **Manual checks for Phase 61.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
 

@@ -127,7 +127,10 @@ namespace ClaudeVS.ToolWindow
                 {
                     _gaveLoudTip = true;
                     _gaveLargeOutputTip = true; // one tip about this output is enough
-                    Tip(Core.Tokens.TurnFileActivity.LoudTip(command, kind, loudTokens, Core.Setup.TokenSaverSetup.IsInstalled(_sessionDir)));
+                    bool hook = Core.Setup.TokenSaverSetup.IsInstalled(_sessionDir);
+                    Tip(Core.Tokens.TurnFileActivity.LoudTip(command, kind, loudTokens, hook));
+                    if (hook && TipsOn) // without the hook the plain command is loud too: nothing to ask for
+                        TipAction($"Ask for the plain `{kind}`", Core.Tokens.TurnFileActivity.PlainCommandRequest(kind));
                     return;
                 }
                 if (ev.IsError || _gaveLargeOutputTip) return;
@@ -147,6 +150,28 @@ namespace ClaudeVS.ToolWindow
             if (_gaveRepeatReadTip || Core.Tokens.ReadTracker.Tip(path, tokens) is not string tip) return;
             _gaveRepeatReadTip = true;
             Tip(tip);
+            if (TipsOn) TipAction("Tell Claude it has " + System.IO.Path.GetFileName(path), Core.Tokens.ReadTracker.AlreadyHaveRequest(path));
+        }
+
+        /// <summary>A link under a tip that puts <paramref name="request"/> in the input box (after anything typed), to edit or send.</summary>
+        private void TipAction(string label, string request)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            _view.AppendActions(new List<(string, string, Action)>
+            {
+                (label, "Puts it in the input box; nothing is sent until you send it", (Action)(() => PutInPrompt(request))),
+            });
+        }
+
+        /// <summary>Puts text in the input box: alone when it is empty, else on a new line after what is typed; caret at the end.</summary>
+        private void PutInPrompt(string text)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (string.IsNullOrEmpty(text)) return;
+            ClearSuggestion();
+            _prompt.Text = _prompt.Text.Trim().Length == 0 ? text : _prompt.Text.TrimEnd() + Environment.NewLine + text;
+            _prompt.CaretIndex = _prompt.Text.Length;
+            _prompt.Focus();
         }
 
         // ---------------- Reads from build output ----------------

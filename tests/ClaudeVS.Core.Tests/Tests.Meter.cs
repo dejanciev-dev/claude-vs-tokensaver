@@ -318,6 +318,8 @@ namespace ClaudeVS.Core.Tests
             True(TurnFileActivity.LoudTip("git log -n 500", "git log", 9000, true).Contains("named a count"), "count");
             True(TurnFileActivity.LoudTip("dotnet build", "dotnet build", 9000, true).Contains("ran as written"), "plain but not through the hook");
             True(TurnFileActivity.LoudTip("dotnet build", "dotnet build", 9000, false).Contains("Install Token-Saving Settings and Hooks"), "no hook: install it");
+            Eq("Run the plain `git log` instead, with no verbosity, pipe or count, so the quiet-build hook can make it quiet.", TurnFileActivity.PlainCommandRequest("git log"), "the link's request");
+            Eq("You already have Big.cs from earlier in this conversation, unchanged; use that instead of reading it again.", ReadTracker.AlreadyHaveRequest(@"C:\repo\src\Big.cs"));
 
             var t0 = DateTime.UtcNow.AddDays(-1);
             var rep = SavingsReport.Build(new[]
