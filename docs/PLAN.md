@@ -1695,8 +1695,12 @@ record, so a background agent's reads are logged.)
 - [x] **Shorter usage lines.** A turn's `readFolders` keeps its 10 largest folders and adds the rest up as
       `(other)`, so a turn that reads all over a large repository doesn't write a long line.
       `TurnFileActivity.Capped`; the build-output tip still sees every folder (small ones add up). Builds clean
-- [ ] **CSV tests by column name.** The CSV tests compare row endings (`…,0,,,,,`) and count columns from the end, so
-      each new column meant fixing seven of them by hand; they read cells by the header's name instead
+- [x] **CSV tests by column name.** The CSV tests compare row endings (`…,0,,,,,`) and count columns from the end, so
+      each new column meant fixing seven of them by hand; they read cells by the header's name instead.
+      `CsvRows` (quotes undone; a row with a different cell count than the header fails) and `ColumnsInOrder` (the
+      order check allows new columns after); the first row's leading columns are still compared as text up to
+      `attached_files`, and all later ones must be empty or 0. Checked by adding a column that writes nothing on a
+      plain turn: no test to change
 
 ---
 

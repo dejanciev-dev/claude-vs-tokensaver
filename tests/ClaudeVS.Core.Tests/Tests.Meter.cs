@@ -237,7 +237,7 @@ namespace ClaudeVS.Core.Tests
             Eq(null, SavingsReport.Build(new[] { new UsageRecord { Timestamp = t0, CostUsd = 0.01 } }, new PriceTable()).OutputRetriesLine(), "none: no line");
             var csv = new StringWriter();
             UsageCsv.Write(new[] { new UsageRecord { Timestamp = t0, CostUsd = 0.05, OutputRetries = 3, OutputRetryCostUsd = 0.0123 } }, csv);
-            True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].Contains(",3,0.0123,"), "csv: output_retries, output_retry_cost_usd: " + csv);
+            { var row = CsvRows(csv.ToString())[0]; Eq("3|0.0123", row["output_retries"] + "|" + row["output_retry_cost_usd"], "csv: output_retries, output_retry_cost_usd"); }
         }
 
         /// <summary>
@@ -286,7 +286,7 @@ namespace ClaudeVS.Core.Tests
             True(rep.ToText().Contains("Reads and commands:") && rep.ToText().Contains("  Quiet-build hook:         12 commands"), rep.ToText());
             var csv = new StringWriter();
             UsageCsv.Write(new[] { new UsageRecord { Timestamp = t0, QuietRuns = new Dictionary<string, int> { ["git log"] = 1, ["dotnet build"] = 2 }, QuietTokens = 40 } }, csv);
-            True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",dotnet build:2;git log:1,40,,,,,"), "csv: " + csv);
+            { var row = CsvRows(csv.ToString())[0]; Eq("dotnet build:2;git log:1|40", row["quiet_runs"] + "|" + row["quiet_tokens"], "csv: quiet_runs, quiet_tokens"); }
         }
 
         /// <summary>Builds, tests and git logs the hook left alone and that ran loud: counted, the tip, the report and the CSV.</summary>
@@ -331,7 +331,7 @@ namespace ClaudeVS.Core.Tests
             True(rep.ToText().Contains("  Loud builds and logs:     3"), rep.ToText());
             var csv = new StringWriter();
             UsageCsv.Write(new[] { new UsageRecord { Timestamp = t0, LoudRuns = new Dictionary<string, int> { ["git log"] = 1 }, LoudTokens = 6000 } }, csv);
-            True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",git log:1,6000,,"), "csv: " + csv);
+            { var row = CsvRows(csv.ToString())[0]; Eq("git log:1|6000", row["loud_runs"] + "|" + row["loud_tokens"], "csv: loud_runs, loud_tokens"); }
         }
 
         /// <summary>A subagent's tool result carries its Agent call, and its re-reads count on that agent's task.</summary>
@@ -400,7 +400,7 @@ namespace ClaudeVS.Core.Tests
             Eq("Subagents re-reading what the conversation had: ~4.0k tok", reads.Lines().Single());
             var csv = new StringWriter();
             UsageCsv.Write(new[] { new UsageRecord { Timestamp = t0, SubagentRereadTokens = 4000 } }, csv);
-            True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",4000"), "csv: agent_reread_tokens last: " + csv);
+            Eq("4000", CsvRows(csv.ToString())[0]["agent_reread_tokens"], "csv: agent_reread_tokens");
         }
 
         /// <summary>Copy session summary's reads: the conversation's turns added up.</summary>
@@ -464,7 +464,7 @@ namespace ClaudeVS.Core.Tests
             True(text.IndexOf("Tool results", StringComparison.Ordinal) < 0 || text.IndexOf("Reads and commands:", StringComparison.Ordinal) > text.IndexOf("Tool results", StringComparison.Ordinal), "the section comes after Tool results");
             var csv = new StringWriter();
             UsageCsv.Write(new[] { new UsageRecord { Timestamp = t0, RepeatReadTokens = 9000 } }, csv);
-            True(csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None)[1].EndsWith(",9000,,,,"), "csv: repeat_read_tokens: " + csv);
+            Eq("9000", CsvRows(csv.ToString())[0]["repeat_read_tokens"], "csv: repeat_read_tokens");
         }
 
         /// <summary>Reads by folder: grouping under the working folder, the report's top folders and the deny-rule hint.</summary>
@@ -525,8 +525,8 @@ namespace ClaudeVS.Core.Tests
             var csv = new StringWriter();
             UsageCsv.Write(new[] { new UsageRecord { Timestamp = t0, ReadFolders = new Dictionary<string, long> { ["src/App/obj"] = 2000, ["src/Core"] = 40000 } } }, csv);
             var lines = csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None);
-            True(lines[0].EndsWith(",read_folders,agent_reread_tokens"), "header: " + lines[0]);
-            True(lines[1].EndsWith(",src/Core:40000;src/App/obj:2000,"), "largest first: " + lines[1]);
+            True(lines[0].Split(',').Contains("read_folders"), "header: " + lines[0]);
+            Eq("src/Core:40000;src/App/obj:2000", CsvRows(csv.ToString())[0]["read_folders"], "largest first");
         }
 
         /// <summary>A turn's reads against its attached references: the footer's tooltip, the report and the CSV.</summary>
@@ -567,8 +567,8 @@ namespace ClaudeVS.Core.Tests
             var csv = new StringWriter();
             UsageCsv.Write(new[] { new UsageRecord { Timestamp = t0, CostUsd = 0.05, RefCeilingTokens = 40000, RefReadTokens = 8000 } }, csv);
             var lines = csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None);
-            True(lines[0].EndsWith(",ref_ceiling_tokens,ref_read_tokens,quiet_runs,quiet_tokens,repeat_read_tokens,loud_runs,loud_tokens,read_folders,agent_reread_tokens"), "header: " + lines[0]);
-            True(lines[1].EndsWith(",40000,8000,,,,,,,"), "row: " + lines[1]);
+            True(ColumnsInOrder(lines[0].Split(','), "ref_ceiling_tokens", "ref_read_tokens"), "header: " + lines[0]);
+            { var row = CsvRows(csv.ToString())[0]; Eq("40000|8000", row["ref_ceiling_tokens"] + "|" + row["ref_read_tokens"], "row"); }
             True(new UsageRecord { RefPaths = new List<string> { "x" } }.RefPaths != null
                  && !Newtonsoft.Json.JsonConvert.SerializeObject(new UsageRecord { RefPaths = new List<string> { "x" } }).Contains("\"x\""), "paths are not logged");
         }
