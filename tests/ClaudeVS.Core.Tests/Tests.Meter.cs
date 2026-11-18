@@ -165,6 +165,32 @@ namespace ClaudeVS.Core.Tests
         /// 2.1.326 with CLAUDE_CODE_MAX_OUTPUT_TOKENS=400: a background subagent asked for a 700-word essay, then the
         /// main agent's own answer, each cut off and asked to go on (synthetic "Output token limit hit." messages).
         /// </summary>
+        /// <summary>
+        /// 2.1.327 with CLAUDE_CODE_MAX_OUTPUT_TOKENS=150 (the init line left out): the main agent's answer is cut off three
+        /// times, each asked to go on, and then the turn fails ("API Error: Claude's response exceeded the 150 output
+        /// token maximum", terminal_reason api_error). The retries count in the failed turn, and the box says what to do.
+        /// </summary>
+        private static void Test_Meter_CutOffThenFailed_RealCli_2_1_327()
+        {
+            var parser = new ClaudeStreamParser();
+            var events = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.327-cut-off-then-failed.jsonl"))
+                .SelectMany(l => parser.Parse(l)).ToList();
+            var retries = events.Where(e => e.Kind == ClaudeEventKind.OutputLimitRetry).ToList();
+            Eq(3, retries.Count, "three cut-offs");
+            True(retries.All(e => !e.IsSubagent), "all the main agent's");
+
+            var done = events.Single(e => e.Kind == ClaudeEventKind.TurnCompleted);
+            True(done.IsError, "the turn failed");
+            Eq("api_error", done.TerminalReason, "terminal_reason");
+            True(ClaudeErrorHints.Explain(done.Text)?.Contains("output token limit") == true, "explained: " + ClaudeErrorHints.Explain(done.Text));
+
+            var meter = new TokenMeter();
+            meter.FreshSession();
+            foreach (var e in events) meter.Observe(e);
+            Eq(3, meter.LastTurnOutputRetries, "counted in the failed turn");
+            True(meter.LastTurnOutputRetryCostUsd > 0, "and priced: " + meter.LastTurnOutputRetryCostUsd);
+        }
+
         private static void Test_Meter_OutputLimitRetries_RealCli_2_1_326()
         {
             var events = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.326-output-limit-retries.jsonl"))
