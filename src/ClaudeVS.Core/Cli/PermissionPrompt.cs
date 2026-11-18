@@ -36,6 +36,25 @@ namespace ClaudeVS.Core.Cli
         public string AlwaysAllowDestination { get; private set; }
 
         /// <summary>
+        /// Why a hook asks for this call: "PreToolUse hook (settings): Confirm before running". Null when no hook asked.
+        /// Verified with 2.1.327: a PreToolUse hook answering <c>permissionDecision: "ask"</c> with a
+        /// <c>permissionDecisionReason</c> sends it as <c>decision_reason</c>, with <c>decision_reason_type: "hook"</c>,
+        /// <c>decision_reason_hook_event</c> and <c>decision_reason_hook_source</c>. Other reasons ("This command
+        /// requires approval") are generic and left out.
+        /// </summary>
+        public string HookReason { get; private set; }
+
+        private static string HookReasonOf(JObject request)
+        {
+            string S(string k) => request?[k]?.Type == JTokenType.String ? ((string)request[k]).Trim() : null;
+            string reason = S("decision_reason");
+            if (S("decision_reason_type") != "hook" || string.IsNullOrEmpty(reason)) return null;
+            string evt = S("decision_reason_hook_event"), source = S("decision_reason_hook_source");
+            string who = (string.IsNullOrEmpty(evt) ? "A hook" : evt + " hook") + (string.IsNullOrEmpty(source) ? "" : $" ({source})");
+            return $"{who}: {reason}";
+        }
+
+        /// <summary>
         /// Said when an "Always allow" rule is not in its settings file after the call. Since 2.1.323 Claude Code keeps
         /// a rule for the session only when it looks like it holds a secret, or would be saved to a
         /// <c>settings.local.json</c> that git tracks, though it still suggests saving it there (verified with 2.1.323:
@@ -98,6 +117,7 @@ namespace ClaudeVS.Core.Cli
 
             string description = request?["description"]?.Type == JTokenType.String ? (string)request["description"] : Arg("description");
             if (!string.IsNullOrWhiteSpace(description) && description.Trim() != p.Detail) p.Description = description.Trim();
+            p.HookReason = HookReasonOf(request);
 
             var allow = new JArray((request?["permission_suggestions"] as JArray ?? new JArray()).OfType<JObject>()
                 .Where(s => (string)s["type"] == "addRules" && (string)s["behavior"] == "allow" && s["rules"] is JArray r && r.Count > 0));

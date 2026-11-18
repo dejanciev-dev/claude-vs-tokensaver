@@ -6,6 +6,11 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+- **Why a hook asks**: when one of your PreToolUse hooks asks for confirmation with a reason, the permission card
+  shows it under Claude's description (`ⓘ PreToolUse hook (settings): …`), and screen readers hear it. Claude Code
+  sends the reason since 2.1.327.
+
 ## [0.11.0] - 2026-11-17
 
 Still a **preview**, for Claude Code 2.1.318 or newer (tested with 2.1.326). This release makes the numbers right and

@@ -1443,12 +1443,13 @@ Checked on 2026-11-18 with 2.1.327 installed. The 2.1.327 section read for what 
 terminal, cloud, Remote Control, gateway, sandbox, Artifact and plugin entries are left out. Probed with stream-json
 the way the extension runs it (Haiku, two runs, under $0.02).
 
-- [ ] **The hook's reason on the permission card** (2.1.327's VS Code fix: "the permission prompt not showing the
+- [x] **The hook's reason on the permission card** (2.1.327's VS Code fix: "the permission prompt not showing the
       reason that a PreToolUse hook gives when it asks for confirmation"). The `can_use_tool` request carries it:
       `decision_reason`, `decision_reason_type: "hook"`, `decision_reason_hook_event: "PreToolUse"`,
       `decision_reason_hook_source: "settings"`. The card shows it under Claude's description and screen readers hear
       it; other reasons ("This command requires approval", type `other`) say nothing and stay hidden. Capture:
-      `Fixtures/cli-2.1.327-hook-ask-reason.jsonl`
+      `Fixtures/cli-2.1.327-hook-ask-reason.jsonl`, `Test_PermissionPrompt_RealCli_HookReason_2_1_327`;
+      `PermissionPrompt.HookReason`. Builds clean; not yet run in VS
 - [ ] **Add to Chat from Solution Explorer** (2.1.327's VS Code "Add to Chat" in the Explorer's right-click menu).
       Right-click files, folders or projects in Solution Explorer → *Add to Claude Code chat* puts `@path` references
       (relative to the working folder) into the input box, like the `@` picker: paths only, no contents. VS-only
