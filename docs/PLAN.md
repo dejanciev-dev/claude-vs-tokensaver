@@ -1655,7 +1655,9 @@ this phase shows it while it happens.
       files Claude already read, asking it directly (or naming the lines the agent needs) is cheaper.
       `SessionNotices.SubagentRereadTip` (the conversation's total; "An Explore agent", "A fork"); reset with the
       conversation. Builds clean; not yet run in VS
-- [ ] **Manual checks for Phase 63.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
+- [x] **Manual checks for Phase 63.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md). Section 26,
+      *Subagent re-reads, where you see them*: the agent's row and the tip, once per conversation, none under 5k;
+      Release is now 27
 
 ---
 
