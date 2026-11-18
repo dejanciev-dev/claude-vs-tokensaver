@@ -389,16 +389,35 @@ namespace ClaudeVS.Core.Cli
         /// The build-output or vendored folder a turn's reads (<see cref="Tokens.UsageRecord.ReadFolders"/>) took the most
         /// from, when 2k+ tokens: its read-deny rule and the tip; null otherwise.
         /// </summary>
-        public static (string Rule, string Text)? NoiseReadTip(IReadOnlyDictionary<string, long> readFolders)
+        public static (string Rule, string Text)? NoiseReadTip(IReadOnlyDictionary<string, long> readFolders, IReadOnlyDictionary<string, long> readFiles = null)
         {
-            if (readFolders == null) return null;
-            var worst = readFolders.Select(kv => (Folder: kv.Key, Tokens: kv.Value, Rule: Tokens.SavingsReport.NoiseRule(kv.Key)))
+            var folders = (readFolders ?? new Dictionary<string, long>()).Select(kv => (Where: kv.Key, Tokens: kv.Value, Rule: Tokens.SavingsReport.NoiseRule(kv.Key), File: false));
+            // Minified files and source maps (Phase 61), by their file rule, wherever they are
+            var files = (readFiles ?? new Dictionary<string, long>())
+                .Where(kv => !kv.Key.Replace('\\', '/').Split('/').Any(seg => Tokens.SavingsReport.NoiseRule(seg) != null)) // in obj…: the folder's rule counts it
+                .Select(kv => (Where: kv.Key, Tokens: kv.Value, Rule: GeneratedFileRule(kv.Key), File: true));
+            var worst = folders.Concat(files)
                 .Where(x => x.Rule != null).GroupBy(x => x.Rule)
-                .Select(g => (Rule: g.Key, Folder: g.OrderByDescending(x => x.Tokens).First().Folder, Tokens: g.Sum(x => x.Tokens)))
+                .Select(g => (Rule: g.Key, Where: g.OrderByDescending(x => x.Tokens).First().Where, Tokens: g.Sum(x => x.Tokens), File: g.First().File))
                 .OrderByDescending(x => x.Tokens).FirstOrDefault();
             if (worst.Rule == null || worst.Tokens < NoiseReadTokens) return null;
-            return (worst.Rule, $"Claude read ~{Tokens.TokenMeter.Format(worst.Tokens)} tokens from {worst.Folder}, which holds build output or vendored code: "
+            if (worst.File)
+            {
+                string pattern = worst.Rule.Substring("Read(./**/".Length).TrimEnd(')');
+                return (worst.Rule, $"Claude read ~{Tokens.TokenMeter.Format(worst.Tokens)} tokens of {pattern} files ({System.IO.Path.GetFileName(worst.Where)}…), which are generated: "
+                    + $"rarely worth the context. {worst.Rule} in the project's settings keeps Claude out of them.");
+            }
+            return (worst.Rule, $"Claude read ~{Tokens.TokenMeter.Format(worst.Tokens)} tokens from {worst.Where}, which holds build output or vendored code: "
                 + $"rarely worth the context. {worst.Rule} in the project's settings keeps Claude out of such folders.");
+        }
+
+        /// <summary>The setup's read-deny rule for a generated file (minified, a source map): "Read(./**/*.min.js)"; null for others.</summary>
+        public static string GeneratedFileRule(string path)
+        {
+            string name = System.IO.Path.GetFileName((path ?? "").Replace('\\', '/').TrimEnd('/')) ?? "";
+            foreach (var ext in new[] { ".min.js", ".min.css", ".map" })
+                if (name.Length > ext.Length && name.EndsWith(ext, System.StringComparison.OrdinalIgnoreCase)) return $"Read(./**/*{ext})";
+            return null;
         }
 
         /// <summary>A fixed part of the context this large (tokens) earns the tip.</summary>

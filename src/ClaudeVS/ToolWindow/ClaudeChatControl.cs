@@ -2133,7 +2133,7 @@ namespace ClaudeVS.ToolWindow
             if (_turnFiles.ReadTokensByFile.Count > 0)
             {
                 rec.ReadFolders = TurnFileActivity.ByFolder(_turnFiles.ReadTokensByFile, WorkFolder);
-                NoiseReadTip(rec.ReadFolders);
+                NoiseReadTip(rec.ReadFolders, _turnFiles.ReadTokensByFile);
             }
             if (_turnFiles.LoudRuns.Count > 0)
             {

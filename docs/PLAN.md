@@ -1601,9 +1601,10 @@ turns that into fixes in the chat and keeps what was only a passing tip.
 Planned on 2026-11-18, after Phase 60, on the same branch. Phase 60's tips say what to do; this phase makes that a
 click, and covers generated files the setup's deny rules name but the build-output tip missed.
 
-- [ ] **Generated files in the build-output tip.** Reads of minified and source-map files (`*.min.js`, `*.min.css`,
+- [x] **Generated files in the build-output tip.** Reads of minified and source-map files (`*.min.js`, `*.min.css`,
       `*.map`, as in the setup's deny rules) count toward the tip, with their file rule (`Read(./**/*.min.js)`), not
-      only build-output folders
+      only build-output folders. `SessionNotices.GeneratedFileRule`; `NoiseReadTip(folders, files)` takes the turn's
+      reads by file; one inside a build-output folder counts for the folder only. Builds clean; not yet run in VS
 - [ ] **Prompt-box links on the tips.** The loud-command tip gets **Ask for the plain `dotnet build`**, and the
       repeated-read tip **Tell Claude it has `Foo.cs`**: each puts the request into the input box (after anything
       typed), to edit or send; nothing is sent by itself
