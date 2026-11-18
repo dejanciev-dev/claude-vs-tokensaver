@@ -1626,8 +1626,11 @@ they don't show yet.
       period's reads come from more than one solution, each row says which (`ClaudeVS: src/Core`). Solutions told
       apart by their folder (a trailing slash ignored), named by `SolutionBreakdown.NameOf`; the deny-rule hint still
       applies to such rows
-- [ ] **References measured late.** A reference still being measured when the prompt goes out (a large folder) was
-      left out of *References read*; its size, measured in the background, now counts when the turn is logged
+- [x] **References measured late.** A reference still being measured when the prompt goes out (a large folder) was
+      left out of *References read*; its size, measured in the background, now counts when the turn is logged.
+      `UsageRecord.RefPending` (not logged); sending keeps the cache slot for it, and logging adds its size and takes
+      it out of the cache (unless it is attached again), so a later attach measures it afresh. Builds clean; not yet
+      run in VS
 - [ ] **Subagents re-reading what the conversation has.** Tokens a subagent spends reading a file the main agent
       already read in this conversation (a subagent starts without that context, so it reads it again): per turn in
       the usage log, a savings report line and a CSV column, and in the session summary

@@ -10,7 +10,8 @@ All notable changes to this project are listed here. The format follows
 - **What references really cost**: after a turn with attached files or folders, the footer's tooltip says how much
   of them Claude read against reading them whole (`References: Claude read 2 of 12 files, ~8.0k of ~40.0k tok
   (20%)`), its subagents' reads included. The savings report adds a *References read* line, and the usage CSV
-  `ref_ceiling_tokens` and `ref_read_tokens` columns.
+  `ref_ceiling_tokens` and `ref_read_tokens` columns. A large folder still being measured when you send counts too,
+  once its size is known.
 - **What the quiet-build hook did**: the savings report counts the commands the token-saving hook made quiet, by
   kind, and what their output brought in (`12 commands made quiet (dotnet build 9, git log 3), ~1.2k tok came
   back`); the usage CSV adds `quiet_runs` and `quiet_tokens`.
