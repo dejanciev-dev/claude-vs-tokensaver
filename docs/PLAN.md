@@ -1564,6 +1564,24 @@ and what came back, not as a guessed total.
       references, the quiet-build hook and reads really cost*: the footer's references line, the quiet-build line and
       CSV columns, the folders section, Open and Reinstall from the setup check; Release is now 23
 
+## Phase 60 — Reads and loud commands: from numbers to fixes
+
+Planned on 2026-11-18, after Phase 59. Phase 59 logs where reads go and what the quiet-build hook did; this phase
+turns that into fixes in the chat and keeps what was only a passing tip.
+
+- [ ] **Add a deny rule from a tip.** When a turn's reads brought 2k+ tokens from build output or vendored code
+      (`obj`, `node_modules`… as in *Folders read most*), once per conversation: a tip naming the folder and what it
+      cost, with **Add `Read(./**/obj/**)`**, which merges the rule into the project's `.claude/settings.json` (not
+      when a settings file already has it)
+- [ ] **Repeated reads over time.** The usage log keeps each turn's tokens from re-reading an unchanged file
+      (`ReadTracker`, until now only a tip); a savings report line and a `repeat_read_tokens` CSV column
+- [ ] **Loud commands the hook skipped.** Builds, tests and `git log` that the hook leaves alone (a verbosity given,
+      a pipe or chain, a count) and that brought 2k+ tokens: counted by kind in the usage log, the report and the CSV,
+      and once per conversation a tip with the form that runs quiet (the plain command)
+- [ ] **Reads in the session summary.** *Copy session summary* adds the conversation's reads: the top folders, the
+      attached references read against their ceiling, repeated reads, and commands made quiet or left loud
+- [ ] **Manual checks for Phase 60.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
+
 ---
 
 ## Working in Visual Studio — daily loop
