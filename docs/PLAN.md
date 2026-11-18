@@ -1596,6 +1596,20 @@ turns that into fixes in the chat and keeps what was only a passing tip.
       and loud commands: from numbers to fixes*: the build-output tip and its rule, repeated reads in the report and
       the CSV, the loud-command tip with and without the hook, the session summary's lines; Release is now 24
 
+## Phase 61 — Tips you can act on, and generated files
+
+Planned on 2026-11-18, after Phase 60, on the same branch. Phase 60's tips say what to do; this phase makes that a
+click, and covers generated files the setup's deny rules name but the build-output tip missed.
+
+- [ ] **Generated files in the build-output tip.** Reads of minified and source-map files (`*.min.js`, `*.min.css`,
+      `*.map`, as in the setup's deny rules) count toward the tip, with their file rule (`Read(./**/*.min.js)`), not
+      only build-output folders
+- [ ] **Prompt-box links on the tips.** The loud-command tip gets **Ask for the plain `dotnet build`**, and the
+      repeated-read tip **Tell Claude it has `Foo.cs`**: each puts the request into the input box (after anything
+      typed), to edit or send; nothing is sent by itself
+- [ ] **Reads by folder in the CSV.** A `read_folders` column (`src/Core:40000;src/App/obj:2000`, largest first)
+- [ ] **Manual checks for Phase 61.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
+
 ---
 
 ## Working in Visual Studio — daily loop
