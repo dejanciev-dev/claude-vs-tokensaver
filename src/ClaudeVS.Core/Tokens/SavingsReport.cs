@@ -1103,8 +1103,16 @@ namespace ClaudeVS.Core.Tokens
             }
             rep.RepeatReadTokens = list.Sum(r => r.RepeatReadTokens);
             rep.RepeatReadTurns = list.Count(r => r.RepeatReadTokens > 0);
-            foreach (var r in list.Where(r => r.ReadFolders != null))
-                foreach (var kv in r.ReadFolders) { rep.ReadFolders.TryGetValue(kv.Key, out var t); rep.ReadFolders[kv.Key] = t + kv.Value; }
+            // Folders are relative to each working folder: over several solutions, say which one each row is from
+            var withReads = list.Where(r => r.ReadFolders != null && r.ReadFolders.Count > 0).ToList();
+            bool severalSolutions = withReads.Select(r => (r.Solution ?? "").TrimEnd('\\', '/')).Distinct(StringComparer.OrdinalIgnoreCase).Skip(1).Any();
+            foreach (var r in withReads)
+                foreach (var kv in r.ReadFolders)
+                {
+                    string key = severalSolutions && !string.IsNullOrEmpty(r.Solution) ? SolutionBreakdown.NameOf(r.Solution) + ": " + kv.Key : kv.Key;
+                    rep.ReadFolders.TryGetValue(key, out var t);
+                    rep.ReadFolders[key] = t + kv.Value;
+                }
             foreach (var r in list.Where(r => r.QuietRuns != null))
             {
                 foreach (var kv in r.QuietRuns) { rep.QuietRuns.TryGetValue(kv.Key, out var n); rep.QuietRuns[kv.Key] = n + kv.Value; }

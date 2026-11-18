@@ -1621,9 +1621,11 @@ click, and covers generated files the setup's deny rules name but the build-outp
 Planned on 2026-11-18, after Phase 61, on the same branch. Going over Phases 59–61 found two gaps, and one cost
 they don't show yet.
 
-- [ ] **Folders per solution.** *Folders read most* adds up folders by their path below the working folder, so in a
+- [x] **Folders per solution.** *Folders read most* adds up folders by their path below the working folder, so in a
       report over all solutions `src/Core` of one solution and `src/Core` of another become one row. When the
-      period's reads come from more than one solution, each row says which (`ClaudeVS: src/Core`)
+      period's reads come from more than one solution, each row says which (`ClaudeVS: src/Core`). Solutions told
+      apart by their folder (a trailing slash ignored), named by `SolutionBreakdown.NameOf`; the deny-rule hint still
+      applies to such rows
 - [ ] **References measured late.** A reference still being measured when the prompt goes out (a large folder) was
       left out of *References read*; its size, measured in the background, now counts when the turn is logged
 - [ ] **Subagents re-reading what the conversation has.** Tokens a subagent spends reading a file the main agent

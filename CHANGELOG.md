@@ -16,7 +16,9 @@ All notable changes to this project are listed here. The format follows
   back`); the usage CSV adds `quiet_runs` and `quiet_tokens`.
 - **Folders read most**: the savings report lists the folders whose reads brought the most into the context (two
   levels below the working folder), and for build output or vendored code (`obj`, `node_modules`…) the read-deny
-  rule that keeps Claude out. Reads outside the working folder are grouped; their paths are not logged.
+  rule that keeps Claude out. Reads outside the working folder are grouped; their paths are not logged. In a report
+  over several solutions each row names its solution (`Shop: src/Core`), so the same folder name in two solutions
+  isn't added up as one.
 - **Keep Claude out of build output**: when a turn reads 2k+ tokens from build output or vendored code (`obj`,
   `node_modules`…), a token tip says so once per conversation, with **Add `Read(./**/obj/**)`**, which merges the
   rule into the project's `.claude/settings.json` (from the next New chat). *Folders read most* now finds such
