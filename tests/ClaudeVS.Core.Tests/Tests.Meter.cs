@@ -433,6 +433,19 @@ namespace ClaudeVS.Core.Tests
             Eq(0, reads.Lines().Count, "reset with the conversation");
         }
 
+        /// <summary>A turn's folders in the usage log: the 10 largest, the rest added up.</summary>
+        private static void Test_ReadFolders_Capped()
+        {
+            var many = Enumerable.Range(1, 14).ToDictionary(i => "f" + i, i => (long)i * 100);
+            var capped = TurnFileActivity.Capped(many);
+            Eq(11, capped.Count, "10 and the rest");
+            True(capped.ContainsKey("f14") && capped.ContainsKey("f5") && !capped.ContainsKey("f4"), "the largest kept");
+            Eq(100L + 200 + 300 + 400, capped[TurnFileActivity.OtherFolders], "f1–f4 added up");
+            Eq(many.Values.Sum(), capped.Values.Sum(), "nothing lost");
+            Eq(3, TurnFileActivity.Capped(new Dictionary<string, long> { ["a"] = 1, ["b"] = 2, ["c"] = 3 }).Count, "few: as they are");
+            Eq(null, TurnFileActivity.Capped(null));
+        }
+
         /// <summary>Repeated reads over time: the report's line and the CSV column.</summary>
         private static void Test_RepeatReads_InReport()
         {

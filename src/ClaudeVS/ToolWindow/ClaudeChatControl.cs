@@ -2149,8 +2149,9 @@ namespace ClaudeVS.ToolWindow
             _repeatReadBase = _reads.RepeatedTokens;
             if (_turnFiles.ReadTokensByFile.Count > 0)
             {
-                rec.ReadFolders = TurnFileActivity.ByFolder(_turnFiles.ReadTokensByFile, WorkFolder);
-                NoiseReadTip(rec.ReadFolders, _turnFiles.ReadTokensByFile);
+                var folders = TurnFileActivity.ByFolder(_turnFiles.ReadTokensByFile, WorkFolder);
+                NoiseReadTip(folders, _turnFiles.ReadTokensByFile); // all of them: small build-output folders add up
+                rec.ReadFolders = TurnFileActivity.Capped(folders); // the log keeps the 10 largest
             }
             if (_turnFiles.LoudRuns.Count > 0)
             {

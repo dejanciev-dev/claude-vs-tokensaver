@@ -146,6 +146,24 @@ namespace ClaudeVS.Core.Tokens
             return null;
         }
 
+        /// <summary>Where <see cref="Capped"/> adds up the folders past the largest ones.</summary>
+        public const string OtherFolders = "(other)";
+
+        /// <summary>
+        /// The <paramref name="max"/> largest folders, and the rest added up as <see cref="OtherFolders"/>, so a turn that
+        /// reads all over a large repository writes a short usage line. Null for null.
+        /// </summary>
+        public static Dictionary<string, long> Capped(IReadOnlyDictionary<string, long> folders, int max = 10)
+        {
+            if (folders == null) return null;
+            var sorted = folders.OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase).ToList();
+            var result = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+            foreach (var kv in sorted.Take(max)) result[kv.Key] = kv.Value;
+            long rest = sorted.Skip(max).Sum(kv => kv.Value);
+            if (rest > 0) { result.TryGetValue(OtherFolders, out var t); result[OtherFolders] = t + rest; }
+            return result;
+        }
+
         /// <summary>Where <see cref="ByFolder"/> puts reads outside the working folder (their paths are not logged).</summary>
         public const string OutsideFolder = "(outside the working folder)";
 
