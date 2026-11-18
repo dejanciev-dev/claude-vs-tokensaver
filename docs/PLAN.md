@@ -1437,6 +1437,43 @@ keeps setting keys as written (even unknown ones), so the settings check must kn
       origin v0.11.0`, which builds the VSIX and makes a draft GitHub release; publishing it starts the Marketplace
       upload, which waits for approval
 
+## Phase 57 — Keep up with the CLI (from the Claude Code CHANGELOG 2.1.327)
+
+Checked on 2026-11-18 with 2.1.327 installed. The 2.1.327 section read for what the extension sends or reads;
+terminal, cloud, Remote Control, gateway, sandbox, Artifact and plugin entries are left out. Probed with stream-json
+the way the extension runs it (Haiku, two runs, under $0.02).
+
+- [ ] **The hook's reason on the permission card** (2.1.327's VS Code fix: "the permission prompt not showing the
+      reason that a PreToolUse hook gives when it asks for confirmation"). The `can_use_tool` request carries it:
+      `decision_reason`, `decision_reason_type: "hook"`, `decision_reason_hook_event: "PreToolUse"`,
+      `decision_reason_hook_source: "settings"`. The card shows it under Claude's description and screen readers hear
+      it; other reasons ("This command requires approval", type `other`) say nothing and stay hidden. Capture:
+      `Fixtures/cli-2.1.327-hook-ask-reason.jsonl`
+- [ ] **Add to Chat from Solution Explorer** (2.1.327's VS Code "Add to Chat" in the Explorer's right-click menu).
+      Right-click files, folders or projects in Solution Explorer → *Add to Claude Code chat* puts `@path` references
+      (relative to the working folder) into the input box, like the `@` picker: paths only, no contents. VS-only
+- [ ] **Verify with 2.1.327 and raise `CliVersion.Tested`.** The live tests with 2.1.327; README, Marketplace
+      overview, CONTRIBUTING and the plan-mode notes
+
+Checked, nothing to change:
+- Cut-off retries (2.1.327: subagent answers that hit the output limit twice come back whole more often; a reply cut
+  at 32,000 tokens on an unrecognized model goes on at 128,000): with `CLAUDE_CODE_MAX_OUTPUT_TOKENS=400` a subagent's
+  retry still starts "Output token limit hit.", which the counting matches. The run cut off once, so the "twice" path
+  was not seen
+- The Bash tool's diff of changed files: not in stream-json (`tool_use_result` has stdout, stderr and flags only), so
+  *Files changed* keeps its own
+- `claude -p` going on after 10 s without a model's settings, and the first subagent on a model waiting up to 10 s
+  for them: the router's warm-up happens while idle, and the 60 s stall timer is far off
+- Shell start-up files may now run before a session's first Bash command is approved, even if it is refused
+  (`CLAUDE_CODE_DISABLE_SHELL_HEAD_START=1` turns it off). The command itself still waits for the card; set the
+  variable before starting Visual Studio to keep it off
+- PowerShell asking about one more command, `ExitWorktree` asking before removing a worktree: the card shows them as
+  any other tool (`Allow ExitWorktree?`)
+- Headless resume after a killed process, transcripts read again when they end early, `https_proxy` as a bare
+  `host:port` without a terminal: fixes the extension gets as it is
+- [VSCode] tools removed from the IDE connection (`openFile`, `saveDocument`, `getOpenEditors`): the extension's MCP
+  server has only `get_error_list`
+
 ---
 
 ## Working in Visual Studio — daily loop
