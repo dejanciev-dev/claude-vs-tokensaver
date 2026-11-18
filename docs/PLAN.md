@@ -1616,6 +1616,21 @@ click, and covers generated files the setup's deny rules name but the build-outp
       you can act on, and generated files*: the minified-file tip, the prompt-box links (and none with tips off), the
       `read_folders` column; Release is now 25
 
+## Phase 62 — Reads, counted right across solutions and agents
+
+Planned on 2026-11-18, after Phase 61, on the same branch. Going over Phases 59–61 found two gaps, and one cost
+they don't show yet.
+
+- [ ] **Folders per solution.** *Folders read most* adds up folders by their path below the working folder, so in a
+      report over all solutions `src/Core` of one solution and `src/Core` of another become one row. When the
+      period's reads come from more than one solution, each row says which (`ClaudeVS: src/Core`)
+- [ ] **References measured late.** A reference still being measured when the prompt goes out (a large folder) was
+      left out of *References read*; its size, measured in the background, now counts when the turn is logged
+- [ ] **Subagents re-reading what the conversation has.** Tokens a subagent spends reading a file the main agent
+      already read in this conversation (a subagent starts without that context, so it reads it again): per turn in
+      the usage log, a savings report line and a CSV column, and in the session summary
+- [ ] **Manual checks for Phase 62.** The VS-only parts in [MANUAL-CHECKS.md](MANUAL-CHECKS.md)
+
 ---
 
 ## Working in Visual Studio — daily loop
