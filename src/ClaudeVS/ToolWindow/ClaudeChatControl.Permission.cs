@@ -27,6 +27,8 @@ namespace ClaudeVS.ToolWindow
         };
         private readonly TextBlock _permTitle = new TextBlock { FontSize = 13, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
         private readonly TextBlock _permDescription = new TextBlock { FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 3, 0, 0) };
+        /// <summary>Why a hook asks for this call (2.1.327 sends it), muted under Claude's description.</summary>
+        private readonly TextBlock _permHookReason = new TextBlock { FontSize = 11.5, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 3, 0, 0) };
         private readonly Border _permDetailBox = new Border { CornerRadius = new CornerRadius(4), Padding = new Thickness(8, 5, 8, 5), Margin = new Thickness(0, 6, 0, 0) };
         private readonly TextBox _permDetail = new TextBox
         {
@@ -48,6 +50,7 @@ namespace ClaudeVS.ToolWindow
         private void BuildPermissionCard()
         {
             ChatTheme.Text(_permDescription);
+            ChatTheme.Muted(_permHookReason);
             ChatTheme.Text(_permDetail);
             _permDetail.FontFamily = new FontFamily("Cascadia Mono, Consolas");
             _permDetail.FontSize = 12;
@@ -86,6 +89,7 @@ namespace ClaudeVS.ToolWindow
             var stack = new StackPanel();
             stack.Children.Add(_permTitle);
             stack.Children.Add(_permDescription);
+            stack.Children.Add(_permHookReason);
             stack.Children.Add(_permDetailBox);
             stack.Children.Add(buttons);
             stack.Children.Add(feedback);
@@ -110,6 +114,8 @@ namespace ClaudeVS.ToolWindow
 
             _permDescription.Text = p.Description ?? "";
             _permDescription.Visibility = p.Description == null ? Visibility.Collapsed : Visibility.Visible;
+            _permHookReason.Text = p.HookReason == null ? "" : "ⓘ " + p.HookReason;
+            _permHookReason.Visibility = p.HookReason == null ? Visibility.Collapsed : Visibility.Visible;
             SetPermissionDetail(p.Detail ?? "", expanded: false);
             if (p.DetailIsCode) _permDetail.FontFamily = new FontFamily("Cascadia Mono, Consolas");
             else _permDetail.SetResourceReference(Control.FontFamilyProperty, VsFonts.EnvironmentFontFamilyKey);
@@ -129,7 +135,7 @@ namespace ClaudeVS.ToolWindow
 
             _permFeedback.Clear();
             _permission.Visibility = Visibility.Visible;
-            Announce($"Claude asks: {p.Title} {p.Description ?? p.Detail}. The Allow and Deny buttons are above the prompt box.", assertive: true);
+            Announce($"Claude asks: {p.Title} {p.Description ?? p.Detail}.{(p.HookReason == null ? "" : " " + p.HookReason + ".")} The Allow and Deny buttons are above the prompt box.", assertive: true);
         }
 
         /// <summary>

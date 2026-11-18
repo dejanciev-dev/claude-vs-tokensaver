@@ -465,6 +465,25 @@ namespace ClaudeVS.Core.Tests
             True(prompts.Skip(1).All(p => p.AlwaysAllowDestination == "localSettings"), "saved in settings.local.json");
         }
 
+        /// <summary>
+        /// A real request from Claude Code 2.1.327 when a PreToolUse hook answers "ask" with a reason: the card says
+        /// which hook asks and why. A generic reason (2.1.325's "This command requires approval") is not shown.
+        /// </summary>
+        private static void Test_PermissionPrompt_RealCli_HookReason_2_1_327()
+        {
+            var line = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.327-hook-ask-reason.jsonl"));
+            var ev = new ClaudeStreamParser().Parse(line).Single();
+            Eq(ClaudeEventKind.PermissionRequest, ev.Kind, "permission request");
+            var p = PermissionPrompt.From(ev.ToolName, ev.ToolInput, ev.Payload);
+            Eq("echo hello > out.txt", p.Detail, "the command");
+            Eq("PreToolUse hook (settings): Probe hook: confirm before running", p.HookReason, "the hook's reason");
+
+            var generic = PermissionPrompt.From("Bash", JObject.Parse("{\"command\":\"ls\"}"),
+                JObject.Parse("{\"decision_reason\":\"This command requires approval\",\"decision_reason_type\":\"other\"}"));
+            Eq(null, generic.HookReason, "a reason that isn't a hook's is not shown");
+            Eq(null, PermissionPrompt.From("Bash", JObject.Parse("{\"command\":\"ls\"}"), null).HookReason, "no request");
+        }
+
         private static void Test_PermissionPrompt_OtherTools()
         {
             var edit = PermissionPrompt.From("Edit", JObject.Parse("{\"file_path\":\"C:\\\\work\\\\a.cs\",\"old_string\":\"x\",\"new_string\":\"y\"}"), null);
