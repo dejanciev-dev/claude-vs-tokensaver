@@ -424,6 +424,19 @@ namespace ClaudeVS.Core.Tests
             True(top[1].Contains("add Read(./**/node_modules/**) to permissions.deny"), top[1]);
             True(rep.ToText().Contains("Folders read most:"), rep.ToText());
             Eq(0, SavingsReport.Build(new[] { new UsageRecord { Timestamp = t0, CostUsd = 0.01 } }, new PriceTable()).TopReadFolders().Count, "none: no section");
+
+            // Two solutions: the same relative folder is two rows, named by solution; one solution: no names
+            var two = SavingsReport.Build(new[]
+            {
+                new UsageRecord { Timestamp = t0, CostUsd = 0.01, Solution = @"C:\src\Shop\", ReadFolders = new Dictionary<string, long> { ["src/Core"] = 5000, ["src/App/obj"] = 3000 } },
+                new UsageRecord { Timestamp = t0, CostUsd = 0.01, Solution = @"C:\src\Blog", ReadFolders = new Dictionary<string, long> { ["src/Core"] = 4000 } },
+                new UsageRecord { Timestamp = t0, CostUsd = 0.01, Solution = @"C:\src\Shop", ReadFolders = new Dictionary<string, long> { ["src/Core"] = 1000 } },
+            }, new PriceTable());
+            Eq(6000L, two.ReadFolders["Shop: src/Core"], "Shop's src/Core, with and without a trailing slash");
+            Eq(4000L, two.ReadFolders["Blog: src/Core"], "Blog's apart");
+            True(two.TopReadFolders().Any(l => l.StartsWith("Shop: src/App/obj") && l.Contains("Read(./**/obj/**)")), "the rule still found: " + string.Join(" | ", two.TopReadFolders()));
+            var one = SavingsReport.Build(new[] { new UsageRecord { Timestamp = t0, CostUsd = 0.01, Solution = @"C:\src\Shop", ReadFolders = new Dictionary<string, long> { ["src/Core"] = 5000 } } }, new PriceTable());
+            True(one.ReadFolders.ContainsKey("src/Core"), "one solution: plain folders");
             var csv = new StringWriter();
             UsageCsv.Write(new[] { new UsageRecord { Timestamp = t0, ReadFolders = new Dictionary<string, long> { ["src/App/obj"] = 2000, ["src/Core"] = 40000 } } }, csv);
             var lines = csv.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None);
