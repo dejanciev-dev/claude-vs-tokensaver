@@ -97,10 +97,10 @@ namespace ClaudeVS.Core.Cli
                 // (netstandard2.0 has no StandardInputEncoding), so wrap the raw stream ourselves.
                 _stdin = new StreamWriter(p.StandardInput.BaseStream, new UTF8Encoding(false)) { AutoFlush = true, NewLine = "\n" };
                 _process = p;
-                // Hooks are registered with an initialize request, before anything else is written (we hold _gate).
-                if (Options.EditNotesHook)
+                // The initialize request goes first (we hold _gate), as the Agent SDK does: it registers our hooks (with
+                // EditNotesHook), and its answer carries the output styles and the models' full IDs (Haiku in plan mode).
                 {
-                    var initRequest = BuildInitialize();
+                    var initRequest = BuildInitialize(Options.EditNotesHook);
                     // Its answer carries the output styles (and more); keep it for GetOutputStylesAsync.
                     var tcs = new TaskCompletionSource<JObject>(TaskCreationOptions.RunContinuationsAsynchronously);
                     _pending[(string)initRequest["request_id"]] = tcs;
@@ -112,6 +112,7 @@ namespace ClaudeVS.Core.Cli
                 CurrentModel = Options.Model;
                 CurrentEffort = Options.Effort;
                 AppliedEffort = null; // a new process: read again
+                _modelIdPinned = false; // a new process: switch Haiku to its full ID before the first prompt
 
                 var stdout = p.StandardOutput;
                 var stderr = p.StandardError;
@@ -135,6 +136,7 @@ namespace ClaudeVS.Core.Cli
         {
             bool started = EnsureRunning();
             if (started && !ThinkingEnabled) await SendThinkingAsync().ConfigureAwait(false); // there is no launch flag for it
+            await PinModelIdAsync().ConfigureAwait(false); // before the first prompt: plan mode keeps Haiku
             IsBusy = true;
             await WriteLineAsync(BuildUserMessage(text, messageId, images, TakeStrandedNotes())).ConfigureAwait(false);
         }
@@ -202,9 +204,47 @@ namespace ClaudeVS.Core.Cli
         {
             if (model == ModelChoice.Auto || model == CurrentModel) return;
             if (!IsRunning) { Options.Model = model; CurrentModel = model; return; }
-            await SendControlAsync(new JObject { ["subtype"] = "set_model", ["model"] = model.ToCli() }).ConfigureAwait(false);
+            await SendControlAsync(new JObject { ["subtype"] = "set_model", ["model"] = await ModelArgAsync(model).ConfigureAwait(false) }).ConfigureAwait(false);
             CurrentModel = model;
             await GetSettingsAsync().ConfigureAwait(false); // a cap can be per model: the effort applied may change with it
+        }
+
+        // ---- Haiku in plan mode ----
+        // Claude Code turns the alias "haiku" into "sonnet" in plan mode (as "opusplan" into "opus"), and only the alias
+        // (verified with 2.1.328): with the full ID, plan mode answers with Haiku. The ID comes from the initialize answer.
+
+        private volatile bool _modelIdPinned;
+
+        /// <summary>
+        /// The full model ID Claude Code resolves <paramref name="alias"/> to, from the <c>initialize</c> answer's
+        /// <c>models</c> (<c>{"value": "haiku", "resolvedModel": "claude-haiku-5-5"}</c>, 2.1.328); null when not listed.
+        /// </summary>
+        public static string ResolvedModelId(JObject initializeResponse, string alias)
+        {
+            if (!(initializeResponse?["models"] is JArray models) || string.IsNullOrEmpty(alias)) return null;
+            var m = models.OfType<JObject>().FirstOrDefault(x => string.Equals((string)x["value"], alias, StringComparison.OrdinalIgnoreCase));
+            string id = m?["resolvedModel"]?.Type == JTokenType.String ? ((string)m["resolvedModel"]).Trim() : null;
+            return string.IsNullOrEmpty(id) || id == alias ? null : id;
+        }
+
+        /// <summary>What <c>set_model</c> gets for <paramref name="model"/>: Haiku's full ID when the initialize answer gave it, else the alias.</summary>
+        private async Task<string> ModelArgAsync(ModelChoice model)
+        {
+            if (model != ModelChoice.Haiku || _initialize == null) return model.ToCli();
+            var done = await Task.WhenAny(_initialize, Task.Delay(TimeSpan.FromSeconds(5))).ConfigureAwait(false);
+            if (done != _initialize) return model.ToCli();
+            return ResolvedModelId(await _initialize.ConfigureAwait(false), model.ToCli()) ?? model.ToCli();
+        }
+
+        /// <summary>Once per process: started on Haiku, switch to its full ID before the first prompt (see above).</summary>
+        private async Task PinModelIdAsync()
+        {
+            if (_modelIdPinned) return;
+            _modelIdPinned = true;
+            if (CurrentModel != ModelChoice.Haiku) return;
+            string arg = await ModelArgAsync(ModelChoice.Haiku).ConfigureAwait(false);
+            if (arg != ModelChoice.Haiku.ToCli())
+                await SendControlAsync(new JObject { ["subtype"] = "set_model", ["model"] = arg }).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -477,19 +517,16 @@ namespace ClaudeVS.Core.Cli
         /// The initialize control request with a PostToolUse hook on Edit and Write; the CLI then sends a
         /// <c>hook_callback</c> after each of those calls (verified with 2.1.318).
         /// </summary>
-        public static JObject BuildInitialize() => new JObject
+        public static JObject BuildInitialize(bool editNotesHook = true)
         {
-            ["type"] = "control_request",
-            ["request_id"] = "init-" + Guid.NewGuid().ToString("N"),
-            ["request"] = new JObject
-            {
-                ["subtype"] = "initialize",
-                ["hooks"] = new JObject
+            var request = new JObject { ["subtype"] = "initialize" };
+            if (editNotesHook)
+                request["hooks"] = new JObject
                 {
                     ["PostToolUse"] = new JArray(new JObject { ["matcher"] = "Edit|Write", ["hookCallbackIds"] = new JArray(EditNotesCallbackId) }),
-                },
-            },
-        };
+                };
+            return new JObject { ["type"] = "control_request", ["request_id"] = "init-" + Guid.NewGuid().ToString("N"), ["request"] = request };
+        }
 
         private sealed class ToolNote
         {

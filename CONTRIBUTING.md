@@ -23,8 +23,8 @@ dotnet run --project tests/ClaudeVS.Core.Tests -- --live-all
 
 It runs them one after another, each in an empty temp folder and asking for Haiku, then prints a summary with each
 test's cost and the total (12 tests, about $0.26 and 5 minutes with Claude Code 2.1.328; a single `--live-…` test
-prints its cost too). The exit code is 0 only when all pass. It never uses plan mode, where Claude Code answers
-with Sonnet even when Haiku is asked for (~20x the cost).
+prints its cost too). The exit code is 0 only when all pass. `live (Plan)` checks that plan mode still answers with
+Haiku: Claude Code turns the alias `haiku` into Sonnet there, so the session asks for Haiku by its full ID.
 
 When prices may have changed (a new model or a Claude Code update), run `--live-prices`: two short turns on each of
 Haiku, Sonnet, Opus and Fable, each turn's usage priced with the default prices next to what Claude Code billed
