@@ -560,7 +560,7 @@ namespace ClaudeVS.Core.Tests
                     var done = new ManualResetEventSlim();
                     string reply = "";
                     ClaudeEvent result = null;
-                    using (var session = NewSession(new ClaudeLaunchOptions { WorkingDirectory = dir, Model = ModelChoice.Haiku, Effort = EffortChoice.Low, PermissionMode = PermissionModeChoice.AcceptEdits })) // not Plan: plan mode answers with Sonnet
+                    using (var session = NewSession(new ClaudeLaunchOptions { WorkingDirectory = dir, Model = ModelChoice.Haiku, Effort = EffortChoice.Low, PermissionMode = PermissionModeChoice.AcceptEdits }))
                     {
                         session.EventReceived += (s, ev) =>
                         {
@@ -807,6 +807,8 @@ namespace ClaudeVS.Core.Tests
         /// <summary>
         /// `--live [rawLogPath] [mode] [turns]`: short turns asking for Haiku, Accept Edits unless another mode is named.
         /// In plan mode Claude Code answers the alias "haiku" with Sonnet; the session switches to Haiku's full ID first.
+        /// Plan mode adds two turns: one after the process was killed (a crash: restarted with --resume), one in a new
+        /// session that resumes the conversation (as reopening it in the chat does). Both must still be answered by Haiku.
         /// </summary>
         public static int Run(string rawLogPath, PermissionModeChoice mode = PermissionModeChoice.AcceptEdits, int turns = 2)
         {
@@ -821,24 +823,45 @@ namespace ClaudeVS.Core.Tests
             var failures = new List<string>();
             void Check(bool ok, string what) { Console.WriteLine((ok ? "  ok   " : "  FAIL ") + what); if (!ok) failures.Add(what); }
 
-            var session = NewSession(new ClaudeLaunchOptions
+            ClaudeSession Open(string resumeId) { var s = NewSession(new ClaudeLaunchOptions
             {
                 WorkingDirectory = dir,
                 Model = ModelChoice.Haiku,
                 Effort = EffortChoice.Low,
                 PermissionMode = mode,
                 AppendSystemPrompt = "Answer in as few words as possible.",
+                ResumeSessionId = resumeId,
             });
-            session.EventReceived += (s, e) => events.Add(e);
-            session.RawLine += (s, e) => { lock (raw) raw.Append(e.Direction).Append('\t').Append(e.Line).Append('\n'); };
+            s.EventReceived += (_, e) => events.Add(e);
+            s.RawLine += (_, e) => { lock (raw) raw.Append(e.Direction).Append('\t').Append(e.Line).Append('\n'); };
+            return s; }
+            var session = Open(null);
+            bool plan = mode == PermissionModeChoice.Plan;
+            int crashTurn = plan ? turns + 1 : 0, resumeTurn = plan ? turns + 2 : 0; // plan mode: Haiku after a restart too
+            string[] words = { "PING", "PONG", "PANG", "PUNG" };
 
             try
             {
-                Console.WriteLine($"mode: {mode.ToCli()}, turns: {turns}");
-                for (int turn = 1; turn <= turns; turn++)
+                Console.WriteLine($"mode: {mode.ToCli()}, turns: {turns}" + (plan ? " + one after a crash, one resumed in a new session" : ""));
+                for (int turn = 1; turn <= Math.Max(turns, resumeTurn); turn++)
                 {
-                    Console.WriteLine($"Turn {turn}:");
-                    string prompt = turn == 1 ? "Reply with exactly the word: PING" : "Reply with exactly the word: PONG";
+                    Console.WriteLine($"Turn {turn}" + (turn == crashTurn ? " (after the process was killed)" : turn == resumeTurn ? " (a new session, --resume)" : "") + ":");
+                    string word = turn <= words.Length ? words[turn - 1] : "PONG";
+                    if (turn == crashTurn)
+                    {
+                        int? pid = session.ProcessId;
+                        if (pid != null) try { System.Diagnostics.Process.GetProcessById(pid.Value).Kill(entireProcessTree: true); } catch (ArgumentException) { }
+                        for (int i = 0; i < 50 && session.IsRunning; i++) Thread.Sleep(100);
+                        Check(!session.IsRunning, "process killed");
+                    }
+                    if (turn == resumeTurn)
+                    {
+                        string id = session.SessionId;
+                        session.Dispose();
+                        Check(!string.IsNullOrEmpty(id), "a session id to resume");
+                        session = Open(id);
+                    }
+                    string prompt = "Reply with exactly the word: " + word;
                     session.SendPromptAsync(prompt).GetAwaiter().GetResult();
                     var seen = Collect(events, TimeSpan.FromSeconds(120));
                     string text = string.Concat(seen.Where(e => e.Kind == ClaudeEventKind.TextDelta).Select(e => e.Text));
@@ -850,7 +873,7 @@ namespace ClaudeVS.Core.Tests
                     if (turn == 1) Check(seen.Any(e => e.Kind == ClaudeEventKind.SessionStarted && !string.IsNullOrEmpty(e.SessionId)), "SessionStarted with a session id");
                     Check(done != null, "TurnCompleted received");
                     Check(done != null && !done.IsError, "turn is not an error" + (done?.IsError == true ? ": " + done.Text : ""));
-                    Check(text.IndexOf(turn == 1 ? "PING" : "PONG", StringComparison.OrdinalIgnoreCase) >= 0, "answer text parsed");
+                    Check(text.IndexOf(word, StringComparison.OrdinalIgnoreCase) >= 0, "answer text parsed");
                     Check(done != null && done.Usage.Total > 0, $"usage reported ({done?.Usage.Total ?? 0} tokens)");
                     Check(done?.TotalCostUsd != null, $"cost reported (${done?.TotalCostUsd:0.00000})");
                     var model = seen.LastOrDefault(e => e.Kind == ClaudeEventKind.AssistantUsage && !string.IsNullOrEmpty(e.Model))?.Model;

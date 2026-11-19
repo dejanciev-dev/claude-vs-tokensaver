@@ -1774,9 +1774,14 @@ already says when a turn ran fast.
       takes the current IDs from the models list (the four 5.x IDs until it comes). The meter learns before it prices
       the turn's subagents; the cost tooltip says "at the prices Claude Code bills for …". The test runner forgets
       learned prices before each test. `Test_PriceTable_LearnsOlderModels`. Builds clean; not yet run in VS
-- [ ] **Haiku pin on resume and restart.** A resumed conversation, and a process restarted after a crash or a stop,
+- [x] **Haiku pin on resume and restart.** A resumed conversation, and a process restarted after a crash or a stop,
       ask for Haiku by its full ID in plan mode too. `--live raw.jsonl Plan` also ends the process after the first
-      turn and checks that the next turn, after `--resume`, is answered by Haiku
+      turn and checks that the next turn, after `--resume`, is answered by Haiku. Nothing to change in the session:
+      every process start sends `initialize` first and pins Haiku again before its first prompt. The test now runs two
+      more plan-mode turns: one after killing the process (restarted with `--resume`), one in a new session resumed
+      from the conversation's id. Passes with 2.1.328 ($0.0096 for four turns): 3 processes, each sent `set_model`
+      `claude-haiku-5-5`, each turn answered by claude-haiku-5-5. Also gone: a "plan mode answers with Sonnet" comment
+      left in `--live-long-prompt`
 - [ ] **Manual checks for Phases 67 and 68.** A section in [MANUAL-CHECKS.md](MANUAL-CHECKS.md): Haiku and Auto in
       plan mode, the footer's model name, the effort tip, a resumed conversation; Release moves down one
 
