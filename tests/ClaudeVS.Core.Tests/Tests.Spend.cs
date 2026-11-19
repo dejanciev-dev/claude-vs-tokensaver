@@ -59,6 +59,48 @@ namespace ClaudeVS.Core.Tests
             True(back != null && back.SpeedChanged && !back.NowFast && back.Note().Contains("fell back to standard speed"), back?.Note());
         }
 
+        /// <summary>
+        /// A model that isn't one of the four current ones (Haiku 4.5 bills $1 / $5, Haiku 5.5 $0.10 / $0.50) is priced
+        /// from Claude Code's costUSD for it, not at its family's price.
+        /// </summary>
+        private static void Test_PriceTable_LearnsOlderModels()
+        {
+            PriceTable.ResetLearned();
+            try
+            {
+                var prices = new PriceTable();
+                var usage = new TokenUsage { Input = 1000, Output = 1000 };
+                ModelUsageEntry Billed(double usd) => new ModelUsageEntry { Usage = usage, CostUsd = usd };
+                const string old = "claude-haiku-4-5-20251001";
+
+                Eq(0.1, prices.For(old).Input, "not learned yet: the family's price");
+                prices.Learn(new Dictionary<string, ModelUsageEntry> { [old] = Billed(0.006) }, skip: true);
+                Eq(0.1, prices.For(old).Input, "a fast or long-context turn teaches nothing");
+                prices.Learn(new Dictionary<string, ModelUsageEntry> { [old] = Billed(0.0001) });
+                Eq(0.1, prices.For(old).Input, "too little spent to learn from");
+
+                prices.Learn(new Dictionary<string, ModelUsageEntry> { [old] = Billed(0.006), ["claude-haiku-5-5"] = Billed(0.006) });
+                Eq(1.0, Math.Round(prices.For(old).Input, 6), "Haiku 4.5: $1 input");
+                Eq(5.0, Math.Round(prices.For(old).Output, 6), "and $5 output");
+                Eq(0.006, Math.Round(prices.For(old).Cost(usage), 6), "to Claude Code's cost");
+                Eq(1.0, Math.Round(new PriceTable().For(old + "[1m]").Input, 6), "kept for the VS session, any table, the 1M suffix too");
+                Eq(0.1, prices.For("claude-haiku-5-5").Input, "a current model keeps Options → Pricing");
+                Eq(0.1, prices.For("haiku").Input, "and its alias");
+                True(prices.Haiku.LongContextMultiplier == 5 && prices.For(old).LongContextMultiplier == 1, "Haiku 5.5's long-context tier isn't learned onto another model");
+
+                True(TurnFooter.CostBreakdown(old, usage, 0, 0.006, prices).StartsWith("What this answer cost, at the prices Claude Code bills for claude-haiku-4-5-20251001:"), "the tooltip says whose prices");
+                True(TurnFooter.CostBreakdown("claude-haiku-5-5", usage, 0, 0, prices).StartsWith("What this answer cost, at Haiku prices:"), "a current model");
+
+                // A newer Claude Code moves the alias on: the model it resolves to now is current, the old one learned
+                var models = ModelCatalog.Parse(JObject.Parse("{\"models\":[{\"value\":\"haiku\",\"resolvedModel\":\"claude-haiku-6\"},{\"value\":\"sonnet\",\"resolvedModel\":\"claude-sonnet-5-5\"}]}"));
+                PriceTable.UseCatalog(models);
+                True(PriceTable.IsCurrent("claude-haiku-6") && !PriceTable.IsCurrent("claude-haiku-5-5"), "current models from the catalog");
+                prices.Learn(new Dictionary<string, ModelUsageEntry> { ["claude-haiku-5-5"] = Billed(0.0012) });
+                Eq(0.2, Math.Round(prices.For("claude-haiku-5-5").Input, 6), "no longer current: learned");
+            }
+            finally { PriceTable.ResetLearned(); }
+        }
+
         private static void Test_Fable_ManualChoiceOnly()
         {
             Eq("fable", ModelChoice.Fable.ToCli(), "CLI alias");

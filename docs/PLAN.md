@@ -1766,10 +1766,14 @@ already says when a turn ran fast.
       `ResolvedModelId` reads it now), `ModelCatalog.DisplayName` / `IsCurrent` / `SupportsEffort` (a model without
       levels in a list that has them takes no effort: Haiku 4.5), `SessionNotices.UnsupportedEffort`. Checked against
       the 2.1.328 capture: `Test_ModelCatalog_RealCli_2_1_328`. Builds clean; not yet run in VS
-- [ ] **Unknown model IDs priced.** A model set outside the picker (`settings.json`, a hook, an older ID such as
+- [x] **Unknown model IDs priced.** A model set outside the picker (`settings.json`, a hook, an older ID such as
       `claude-haiku-4-5-20251001`) got its family's current price: Haiku 4.5 at Haiku 5.5's price, a tenth of what it
       bills. A model that isn't one of the four current IDs is priced from Claude Code's own `costUSD` for it
-      (`model_usage_since_last_result`), and named by its display name
+      (`model_usage_since_last_result`), and named by its display name. `PriceTable.Learn` (the family's price scaled
+      to costUSD; not from a fast or long-context turn, nor under $0.0005), kept for the VS session; `UseCatalog`
+      takes the current IDs from the models list (the four 5.x IDs until it comes). The meter learns before it prices
+      the turn's subagents; the cost tooltip says "at the prices Claude Code bills for …". The test runner forgets
+      learned prices before each test. `Test_PriceTable_LearnsOlderModels`. Builds clean; not yet run in VS
 - [ ] **Haiku pin on resume and restart.** A resumed conversation, and a process restarted after a crash or a stop,
       ask for Haiku by its full ID in plan mode too. `--live raw.jsonl Plan` also ends the process after the first
       turn and checks that the next turn, after `--resume`, is answered by Haiku

@@ -158,8 +158,82 @@ namespace ClaudeVS.Core.Tokens
             return null;
         }
 
+        // ---- Models that aren't the four current ones ----
+        // Options → Pricing prices the models the picker's aliases resolve to. A model set another way (settings.json, a
+        // hook, an older ID) has its family's name but not its price: Haiku 4.5 bills 10× Haiku 5.5. Its price is
+        // learned from Claude Code's own costUSD for it, and kept for the rest of the VS session.
+
+        private static readonly object LearnGate = new object();
+        private static HashSet<string> _currentIds = new HashSet<string>(new[] { "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5", "claude-fable-5-2" }, StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, ModelPrice> Learned = new Dictionary<string, ModelPrice>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>The current models from Claude Code's models list (what the picker's aliases resolve to).</summary>
+        public static void UseCatalog(Cli.ModelCatalog models)
+        {
+            if (models == null) return;
+            var ids = Cli.ModelCatalog.PickerAliases.Select(a => models.ResolvedId(a)).Where(id => id != null).ToList();
+            if (ids.Count == 0) return;
+            lock (LearnGate) _currentIds = new HashSet<string>(ids, StringComparer.OrdinalIgnoreCase);
+        }
+
+        /// <summary>True for an alias or one of the current models' IDs: priced by Options → Pricing as is.</summary>
+        public static bool IsCurrent(string model)
+        {
+            string id = Cli.ModelCatalog.BareId(model);
+            if (id == null || !id.StartsWith("claude-", StringComparison.OrdinalIgnoreCase)) return true; // an alias ("haiku")
+            lock (LearnGate) return _currentIds.Contains(id);
+        }
+
+        /// <summary>Forgets learned prices and the current models (tests).</summary>
+        public static void ResetLearned()
+        {
+            lock (LearnGate)
+            {
+                Learned.Clear();
+                _currentIds = new HashSet<string>(new[] { "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5", "claude-fable-5-2" }, StringComparer.OrdinalIgnoreCase);
+            }
+        }
+
+        /// <summary>A learned price for a model that isn't current; null when none.</summary>
+        public static ModelPrice LearnedPrice(string model)
+        {
+            string id = Cli.ModelCatalog.BareId(model);
+            if (id == null) return null;
+            lock (LearnGate) return Learned.TryGetValue(id, out var p) ? p : null;
+        }
+
+        /// <summary>Below this much spent on a model, its costUSD is too coarse to learn a price from.</summary>
+        public const double LearnFromUsd = 0.0005;
+
+        /// <summary>
+        /// Learns the price of each model in <paramref name="billed"/> (a result's <c>model_usage_since_last_result</c>)
+        /// that isn't current: its family's price here, scaled to what Claude Code says it cost. Not from a turn that
+        /// ran partly fast (the per-model lines don't say which tokens) or one with requests over the long-context tier.
+        /// </summary>
+        public void Learn(IReadOnlyDictionary<string, Cli.ModelUsageEntry> billed, bool skip = false)
+        {
+            if (billed == null || skip) return;
+            foreach (var kv in billed)
+            {
+                if (IsCurrent(kv.Key) || kv.Value == null || kv.Value.CostUsd < LearnFromUsd) continue;
+                var family = For(Family(kv.Key)); // the family's own price, by alias
+                if (family == null) continue;
+                var plain = new ModelPrice { Input = family.Input, Output = family.Output, CacheWrite = family.CacheWrite, CacheRead = family.CacheRead };
+                double atFamily = plain.Cost(kv.Value.Usage);
+                if (atFamily <= 0) continue;
+                double x = kv.Value.CostUsd / atFamily;
+                var learned = new ModelPrice { Input = plain.Input * x, Output = plain.Output * x, CacheWrite = plain.CacheWrite * x, CacheRead = plain.CacheRead * x };
+                lock (LearnGate) Learned[Cli.ModelCatalog.BareId(kv.Key)] = learned;
+            }
+        }
+
+        /// <summary>
+        /// The price for a model ID or alias: a model that isn't current at the price learned for it (<see cref="Learn"/>),
+        /// else its family's price from Options → Pricing; null for an unknown family.
+        /// </summary>
         public ModelPrice For(string model)
         {
+            if (!IsCurrent(model) && LearnedPrice(model) is ModelPrice learned) return learned;
             switch (Family(model))
             {
                 case "opus": return Opus;

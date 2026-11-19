@@ -12,6 +12,12 @@ All notable changes to this project are listed here. The format follows
   no xhigh; Haiku 4.5 takes no effort at all), a tip says so once per conversation and names the levels it takes. From
   Claude Code's own models list.
 
+### Fixed
+
+- **A model set outside the picker** (in `settings.json`, by a hook, an older ID such as Haiku 4.5) was priced at its
+  family's current price: Haiku 4.5 at a tenth of what it bills. A model that isn't one of the four in Options →
+  Pricing is now priced from what Claude Code says it cost, from its first turn on; the cost tooltip says so.
+
 ### Changed
 
 - The line under an answer names the model as Claude Code does (`Haiku 5.5`, not `claude-haiku-5-5`); the ID is in

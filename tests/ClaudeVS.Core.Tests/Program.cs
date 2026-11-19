@@ -66,6 +66,7 @@ namespace ClaudeVS.Core.Tests
             int failed = 0;
             foreach (var t in tests)
             {
+                Tokens.PriceTable.ResetLearned(); // prices learned from costUSD are kept for the process
                 try { t.Invoke(null, null); Console.WriteLine("PASS " + t.Name); }
                 catch (TargetInvocationException ex) { failed++; Console.WriteLine("FAIL " + t.Name + ": " + ex.InnerException?.Message); }
             }
