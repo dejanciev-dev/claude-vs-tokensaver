@@ -6,6 +6,17 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **An effort the model doesn't take:** when the model that answered doesn't list the effort you picked (Opus 4.6 has
+  no xhigh; Haiku 4.5 takes no effort at all), a tip says so once per conversation and names the levels it takes. From
+  Claude Code's own models list.
+
+### Changed
+
+- The line under an answer names the model as Claude Code does (`Haiku 5.5`, not `claude-haiku-5-5`); the ID is in
+  its tooltip.
+
 ## [0.12.0] - 2026-11-18
 
 Still a **preview**, for Claude Code 2.1.318 or newer (tested with 2.1.328). This release shows where tokens go when
