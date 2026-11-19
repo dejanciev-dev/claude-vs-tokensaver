@@ -321,7 +321,17 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Do it again in the same conversation | The row counts again; no second tip |
 | **New chat**, a small file read twice the same way | The row says `re-read ~…`; no tip under 5k |
 
-## 27. Release (Phase 5)
+## 27. Models in Plan mode, and as Claude Code names them (Phases 67 and 68)
+
+| Do | Expect |
+|---|---|
+| Model **Haiku**, mode **Plan**, ask *What does this solution do, in one sentence?* | The footer says `Haiku 5.5` (tooltip: `Model: claude-haiku-5-5`); no warning that another model answered |
+| Model **Auto**, mode **Plan**, the same short question | The routing hint picks Haiku, and the footer says `Haiku 5.5` |
+| Close the chat, reopen that conversation from its history, still Plan on Haiku, ask again | Still `Haiku 5.5` |
+| Close VS, set `ANTHROPIC_DEFAULT_HAIKU_MODEL=claude-haiku-4-5-20251001`, start it again; Haiku, effort **High**, a short question | The footer says `Haiku 4.5`; its cost tooltip starts *at the prices Claude Code bills for claude-haiku-4-5-20251001*, and the total matches Claude Code's; one token tip: *Haiku 4.5 answered, and it takes no effort setting* |
+| The same, a second question | No second tip. Afterwards, clear the variable |
+
+## 28. Release (Phase 5)
 
 These need you rather than a check list:
 
