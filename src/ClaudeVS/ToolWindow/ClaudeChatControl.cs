@@ -1493,6 +1493,8 @@ namespace ClaudeVS.ToolWindow
             ThreadHelper.ThrowIfNotOnUIThread();
             var m = _meterModel;
             if (m == null || string.IsNullOrWhiteSpace(_prompt.Text) || m.Cache.ContextTokens < PromptSize.ShowFrom) return null;
+            // The model the alias resolves to (ANTHROPIC_DEFAULT_HAIKU_MODEL can point "haiku" at Haiku 4.5): its price and cache
+            if (sendModel != null) sendModel = _session?.Models?.ResolvedId(sendModel) ?? sendModel;
             return NextPromptPrice.Estimate(m.Cache, m.LastModel, sendModel, PromptSize.Estimate(_prompt.Text), Options?.ToPriceTable(), DateTime.UtcNow).Note();
         }
 

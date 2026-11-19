@@ -19,6 +19,9 @@ All notable changes to this project are listed here. The format follows
   Pricing is now priced from what Claude Code says it cost, from its first turn on; the cost tooltip says so. The
   price goes into the usage log with the turn (`prices`), so the savings report prices it right in later VS sessions
   too.
+- The price shown while you type ("~$0.02 to send") priced the alias's family, so with `ANTHROPIC_DEFAULT_HAIKU_MODEL`
+  set it showed Haiku 5.5's price and a warm cache for Haiku 4.5. It prices the model the alias resolves to now, and
+  two models of one family no longer count as sharing a cache.
 
 ### Changed
 

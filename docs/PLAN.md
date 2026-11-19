@@ -1828,8 +1828,12 @@ summary), and checks an older model's learned price against Claude Code's bill.
       ("Opus 4.6 takes no xhigh: Claude Code uses high"), by the rule Phase 69's probe confirmed. The model is the
       choice's resolved ID, or on Auto the last answer's (`ModelPickerText.NextModel`); the level stays selectable,
       only a settings cap disables one. `ModelPickerText.EffortNote`. Builds clean; not yet run in VS
-- [ ] **Auto's estimates use real IDs.** With `ANTHROPIC_DEFAULT_HAIKU_MODEL` (or another) pointing an alias at
-      another model, the price hint while typing prices the model the alias resolves to, not the alias's family
+- [x] **Auto's estimates use real IDs.** With `ANTHROPIC_DEFAULT_HAIKU_MODEL` (or another) pointing an alias at
+      another model, the price hint while typing prices the model the alias resolves to, not the alias's family. The
+      hint (Auto's and a hand-picked model's) resolves the alias through the models list first. Found on the way:
+      `NextPromptPrice` called the cache warm for any model of the same family; two full IDs must match now (Haiku 4.5
+      doesn't read Haiku 5.5's cache), an alias still matches by family. Tests in `Test_NextPromptPrice`. Builds
+      clean; not yet run in VS
 - [ ] **Session summary per model.** Copy session summary lists what each model cost (main agent and agents, Claude
       Code's costUSD), named as Claude Code names them
 - [ ] **Live price check, older model.** `--live-prices` adds Haiku 4.5: its learned price, from the first turn, gives
