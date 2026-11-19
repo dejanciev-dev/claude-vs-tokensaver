@@ -11,7 +11,8 @@ namespace ClaudeVS.Core.Tokens
     /// </summary>
     public static class SessionSummary
     {
-        public static string Format(TokenMeter m, string title = null, string sessionId = null, ConversationReads reads = null)
+        /// <param name="models">Claude Code's models list, to name each model in the cost by model ("Haiku 5.5"); IDs without it.</param>
+        public static string Format(TokenMeter m, string title = null, string sessionId = null, ConversationReads reads = null, ModelCatalog models = null)
         {
             if (m == null) return "";
             var s = m.SessionTotal;
@@ -19,6 +20,10 @@ namespace ClaudeVS.Core.Tokens
             var sb = new StringBuilder();
             sb.Append("Claude Code session").Append(string.IsNullOrWhiteSpace(title) ? "" : ": " + title.Trim()).Append('\n');
             sb.Append($"Turns: {m.Turns} · Cost: ${m.SessionCostUsd.ToString("0.00", c)} (API prices)\n");
+            // What each model cost (main agent and agents), as Claude Code billed it; most first. One model: the cost says it
+            var byModel = m.SessionCostByModel.Where(kv => kv.Value > 0).OrderByDescending(kv => kv.Value).ToList();
+            if (byModel.Count > 1)
+                sb.Append("By model: ").Append(string.Join(" · ", byModel.Select(kv => $"{models?.DisplayName(kv.Key) ?? kv.Key} {AgentTask.FormatCost(kv.Value)}"))).Append('\n');
             sb.Append($"Tokens: {TokenMeter.Format(s.Total)} (input {TokenMeter.Format(s.Input)}, output {TokenMeter.Format(s.Output)}");
             if (s.Thinking > 0) sb.Append($" of which thinking {TokenMeter.Format(s.Thinking)}");
             sb.Append($", cache read {TokenMeter.Format(s.CacheRead)}, cache write {TokenMeter.Format(s.CacheCreation)})\n");

@@ -1834,8 +1834,10 @@ summary), and checks an older model's learned price against Claude Code's bill.
       `NextPromptPrice` called the cache warm for any model of the same family; two full IDs must match now (Haiku 4.5
       doesn't read Haiku 5.5's cache), an alias still matches by family. Tests in `Test_NextPromptPrice`. Builds
       clean; not yet run in VS
-- [ ] **Session summary per model.** Copy session summary lists what each model cost (main agent and agents, Claude
-      Code's costUSD), named as Claude Code names them
+- [x] **Session summary per model.** Copy session summary lists what each model cost (main agent and agents, Claude
+      Code's costUSD), named as Claude Code names them. `TokenMeter.SessionCostByModel` (reset with the conversation),
+      a `By model:` line under the cost, only when more than one model was billed (one model: the cost line says it
+      already). `SessionSummary.Format(…, models)`; `Test_SessionSummary`. Builds clean; not yet run in VS
 - [ ] **Live price check, older model.** `--live-prices` adds Haiku 4.5: its learned price, from the first turn, gives
       Claude Code's cost for the second
 
