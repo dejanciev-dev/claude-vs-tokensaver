@@ -2507,7 +2507,7 @@ namespace ClaudeVS.ToolWindow
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             if (_meterModel == null || _meterModel.Turns == 0) { Append("No turns in this conversation yet."); return; }
-            string text = SessionSummary.Format(_meterModel, _fullTitle ?? _sessionName, _session?.SessionId ?? _resumeId, _conversationReads);
+            string text = SessionSummary.Format(_meterModel, _fullTitle ?? _sessionName, _session?.SessionId ?? _resumeId, _conversationReads, _session?.Models);
             try { Clipboard.SetText(text); Append("Copied the session summary."); }
             catch (Exception) { Append("The clipboard is busy; try again."); }
         }

@@ -859,6 +859,25 @@ namespace ClaudeVS.Core.Tests
             True(lines[2].StartsWith("Tokens: ") && lines[2].Contains("of which thinking 56") && lines[2].Contains("cache read 14.3k"), lines[2]);
             True(lines[3].StartsWith("Cache hits: 60%"), lines[3]);
             Eq("Session: abc-123", lines.Last());
+            Eq(0.002, Math.Round(meter.SessionCostByModel["claude-haiku-5-5"], 3), "billed per model");
+            True(!s.Contains("By model:"), "one model: no line");
+
+            // A second model (an agent on Haiku 4.5): cost by model, named as Claude Code names them, most first
+            var models = ModelCatalog.Parse(JObject.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.328-initialize-models.json"))));
+            meter.Observe(new ClaudeEvent
+            {
+                Kind = ClaudeEventKind.TurnCompleted, Usage = new TokenUsage { Input = 10 },
+                ModelUsageSinceLastResult = new Dictionary<string, ModelUsageEntry>
+                {
+                    ["claude-haiku-5-5"] = new ModelUsageEntry { CostUsd = 0.01 },
+                    ["claude-haiku-4-5-20251001"] = new ModelUsageEntry { CostUsd = 0.05 },
+                },
+            });
+            string two = SessionSummary.Format(meter, "t", null, null, models);
+            True(two.Split('\n')[2].StartsWith("By model: Haiku 4.5 $0.050 · Haiku 5.5 $0.01"), two);
+            True(SessionSummary.Format(meter).Contains("By model: claude-haiku-4-5-20251001 "), "without the list: IDs");
+            meter.Reset();
+            Eq(0, meter.SessionCostByModel.Count, "reset");
         }
 
         private static void Test_ResultTokensByTool()

@@ -11,6 +11,8 @@ All notable changes to this project are listed here. The format follows
 - **An effort the model doesn't take:** when the model that answered doesn't list the effort you picked (Opus 4.6 has
   no xhigh; Haiku 4.5 takes no effort at all), a tip says so once per conversation: Claude Code quietly uses the next
   level down (Opus 4.6: high), or none. From Claude Code's own models list.
+- **Copy session summary** says what each model cost when the conversation used more than one (`By model: Sonnet 5.5
+  $0.40 · Haiku 4.5 $0.05`): main agent and agents, as Claude Code billed them.
 
 ### Fixed
 

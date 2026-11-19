@@ -94,6 +94,11 @@ namespace ClaudeVS.Core.Tokens
         public List<AgentTypeCost> LastTurnAgentTypes { get; private set; }
         /// <summary>The conversation's subagent cost by kind of agent (sums of <see cref="LastTurnAgentTypes"/>).</summary>
         public Dictionary<string, double> SessionAgentCostByType { get; } = new Dictionary<string, double>(StringComparer.Ordinal);
+        /// <summary>
+        /// What each model cost this conversation, main agent and agents, as Claude Code billed it
+        /// (<c>model_usage_since_last_result</c>'s costUSD), by model ID; for Copy session summary.
+        /// </summary>
+        public Dictionary<string, double> SessionCostByModel { get; } = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
         private readonly AgentTypeSplit _agentTypes = new AgentTypeSplit();
         public long ContextTokens { get; private set; }
         public long ContextWindow { get; private set; }
@@ -241,7 +246,7 @@ namespace ClaudeVS.Core.Tokens
             Cache.Reset();
             _breaks.Reset(); _pendingBreak = null;
             Learner.Reset();
-            _subagents.Reset(); _agentTypes.Reset(); LastTurnAgentTypes = null; SessionAgentCostByType.Clear(); LastTurnSubagents = new Dictionary<string, TokenUsage>(); LastTurnSubagentCostUsd = 0; SessionSubagentTokens = 0;
+            _subagents.Reset(); _agentTypes.Reset(); LastTurnAgentTypes = null; SessionAgentCostByType.Clear(); SessionCostByModel.Clear(); LastTurnSubagents = new Dictionary<string, TokenUsage>(); LastTurnSubagentCostUsd = 0; SessionSubagentTokens = 0;
             LastTurnSide = default; LastTurnSideCostUsd = 0; LastTurnSideIsCompact = false; SessionSuggestionsUsd = 0; SessionSuggestionTurns = 0; SessionCompactUsd = 0; _turnCompacted = false;
             LastTurnOutputRetries = 0; LastTurnOutputRetryCostUsd = 0; SessionOutputRetries = 0; SessionOutputRetryCostUsd = 0; _turnRetries = 0; _retryWaiting.Clear(); _retryMessageOf.Clear(); _retryAnswers.Clear();
             _turnLargeByMessage.Clear();
@@ -359,6 +364,12 @@ namespace ClaudeVS.Core.Tokens
                     // otherwise count as this turn's) and the last suggestion an earlier process made but never billed.
                     LastTurnCostBilled = ev.ModelUsageSinceLastResult != null && ev.ModelUsageSinceLastResult.Count > 0;
                     if (LastTurnCostBilled) LastTurnCostUsd = ev.ModelUsageSinceLastResult.Values.Sum(m => m.CostUsd);
+                    if (LastTurnCostBilled)
+                        foreach (var kv in ev.ModelUsageSinceLastResult)
+                        {
+                            string id = Cli.ModelCatalog.BareId(kv.Key) ?? kv.Key;
+                            SessionCostByModel[id] = (SessionCostByModel.TryGetValue(id, out var was) ? was : 0) + kv.Value.CostUsd;
+                        }
                     break;
                 default:
                     return;
