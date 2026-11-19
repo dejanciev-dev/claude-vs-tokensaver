@@ -79,5 +79,9 @@ namespace ClaudeVS.Core.Tests
             if (!EqualityComparer<T>.Default.Equals(expected, actual)) throw new Exception($"{what}: expected <{expected}> got <{actual}>");
         }
         private static void True(bool c, string what) { if (!c) throw new Exception(what); }
+
+        /// <summary>The models list from Claude Code 2.1.328's initialize answer (Fixtures/cli-2.1.328-initialize-models.json).</summary>
+        private static JObject Initialize_2_1_328() => JObject.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.328-initialize-models.json")));
+        private static ModelCatalog Models_2_1_328() => ModelCatalog.Parse(Initialize_2_1_328());
     }
 }

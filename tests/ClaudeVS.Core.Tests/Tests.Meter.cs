@@ -863,7 +863,7 @@ namespace ClaudeVS.Core.Tests
             True(!s.Contains("By model:"), "one model: no line");
 
             // A second model (an agent on Haiku 4.5): cost by model, named as Claude Code names them, most first
-            var models = ModelCatalog.Parse(JObject.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.328-initialize-models.json"))));
+            var models = Models_2_1_328();
             meter.Observe(new ClaudeEvent
             {
                 Kind = ClaudeEventKind.TurnCompleted, Usage = new TokenUsage { Input = 10 },

@@ -165,7 +165,7 @@ namespace ClaudeVS.Core.Tests
             var forkPriced = priced.Find("a3930c38f13bbef71");
             Eq("claude-haiku-5-5", forkPriced.Model, "the model its requests ran on"); Eq("haiku", forkPriced.ModelShort);
             Eq($"Done · haiku · 24.6k tok · {AgentTask.FormatCost(forkPriced.CostUsd)}", ToolCallView.AgentUsageLine(forkPriced), "under the Agent row");
-            var catalog = ModelCatalog.Parse(JObject.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.328-initialize-models.json"))));
+            var catalog = Models_2_1_328();
             Eq($"Done · Haiku 5.5 · 24.6k tok · {AgentTask.FormatCost(forkPriced.CostUsd)}", ToolCallView.AgentUsageLine(forkPriced, catalog), "named as Claude Code names it");
             Eq("Haiku 4.5", new AgentTask { Model = "claude-haiku-4-5-20251001" }.ModelName(catalog), "an older model stands out");
             Eq("haiku", new AgentTask { Model = "claude-haiku-9" }.ModelName(catalog), "not listed: the family");
@@ -498,7 +498,7 @@ namespace ClaudeVS.Core.Tests
         /// </summary>
         private static void Test_ResolvedModelId_RealCli_2_1_328()
         {
-            var init = JObject.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.328-initialize-models.json")));
+            var init = Initialize_2_1_328();
             Eq("claude-haiku-5-5", ClaudeSession.ResolvedModelId(init, "haiku"));
             Eq("claude-sonnet-5-5", ClaudeSession.ResolvedModelId(init, "sonnet"));
             Eq("claude-haiku-5-5", ClaudeSession.ResolvedModelId(init, "HAIKU"), "any case");
@@ -511,7 +511,7 @@ namespace ClaudeVS.Core.Tests
         /// <summary>The model picker: Claude Code's names and the prices from Options → Pricing.</summary>
         private static void Test_ModelPickerText()
         {
-            var models = ModelCatalog.Parse(JObject.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.328-initialize-models.json"))));
+            var models = Models_2_1_328();
             var prices = new Tokens.PriceTable();
             Eq("Haiku 5.5", ModelPickerText.Label(ModelChoice.Haiku, models));
             Eq("Fable 5.2", ModelPickerText.Label(ModelChoice.Fable, models));
@@ -545,7 +545,7 @@ namespace ClaudeVS.Core.Tests
         /// <summary>The same capture as a <see cref="ModelCatalog"/>: names, current models and effort levels.</summary>
         private static void Test_ModelCatalog_RealCli_2_1_328()
         {
-            var models = ModelCatalog.Parse(JObject.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.328-initialize-models.json"))));
+            var models = Models_2_1_328();
             True(models != null && models.Models.Count == 14, "14 models listed");
             Eq("Haiku 5.5", models.DisplayName("claude-haiku-5-5"));
             Eq("Opus 5.5", models.DisplayName("claude-opus-5-5"), "Opus's own entry, not \"Default (recommended)\"");
