@@ -1818,6 +1818,21 @@ report.
       (`PriceTable.Remember`, oldest first; a price learned in this VS session wins). The CSV needed nothing: its costs
       are the ones Claude Code billed. `Test_SavingsReport_LoggedPricesForOlderModels`. Builds clean; not yet run in VS
 
+## Phase 70 — The model you really get, before and after the turn
+
+Planned on 2026-11-19, after Phase 69, on the same branch. Phases 68–69 name and price the model that answered. This
+phase uses the same facts before a turn (the effort picker, Auto's price hint) and after a conversation (Copy session
+summary), and checks an older model's learned price against Claude Code's bill.
+
+- [ ] **Effort picker knows the model.** A level the current model doesn't take is marked in the effort picker
+      ("Opus 4.6 takes no xhigh: Claude Code uses high"), by the rule Phase 69's probe confirmed
+- [ ] **Auto's estimates use real IDs.** With `ANTHROPIC_DEFAULT_HAIKU_MODEL` (or another) pointing an alias at
+      another model, the price hint while typing prices the model the alias resolves to, not the alias's family
+- [ ] **Session summary per model.** Copy session summary lists what each model cost (main agent and agents, Claude
+      Code's costUSD), named as Claude Code names them
+- [ ] **Live price check, older model.** `--live-prices` adds Haiku 4.5: its learned price, from the first turn, gives
+      Claude Code's cost for the second
+
 ---
 
 ## Working in Visual Studio — daily loop
