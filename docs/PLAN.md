@@ -1702,6 +1702,30 @@ record, so a background agent's reads are logged.)
       `attached_files`, and all later ones must be empty or 0. Checked by adding a column that writes nothing on a
       plain turn: no test to change
 
+## Phase 66 — Keep up with the CLI (from the Claude Code CHANGELOG 2.1.328)
+
+Checked on 2026-11-19 with 2.1.328 installed. The 2.1.328 section read for what the extension sends or reads (from
+the public CHANGELOG); Code Mode, self-hosted runner, terminal, `/plugin`, cloud, Remote Control and gateway entries
+are left out.
+
+- [ ] **Verify with 2.1.328 and raise `CliVersion.Tested`.** The live tests and `--live-reads` with 2.1.328; README,
+      Marketplace overview, CONTRIBUTING and the plan-mode notes
+
+Checked, nothing to change:
+- Glob and Grep "counting an error as results" (a VS Code panel fix): probed with a folder that doesn't exist, both
+  results come with `is_error: true` ("Path does not exist", "Directory does not exist"), and the tool row shows an
+  error, not "Found …"
+- Token counts "for subagents counting a retried reply twice": the agent rows show Claude Code's own counts, so they
+  are right from 2.1.328 on with nothing to change here
+- `CLAUDE_CODE_DISABLE_DEFERRED_TOOL_RESUME` (stops `--resume` from running a tool call that a hook deferred): the
+  extension's hooks never defer
+- Subagents in `claude -p` waiting for their own subagents, and counting background ones, with
+  `CLAUDE_CODE_FORK_SUBAGENT=0`: the extension doesn't set it
+- Managed `PostToolUse` hooks no longer firing for refused calls; `"onFailure": "block"` for `mcp_tool` hooks: not
+  used by the extension's setup
+- The usage-credits error that named a rate limit: the failed-turn hint checks the error kind (`billing_error`) and
+  credit wording before rate limits, so the corrected text only makes it surer
+
 ---
 
 ## Working in Visual Studio — daily loop
