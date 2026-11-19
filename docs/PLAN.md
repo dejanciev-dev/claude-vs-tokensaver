@@ -1789,6 +1789,22 @@ already says when a turn ran fast.
       *Models in Plan mode, and as Claude Code names them*: Haiku 4.5 through `ANTHROPIC_DEFAULT_HAIKU_MODEL` checks
       the name, the learned price and the effort tip at once; Release is now 28
 
+## Phase 69 — Older models, seen and priced everywhere
+
+Planned on 2026-11-19, after Phase 68, on the same branch. Phase 68 names and prices a model that isn't one of the
+four current ones in the footer, and only while VS runs. This phase checks what Claude Code really does with an effort
+such a model doesn't take, and carries the names and prices to the Agents panel, the model picker and the savings
+report.
+
+- [ ] **Probe effort on Haiku 4.5.** A short live probe: Haiku 4.5 sent effort High. Does Claude Code accept it,
+      drop it, or fail the turn? The effort tip says what really happens
+- [ ] **Agent rows name the model.** The Agents panel and the agent's row say `Haiku 4.5`, not `haiku`, from
+      Claude Code's models list, so an agent on an older or dearer model stands out
+- [ ] **Picker shows names and prices.** The model picker shows Claude Code's name for each choice (`Haiku 5.5`)
+      and its price per million tokens from Options → Pricing
+- [ ] **Report prices older models.** The usage log keeps what Claude Code billed per model, so the savings report and
+      the CSV price an older model right in later VS sessions too
+
 ---
 
 ## Working in Visual Studio — daily loop
