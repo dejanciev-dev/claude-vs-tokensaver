@@ -1803,8 +1803,9 @@ report.
       Haiku 4.5 sent high → effort `null`, Opus 4.6 sent xhigh → `high`, Haiku 5.5 sent high → `high`. So the next level
       down that the model takes, or none. `ModelCatalog.EffortApplied` predicts it; the tip names it ("Claude Code uses
       high instead", "drops the high effort you picked"). Capture: `Fixtures/cli-2.1.328-effort-applied.json`
-- [ ] **Agent rows name the model.** The Agents panel and the agent's row say `Haiku 4.5`, not `haiku`, from
-      Claude Code's models list, so an agent on an older or dearer model stands out
+- [x] **Agent rows name the model.** The Agents panel and the agent's row say `Haiku 4.5`, not `haiku`, from
+      Claude Code's models list, so an agent on an older or dearer model stands out. `AgentTask.ModelName` (the family
+      when the model isn't listed), `ToolCallView.AgentUsageLine(t, models)`. Builds clean; not yet run in VS
 - [ ] **Picker shows names and prices.** The model picker shows Claude Code's name for each choice (`Haiku 5.5`)
       and its price per million tokens from Options → Pricing
 - [ ] **Report prices older models.** The usage log keeps what Claude Code billed per model, so the savings report and

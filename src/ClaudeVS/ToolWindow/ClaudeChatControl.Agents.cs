@@ -46,7 +46,7 @@ namespace ClaudeVS.ToolWindow
             {
                 var t = _tasks.Find((string)ev.Payload["task_id"]);
                 if (t != null && t.IsBackgrounded && t.ParentTaskId == null) _lastBackgroundDone = t.Description;
-                _view.ShowAgentUsage(t?.ToolUseId, Core.Cli.ToolCallView.AgentUsageLine(t)); // stays when the panel is cleared
+                _view.ShowAgentUsage(t?.ToolUseId, Core.Cli.ToolCallView.AgentUsageLine(t, _session?.Models)); // stays when the panel is cleared
                 Tip(SessionNotices.ForkCost(t));
             }
             RefreshAgentsPanel();
@@ -242,8 +242,8 @@ namespace ClaudeVS.ToolWindow
             name.Inlines.Add(new System.Windows.Documents.Run(described ?? (t.IsAgent ? "Agent" : "Command")) { FontWeight = FontWeights.SemiBold });
             // Commands are most of the list: only agents (and background runs) say what kind they are.
             string kind = t.IsAgent ? Core.Cli.ToolCallView.AgentKind(t.SubagentType) : "command";
-            // "Explore · haiku": the model decides most of what an agent costs
-            string tag = t.IsAgent ? kind + (t.ModelShort != null ? " · " + t.ModelShort : "") + (t.IsBackgrounded ? " · background" : "") : t.IsBackgrounded ? "background" : null;
+            // "Explore · Haiku 5.5": the model decides most of what an agent costs
+            string tag = t.IsAgent ? kind + (t.ModelName(_session?.Models) is string model ? " · " + model : "") + (t.IsBackgrounded ? " · background" : "") : t.IsBackgrounded ? "background" : null;
             if (tag != null) name.Inlines.Add(new System.Windows.Documents.Run("  " + tag) { Foreground = Brushes.Gray });
             ChatTheme.Text(name);
             row.Children.Add(name);

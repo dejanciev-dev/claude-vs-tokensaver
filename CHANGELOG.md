@@ -22,6 +22,8 @@ All notable changes to this project are listed here. The format follows
 
 - The line under an answer names the model as Claude Code does (`Haiku 5.5`, not `claude-haiku-5-5`); the ID is in
   its tooltip.
+- Agents say which model they ran on the same way (`Explore · Haiku 4.5`, not `haiku`): in the Agents panel and on
+  the line under a finished Agent row, so an agent on an older or dearer model stands out.
 
 ## [0.12.0] - 2026-11-18
 

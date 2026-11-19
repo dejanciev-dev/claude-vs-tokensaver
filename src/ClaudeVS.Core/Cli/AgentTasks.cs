@@ -46,6 +46,11 @@ namespace ClaudeVS.Core.Cli
         public string Model { get; set; }
         /// <summary>"haiku", "sonnet", "opus", "fable", or the model id when it is none of those; null when not known.</summary>
         public string ModelShort => Model == null ? null : Tokens.PriceTable.Family(Model) ?? Model;
+        /// <summary>
+        /// The model as Claude Code names it ("Haiku 4.5") when <paramref name="models"/> lists it, else <see cref="ModelShort"/>:
+        /// an agent on an older or dearer model than you expect shows which.
+        /// </summary>
+        public string ModelName(ModelCatalog models) => Model == null ? null : models?.DisplayName(Model) ?? ModelShort;
 
         /// <summary>"$0.042", "$1.23" or "&lt;$0.001"; null when nothing was priced.</summary>
         public static string FormatCost(double usd)
