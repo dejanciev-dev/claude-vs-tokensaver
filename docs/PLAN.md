@@ -1751,6 +1751,28 @@ extension.
       "Plan mode: Sonnet answers, not Haiku" and its Sonnet price, the README's known limitation and the Options
       note; 0.12.0 gets a highlight and a *Fixed* entry. Builds clean; not yet run in VS
 
+## Phase 68 — Models as Claude Code names and prices them
+
+Planned on 2026-11-19, after Phase 67. Claude Code's `initialize` answer lists every model it offers: alias, full ID,
+display name and the effort levels it supports. Phase 67 read only Haiku's ID from it. This phase uses the rest, prices
+a model that isn't one of the four current ones, checks that plan mode keeps Haiku after a resume or a restart, and
+writes down the VS checks for Phases 67 and 68. Fast mode stays out: the chat has no fast-mode switch, and the footer
+already says when a turn ran fast.
+
+- [ ] **Model facts from Claude Code.** `ModelCatalog` reads the `initialize` models list (alias, `resolvedModel`,
+      `displayName`, `supportedEffortLevels`). The footer names the model that answered as Claude Code does
+      (`Haiku 5.5`, not `claude-haiku-5-5`; the ID stays in the tooltip). When that model doesn't list the effort the
+      turn was sent with, a tip says so once per conversation
+- [ ] **Unknown model IDs priced.** A model set outside the picker (`settings.json`, a hook, an older ID such as
+      `claude-haiku-4-5-20251001`) got its family's current price: Haiku 4.5 at Haiku 5.5's price, a tenth of what it
+      bills. A model that isn't one of the four current IDs is priced from Claude Code's own `costUSD` for it
+      (`model_usage_since_last_result`), and named by its display name
+- [ ] **Haiku pin on resume and restart.** A resumed conversation, and a process restarted after a crash or a stop,
+      ask for Haiku by its full ID in plan mode too. `--live raw.jsonl Plan` also ends the process after the first
+      turn and checks that the next turn, after `--resume`, is answered by Haiku
+- [ ] **Manual checks for Phases 67 and 68.** A section in [MANUAL-CHECKS.md](MANUAL-CHECKS.md): Haiku and Auto in
+      plan mode, the footer's model name, the effort tip, a resumed conversation; Release moves down one
+
 ---
 
 ## Working in Visual Studio — daily loop
