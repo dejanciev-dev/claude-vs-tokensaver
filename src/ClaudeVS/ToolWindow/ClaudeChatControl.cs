@@ -2177,6 +2177,7 @@ namespace ClaudeVS.ToolWindow
             rec.FastTokens = ev.Usage.FastTokens;
             rec.LargeContextTokens = _meterModel?.LastTurn.LargeContextTokens ?? 0; // per request: the meter counted it
             rec.Agents = AgentTokens.From(_meterModel?.LastTurnSubagents); // not in the counts above, which are the main agent's
+            rec.Prices = PriceTable.LearnedPrices(new[] { modelUsed }.Concat(rec.Agents?.Select(a => a.Model) ?? Enumerable.Empty<string>())); // older models, for later reports
             rec.AgentTypes = _meterModel?.LastTurnAgentTypes;
             rec.ToolResultTokens = _meterModel?.LastTurnResultTokensByTool;
             rec.CostUsd = _meterModel?.LastTurnCostUsd ?? 0;

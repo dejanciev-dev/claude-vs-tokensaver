@@ -121,6 +121,11 @@ namespace ClaudeVS.Core.Tokens
         [JsonProperty("repeatRead", DefaultValueHandling = DefaultValueHandling.Ignore)] public long RepeatReadTokens { get; set; }
         /// <summary>Tokens subagents spent reading files the main agent already had in this conversation (<see cref="TurnFileActivity.SubagentRereadTokens"/>); 0 when none.</summary>
         [JsonProperty("agentReread", DefaultValueHandling = DefaultValueHandling.Ignore)] public long SubagentRereadTokens { get; set; }
+        /// <summary>
+        /// Prices of the turn's models that Options → Pricing doesn't price, as learned from Claude Code's costUSD
+        /// (<see cref="PriceTable.LearnedPrices"/>): model ID → "input, output, cacheWrite, cacheRead". Null when none.
+        /// </summary>
+        [JsonProperty("prices", NullValueHandling = NullValueHandling.Ignore)] public Dictionary<string, string> Prices { get; set; }
         /// <summary>References not measured yet when the prompt went out; their sizes are added when the turn is logged. Not logged.</summary>
         [JsonIgnore] public List<string> RefPending { get; set; }
         /// <summary>The attached references' full paths, to match reads against; not logged.</summary>

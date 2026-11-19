@@ -99,6 +99,41 @@ namespace ClaudeVS.Core.Tests
             finally { PriceTable.ResetLearned(); }
         }
 
+        /// <summary>
+        /// A learned price is logged with the turn (<c>prices</c>), so a report in a later VS session prices an agent on
+        /// Haiku 4.5 as it was billed, not at Haiku 5.5's price.
+        /// </summary>
+        private static void Test_SavingsReport_LoggedPricesForOlderModels()
+        {
+            const string old = "claude-haiku-4-5-20251001";
+            var prices = new PriceTable();
+            prices.Learn(new Dictionary<string, ModelUsageEntry> { [old] = new ModelUsageEntry { Usage = new TokenUsage { Input = 1000, Output = 1000 }, CostUsd = 0.006 } });
+            var logged = PriceTable.LearnedPrices(new[] { "claude-sonnet-5-5", old, null });
+            Eq(1, logged.Count, "only the model Options doesn't price");
+            Eq("1, 5, 1.25, 0.1", logged[old]);
+            Eq(null, PriceTable.LearnedPrices(new[] { "claude-sonnet-5-5" }), "none: nothing logged");
+
+            var rec = new UsageRecord
+            {
+                Timestamp = new DateTime(2026, 11, 19, 10, 0, 0, DateTimeKind.Utc), Solution = "S", ModelUsed = "claude-sonnet-5-5",
+                InputTokens = 10, OutputTokens = 10, CostUsd = 0.01,
+                Agents = new List<AgentTokens> { new AgentTokens { Model = old, InputTokens = 1_000_000 } },
+                Prices = logged,
+            };
+            var line = Newtonsoft.Json.JsonConvert.SerializeObject(rec);
+            True(line.Contains("\"prices\":{\"claude-haiku-4-5-20251001\":\"1, 5, 1.25, 0.1\"}"), "in the log: " + line);
+
+            PriceTable.ResetLearned(); // a later VS session
+            Eq(0.1, prices.For(old).Input, "not learned in this one");
+            var back = Newtonsoft.Json.JsonConvert.DeserializeObject<UsageRecord>(line);
+            var rep = SavingsReport.Build(new[] { back }, prices, nowUtc: rec.Timestamp.AddHours(1));
+            Eq(1.0, Math.Round(rep.AgentCostUsd, 6), "1M input tokens at Haiku 4.5's $1, from the log");
+
+            prices.Learn(new Dictionary<string, ModelUsageEntry> { [old] = new ModelUsageEntry { Usage = new TokenUsage { Input = 1000, Output = 1000 }, CostUsd = 0.012 } });
+            PriceTable.Remember(new[] { back });
+            Eq(2.0, Math.Round(prices.For(old).Input, 6), "a price learned in this VS session wins over the log");
+        }
+
         private static void Test_Fable_ManualChoiceOnly()
         {
             Eq("fable", ModelChoice.Fable.ToCli(), "CLI alias");

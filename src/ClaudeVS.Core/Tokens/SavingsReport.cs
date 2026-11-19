@@ -213,9 +213,41 @@ namespace ClaudeVS.Core.Tokens
                 double atFamily = plain.Cost(kv.Value.Usage);
                 if (atFamily <= 0) continue;
                 double x = kv.Value.CostUsd / atFamily;
-                var learned = new ModelPrice { Input = plain.Input * x, Output = plain.Output * x, CacheWrite = plain.CacheWrite * x, CacheRead = plain.CacheRead * x };
+                double R(double v) => Math.Round(v * x, 6); // "1, 5, 1.25, 0.1" in the log, not 0.9999999999
+                var learned = new ModelPrice { Input = R(plain.Input), Output = R(plain.Output), CacheWrite = R(plain.CacheWrite), CacheRead = R(plain.CacheRead) };
                 lock (LearnGate) Learned[Cli.ModelCatalog.BareId(kv.Key)] = learned;
             }
+        }
+
+        /// <summary>
+        /// For a logged turn (<see cref="UsageRecord.Prices"/>): the learned prices of <paramref name="models"/> that aren't
+        /// current, as "input, output, cacheWrite, cacheRead"; null when none.
+        /// </summary>
+        public static Dictionary<string, string> LearnedPrices(IEnumerable<string> models)
+        {
+            Dictionary<string, string> d = null;
+            foreach (var m in models ?? Enumerable.Empty<string>())
+            {
+                if (IsCurrent(m) || !(LearnedPrice(m) is ModelPrice p)) continue;
+                (d = d ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase))[Cli.ModelCatalog.BareId(m)] = p.ToString();
+            }
+            return d;
+        }
+
+        /// <summary>
+        /// Takes the prices logged with past turns (<see cref="UsageRecord.Prices"/>), oldest first, so a report in a later
+        /// VS session prices an older model as it was billed. A price learned in this VS session wins.
+        /// </summary>
+        public static void Remember(IEnumerable<UsageRecord> records)
+        {
+            var logged = new Dictionary<string, ModelPrice>(StringComparer.OrdinalIgnoreCase);
+            foreach (var r in (records ?? Enumerable.Empty<UsageRecord>()).Where(r => r?.Prices != null).OrderBy(r => r.Timestamp))
+                foreach (var kv in r.Prices)
+                    if (!IsCurrent(kv.Key) && ModelPrice.Parse(kv.Value) is ModelPrice p) logged[Cli.ModelCatalog.BareId(kv.Key)] = p;
+            if (logged.Count == 0) return;
+            lock (LearnGate)
+                foreach (var kv in logged)
+                    if (!Learned.ContainsKey(kv.Key)) Learned[kv.Key] = kv.Value;
         }
 
         /// <summary>
@@ -1008,6 +1040,8 @@ namespace ClaudeVS.Core.Tokens
         public static SavingsReport Build(IEnumerable<UsageRecord> records, PriceTable prices, string solution = null, DateTime? sinceUtc = null, DateTime? nowUtc = null, DateTime? untilUtc = null)
         {
             prices = prices ?? new PriceTable();
+            records = records as IReadOnlyCollection<UsageRecord> ?? (records ?? Enumerable.Empty<UsageRecord>()).ToList();
+            PriceTable.Remember(records); // older models at the prices logged with their turns
             var scoped = (records ?? Enumerable.Empty<UsageRecord>())
                 .Where(r => solution == null || string.Equals(r.Solution, solution, StringComparison.OrdinalIgnoreCase))
                 .OrderBy(r => r.Timestamp)
