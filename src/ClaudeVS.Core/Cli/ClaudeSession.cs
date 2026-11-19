@@ -105,7 +105,7 @@ namespace ClaudeVS.Core.Cli
                     var tcs = new TaskCompletionSource<JObject>(TaskCreationOptions.RunContinuationsAsynchronously);
                     _pending[(string)initRequest["request_id"]] = tcs;
                     _initialize = tcs.Task;
-                    tcs.Task.ContinueWith(t => { if (t.Status == TaskStatus.RanToCompletion && ModelCatalog.Parse(t.Result) is ModelCatalog c) { Models = c; Tokens.PriceTable.UseCatalog(c); } },
+                    tcs.Task.ContinueWith(t => { if (t.Status == TaskStatus.RanToCompletion && ModelCatalog.Parse(t.Result) is ModelCatalog c) Models = c; },
                         TaskContinuationOptions.ExecuteSynchronously);
                     string init = initRequest.ToString(Formatting.None);
                     RaiseRaw(RawLineDirection.Stdin, init);

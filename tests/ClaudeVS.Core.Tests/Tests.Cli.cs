@@ -516,9 +516,6 @@ namespace ClaudeVS.Core.Tests
             Eq(null, models.DisplayName("default"), "names a choice, not a model");
             Eq(null, models.DisplayName("claude-nosuch-1"));
 
-            True(models.IsCurrent("claude-haiku-5-5") && models.IsCurrent("claude-fable-5-2") && models.IsCurrent("claude-sonnet-5-5"), "the picker's four");
-            True(!models.IsCurrent("claude-fable-5-1") && !models.IsCurrent("claude-haiku-4-5-20251001") && !models.IsCurrent("claude-opus-4-7"), "older models");
-
             Eq(true, models.SupportsEffort("claude-opus-5-5", "XHigh"));
             Eq(false, models.SupportsEffort("claude-opus-4-6", "xhigh"), "Opus 4.6: low, medium, high, max");
             Eq(false, models.SupportsEffort("claude-haiku-4-5-20251001", "low"), "Haiku 4.5 takes no effort");

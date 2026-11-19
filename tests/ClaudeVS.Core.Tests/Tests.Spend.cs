@@ -91,12 +91,10 @@ namespace ClaudeVS.Core.Tests
                 True(TurnFooter.CostBreakdown(old, usage, 0, 0.006, prices).StartsWith("What this answer cost, at the prices Claude Code bills for claude-haiku-4-5-20251001:"), "the tooltip says whose prices");
                 True(TurnFooter.CostBreakdown("claude-haiku-5-5", usage, 0, 0, prices).StartsWith("What this answer cost, at Haiku prices:"), "a current model");
 
-                // A newer Claude Code moves the alias on: the model it resolves to now is current, the old one learned
-                var models = ModelCatalog.Parse(JObject.Parse("{\"models\":[{\"value\":\"haiku\",\"resolvedModel\":\"claude-haiku-6\"},{\"value\":\"sonnet\",\"resolvedModel\":\"claude-sonnet-5-5\"}]}"));
-                PriceTable.UseCatalog(models);
-                True(PriceTable.IsCurrent("claude-haiku-6") && !PriceTable.IsCurrent("claude-haiku-5-5"), "current models from the catalog");
-                prices.Learn(new Dictionary<string, ModelUsageEntry> { ["claude-haiku-5-5"] = Billed(0.0012) });
-                Eq(0.2, Math.Round(prices.For("claude-haiku-5-5").Input, 6), "no longer current: learned");
+                // A newer model than the four (a Claude Code whose alias moved on) is learned too, until the defaults catch up
+                True(PriceTable.IsCurrent("claude-fable-5-2") && !PriceTable.IsCurrent("claude-haiku-6") && !PriceTable.IsCurrent("claude-fable-5-1"), "the four Options prices");
+                prices.Learn(new Dictionary<string, ModelUsageEntry> { ["claude-haiku-6"] = Billed(0.0012) });
+                Eq(0.2, Math.Round(prices.For("claude-haiku-6").Input, 6), "learned");
             }
             finally { PriceTable.ResetLearned(); }
         }

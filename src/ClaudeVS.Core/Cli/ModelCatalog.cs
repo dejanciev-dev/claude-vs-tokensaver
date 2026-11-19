@@ -28,9 +28,6 @@ namespace ClaudeVS.Core.Cli
     /// </summary>
     public sealed class ModelCatalog
     {
-        /// <summary>The aliases behind the model picker's choices; the IDs they resolve to are the current models.</summary>
-        public static readonly string[] PickerAliases = { "haiku", "sonnet", "opus", "fable" };
-
         private readonly List<ModelInfo> _models;
 
         private ModelCatalog(List<ModelInfo> models) { _models = models; }
@@ -101,17 +98,6 @@ namespace ClaudeVS.Core.Cli
             var m = Find(model);
             if (m?.DisplayName == null || m.Value == "default") return null; // "Default (recommended)" names a choice, not a model
             return m.DisplayName;
-        }
-
-        /// <summary>
-        /// True when <paramref name="model"/> is what one of the picker's aliases resolves to now (Opus 5.5, Sonnet 5.5,
-        /// Haiku 5.5, Fable 5.2 with 2.1.328): the models Options → Pricing prices.
-        /// </summary>
-        public bool IsCurrent(string model)
-        {
-            string id = BareId(model);
-            if (id == null) return false;
-            return PickerAliases.Any(a => string.Equals(ResolvedId(a) ?? a, id, StringComparison.OrdinalIgnoreCase));
         }
 
         /// <summary>

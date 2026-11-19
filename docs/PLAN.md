@@ -1770,8 +1770,10 @@ already says when a turn ran fast.
       `claude-haiku-4-5-20251001`) got its family's current price: Haiku 4.5 at Haiku 5.5's price, a tenth of what it
       bills. A model that isn't one of the four current IDs is priced from Claude Code's own `costUSD` for it
       (`model_usage_since_last_result`), and named by its display name. `PriceTable.Learn` (the family's price scaled
-      to costUSD; not from a fast or long-context turn, nor under $0.0005), kept for the VS session; `UseCatalog`
-      takes the current IDs from the models list (the four 5.x IDs until it comes). The meter learns before it prices
+      to costUSD; not from a fast or long-context turn, nor under $0.0005), kept for the VS session. The current IDs
+      are `PriceTable.PricedIds`, the four the default prices are for, not what the aliases resolve to:
+      `ANTHROPIC_DEFAULT_HAIKU_MODEL` can point `haiku` at Haiku 4.5 (a first version took them from the models list;
+      changed before the PR). The meter learns before it prices
       the turn's subagents; the cost tooltip says "at the prices Claude Code bills for …". The test runner forgets
       learned prices before each test. `Test_PriceTable_LearnsOlderModels`. Builds clean; not yet run in VS
 - [x] **Haiku pin on resume and restart.** A resumed conversation, and a process restarted after a crash or a stop,
