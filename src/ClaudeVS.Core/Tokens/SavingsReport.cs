@@ -159,39 +159,30 @@ namespace ClaudeVS.Core.Tokens
         }
 
         // ---- Models that aren't the four current ones ----
-        // Options → Pricing prices the models the picker's aliases resolve to. A model set another way (settings.json, a
-        // hook, an older ID) has its family's name but not its price: Haiku 4.5 bills 10× Haiku 5.5. Its price is
-        // learned from Claude Code's own costUSD for it, and kept for the rest of the VS session.
+        // Options → Pricing prices four models (the defaults are theirs). A model set another way (settings.json, a hook,
+        // ANTHROPIC_DEFAULT_HAIKU_MODEL, an older ID) has its family's name but not its price: Haiku 4.5 bills 10× Haiku
+        // 5.5. Its price is learned from Claude Code's own costUSD for it, and kept for the rest of the VS session. Not
+        // taken from what the aliases resolve to: with that variable set, "haiku" resolves to Haiku 4.5.
+
+        /// <summary>The models Options → Pricing prices; raise with the defaults when Claude Code's aliases move on.</summary>
+        public static readonly IReadOnlyCollection<string> PricedIds = new HashSet<string>(
+            new[] { "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5", "claude-fable-5-2" }, StringComparer.OrdinalIgnoreCase);
 
         private static readonly object LearnGate = new object();
-        private static HashSet<string> _currentIds = new HashSet<string>(new[] { "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5", "claude-fable-5-2" }, StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, ModelPrice> Learned = new Dictionary<string, ModelPrice>(StringComparer.OrdinalIgnoreCase);
 
-        /// <summary>The current models from Claude Code's models list (what the picker's aliases resolve to).</summary>
-        public static void UseCatalog(Cli.ModelCatalog models)
-        {
-            if (models == null) return;
-            var ids = Cli.ModelCatalog.PickerAliases.Select(a => models.ResolvedId(a)).Where(id => id != null).ToList();
-            if (ids.Count == 0) return;
-            lock (LearnGate) _currentIds = new HashSet<string>(ids, StringComparer.OrdinalIgnoreCase);
-        }
-
-        /// <summary>True for an alias or one of the current models' IDs: priced by Options → Pricing as is.</summary>
+        /// <summary>True for an alias or one of <see cref="PricedIds"/>: priced by Options → Pricing as is.</summary>
         public static bool IsCurrent(string model)
         {
             string id = Cli.ModelCatalog.BareId(model);
             if (id == null || !id.StartsWith("claude-", StringComparison.OrdinalIgnoreCase)) return true; // an alias ("haiku")
-            lock (LearnGate) return _currentIds.Contains(id);
+            return PricedIds.Contains(id);
         }
 
-        /// <summary>Forgets learned prices and the current models (tests).</summary>
+        /// <summary>Forgets learned prices (tests).</summary>
         public static void ResetLearned()
         {
-            lock (LearnGate)
-            {
-                Learned.Clear();
-                _currentIds = new HashSet<string>(new[] { "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5", "claude-fable-5-2" }, StringComparer.OrdinalIgnoreCase);
-            }
+            lock (LearnGate) Learned.Clear();
         }
 
         /// <summary>A learned price for a model that isn't current; null when none.</summary>
