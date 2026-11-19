@@ -165,6 +165,11 @@ namespace ClaudeVS.Core.Tests
             var forkPriced = priced.Find("a3930c38f13bbef71");
             Eq("claude-haiku-5-5", forkPriced.Model, "the model its requests ran on"); Eq("haiku", forkPriced.ModelShort);
             Eq($"Done · haiku · 24.6k tok · {AgentTask.FormatCost(forkPriced.CostUsd)}", ToolCallView.AgentUsageLine(forkPriced), "under the Agent row");
+            var catalog = ModelCatalog.Parse(JObject.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.328-initialize-models.json"))));
+            Eq($"Done · Haiku 5.5 · 24.6k tok · {AgentTask.FormatCost(forkPriced.CostUsd)}", ToolCallView.AgentUsageLine(forkPriced, catalog), "named as Claude Code names it");
+            Eq("Haiku 4.5", new AgentTask { Model = "claude-haiku-4-5-20251001" }.ModelName(catalog), "an older model stands out");
+            Eq("haiku", new AgentTask { Model = "claude-haiku-9" }.ModelName(catalog), "not listed: the family");
+            Eq(null, new AgentTask().ModelName(catalog));
             Eq(null, ToolCallView.AgentUsageLine(new AgentTask { TaskType = "local_agent" }), "still running");
             Eq(null, ToolCallView.AgentUsageLine(new AgentTask { TaskType = "local_bash", Status = AgentTaskStatus.Completed }), "a shell command");
             Eq("Stopped · 1 tool", ToolCallView.AgentUsageLine(new AgentTask { TaskType = "local_agent", Status = AgentTaskStatus.Stopped, ToolUses = 1 }));
