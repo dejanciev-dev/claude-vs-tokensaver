@@ -23,6 +23,9 @@ Claude reads and runs things, and turns that into fixes you can click.
 - **Hooks you can see:** why a hook asks on the permission card, and `allowed by a hook` / `denied by a hook` on tool
   rows.
 - **Add to Claude Code Chat** from Solution Explorer, with what each reference may cost before you send.
+- **Haiku in Plan mode:** plan mode answered with Sonnet when Haiku was asked for, so Auto picked Sonnet there. Claude
+  Code turns only the alias `haiku` into Sonnet in plan mode; the chat now asks for Haiku by its full ID, so plan mode
+  answers with Haiku (a short plan-mode turn: $0.003 instead of $0.048).
 
 The full list follows.
 
@@ -82,6 +85,11 @@ The full list follows.
   sends the reason since 2.1.327.
 - **Add to Claude Code Chat** in Solution Explorer: right-click files, folders, projects or the solution (several at
   once too) and they are attached to the chat as references, paths only, like *Attach Current File*.
+### Fixed
+- **Plan mode answered with Sonnet when Haiku was asked for** (since Claude Code 2.1.316), so Auto picked Sonnet in
+  Plan mode and a Haiku picked by hand was priced at Sonnet. Claude Code turns the alias `haiku` into Sonnet in plan
+  mode, and only the alias: the chat now learns Haiku's full ID from Claude Code at start (`claude-haiku-5-5`) and
+  asks for that, so plan mode answers with Haiku and Auto picks it there again.
 
 ## [0.11.0] - 2026-11-17
 
