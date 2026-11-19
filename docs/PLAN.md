@@ -1806,8 +1806,11 @@ report.
 - [x] **Agent rows name the model.** The Agents panel and the agent's row say `Haiku 4.5`, not `haiku`, from
       Claude Code's models list, so an agent on an older or dearer model stands out. `AgentTask.ModelName` (the family
       when the model isn't listed), `ToolCallView.AgentUsageLine(t, models)`. Builds clean; not yet run in VS
-- [ ] **Picker shows names and prices.** The model picker shows Claude Code's name for each choice (`Haiku 5.5`)
-      and its price per million tokens from Options → Pricing
+- [x] **Picker shows names and prices.** The model picker shows Claude Code's name for each choice (`Haiku 5.5`)
+      and its price per million tokens from Options → Pricing. `ModelPickerText` (`$0.10 / $0.50 per Mtok in / out`;
+      Fable keeps "2× the Opus price; Auto never picks it"). A choice that resolves to a model Options doesn't price
+      (`ANTHROPIC_DEFAULT_HAIKU_MODEL`) shows its name and no price until one is learned. Before the first prompt the
+      names are plain (`Haiku`). Builds clean; not yet run in VS
 - [ ] **Report prices older models.** The usage log keeps what Claude Code billed per model, so the savings report and
       the CSV price an older model right in later VS sessions too
 

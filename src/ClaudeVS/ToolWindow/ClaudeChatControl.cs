@@ -734,15 +734,16 @@ namespace ClaudeVS.ToolWindow
         private IEnumerable<ChatPopup.Entry> ModelEntries()
         {
             var prices = Options?.ToPriceTable() ?? new PriceTable();
+            var models = _session?.Models;
             foreach (ModelChoice m in Enum.GetValues(typeof(ModelChoice)))
             {
-                // A model dearer than Opus (Fable) says so: Auto never picks it, so this is the only place you choose it.
-                string dearer = prices.VersusOpus(m.ToCli());
+                // Claude Code's name ("Haiku 5.5") and the price; a model dearer than Opus (Fable) says so: Auto never
+                // picks it, so this is the only place you choose it.
                 yield return new ChatPopup.Entry
                 {
                     Group = "Model",
-                    Label = m == ModelChoice.Auto ? "Auto (route each prompt)" : m.ToString(),
-                    Description = dearer != null ? $"{dearer}; Auto never picks it" : null,
+                    Label = ModelPickerText.Label(m, models),
+                    Description = ModelPickerText.Description(m, models, prices),
                     Checked = _modelChoice == m,
                     Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); SetModel(m); },
                 };

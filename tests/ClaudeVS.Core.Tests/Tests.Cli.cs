@@ -508,6 +508,29 @@ namespace ClaudeVS.Core.Tests
             Eq(null, ClaudeSession.ResolvedModelId(null, "haiku"));
         }
 
+        /// <summary>The model picker: Claude Code's names and the prices from Options → Pricing.</summary>
+        private static void Test_ModelPickerText()
+        {
+            var models = ModelCatalog.Parse(JObject.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.328-initialize-models.json"))));
+            var prices = new Tokens.PriceTable();
+            Eq("Haiku 5.5", ModelPickerText.Label(ModelChoice.Haiku, models));
+            Eq("Fable 5.2", ModelPickerText.Label(ModelChoice.Fable, models));
+            Eq("Haiku", ModelPickerText.Label(ModelChoice.Haiku, null), "before Claude Code has said");
+            Eq("Auto (route each prompt)", ModelPickerText.Label(ModelChoice.Auto, models));
+            Eq("$0.10 / $0.50 per Mtok in / out", ModelPickerText.Description(ModelChoice.Haiku, models, prices));
+            Eq("$4 / $20 per Mtok in / out", ModelPickerText.Description(ModelChoice.Opus, models, prices));
+            Eq("$8 / $40 per Mtok in / out; 2× the Opus price; Auto never picks it", ModelPickerText.Description(ModelChoice.Fable, models, prices));
+            Eq(null, ModelPickerText.Description(ModelChoice.Auto, models, prices));
+
+            // ANTHROPIC_DEFAULT_HAIKU_MODEL pointing "haiku" at Haiku 4.5: its name, and no price until one is learned
+            var older = ModelCatalog.Parse(JObject.Parse("{\"models\":[{\"value\":\"haiku\",\"resolvedModel\":\"claude-haiku-4-5-20251001\",\"displayName\":\"Haiku 4.5\"}]}"));
+            Eq("Haiku 4.5", ModelPickerText.Label(ModelChoice.Haiku, older));
+            Eq(null, ModelPickerText.Description(ModelChoice.Haiku, older, prices), "Options doesn't price it");
+            prices.Learn(new Dictionary<string, ModelUsageEntry> { ["claude-haiku-4-5-20251001"] = new ModelUsageEntry { Usage = new TokenUsage { Input = 1000, Output = 1000 }, CostUsd = 0.006 } });
+            Eq("$1 / $5 per Mtok in / out", ModelPickerText.Description(ModelChoice.Haiku, older, prices), "learned");
+            Eq("$2.50", ModelPickerText.Usd(2.5));
+        }
+
         /// <summary>The same capture as a <see cref="ModelCatalog"/>: names, current models and effort levels.</summary>
         private static void Test_ModelCatalog_RealCli_2_1_328()
         {
