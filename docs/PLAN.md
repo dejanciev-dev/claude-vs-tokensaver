@@ -1860,9 +1860,11 @@ the unreleased work (Phases 68–70) becomes 0.13.0.
       claude-sonnet-5-5 $0.0543, together Claude Code's total; the agent's task on claude-sonnet-5-5, named
       `Sonnet 5.5`; `By model: Sonnet 5.5 $0.054 · Haiku 5.5 $0.006`. Not in `--live-all`. Also gone: CONTRIBUTING's
       "`Plan` checks the known Sonnet case", left from before Phase 67
-- [ ] **Version 0.13.0.** Manifest, assembly and package registration at 0.13.0, still a preview; the Unreleased
+- [x] **Version 0.13.0.** Manifest, assembly and package registration at 0.13.0, still a preview; the Unreleased
       changelog becomes `## [0.13.0]` with highlights, and the Marketplace overview adds what's new. Tagging stays
-      yours, after 0.12.0's
+      yours, after 0.12.0's: `git tag v0.12.0 <0.12.0's commit>` first if it isn't tagged yet, then after merging
+      `git tag v0.13.0 && git push origin v0.13.0`. Four highlights (names, older models priced, effort, cost by
+      model); the overview's *See what you spend* adds a bullet. The Release VSIX builds
 
 ---
 
