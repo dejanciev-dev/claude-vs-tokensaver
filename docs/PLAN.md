@@ -1838,8 +1838,10 @@ summary), and checks an older model's learned price against Claude Code's bill.
       Code's costUSD), named as Claude Code names them. `TokenMeter.SessionCostByModel` (reset with the conversation),
       a `By model:` line under the cost, only when more than one model was billed (one model: the cost line says it
       already). `SessionSummary.Format(…, models)`; `Test_SessionSummary`. Builds clean; not yet run in VS
-- [ ] **Live price check, older model.** `--live-prices` adds Haiku 4.5: its learned price, from the first turn, gives
-      Claude Code's cost for the second
+- [x] **Live price check, older model.** `--live-prices` adds Haiku 4.5: its learned price, from the first turn, gives
+      Claude Code's cost for the second. Started with `--model claude-haiku-4-5-20251001`; `--live-prices older` runs
+      only it. Passes with 2.1.328 ($0.0104): learned `1, 5, 1.25, 0.1` from a turn of input, output and a 1-hour cache
+      write, and the second turn (a cache read) priced with it came to Claude Code's $0.0010459 exactly
 
 ---
 

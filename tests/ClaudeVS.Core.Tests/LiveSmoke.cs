@@ -417,9 +417,11 @@ namespace ClaudeVS.Core.Tests
         /// turns in a trimmed process (no tools, no settings, a ~4.5k-token system prompt cached for 1 hour): the
         /// first writes the cache, the second reads it. Each turn is one request, so its usage priced with
         /// <see cref="Tokens.PriceTable"/> must equal the growth of the CLI's total_cost_usd. About $0.19 (Opus and
-        /// Fable cache writes), so not part of --live-all. Checked by hand this way in Phases 18 and 20.
+        /// Fable cache writes), so not part of --live-all. Checked by hand this way in Phases 18 and 20. Then Haiku 4.5, a
+        /// model Options doesn't price: its first turn teaches its price from costUSD, which must give the second turn's
+        /// bill. `--live-prices older` runs only that (about $0.01).
         /// </summary>
-        public static int RunPrices()
+        public static int RunPrices(bool olderOnly = false)
         {
             if (ClaudeCliLocator.Resolve("") == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }
             var sys = new StringBuilder("You answer in one word.");
@@ -428,29 +430,35 @@ namespace ClaudeVS.Core.Tests
                 "--strict-mcp-config", "--disable-slash-commands", "--setting-sources", "\"\"", "--no-session-persistence");
             var prices = new Tokens.PriceTable();
             int failed = 0;
-            foreach (var model in new[] { ModelChoice.Haiku, ModelChoice.Sonnet, ModelChoice.Opus, ModelChoice.Fable })
+            // Haiku 4.5 (an older model Options doesn't price): its first turn teaches the price, its second must match
+            const string olderId = "claude-haiku-4-5-20251001";
+            foreach (var (model, olderModel) in new[] { (ModelChoice.Haiku, (string)null), (ModelChoice.Sonnet, null), (ModelChoice.Opus, null), (ModelChoice.Fable, null), (ModelChoice.Auto, olderId) }.Where(m => !olderOnly || m.Item2 != null))
             {
                 string dir = Path.Combine(Path.GetTempPath(), "cvs-live-" + Guid.NewGuid().ToString("N"));
                 Directory.CreateDirectory(dir);
                 var turns = new BlockingCollection<ClaudeEvent>();
                 try
                 {
-                    using (var session = NewSession(new ClaudeLaunchOptions { WorkingDirectory = dir, Model = model, PermissionMode = PermissionModeChoice.Default, ExtraArguments = args }))
+                    string label = olderModel != null ? "Haiku 4.5" : model.ToString();
+                    using (var session = NewSession(new ClaudeLaunchOptions { WorkingDirectory = dir, Model = model, PermissionMode = PermissionModeChoice.Default, ExtraArguments = args + (olderModel != null ? " --model " + olderModel : "") }))
                     {
                         session.EventReceived += (s, ev) => { if (ev.Kind == ClaudeEventKind.TurnCompleted) turns.Add(ev); };
                         double before = 0;
                         foreach (var prompt in new[] { "Say one.", "Say two." })
                         {
                             session.SendPromptAsync(prompt).Wait();
-                            if (!turns.TryTake(out var t, TimeSpan.FromSeconds(120))) { Console.WriteLine($"  FAIL {model}: no answer"); failed++; break; }
+                            if (!turns.TryTake(out var t, TimeSpan.FromSeconds(120))) { Console.WriteLine($"  FAIL {label}: no answer"); failed++; break; }
                             double cli = (t.TotalCostUsd ?? 0) - before;
                             before = t.TotalCostUsd ?? before;
                             var u = t.Usage.AsRequest(); // one request per turn here
-                            var price = prices.For(t.Model ?? model.ToCli()) ?? prices.For(model.ToCli());
+                            bool learning = olderModel != null && prompt == "Say one.";
+                            if (learning) prices.Learn(t.ModelUsageSinceLastResult); // as the meter does
+                            var price = prices.For(olderModel ?? t.Model ?? model.ToCli()) ?? prices.For(model.ToCli());
                             double ours = price.Cost(u);
                             bool ok = Math.Abs(ours - cli) <= 1e-9 + cli * 1e-6;
                             if (!ok) failed++;
-                            Console.WriteLine($"  {(ok ? "ok  " : "FAIL")} {model,-6} {prompt,-9} in {u.Input,3} · out {u.Output,3} · read {u.CacheRead,5:N0} · write {u.CacheCreation,5:N0} (1h {u.CacheCreation1h:N0})"
+                            if (learning) Console.WriteLine($"  learned {olderModel}: {price}");
+                            Console.WriteLine($"  {(ok ? "ok  " : "FAIL")} {label,-9} {prompt,-9} in {u.Input,3} · out {u.Output,3} · read {u.CacheRead,5:N0} · write {u.CacheCreation,5:N0} (1h {u.CacheCreation1h:N0})"
                                 + $"   ours ${ours:0.0000000} · CLI ${cli:0.0000000}" + (ok ? "" : $"   off by ${ours - cli:0.0000000}"));
                         }
                     }
