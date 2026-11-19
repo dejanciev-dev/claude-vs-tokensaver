@@ -31,7 +31,8 @@ that resumes the conversation.
 When prices may have changed (a new model or a Claude Code update), run `--live-prices`: two short turns on each of
 Haiku, Sonnet, Opus and Fable, each turn's usage priced with the default prices next to what Claude Code billed
 (about $0.18, not part of `--live-all`). A FAIL line shows which model is off and by how much; update `PriceTable`
-and the prices fixture.
+and the prices fixture. It ends with Haiku 4.5, a model Options doesn't price: the price learned from its first turn
+must give the second turn's bill. `--live-prices older` runs only that (about $0.01).
 
 After a Claude Code update that touches subagents, run `--live-reads [rawPath]` (about $0.01, not part of
 `--live-all`): Haiku reads a large file, then an Explore agent reads it again; it checks that a subagent's tool
