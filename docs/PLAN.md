@@ -11,7 +11,7 @@ Tick the boxes as you go. Each phase ends with something you can run.
 |---|---|
 | `ClaudeVS.Core` (CLI session, parser, router, meter, context, setup) | ✅ Written, 16/16 tests pass |
 | `ClaudeVS` VSIX (package, tool window, commands, options) | ✅ Builds clean (0 warnings); not yet run in the experimental instance |
-| Real end-to-end run against `claude` CLI | ⚠️ Core verified against CLI 2.1.316 (`--live` smoke test): sessions, streaming, usage, cost, cache OK; Haiku routing works in acceptEdits ($0.002 vs $0.042 per turn on Sonnet); in plan mode the CLI answers with Sonnet even when Haiku is requested (still so in 2.1.328, where all other live smoke tests pass). VS UI not run yet |
+| Real end-to-end run against `claude` CLI | ⚠️ Core verified against CLI 2.1.316 (`--live` smoke test): sessions, streaming, usage, cost, cache OK; Haiku routing works in acceptEdits ($0.002 vs $0.042 per turn on Sonnet); plan mode answered with Sonnet until Phase 67 asked for Haiku by its full ID (all live smoke tests pass with 2.1.328, plan mode included). VS UI not run yet |
 | Markdown transcript, diffs, history, question cards | ❌ Not started |
 
 ---
@@ -1738,9 +1738,13 @@ claude-haiku-5-5, and `set_model` to `claude-haiku-5-5` in plan mode kept Haiku 
 alias with its `resolvedModel` (`haiku` → `claude-haiku-5-5`), so the ID can be learned rather than written into the
 extension.
 
-- [ ] **Haiku's full ID.** `ClaudeSession` reads `resolvedModel` for `haiku` from the `initialize` answer; a process
+- [x] **Haiku's full ID.** `ClaudeSession` reads `resolvedModel` for `haiku` from the `initialize` answer; a process
       started on Haiku switches to that ID (`set_model`) before its first prompt, and a switch to Haiku sends it, so
-      plan mode keeps Haiku. `--live raw.jsonl Plan` checks it
+      plan mode keeps Haiku. `--live raw.jsonl Plan` checks it: both turns answered by claude-haiku-5-5 ($0.0053 for
+      two turns, against $0.088 on Sonnet just before). `ClaudeSession.ResolvedModelId`, `PinModelIdAsync`,
+      `ModelArgAsync`; the initialize request now always goes first (its hook only with `EditNotesHook`; the first
+      run of `--live`, which doesn't set that, still got Sonnet). `live (Plan)` is in `--live-all` now. Capture:
+      `Fixtures/cli-2.1.328-initialize-models.json` (only the models list), `Test_ResolvedModelId_RealCli_2_1_328`
 - [ ] **Auto picks Haiku in Plan mode again.** The router's plan-mode rule (Haiku → Sonnet) and the "plan mode answers
       with Sonnet" notes go; README, Options and the 0.12.0 notes say plan mode keeps Haiku. The model-mismatch warning
       stays, for a Claude Code that does it another way

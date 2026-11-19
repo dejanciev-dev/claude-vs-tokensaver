@@ -105,6 +105,9 @@ namespace ClaudeVS.Core.Tests
             Eq("note", (string)ClaudeSession.HookResponse("note").SelectToken("hookSpecificOutput.additionalContext"));
             Eq("PostToolUse", (string)ClaudeSession.HookResponse("note").SelectToken("hookSpecificOutput.hookEventName"));
             True(!ClaudeArgsBuilder.Build(new ClaudeLaunchOptions { EditNotesHook = true }).Contains("hook"), "hooks are not a command-line flag");
+            var plain = ClaudeSession.BuildInitialize(editNotesHook: false);
+            Eq("initialize", (string)plain.SelectToken("request.subtype"), "sent without the hook too (for the models' full IDs)");
+            Eq(null, plain.SelectToken("request.hooks"), "no hooks then");
 
             var evs = new ClaudeStreamParser().Parse("{\"type\":\"control_request\",\"request_id\":\"h1\",\"request\":{\"subtype\":\"hook_callback\",\"callback_id\":\"edit_notes\",\"tool_use_id\":\"toolu_9\",\"input\":{\"hook_event_name\":\"PostToolUse\"}}}");
             Eq(ClaudeEventKind.HookCallback, evs.Single().Kind);
@@ -482,6 +485,22 @@ namespace ClaudeVS.Core.Tests
                 JObject.Parse("{\"decision_reason\":\"This command requires approval\",\"decision_reason_type\":\"other\"}"));
             Eq(null, generic.HookReason, "a reason that isn't a hook's is not shown");
             Eq(null, PermissionPrompt.From("Bash", JObject.Parse("{\"command\":\"ls\"}"), null).HookReason, "no request");
+        }
+
+        /// <summary>
+        /// The models in Claude Code 2.1.328's initialize answer (only that list kept): each alias with the full ID it
+        /// resolves to. Haiku's full ID is what keeps plan mode on Haiku (the alias becomes Sonnet there).
+        /// </summary>
+        private static void Test_ResolvedModelId_RealCli_2_1_328()
+        {
+            var init = JObject.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.328-initialize-models.json")));
+            Eq("claude-haiku-5-5", ClaudeSession.ResolvedModelId(init, "haiku"));
+            Eq("claude-sonnet-5-5", ClaudeSession.ResolvedModelId(init, "sonnet"));
+            Eq("claude-haiku-5-5", ClaudeSession.ResolvedModelId(init, "HAIKU"), "any case");
+            Eq(null, ClaudeSession.ResolvedModelId(init, "claude-opus-4-6"), "a full ID resolves to itself: nothing to switch to");
+            Eq(null, ClaudeSession.ResolvedModelId(init, "nosuch"), "not listed");
+            Eq(null, ClaudeSession.ResolvedModelId(new JObject(), "haiku"), "an older Claude Code without the list");
+            Eq(null, ClaudeSession.ResolvedModelId(null, "haiku"));
         }
 
         private static void Test_PermissionPrompt_OtherTools()

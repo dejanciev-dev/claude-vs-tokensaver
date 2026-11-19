@@ -52,10 +52,10 @@ namespace ClaudeVS.Core.Tests
         }
 
         /// <summary>
-        /// `--live-all`: every live test in order, with a summary and the total cost (about $0.15 on Haiku with
-        /// 2.1.322). Nothing runs in plan mode: there the CLI answers with Sonnet even when Haiku is asked for
-        /// (2.1.316-2.1.326), which costs ~20x more and fails the "answered by Haiku" check; `--live raw.jsonl Plan`
-        /// checks that on purpose. Exit code 0 only when every test passed.
+        /// `--live-all`: every live test in order, with a summary and the total cost (about $0.26 on Haiku with
+        /// 2.1.328). Plan mode is in it since Phase 67: Claude Code turns the alias "haiku" into Sonnet there, and the
+        /// session switches to Haiku's full ID, so "answered by Haiku" checks that this still works. Exit code 0 only
+        /// when every test passed.
         /// </summary>
         public static int RunAll()
         {
@@ -71,6 +71,7 @@ namespace ClaudeVS.Core.Tests
                 ("edit-review-interrupt", () => RunEditReviewInterrupted(null)),
                 ("edit-stop-allow", () => RunEditReviewInterrupted(null, allowPlain: true)),
                 ("live (Accept Edits)", () => Run(null, PermissionModeChoice.AcceptEdits)),
+                ("live (Plan)", () => Run(null, PermissionModeChoice.Plan)), // Haiku's full ID keeps plan mode on Haiku
                 ("ask", () => RunInteractive(null, PermissionModeChoice.Default, ask)),
                 ("session", RunSession),
                 ("long-prompt", RunLongPrompt),
@@ -93,7 +94,6 @@ namespace ClaudeVS.Core.Tests
                 Console.WriteLine($"  {(r.Code == 0 ? "PASS" : r.Code == 2 ? "SKIP" : "FAIL"),-4}  {r.Name,-24} ${r.Cost,7:0.0000}  {r.Time.TotalSeconds,5:0} s");
             int failed = results.Count(r => r.Code != 0);
             Console.WriteLine($"  {results.Count - failed} of {results.Count} passed · total ${Spent:0.0000} · {TimeSpan.FromTicks(results.Sum(r => r.Time.Ticks)).TotalMinutes:0.0} min");
-            Console.WriteLine("  Not run: --live in plan mode (answers with Sonnet, a known limitation; check it with --live raw.jsonl Plan).");
             return failed == 0 ? 0 : 1;
         }
         /// <summary>
@@ -806,15 +806,13 @@ namespace ClaudeVS.Core.Tests
 
         /// <summary>
         /// `--live [rawLogPath] [mode] [turns]`: short turns asking for Haiku, Accept Edits unless another mode is named.
-        /// Plan mode is the known exception: the CLI answers with Sonnet there (2.1.316-2.1.326), ~20x the cost.
+        /// In plan mode Claude Code answers the alias "haiku" with Sonnet; the session switches to Haiku's full ID first.
         /// </summary>
         public static int Run(string rawLogPath, PermissionModeChoice mode = PermissionModeChoice.AcceptEdits, int turns = 2)
         {
             string exe = ClaudeCliLocator.Resolve("");
             if (exe == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }
             Console.WriteLine("claude: " + exe);
-            if (mode == PermissionModeChoice.Plan)
-                Console.WriteLine("  note: plan mode answers with Sonnet even when Haiku is asked for (known since 2.1.316): ~20x the cost, and the Haiku check fails");
 
             string dir = Path.Combine(Path.GetTempPath(), "cvs-live-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(dir);
