@@ -1728,6 +1728,23 @@ Checked, nothing to change:
 - The usage-credits error that named a rate limit: the failed-turn hint checks the error kind (`billing_error`) and
   credit wording before rate limits, so the corrected text only makes it surer
 
+## Phase 67 — Haiku in Plan mode
+
+Planned on 2026-11-19, on the same branch. Since 2.1.316 the chat says plan mode answers with Sonnet when Haiku is
+asked for, and Auto picks Sonnet in Plan mode. Found in the 2.1.328 binary: Claude Code turns the alias `haiku` into
+`sonnet` in plan mode (as it turns `opusplan` into `opus`), on purpose, and only for the alias. Probed with 2.1.328:
+`--permission-mode plan --model haiku` answered with claude-sonnet-5-5, `--model claude-haiku-5-5` with
+claude-haiku-5-5, and `set_model` to `claude-haiku-5-5` in plan mode kept Haiku too. The `initialize` answer lists each
+alias with its `resolvedModel` (`haiku` → `claude-haiku-5-5`), so the ID can be learned rather than written into the
+extension.
+
+- [ ] **Haiku's full ID.** `ClaudeSession` reads `resolvedModel` for `haiku` from the `initialize` answer; a process
+      started on Haiku switches to that ID (`set_model`) before its first prompt, and a switch to Haiku sends it, so
+      plan mode keeps Haiku. `--live raw.jsonl Plan` checks it
+- [ ] **Auto picks Haiku in Plan mode again.** The router's plan-mode rule (Haiku → Sonnet) and the "plan mode answers
+      with Sonnet" notes go; README, Options and the 0.12.0 notes say plan mode keeps Haiku. The model-mismatch warning
+      stays, for a Claude Code that does it another way
+
 ---
 
 ## Working in Visual Studio — daily loop
