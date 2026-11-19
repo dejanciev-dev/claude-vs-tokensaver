@@ -37,9 +37,11 @@ must give the second turn's bill. `--live-prices older` runs only that (about $0
 After a Claude Code update that touches subagents, run `--live-reads [rawPath]` (about $0.01, not part of
 `--live-all`): Haiku reads a large file, then an Explore agent reads it again; it checks that a subagent's tool
 results carry its Agent call and that the agent's read counts as a re-read of the conversation's file.
+`--live-models [rawPath]` (about $0.06) has Haiku answer with an Explore agent on Sonnet: each model's billed cost adds
+up to Claude Code's total, the agent is named `Sonnet 5.5`, and Copy session summary has its `By model:` line.
 
 Each test also runs on its own. `--live [path-for-raw-output.txt] [mode]` runs two short turns, in Accept Edits
-unless a mode is named (`Plan` checks the known Sonnet case on purpose). To capture and answer permission
+unless a mode is named (`Plan` checks that plan mode keeps Haiku, also after a restart and a resume). To capture and answer permission
 requests (questions, plan approval), use `--live-ask <rawPath> <PermissionMode> "<prompt>"`. `--live-edit-review` has Haiku make a two-line edit, applies one line and checks that Claude was told (about
 $0.005); `--live-edit-review-interrupt [rawPath]` does the same but presses Stop right after approving, then asks
 Claude what happened (about $0.007); `--live-edit-stop-allow [rawPath]` allows the edit as proposed instead, then

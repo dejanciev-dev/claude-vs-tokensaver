@@ -221,6 +221,78 @@ namespace ClaudeVS.Core.Tests
             return failures.Count == 0 ? 0 : 1;
         }
 
+        /// <summary>
+        /// `--live-models [rawPath]` (not in --live-all, about $0.05): Haiku answers and an Explore agent runs on Sonnet.
+        /// Checks what Phases 68–70 assume of a conversation on two models: each model's billed cost
+        /// (<c>model_usage_since_last_result</c>) adds up to Claude Code's total, the agent's task knows its model and is
+        /// named as Claude Code names it, and Copy session summary has the <c>By model:</c> line.
+        /// </summary>
+        public static int RunModels(string rawLogPath)
+        {
+            string exe = ClaudeCliLocator.Resolve("");
+            if (exe == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-live-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            File.WriteAllText(Path.Combine(dir, "Notes.txt"), "The answer is 42.\n");
+            var failures = new List<string>();
+            void Check(bool ok, string what) { Console.WriteLine((ok ? "  ok   " : "  FAIL ") + what); if (!ok) failures.Add(what); }
+            var raw = new StringBuilder();
+            var meter = new Tokens.TokenMeter();
+            var tasks = new AgentTaskList();
+            var done = new AutoResetEvent(false);
+            double total = 0;
+            using (var session = NewSession(new ClaudeLaunchOptions { WorkingDirectory = dir, Model = ModelChoice.Haiku, Effort = EffortChoice.Low, PermissionMode = PermissionModeChoice.Default }))
+            {
+                session.RawLine += (s, e) => { lock (raw) raw.Append(e.Direction == RawLineDirection.Stdin ? ">> " : "<< ").AppendLine(e.Line); };
+                session.EventReceived += (s, ev) =>
+                {
+                    lock (meter)
+                    {
+                        meter.Observe(ev);
+                        if (ev.Kind == ClaudeEventKind.Task) tasks.Apply(ev.Payload);
+                        if (ev.Kind == ClaudeEventKind.AssistantUsage && ev.IsSubagent) tasks.ObserveRequest(ev, meter.RequestCostUsd); // as the chat does
+                    }
+                    if (ev.Kind == ClaudeEventKind.PermissionRequest) session.RespondToPermissionAsync(ev.RequestId, ev.ToolInput, true, null).Wait();
+                    if (ev.Kind == ClaudeEventKind.TurnCompleted) { total = ev.TotalCostUsd ?? total; done.Set(); }
+                };
+                try
+                {
+                    session.SendPromptAsync("Use the Agent tool with subagent_type Explore, model sonnet and run_in_background false, and wait for its answer. Tell the agent to read Notes.txt and return the number in it. Then reply with that number only.").Wait();
+                    Check(done.WaitOne(TimeSpan.FromSeconds(240)), "turn finished");
+                    // The agent may still run in the background (see --live-reads): wait for it, and the turn its answer starts
+                    var until = DateTime.UtcNow.AddSeconds(150);
+                    while (tasks.Tasks.Any(x => x.IsAgent && x.IsRunning) && DateTime.UtcNow < until) Thread.Sleep(500);
+                    var agent = tasks.Tasks.FirstOrDefault(x => x.IsAgent);
+                    if (agent?.IsBackgrounded == true) done.WaitOne(TimeSpan.FromSeconds(60));
+
+                    var models = session.Models;
+                    Console.WriteLine($"  agent: {agent?.SubagentType}, model {agent?.Model}, {agent?.Status}");
+                    Check(models != null, "the models list came with initialize");
+                    Check(agent?.Model?.IndexOf("sonnet", StringComparison.OrdinalIgnoreCase) >= 0, "the agent ran on Sonnet");
+                    Check(agent?.ModelName(models) == "Sonnet 5.5", $"named as Claude Code names it ({agent?.ModelName(models)})");
+
+                    Dictionary<string, double> byModel;
+                    lock (meter) byModel = meter.SessionCostByModel.ToDictionary(kv => kv.Key, kv => kv.Value);
+                    Console.WriteLine("  billed: " + string.Join(", ", byModel.Select(kv => $"{kv.Key} ${kv.Value:0.0000}")) + $"; Claude Code's total ${total:0.0000}");
+                    Check(byModel.Count == 2 && byModel.Keys.Any(k => k.Contains("haiku")) && byModel.Keys.Any(k => k.Contains("sonnet")), "billed per model: Haiku and Sonnet");
+                    Check(Math.Abs(byModel.Values.Sum() - total) < 1e-6, "they add up to Claude Code's total");
+
+                    string summary;
+                    lock (meter) summary = Tokens.SessionSummary.Format(meter, "live", null, null, models);
+                    string line = summary.Split('\n').FirstOrDefault(l => l.StartsWith("By model: ", StringComparison.Ordinal));
+                    Console.WriteLine("  " + (line ?? "(no By model line)"));
+                    Check(line != null && line.Contains("Sonnet 5.5 ") && line.Contains("Haiku 5.5 "), "Copy session summary: By model, both named");
+                }
+                finally
+                {
+                    if (!string.IsNullOrEmpty(rawLogPath)) lock (raw) File.WriteAllText(rawLogPath, raw.ToString());
+                }
+            }
+            try { Directory.Delete(dir, true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+            Console.WriteLine(failures.Count == 0 ? "PASS live models" : "FAIL live models");
+            return failures.Count == 0 ? 0 : 1;
+        }
+
         public static int RunSession()
         {
             string exe = ClaudeCliLocator.Resolve("");
