@@ -1843,6 +1843,20 @@ summary), and checks an older model's learned price against Claude Code's bill.
       only it. Passes with 2.1.328 ($0.0104): learned `1, 5, 1.25, 0.1` from a turn of input, output and a 1-hour cache
       write, and the second turn (a cache read) priced with it came to Claude Code's $0.0010459 exactly
 
+## Phase 71 — Tidy up, check two models live, and prepare 0.13.0
+
+Planned on 2026-11-19, after Phase 70, on the same branch; the last phase of this run. Phases 68–70 grew
+`SavingsReport.cs` and repeated a fixture load across tests; one live run checks a conversation on two models; then
+the unreleased work (Phases 68–70) becomes 0.13.0.
+
+- [ ] **Tidy up Phases 68–70.** The learned prices move out of `SavingsReport.cs` into their own file; the tests load
+      the 2.1.328 models list through one helper
+- [ ] **Live two-model test.** `--live-models`: Sonnet answers and an Explore agent runs on Haiku. Each model's billed
+      cost, the agent's model name and the summary's `By model:` line, against the real CLI
+- [ ] **Version 0.13.0.** Manifest, assembly and package registration at 0.13.0, still a preview; the Unreleased
+      changelog becomes `## [0.13.0]` with highlights, and the Marketplace overview adds what's new. Tagging stays
+      yours, after 0.12.0's
+
 ---
 
 ## Working in Visual Studio — daily loop
