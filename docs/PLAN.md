@@ -1745,9 +1745,11 @@ extension.
       `ModelArgAsync`; the initialize request now always goes first (its hook only with `EditNotesHook`; the first
       run of `--live`, which doesn't set that, still got Sonnet). `live (Plan)` is in `--live-all` now. Capture:
       `Fixtures/cli-2.1.328-initialize-models.json` (only the models list), `Test_ResolvedModelId_RealCli_2_1_328`
-- [ ] **Auto picks Haiku in Plan mode again.** The router's plan-mode rule (Haiku → Sonnet) and the "plan mode answers
+- [x] **Auto picks Haiku in Plan mode again.** The router's plan-mode rule (Haiku → Sonnet) and the "plan mode answers
       with Sonnet" notes go; README, Options and the 0.12.0 notes say plan mode keeps Haiku. The model-mismatch warning
-      stays, for a Claude Code that does it another way
+      stays, for a Claude Code that does it another way. Gone: `ModelRouter.PlanModeNote` and `AnsweredBy`, the hint
+      "Plan mode: Sonnet answers, not Haiku" and its Sonnet price, the README's known limitation and the Options
+      note; 0.12.0 gets a highlight and a *Fixed* entry. Builds clean; not yet run in VS
 
 ---
 

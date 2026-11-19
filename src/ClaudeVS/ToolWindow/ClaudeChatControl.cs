@@ -1472,14 +1472,7 @@ namespace ClaudeVS.ToolWindow
                 string send = _modelChoice != ModelChoice.Auto ? _modelChoice.ToCli() : null;
                 string dearer = send != null && !string.IsNullOrWhiteSpace(_prompt.Text) ? (Options?.ToPriceTable() ?? new PriceTable()).VersusOpus(send) : null;
                 if (dearer != null) dearer = _modelChoice + ": " + dearer; // "Fable: 2× the Opus price"
-                // Haiku picked by hand in plan mode: Sonnet answers, so say so and price the prompt at Sonnet
-                string answeredBy = null;
-                if (ModelRouter.AnsweredBy(_modelChoice, _mode == PermissionModeChoice.Plan) is ModelChoice real)
-                {
-                    answeredBy = $"Plan mode: {real} answers, not {_modelChoice}";
-                    send = real.ToCli();
-                }
-                _route.Text = string.Join("   ·   ", new[] { answeredBy, dearer, size, PriceNote(send) }.Where(s => s != null));
+                _route.Text = string.Join("   ·   ", new[] { dearer, size, PriceNote(send) }.Where(s => s != null));
                 return;
             }
             int lines = _selection == null ? 0 : _selection.EndLine - _selection.StartLine + 1;
