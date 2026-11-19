@@ -30,6 +30,27 @@ namespace ClaudeVS.Core.Cli
             return price != null && dearer != null ? price + "; " + dearer : price ?? dearer;
         }
 
+        /// <summary>
+        /// The model the next turn goes to, for the effort picker: the choice's resolved ID, or for Auto the model that
+        /// answered last (null before any).
+        /// </summary>
+        public static string NextModel(ModelChoice m, ModelCatalog models, string lastModel) =>
+            m == ModelChoice.Auto ? lastModel : models?.ResolvedId(m.ToCli()) ?? m.ToCli();
+
+        /// <summary>
+        /// For an effort level <paramref name="model"/> doesn't take: "Opus 4.6 takes no xhigh: Claude Code uses high",
+        /// "Haiku 4.5 takes no effort: Claude Code drops it" (<see cref="ModelCatalog.EffortApplied"/>, probed with
+        /// 2.1.328). Null when it takes it, for Auto, or when the catalog doesn't say.
+        /// </summary>
+        public static string EffortNote(EffortChoice effort, ModelCatalog models, string model)
+        {
+            string e = effort.ToCli();
+            if (models == null || e == null || models.SupportsEffort(model, e) != false) return null;
+            string name = models.DisplayName(model) ?? ModelCatalog.BareId(model);
+            string applied = models.EffortApplied(model, e);
+            return string.IsNullOrEmpty(applied) ? $"{name} takes no effort: Claude Code drops it" : $"{name} takes no {e}: Claude Code uses {applied}";
+        }
+
         /// <summary>"$0.10", "$4", "$2.50".</summary>
         public static string Usd(double v)
         {

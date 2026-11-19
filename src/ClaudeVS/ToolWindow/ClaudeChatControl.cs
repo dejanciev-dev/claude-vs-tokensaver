@@ -748,13 +748,16 @@ namespace ClaudeVS.ToolWindow
                     Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); SetModel(m); },
                 };
             }
+            string nextModel = ModelPickerText.NextModel(_modelChoice, models, _meterModel?.LastModel);
             foreach (EffortChoice ef in Enum.GetValues(typeof(EffortChoice)))
             {
                 bool capped = ClaudeSettings.Above(ef, _effortCap); // above maxEffortLevel: Claude Code would answer lower
                 yield return new ChatPopup.Entry
                 {
                     Group = "Effort", Label = ef == EffortChoice.Auto ? "Auto (follow the model choice)" : ef.ToString(), Checked = _effortChoice == ef,
-                    Enabled = !capped, Description = capped ? $"Above your Claude Code settings' cap ({_effortCap.Value.ToCli()}, maxEffortLevel)" : null,
+                    Enabled = !capped,
+                    // a level the model doesn't take: Claude Code uses the next one down, or none
+                    Description = capped ? $"Above your Claude Code settings' cap ({_effortCap.Value.ToCli()}, maxEffortLevel)" : ModelPickerText.EffortNote(ef, models, nextModel),
                     Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); SetEffort(ef); },
                 };
             }

@@ -27,7 +27,8 @@ All notable changes to this project are listed here. The format follows
 - Agents say which model they ran on the same way (`Explore · Haiku 4.5`, not `haiku`): in the Agents panel and on
   the line under a finished Agent row, so an agent on an older or dearer model stands out.
 - The model picker names each choice as Claude Code does (`Haiku 5.5`) and shows its price per million tokens in and
-  out, from Options → Pricing.
+  out, from Options → Pricing. The effort picker marks a level the next turn's model doesn't take ("Opus 4.6 takes no
+  xhigh: Claude Code uses high").
 
 ## [0.12.0] - 2026-11-18
 
