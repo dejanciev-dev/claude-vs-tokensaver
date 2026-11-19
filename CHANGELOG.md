@@ -8,7 +8,7 @@ All notable changes to this project are listed here. The format follows
 
 ## [0.12.0] - 2026-11-18
 
-Still a **preview**, for Claude Code 2.1.318 or newer (tested with 2.1.327). This release shows where tokens go when
+Still a **preview**, for Claude Code 2.1.318 or newer (tested with 2.1.328). This release shows where tokens go when
 Claude reads and runs things, and turns that into fixes you can click.
 
 ### Highlights
