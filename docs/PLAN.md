@@ -1853,8 +1853,13 @@ the unreleased work (Phases 68–70) becomes 0.13.0.
       the 2.1.328 models list through one helper. `PriceTable` is partial: `Tokens/PriceTable.Learned.cs` (101 lines;
       `SavingsReport.cs` back to 1,563). `Models_2_1_328()` / `Initialize_2_1_328()` in the test runner replace five
       copies of the fixture load. No behaviour change: 237 tests pass, builds clean
-- [ ] **Live two-model test.** `--live-models`: Sonnet answers and an Explore agent runs on Haiku. Each model's billed
-      cost, the agent's model name and the summary's `By model:` line, against the real CLI
+- [x] **Live two-model test.** `--live-models`: Sonnet answers and an Explore agent runs on Haiku. Each model's billed
+      cost, the agent's model name and the summary's `By model:` line, against the real CLI. Turned around to keep it
+      cheap: Haiku answers and the Explore agent runs on Sonnet (the Agent tool's `model`); a Sonnet main turn would
+      write ~30k tokens of cache at Sonnet's price. Passes with 2.1.328 ($0.061): billed claude-haiku-5-5 $0.0064 and
+      claude-sonnet-5-5 $0.0543, together Claude Code's total; the agent's task on claude-sonnet-5-5, named
+      `Sonnet 5.5`; `By model: Sonnet 5.5 $0.054 · Haiku 5.5 $0.006`. Not in `--live-all`. Also gone: CONTRIBUTING's
+      "`Plan` checks the known Sonnet case", left from before Phase 67
 - [ ] **Version 0.13.0.** Manifest, assembly and package registration at 0.13.0, still a preview; the Unreleased
       changelog becomes `## [0.13.0]` with highlights, and the Marketplace overview adds what's new. Tagging stays
       yours, after 0.12.0's
