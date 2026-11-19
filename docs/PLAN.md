@@ -1811,8 +1811,12 @@ report.
       Fable keeps "2× the Opus price; Auto never picks it"). A choice that resolves to a model Options doesn't price
       (`ANTHROPIC_DEFAULT_HAIKU_MODEL`) shows its name and no price until one is learned. Before the first prompt the
       names are plain (`Haiku`). Builds clean; not yet run in VS
-- [ ] **Report prices older models.** The usage log keeps what Claude Code billed per model, so the savings report and
-      the CSV price an older model right in later VS sessions too
+- [x] **Report prices older models.** The usage log keeps what Claude Code billed per model, so the savings report and
+      the CSV price an older model right in later VS sessions too. Each turn logs the learned prices of its models
+      (main and agents) that Options doesn't price: `UsageRecord.Prices` (`"prices": {"claude-haiku-4-5-20251001":
+      "1, 5, 1.25, 0.1"}`), `PriceTable.LearnedPrices`. `SavingsReport.Build` takes them back first
+      (`PriceTable.Remember`, oldest first; a price learned in this VS session wins). The CSV needed nothing: its costs
+      are the ones Claude Code billed. `Test_SavingsReport_LoggedPricesForOlderModels`. Builds clean; not yet run in VS
 
 ---
 

@@ -16,7 +16,9 @@ All notable changes to this project are listed here. The format follows
 
 - **A model set outside the picker** (in `settings.json`, by a hook, an older ID such as Haiku 4.5) was priced at its
   family's current price: Haiku 4.5 at a tenth of what it bills. A model that isn't one of the four in Options →
-  Pricing is now priced from what Claude Code says it cost, from its first turn on; the cost tooltip says so.
+  Pricing is now priced from what Claude Code says it cost, from its first turn on; the cost tooltip says so. The
+  price goes into the usage log with the turn (`prices`), so the savings report prices it right in later VS sessions
+  too.
 
 ### Changed
 
