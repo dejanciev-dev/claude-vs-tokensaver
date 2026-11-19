@@ -27,7 +27,10 @@ namespace ClaudeVS.Core.Tokens
             double reads = turn.CacheRead * p.CacheRead / 1e6 * x, writes = (write5m * p.CacheWrite + write1h * 2 * p.Input) / 1e6 * x;
             string Usd(double v) => "$" + v.ToString(v > 0 && v < 0.01 ? "0.0000" : "0.000", c);
             var sb = new System.Text.StringBuilder();
-            sb.Append("What this answer cost, at ").Append(PriceTable.Family(model) is string f ? char.ToUpperInvariant(f[0]) + f.Substring(1) : model).Append(" prices");
+            if (!PriceTable.IsCurrent(model) && PriceTable.LearnedPrice(model) != null)
+                sb.Append("What this answer cost, at the prices Claude Code bills for ").Append(ModelCatalog.BareId(model)); // not one of the four in Options → Pricing
+            else
+                sb.Append("What this answer cost, at ").Append(PriceTable.Family(model) is string f ? char.ToUpperInvariant(f[0]) + f.Substring(1) : model).Append(" prices");
             if (x > 1.0001) sb.Append($" ×{x.ToString("0.##", c)} (fast mode or long context)");
             sb.Append(":\n");
             void Row(string name, long tokens, double usd) { if (tokens > 0) sb.Append($"{name,-14}{TokenMeter.Format(tokens),8} tok  {Usd(usd)}\n"); }

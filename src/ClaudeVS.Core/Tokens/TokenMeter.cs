@@ -309,6 +309,8 @@ namespace ClaudeVS.Core.Tokens
                     var turn = ev.Usage;
                     turn.LargeContextTokens = Math.Min(turn.Total, _turnLargeByMessage.Values.Sum());
                     _turnLargeByMessage.Clear();
+                    // A model that isn't one of the four current ones: its price from what Claude Code says it cost
+                    (Prices ?? DefaultPrices).Learn(ev.ModelUsageSinceLastResult, skip: turn.AnyFast || turn.LargeContextTokens > 0);
                     LastTurnResultTokensByTool = _turnResultCharsByTool.Count == 0 ? null
                         : _turnResultCharsByTool.ToDictionary(kv => kv.Key, kv => (long)TokenEstimate.FromChars(kv.Value), StringComparer.Ordinal);
                     _turnResultCharsByTool.Clear();
