@@ -1743,7 +1743,7 @@ extension.
       plan mode keeps Haiku. `--live raw.jsonl Plan` checks it: both turns answered by claude-haiku-5-5 ($0.0053 for
       two turns, against $0.088 on Sonnet just before). `ClaudeSession.ResolvedModelId`, `PinModelIdAsync`,
       `ModelArgAsync`; the initialize request now always goes first (its hook only with `EditNotesHook`; the first
-      run of `--live`, which doesn't set that, still got Sonnet). `live (Plan)` is in `--live-all` now. Capture:
+      run of `--live`, which doesn't set that, still got Sonnet). `live (Plan)` is in `--live-all` now: 13 of 13 pass with 2.1.328 ($0.19, 5.3 min). Capture:
       `Fixtures/cli-2.1.328-initialize-models.json` (only the models list), `Test_ResolvedModelId_RealCli_2_1_328`
 - [x] **Auto picks Haiku in Plan mode again.** The router's plan-mode rule (Haiku → Sonnet) and the "plan mode answers
       with Sonnet" notes go; README, Options and the 0.12.0 notes say plan mode keeps Haiku. The model-mismatch warning
