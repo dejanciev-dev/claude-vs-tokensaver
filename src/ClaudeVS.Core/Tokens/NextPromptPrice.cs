@@ -37,6 +37,8 @@ namespace ClaudeVS.Core.Tokens
     /// </summary>
     public static class NextPromptPrice
     {
+        private static bool IsId(string model) => model != null && model.Trim().StartsWith("claude-", StringComparison.OrdinalIgnoreCase);
+
         /// <param name="cache">The conversation's cache (context size, lifetime, last use).</param>
         /// <param name="cachedModel">The model the context is cached for (the last main answer's); null when unknown.</param>
         /// <param name="sendModel">The model the prompt will go to; null = the cached one.</param>
@@ -47,8 +49,10 @@ namespace ClaudeVS.Core.Tokens
             var p = prices.For(model) ?? prices.Sonnet;
             long context = cache?.ContextTokens ?? 0;
             bool expired = cache?.Remaining(nowUtc) is TimeSpan left && left <= TimeSpan.Zero;
+            // Two IDs must match (Haiku 4.5 and 5.5 have separate caches); an alias matches by family
             string from = PriceTable.Family(cachedModel), to = PriceTable.Family(model);
-            bool otherModel = context > 0 && from != null && to != null && from != to;
+            bool bothIds = IsId(cachedModel) && IsId(model);
+            bool otherModel = context > 0 && (bothIds ? !string.Equals(Cli.ModelCatalog.BareId(cachedModel), Cli.ModelCatalog.BareId(model), StringComparison.OrdinalIgnoreCase) : from != null && to != null && from != to);
             bool cached = context > 0 && !expired && !otherModel;
             // Claude Code writes with the lifetime it has used in this conversation (1 hour: twice the input price).
             double write = cache != null && cache.Lifetime == CacheWindow.Long ? 2 * p.Input : p.CacheWrite;

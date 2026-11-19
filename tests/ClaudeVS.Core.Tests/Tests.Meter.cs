@@ -985,6 +985,16 @@ namespace ClaudeVS.Core.Tests
             True(Math.Abs(other.InputUsd - 100_000 * 5.0 / 1e6) < 1e-12, "Opus cache write: " + other.InputUsd);
             True(other.Note().StartsWith("~$0.50 to send (another model:"), other.Note());
 
+            // An alias resolved to another model of the same family (ANTHROPIC_DEFAULT_HAIKU_MODEL → Haiku 4.5): its own cache and price
+            prices.Learn(new Dictionary<string, ModelUsageEntry> { ["claude-haiku-4-5-20251001"] = new ModelUsageEntry { Usage = new TokenUsage { Input = 1000, Output = 1000 }, CostUsd = 0.006 } });
+            var haikuCache = new CacheWindow();
+            haikuCache.Use(new TokenUsage { CacheRead = 100_000 }, t0);
+            var older = NextPromptPrice.Estimate(haikuCache, "claude-haiku-5-5", "claude-haiku-4-5-20251001", 0, prices, t0.AddMinutes(1));
+            True(older.OtherModel && !older.Cached, "Haiku 4.5 doesn't read Haiku 5.5's cache");
+            True(Math.Abs(older.InputUsd - 100_000 * 1.25 / 1e6) < 1e-12, "written at Haiku 4.5's learned $1.25: " + older.InputUsd);
+            True(NextPromptPrice.Estimate(haikuCache, "claude-haiku-5-5", "haiku", 0, prices, t0.AddMinutes(1)).Cached, "the alias, unresolved: by family");
+            True(NextPromptPrice.Estimate(haikuCache, "claude-haiku-5-5", "claude-haiku-5-5[1m]", 0, prices, t0.AddMinutes(1)).Cached, "the same ID");
+
             var hour = new CacheWindow();
             hour.Use(new TokenUsage { CacheCreation = 40_000, CacheCreation1h = 40_000 }, t0);
             var h = NextPromptPrice.Estimate(hour, "claude-haiku-5-5", null, 0, prices, t0.AddMinutes(61));
