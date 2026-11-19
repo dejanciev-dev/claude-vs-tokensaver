@@ -6,6 +6,23 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-11-19
+
+Still a **preview**, for Claude Code 2.1.318 or newer (tested with 2.1.328). This release names and prices models the
+way Claude Code does, from its own models list and bills, including models the four prices in Options don't cover.
+
+### Highlights
+
+- **Models by their real names:** `Haiku 5.5`, not `claude-haiku-5-5`, under each answer, on agent rows and in the
+  model picker, which also shows each model's price per million tokens.
+- **Older models priced right:** a model set in `settings.json`, by a hook or with `ANTHROPIC_DEFAULT_HAIKU_MODEL` (Haiku
+  4.5 bills 10× Haiku 5.5) is priced at what Claude Code bills for it, in the footer, the price while you type and
+  the savings report.
+- **Effort that a model doesn't take:** the effort picker and a tip say when Claude Code uses a lower level, or none.
+- **Cost by model** in Copy session summary.
+
+The full list follows.
+
 ### Added
 
 - **An effort the model doesn't take:** when the model that answered doesn't list the effort you picked (Opus 4.6 has

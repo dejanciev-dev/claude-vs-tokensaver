@@ -51,6 +51,10 @@ warm, and shows what every turn costs.
   a read-deny rule for build output, or put the plain command in the box.
 - **Agents panel** for subagents and background tasks, with Stop and Run in background. It shows each agent's
   model and cost, turns a row amber past a cost you set, and can stop an agent automatically.
+- **Models as Claude Code names and bills them:** `Haiku 5.5` under each answer, on agent rows and in the model
+  picker (with its price per million tokens). A model the prices in Options don't cover (an older one, or one set with
+  `ANTHROPIC_DEFAULT_HAIKU_MODEL`) is priced at what Claude Code bills for it, and the effort picker says when a
+  model doesn't take a level.
 - **Sessions list** with each conversation's cost.
 
 ## Chat
