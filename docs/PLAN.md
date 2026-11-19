@@ -1784,8 +1784,10 @@ already says when a turn ran fast.
       from the conversation's id. Passes with 2.1.328 ($0.0096 for four turns): 3 processes, each sent `set_model`
       `claude-haiku-5-5`, each turn answered by claude-haiku-5-5. Also gone: a "plan mode answers with Sonnet" comment
       left in `--live-long-prompt`
-- [ ] **Manual checks for Phases 67 and 68.** A section in [MANUAL-CHECKS.md](MANUAL-CHECKS.md): Haiku and Auto in
-      plan mode, the footer's model name, the effort tip, a resumed conversation; Release moves down one
+- [x] **Manual checks for Phases 67 and 68.** A section in [MANUAL-CHECKS.md](MANUAL-CHECKS.md): Haiku and Auto in
+      plan mode, the footer's model name, the effort tip, a resumed conversation; Release moves down one. Section 27,
+      *Models in Plan mode, and as Claude Code names them*: Haiku 4.5 through `ANTHROPIC_DEFAULT_HAIKU_MODEL` checks
+      the name, the learned price and the effort tip at once; Release is now 28
 
 ---
 
