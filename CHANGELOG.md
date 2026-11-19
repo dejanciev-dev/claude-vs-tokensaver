@@ -9,8 +9,8 @@ All notable changes to this project are listed here. The format follows
 ### Added
 
 - **An effort the model doesn't take:** when the model that answered doesn't list the effort you picked (Opus 4.6 has
-  no xhigh; Haiku 4.5 takes no effort at all), a tip says so once per conversation and names the levels it takes. From
-  Claude Code's own models list.
+  no xhigh; Haiku 4.5 takes no effort at all), a tip says so once per conversation: Claude Code quietly uses the next
+  level down (Opus 4.6: high), or none. From Claude Code's own models list.
 
 ### Fixed
 

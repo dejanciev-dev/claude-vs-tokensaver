@@ -524,9 +524,17 @@ namespace ClaudeVS.Core.Tests
 
             Eq(null, SessionNotices.UnsupportedEffort(models, "claude-opus-5-5", "max"));
             Eq(null, SessionNotices.UnsupportedEffort(null, "claude-opus-4-6", "xhigh"), "no catalog");
-            Eq("Opus 4.6 answered, and it doesn't take xhigh effort (it takes low, medium, high, max): Claude Code uses another level, so pick one of those to know what you get.",
+            Eq("Opus 4.6 answered, and it doesn't take xhigh effort: Claude Code uses high instead (it takes low, medium, high, max).",
                 SessionNotices.UnsupportedEffort(models, "claude-opus-4-6", "xhigh"));
-            True(SessionNotices.UnsupportedEffort(models, "claude-haiku-4-5-20251001", "high").StartsWith("Haiku 4.5 answered, and it takes no effort setting"), "Haiku 4.5");
+            Eq("Haiku 4.5 answered, and it takes no effort setting: Claude Code drops the high effort you picked, so it changes nothing.",
+                SessionNotices.UnsupportedEffort(models, "claude-haiku-4-5-20251001", "high"));
+
+            // What 2.1.328's get_settings said it applied, launched with each model and effort (no error in any case)
+            var applied = JObject.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.328-effort-applied.json")));
+            foreach (var c in applied["cases"])
+                Eq((string)c["applied"]["effort"] ?? "", models.EffortApplied((string)c["sent"]["model"], (string)c["sent"]["effort"]), (string)c["sent"]["model"]);
+            Eq("max", models.EffortApplied("claude-opus-4-6", "max"));
+            Eq(null, models.EffortApplied("claude-nosuch-1", "high"), "not listed");
 
             var older = ModelCatalog.Parse(JObject.Parse("{\"models\":[{\"value\":\"haiku\",\"resolvedModel\":\"claude-haiku-5-5\",\"displayName\":\"Haiku 5.5\"}]}"));
             Eq(null, older.SupportsEffort("claude-haiku-5-5", "high"), "a Claude Code that lists no levels: don't know");

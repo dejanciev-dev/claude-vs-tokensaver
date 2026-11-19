@@ -1,0 +1,4 @@
+{"note":"get_settings applied.model / applied.effort from Claude Code 2.1.328, launched with --model and --effort as in sent","cases":[
+{"sent":{"model":"claude-haiku-4-5-20251001","effort":"high"},"applied":{"model":"claude-haiku-4-5-20251001","effort":null}},
+{"sent":{"model":"claude-haiku-5-5","effort":"high"},"applied":{"model":"claude-haiku-5-5","effort":"high"}},
+{"sent":{"model":"claude-opus-4-6","effort":"xhigh"},"applied":{"model":"claude-opus-4-6","effort":"high"}}]}

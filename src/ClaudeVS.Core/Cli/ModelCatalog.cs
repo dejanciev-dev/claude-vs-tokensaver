@@ -104,6 +104,28 @@ namespace ClaudeVS.Core.Cli
         /// Whether <paramref name="model"/> takes <paramref name="effort"/> ("low" … "max"); null when the catalog doesn't
         /// say (the model or its levels not listed, or no effort).
         /// </summary>
+        /// <summary>The effort levels from lowest to highest.</summary>
+        public static readonly string[] EffortOrder = { "low", "medium", "high", "xhigh", "max" };
+
+        /// <summary>
+        /// The effort Claude Code applies when <paramref name="model"/> is sent <paramref name="effort"/>: the effort itself
+        /// when the model takes it, else the highest level it takes below that, else "" for none (2.1.328's
+        /// <c>get_settings</c>: Opus 4.6 sent xhigh applies high, Haiku 4.5 sent high applies none, with no error).
+        /// Null when the catalog doesn't say.
+        /// </summary>
+        public string EffortApplied(string model, string effort)
+        {
+            var ok = SupportsEffort(model, effort);
+            if (ok == null) return null;
+            string e = effort.Trim().ToLowerInvariant();
+            if (ok == true) return e;
+            var levels = Find(model).EffortLevels;
+            int at = Array.IndexOf(EffortOrder, e);
+            for (int i = (at < 0 ? EffortOrder.Length : at) - 1; i >= 0; i--)
+                if (levels.Contains(EffortOrder[i])) return EffortOrder[i];
+            return "";
+        }
+
         public bool? SupportsEffort(string model, string effort)
         {
             if (string.IsNullOrWhiteSpace(effort)) return null;
