@@ -529,6 +529,17 @@ namespace ClaudeVS.Core.Tests
             prices.Learn(new Dictionary<string, ModelUsageEntry> { ["claude-haiku-4-5-20251001"] = new ModelUsageEntry { Usage = new TokenUsage { Input = 1000, Output = 1000 }, CostUsd = 0.006 } });
             Eq("$1 / $5 per Mtok in / out", ModelPickerText.Description(ModelChoice.Haiku, older, prices), "learned");
             Eq("$2.50", ModelPickerText.Usd(2.5));
+
+            // The effort picker, for the model the next turn goes to
+            Eq("claude-haiku-5-5", ModelPickerText.NextModel(ModelChoice.Haiku, models, "claude-opus-4-6"));
+            Eq("claude-opus-4-6", ModelPickerText.NextModel(ModelChoice.Auto, models, "claude-opus-4-6"), "Auto: the last answer's");
+            Eq("haiku", ModelPickerText.NextModel(ModelChoice.Haiku, null, null), "before Claude Code has said");
+            Eq("Opus 4.6 takes no xhigh: Claude Code uses high", ModelPickerText.EffortNote(EffortChoice.XHigh, models, "claude-opus-4-6"));
+            Eq(null, ModelPickerText.EffortNote(EffortChoice.Max, models, "claude-opus-4-6"));
+            Eq("Haiku 4.5 takes no effort: Claude Code drops it", ModelPickerText.EffortNote(EffortChoice.Low, models, "claude-haiku-4-5-20251001"));
+            Eq(null, ModelPickerText.EffortNote(EffortChoice.Auto, models, "claude-haiku-4-5-20251001"), "Auto sends none");
+            Eq(null, ModelPickerText.EffortNote(EffortChoice.XHigh, models, null), "no model yet");
+            Eq(null, ModelPickerText.EffortNote(EffortChoice.XHigh, null, "claude-opus-4-6"), "no catalog");
         }
 
         /// <summary>The same capture as a <see cref="ModelCatalog"/>: names, current models and effort levels.</summary>
