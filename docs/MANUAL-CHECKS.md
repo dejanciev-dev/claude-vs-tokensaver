@@ -321,7 +321,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Do it again in the same conversation | The row counts again; no second tip |
 | **New chat**, a small file read twice the same way | The row says `re-read ~…`; no tip under 5k |
 
-## 27. Models in Plan mode, and as Claude Code names them (Phases 67–69)
+## 27. Models in Plan mode, and as Claude Code names them (Phases 67–70)
 
 | Do | Expect |
 |---|---|
@@ -331,7 +331,10 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Close VS, set `ANTHROPIC_DEFAULT_HAIKU_MODEL=claude-haiku-4-5-20251001`, start it again; Haiku, effort **High**, a short question | The footer says `Haiku 4.5`; its cost tooltip starts *at the prices Claude Code bills for claude-haiku-4-5-20251001*, and the total matches Claude Code's; one token tip: *Haiku 4.5 answered, and it takes no effort setting* |
 | The same, a second question | No second tip |
 | Still with the variable, open the model picker | *Haiku 4.5*, with `$1 / $5 per Mtok in / out` once a turn has run (no price before) |
+| Still with it, open the effort picker | Every level says *Haiku 4.5 takes no effort: Claude Code drops it* |
+| Still with it, a conversation with some context, type a prompt with **Haiku** picked | The price while typing is at Haiku 4.5's price |
 | Still with it, ask *Use an Explore agent to list the files in this folder* | The agent's row says `Explore · Haiku 4.5`, and so does the line under its Agent row once done |
+| Then switch to **Sonnet**, ask once more, `/` → **Copy session summary** | A `By model:` line under the cost, with Sonnet 5.5 and Haiku 4.5, most first |
 | Close VS, clear the variable, start it again, **Show Savings Report** | The agents' cost of those turns is at Haiku 4.5's price, not a tenth of it |
 | Open the model picker in a new chat, after the first answer | *Haiku 5.5* `$0.10 / $0.50 per Mtok in / out`, *Sonnet 5.5*, *Opus 5.5*, *Fable 5.2* with "2× the Opus price; Auto never picks it" |
 
