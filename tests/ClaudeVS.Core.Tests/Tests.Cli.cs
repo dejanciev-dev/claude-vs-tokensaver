@@ -503,6 +503,39 @@ namespace ClaudeVS.Core.Tests
             Eq(null, ClaudeSession.ResolvedModelId(null, "haiku"));
         }
 
+        /// <summary>The same capture as a <see cref="ModelCatalog"/>: names, current models and effort levels.</summary>
+        private static void Test_ModelCatalog_RealCli_2_1_328()
+        {
+            var models = ModelCatalog.Parse(JObject.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.328-initialize-models.json"))));
+            True(models != null && models.Models.Count == 14, "14 models listed");
+            Eq("Haiku 5.5", models.DisplayName("claude-haiku-5-5"));
+            Eq("Opus 5.5", models.DisplayName("claude-opus-5-5"), "Opus's own entry, not \"Default (recommended)\"");
+            Eq("Opus 5.5", models.DisplayName("claude-opus-5-5[1m]"), "the 1M-context suffix");
+            Eq("Opus 5.5", models.DisplayName("opus"), "an alias");
+            Eq("Haiku 4.5", models.DisplayName("claude-haiku-4-5-20251001"));
+            Eq(null, models.DisplayName("default"), "names a choice, not a model");
+            Eq(null, models.DisplayName("claude-nosuch-1"));
+
+            True(models.IsCurrent("claude-haiku-5-5") && models.IsCurrent("claude-fable-5-2") && models.IsCurrent("claude-sonnet-5-5"), "the picker's four");
+            True(!models.IsCurrent("claude-fable-5-1") && !models.IsCurrent("claude-haiku-4-5-20251001") && !models.IsCurrent("claude-opus-4-7"), "older models");
+
+            Eq(true, models.SupportsEffort("claude-opus-5-5", "XHigh"));
+            Eq(false, models.SupportsEffort("claude-opus-4-6", "xhigh"), "Opus 4.6: low, medium, high, max");
+            Eq(false, models.SupportsEffort("claude-haiku-4-5-20251001", "low"), "Haiku 4.5 takes no effort");
+            Eq(null, models.SupportsEffort("claude-nosuch-1", "low"), "not listed: don't know");
+            Eq(null, models.SupportsEffort("claude-opus-4-6", null));
+
+            Eq(null, SessionNotices.UnsupportedEffort(models, "claude-opus-5-5", "max"));
+            Eq(null, SessionNotices.UnsupportedEffort(null, "claude-opus-4-6", "xhigh"), "no catalog");
+            Eq("Opus 4.6 answered, and it doesn't take xhigh effort (it takes low, medium, high, max): Claude Code uses another level, so pick one of those to know what you get.",
+                SessionNotices.UnsupportedEffort(models, "claude-opus-4-6", "xhigh"));
+            True(SessionNotices.UnsupportedEffort(models, "claude-haiku-4-5-20251001", "high").StartsWith("Haiku 4.5 answered, and it takes no effort setting"), "Haiku 4.5");
+
+            var older = ModelCatalog.Parse(JObject.Parse("{\"models\":[{\"value\":\"haiku\",\"resolvedModel\":\"claude-haiku-5-5\",\"displayName\":\"Haiku 5.5\"}]}"));
+            Eq(null, older.SupportsEffort("claude-haiku-5-5", "high"), "a Claude Code that lists no levels: don't know");
+            Eq(null, ModelCatalog.Parse(new JObject()), "no list");
+        }
+
         private static void Test_PermissionPrompt_OtherTools()
         {
             var edit = PermissionPrompt.From("Edit", JObject.Parse("{\"file_path\":\"C:\\\\work\\\\a.cs\",\"old_string\":\"x\",\"new_string\":\"y\"}"), null);

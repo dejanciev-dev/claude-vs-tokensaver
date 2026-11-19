@@ -1759,10 +1759,13 @@ a model that isn't one of the four current ones, checks that plan mode keeps Hai
 writes down the VS checks for Phases 67 and 68. Fast mode stays out: the chat has no fast-mode switch, and the footer
 already says when a turn ran fast.
 
-- [ ] **Model facts from Claude Code.** `ModelCatalog` reads the `initialize` models list (alias, `resolvedModel`,
+- [x] **Model facts from Claude Code.** `ModelCatalog` reads the `initialize` models list (alias, `resolvedModel`,
       `displayName`, `supportedEffortLevels`). The footer names the model that answered as Claude Code does
       (`Haiku 5.5`, not `claude-haiku-5-5`; the ID stays in the tooltip). When that model doesn't list the effort the
-      turn was sent with, a tip says so once per conversation
+      turn was sent with, a tip says so once per conversation. `ClaudeSession.Models` (kept across restarts;
+      `ResolvedModelId` reads it now), `ModelCatalog.DisplayName` / `IsCurrent` / `SupportsEffort` (a model without
+      levels in a list that has them takes no effort: Haiku 4.5), `SessionNotices.UnsupportedEffort`. Checked against
+      the 2.1.328 capture: `Test_ModelCatalog_RealCli_2_1_328`. Builds clean; not yet run in VS
 - [ ] **Unknown model IDs priced.** A model set outside the picker (`settings.json`, a hook, an older ID such as
       `claude-haiku-4-5-20251001`) got its family's current price: Haiku 4.5 at Haiku 5.5's price, a tenth of what it
       bills. A model that isn't one of the four current IDs is priced from Claude Code's own `costUSD` for it

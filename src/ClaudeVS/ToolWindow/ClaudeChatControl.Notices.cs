@@ -463,6 +463,19 @@ namespace ClaudeVS.ToolWindow
             Tip(tip);
         }
 
+        private bool _gaveEffortTip;
+
+        /// <summary>After a turn: once per conversation, an effort the model that answered doesn't take (Claude Code's models list).</summary>
+        private void UnsupportedEffortTip(string model)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (_gaveEffortTip || model == null) return;
+            string tip = SessionNotices.UnsupportedEffort(_session?.Models, model, _lastTurnEffort);
+            if (tip == null) return;
+            _gaveEffortTip = true;
+            Tip(tip);
+        }
+
         /// <summary>After a turn: once per conversation, thinking that was most of a short answer at high effort or above.</summary>
         private void HeavyThinkingTip(string model)
         {
@@ -530,6 +543,7 @@ namespace ClaudeVS.ToolWindow
             _gaveCutOffTip = false;
             _gaveOverkillTip = false;
             _gaveHeavyThinkingTip = false;
+            _gaveEffortTip = false;
             _gaveLongAnswerTip = false;
             _gaveNoiseReadTip = false;
             _gaveLoudTip = false;

@@ -105,6 +105,8 @@ namespace ClaudeVS.Core.Cli
                     var tcs = new TaskCompletionSource<JObject>(TaskCreationOptions.RunContinuationsAsynchronously);
                     _pending[(string)initRequest["request_id"]] = tcs;
                     _initialize = tcs.Task;
+                    tcs.Task.ContinueWith(t => { if (t.Status == TaskStatus.RanToCompletion && ModelCatalog.Parse(t.Result) is ModelCatalog c) Models = c; },
+                        TaskContinuationOptions.ExecuteSynchronously);
                     string init = initRequest.ToString(Formatting.None);
                     RaiseRaw(RawLineDirection.Stdin, init);
                     _stdin.WriteLine(init);
@@ -219,13 +221,14 @@ namespace ClaudeVS.Core.Cli
         /// The full model ID Claude Code resolves <paramref name="alias"/> to, from the <c>initialize</c> answer's
         /// <c>models</c> (<c>{"value": "haiku", "resolvedModel": "claude-haiku-5-5"}</c>, 2.1.328); null when not listed.
         /// </summary>
-        public static string ResolvedModelId(JObject initializeResponse, string alias)
-        {
-            if (!(initializeResponse?["models"] is JArray models) || string.IsNullOrEmpty(alias)) return null;
-            var m = models.OfType<JObject>().FirstOrDefault(x => string.Equals((string)x["value"], alias, StringComparison.OrdinalIgnoreCase));
-            string id = m?["resolvedModel"]?.Type == JTokenType.String ? ((string)m["resolvedModel"]).Trim() : null;
-            return string.IsNullOrEmpty(id) || id == alias ? null : id;
-        }
+        public static string ResolvedModelId(JObject initializeResponse, string alias) =>
+            ModelCatalog.Parse(initializeResponse)?.ResolvedId(alias);
+
+        /// <summary>
+        /// The models Claude Code offers (names, IDs, effort levels), from the last <c>initialize</c> answer; null until
+        /// one has come, or from a Claude Code without the list. Kept across restarts.
+        /// </summary>
+        public ModelCatalog Models { get; private set; }
 
         /// <summary>What <c>set_model</c> gets for <paramref name="model"/>: Haiku's full ID when the initialize answer gave it, else the alias.</summary>
         private async Task<string> ModelArgAsync(ModelChoice model)

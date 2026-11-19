@@ -2015,7 +2015,9 @@ namespace ClaudeVS.ToolWindow
                         if (ev.IsError && !string.IsNullOrEmpty(ev.Text)) AppendError("[error] ", ev.Text);
                         if (ev.TerminalReason != null && ev.TerminalReason != "completed") ClaudeOutputPane.WriteLine("Turn ended: " + ev.TerminalReason);
                         OnSignInExpiry(ev);
-                        string used = _turnModel != null ? " · " + _turnModel : "";
+                        // The model as Claude Code names it ("Haiku 5.5"); its ID goes in the tooltip
+                        string modelName = _turnModel == null ? null : _session?.Models?.DisplayName(_turnModel);
+                        string used = _turnModel != null ? " · " + (modelName ?? _turnModel) : "";
                         // The effort this turn was sent with: its record is next in line (RecordUsage takes it below)
                         if (TurnFooter.Effort(_pendingUsages.Count > 0 ? EffortUsed(_pendingUsages.Peek()) : null) is string effortSent) used += " · " + effortSent; // as Claude Code applied it
                         if (TurnFooter.Agents(ev.Subagents, _meterModel?.LastTurnSubagentTotal.Total ?? 0) is string agents) used += " · " + agents;
@@ -2039,6 +2041,7 @@ namespace ClaudeVS.ToolWindow
                         CutOffTip(); // answers cut off at the output limit that cost enough to go on
                         OverkillModelTip(_turnModel);
                         HeavyThinkingTip(_turnModel);
+                        UnsupportedEffortTip(_turnModel);
                         LongAnswerTip(_turnModel);
                         RefreshContextUsage(show: false); // control request, no model call
                         _turnModel = null;
@@ -2050,7 +2053,7 @@ namespace ClaudeVS.ToolWindow
                         _view.AppendTurnFooter($"✓ {ev.DurationMs / 1000.0:0.0}s · {TokenMeter.Format(ev.Usage.Total)} tok · {TurnFooter.Cost(_meterModel?.LastTurnCostUsd ?? 0, _meterModel?.LastTurnSubagentCostUsd ?? 0)}{usual}{used}{TurnFooter.Extras(ev.Usage, _meterModel?.LastTurnCacheSavedUsd ?? 0)}",
                             string.IsNullOrWhiteSpace(answer) ? null : BookmarkToggle(turn.Prompt, answer, turn.Anchor), answer,
                             tooltip: JoinLines(_meterModel == null ? null : TurnFooter.CostBreakdown(_meterModel.LastModel, _meterModel.LastTurn, _meterModel.LastTurnSubagentCostUsd, _meterModel.LastTurnCostUsd, _meterModel.Prices),
-                                _lastTurnReferences));
+                                _lastTurnReferences, modelName != null ? "Model: " + _turnModel : null));
                         _turnFiles.Reset(); // the next turn's reads
                         if (!string.IsNullOrWhiteSpace(answer)) _lastAnswer = answer;
                         SuggestFromAnswer(answer, ev, turn.Prompt); // grey text in the input box (after a failed turn: what to do); not while queued prompts run

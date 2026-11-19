@@ -255,6 +255,24 @@ namespace ClaudeVS.Core.Cli
                 + $"For questions like this, a lower effort in the effort picker ({lower}, or Auto) thinks less.";
         }
 
+        /// <summary>
+        /// A tip when the model that answered (<paramref name="model"/>) doesn't list <paramref name="effort"/> among the
+        /// effort levels Claude Code says it supports (<see cref="ModelCatalog"/>): Opus 4.6 has no "xhigh", Haiku 4.5
+        /// no effort at all. Claude Code then uses another level or none, so the effort picker doesn't do what it says.
+        /// Null when it does, or when the catalog doesn't say.
+        /// </summary>
+        public static string UnsupportedEffort(ModelCatalog models, string model, string effort)
+        {
+            if (models == null || models.SupportsEffort(model, effort) != false) return null;
+            var info = models.Find(model);
+            string name = models.DisplayName(model) ?? ModelCatalog.BareId(model);
+            string e = effort.Trim().ToLowerInvariant();
+            var levels = info?.EffortLevels;
+            return levels == null || levels.Count == 0
+                ? $"{name} answered, and it takes no effort setting: the {e} effort you picked doesn't change what it does or costs."
+                : $"{name} answered, and it doesn't take {e} effort (it takes {string.Join(", ", levels)}): Claude Code uses another level, so pick one of those to know what you get.";
+        }
+
         /// <summary>Subagents that cost less than this in a turn get no tip, however small the main agent's share.</summary>
         public const double SubagentTipFromUsd = 0.05;
 
