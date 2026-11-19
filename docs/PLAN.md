@@ -11,7 +11,7 @@ Tick the boxes as you go. Each phase ends with something you can run.
 |---|---|
 | `ClaudeVS.Core` (CLI session, parser, router, meter, context, setup) | ✅ Written, 16/16 tests pass |
 | `ClaudeVS` VSIX (package, tool window, commands, options) | ✅ Builds clean (0 warnings); not yet run in the experimental instance |
-| Real end-to-end run against `claude` CLI | ⚠️ Core verified against CLI 2.1.316 (`--live` smoke test): sessions, streaming, usage, cost, cache OK; Haiku routing works in acceptEdits ($0.002 vs $0.042 per turn on Sonnet); in plan mode the CLI answers with Sonnet even when Haiku is requested (still so in 2.1.327, where all other live smoke tests pass). VS UI not run yet |
+| Real end-to-end run against `claude` CLI | ⚠️ Core verified against CLI 2.1.316 (`--live` smoke test): sessions, streaming, usage, cost, cache OK; Haiku routing works in acceptEdits ($0.002 vs $0.042 per turn on Sonnet); in plan mode the CLI answers with Sonnet even when Haiku is requested (still so in 2.1.328, where all other live smoke tests pass). VS UI not run yet |
 | Markdown transcript, diffs, history, question cards | ❌ Not started |
 
 ---
@@ -1705,11 +1705,13 @@ record, so a background agent's reads are logged.)
 ## Phase 66 — Keep up with the CLI (from the Claude Code CHANGELOG 2.1.328)
 
 Checked on 2026-11-19 with 2.1.328 installed. The 2.1.328 section read for what the extension sends or reads (from
-the public CHANGELOG); Code Mode, self-hosted runner, terminal, `/plugin`, cloud, Remote Control and gateway entries
+the CHANGELOG you attached); Code Mode, self-hosted runner, terminal, `/plugin`, cloud, Remote Control and gateway entries
 are left out.
 
-- [ ] **Verify with 2.1.328 and raise `CliVersion.Tested`.** The live tests and `--live-reads` with 2.1.328; README,
-      Marketplace overview, CONTRIBUTING and the plan-mode notes
+- [x] **Verify with 2.1.328 and raise `CliVersion.Tested`.** All 12 live tests pass with 2.1.328 ($0.26, 4.9 min;
+      the router's 4 routes $0.0008, 37 s with warm-up), and `--live-reads` (an Explore agent's ~9.7k-token re-read,
+      on its task); 232 offline tests pass. `--live raw.jsonl Plan` still answers with Sonnet. `CliVersion.Tested` is
+      2.1.328 (`Required` stays 2.1.318); README, Marketplace overview, CONTRIBUTING and the plan-mode notes say so
 
 Checked, nothing to change:
 - Glob and Grep "counting an error as results" (a VS Code panel fix): probed with a folder that doesn't exist, both
