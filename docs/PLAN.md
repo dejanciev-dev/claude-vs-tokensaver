@@ -1849,8 +1849,10 @@ Planned on 2026-11-19, after Phase 70, on the same branch; the last phase of thi
 `SavingsReport.cs` and repeated a fixture load across tests; one live run checks a conversation on two models; then
 the unreleased work (Phases 68–70) becomes 0.13.0.
 
-- [ ] **Tidy up Phases 68–70.** The learned prices move out of `SavingsReport.cs` into their own file; the tests load
-      the 2.1.328 models list through one helper
+- [x] **Tidy up Phases 68–70.** The learned prices move out of `SavingsReport.cs` into their own file; the tests load
+      the 2.1.328 models list through one helper. `PriceTable` is partial: `Tokens/PriceTable.Learned.cs` (101 lines;
+      `SavingsReport.cs` back to 1,563). `Models_2_1_328()` / `Initialize_2_1_328()` in the test runner replace five
+      copies of the fixture load. No behaviour change: 237 tests pass, builds clean
 - [ ] **Live two-model test.** `--live-models`: Sonnet answers and an Explore agent runs on Haiku. Each model's billed
       cost, the agent's model name and the summary's `By model:` line, against the real CLI
 - [ ] **Version 0.13.0.** Manifest, assembly and package registration at 0.13.0, still a preview; the Unreleased
