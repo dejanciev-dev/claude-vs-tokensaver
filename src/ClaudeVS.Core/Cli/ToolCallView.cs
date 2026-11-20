@@ -359,20 +359,51 @@ namespace ClaudeVS.Core.Cli
         /// Claude Code shows them. For a file that ends in a newline it counts the empty "line" after it: probed with
         /// 2.1.329, three lines read whole come back as 4 of 4 (2.1.329 fixed only its own view). So when the read
         /// reaches the end and its <c>content</c> ends in a newline, that line is taken off both counts; an empty file
-        /// is 0 of 0. A read that stops before the end can't tell: its total keeps the extra line ("3 of 11" for ten
-        /// lines). Fixtures/cli-2.1.329-read-lines.jsonl.
+        /// is 0 of 0. A read that stops before the end can't tell from its content ("3 of 11" for ten lines), so the
+        /// file is asked (<paramref name="endsInNewline"/>, by default <see cref="FileEndsInNewline"/>): the total loses
+        /// the extra line when it ends in a newline, and keeps Claude Code's count when the file can't be read.
+        /// Fixtures/cli-2.1.329-read-lines.jsonl.
         /// </summary>
-        public static (long? Read, long? Total, long? Start) ReadLines(JObject file)
+        public static (long? Read, long? Total, long? Start) ReadLines(JObject file, Func<string, bool?> endsInNewline = null)
         {
             long? N(JToken t) => t != null && (t.Type == JTokenType.Integer) ? (long?)t : null;
             long? read = N(file?["numLines"]), total = N(file?["totalLines"]), start = N(file?["startLine"]);
             if (read > 0 && total != null && (start ?? 1) + read - 1 == total
                 && file["content"]?.Type == JTokenType.String && ((string)file["content"]).EndsWith("\n", StringComparison.Ordinal))
             { read--; total--; }
+            // A read that stops before the end: its content can't tell, the file can (Phase 74). The extension runs where it is.
+            else if (read > 0 && total > 1 && (start ?? 1) + read - 1 < total && file["filePath"]?.Type == JTokenType.String
+                && (endsInNewline ?? FileEndsInNewline)((string)file["filePath"]) == true)
+            { total--; }
             // An empty file comes back as one line of nothing (2.1.329: content "", 1 of 1).
             else if (read == 1 && total == 1 && (start ?? 1) == 1 && file["content"]?.Type == JTokenType.String && ((string)file["content"]).Length == 0)
             { read = 0; total = 0; }
             return (read, total, start);
+        }
+
+        /// <summary>
+        /// Whether the file on disk ends in a newline (its last byte, or the last two for UTF-16 LE's <c>\n\0</c>); null
+        /// when it's gone, empty or can't be read. Reads two bytes, however large the file.
+        /// </summary>
+        public static bool? FileEndsInNewline(string path)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path)) return null;
+                using (var f = new System.IO.FileStream(path, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite | System.IO.FileShare.Delete))
+                {
+                    if (f.Length == 0) return null;
+                    int n = (int)Math.Min(2, f.Length);
+                    f.Seek(-n, System.IO.SeekOrigin.End);
+                    var b = new byte[n];
+                    if (f.Read(b, 0, n) != n) return null;
+                    return b[n - 1] == (byte)'\n' || (n == 2 && b[1] == 0 && b[0] == (byte)'\n');
+                }
+            }
+            catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException || ex is ArgumentException || ex is NotSupportedException || ex is System.Security.SecurityException)
+            {
+                return null;
+            }
         }
 
         /// <summary>
