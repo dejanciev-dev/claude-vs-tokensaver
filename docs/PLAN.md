@@ -2103,7 +2103,8 @@ again (the price of a restart), and whether permissions you granted "for this se
       `InstructionFiles.Snapshot` and `Notice` take the home folder; the notice names it `~/.claude/CLAUDE.md`. Not
       probed on its own: it's loaded with the project's `CLAUDE.md`, which `--live-restart` checks. In
       `Test_InstructionFiles`. Builds clean; not yet run in VS
-- [ ] **0.15.0 notes.** The changelog's 0.15.0 says what Phase 79 changed
+- [x] **0.15.0 notes.** The changelog's 0.15.0 says what Phase 79 changed. Each item's entry went into 0.15.0 with it;
+      the first highlight adds the prompt cache, the session's permissions and the restart after a turn
 
 ---
 
