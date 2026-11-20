@@ -74,4 +74,9 @@ screen reader announcements.
 3. **Tools → Claude Code → Generate Lean CLAUDE.md** (once per solution).
 4. Select code and press `Ctrl+Alt+K, S`, or type a prompt and press **Enter**.
 
+## Support
+
+The extension is free and stays free. If it saves you money on tokens, you can rate it on the Marketplace,
+or [open an issue](https://github.com/dejanciev-dev/claude-vs-tokensaver/issues) with what to improve.
+
 Source, documentation and issues: [github.com/dejanciev-dev/claude-vs-tokensaver](https://github.com/dejanciev-dev/claude-vs-tokensaver)

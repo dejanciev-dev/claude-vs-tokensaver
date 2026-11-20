@@ -25,6 +25,7 @@ warm, and shows what every turn costs.
 - [Project layout](#project-layout)
 - [Building and testing](#building-and-testing)
 - [Known limitations](#known-limitations)
+- [Support](#support)
 - [Contributing, changelog and license](#contributing-changelog-and-license)
 
 ## Status
@@ -391,6 +392,11 @@ msbuild ClaudeVS.sln /restore /p:Configuration=Release /warnaserror     # → sr
   empty until the result comes in; with Claude Code 2.1.319 the result carries the CLI's own copy and the diff is redrawn from it.
 - The output-trimming hook (`trim-output.ps1`) assumes Windows PowerShell. Claude Code under WSL would need a bash version.
 - No Marketplace release yet.
+
+## Support
+
+The extension is free and stays free. If it saves you money on tokens, you can rate it on the Marketplace,
+or [open an issue](https://github.com/dejanciev-dev/claude-vs-tokensaver/issues) with what to improve.
 
 ## Contributing, changelog and license
 
