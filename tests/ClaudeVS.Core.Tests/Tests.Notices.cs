@@ -196,6 +196,13 @@ namespace ClaudeVS.Core.Tests
             Eq("Out of credit: send it again once you have more · Tab puts your prompt back", Of(text: "Credit balance is too low").Display());
             Eq("Sign in again, then send it again · Tab puts your prompt back", Of(kind: "authentication_failed", status: 401).Display());
             Eq("The conversation is too long for the context window · Tab: /compact", Of(text: "Prompt is too long").Display());
+            // 2.1.329 no longer retries at the limit the API names: behind a gateway whose model takes fewer output tokens
+            const string refused = "API Error: 400 {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"max_tokens: 128000 > 64000, which is the maximum allowed number of output tokens for claude-sonnet-4-5\"}}";
+            Eq(64000, ClaudeErrorHints.ModelOutputLimit(refused));
+            Eq(null, ClaudeErrorHints.ModelOutputLimit("API Error: 400 max_tokens must be at least 1"), "another max_tokens error");
+            Eq("The model takes at most 64,000 output tokens: set CLAUDE_CODE_MAX_OUTPUT_TOKENS=64000, start a New chat, then send it again · Tab puts your prompt back",
+                Of(kind: "invalid_request", status: 400, text: refused).Display());
+            True(ClaudeErrorHints.Explain(refused)?.Contains("CLAUDE_CODE_MAX_OUTPUT_TOKENS=64000") == true, "the error's explanation too");
             var policy = Of(text: "API Error: Claude Code is unable to respond to this request, which appears to violate our Usage Policy. Run /rewind and change the message, or run /clear.");
             Eq("Blocked by the usage policy: rewind your message to change it, or start a New chat", policy.Display(), "a policy block: the hint alone");
             Eq(null, policy.Prompt, "nothing for Tab: the same prompt would be blocked again");

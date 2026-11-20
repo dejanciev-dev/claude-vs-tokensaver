@@ -37,6 +37,8 @@ namespace ClaudeVS.Core.Cli
                 return "Claude Code is not logged in. Run `claude auth login` in a terminal (or `claude`, then /login). Restart the chat afterwards (New).";
             if (Has(e, "output token maximum", "max_output_tokens"))
                 return "Claude's answer hit the output token limit and was cut off. Ask it to continue, or to work in smaller steps (one file or one part at a time).";
+            if (ModelOutputLimit(error) is int most)
+                return $"The model takes at most {most.ToString(System.Globalization.CultureInfo.InvariantCulture)} output tokens, fewer than Claude Code asked for (often a gateway's model). Set CLAUDE_CODE_MAX_OUTPUT_TOKENS={most.ToString(System.Globalization.CultureInfo.InvariantCulture)} in Claude Code's settings.json (env) or Visual Studio's environment, restart the chat (New), then send again.";
             if (Has(e, "credit balance", "insufficient_quota", "billing", "usage limit", "limit reached"))
                 return "Your Claude plan or API credit limit was reached. Check your usage at claude.ai or console.anthropic.com.";
             if (Has(e, "rate_limit", "rate limit", "too many requests"))
@@ -71,6 +73,8 @@ namespace ClaudeVS.Core.Cli
                 return Step("Blocked by the usage policy: rewind your message to change it, or start a New chat", null);
             if (kind == "max_output_tokens" || Has(e, "output token maximum", "max_output_tokens"))
                 return Step("The answer hit the output limit", "Go on from where you stopped, in smaller parts");
+            if (ModelOutputLimit(text) is int most)
+                return Step($"The model takes at most {most.ToString("N0", System.Globalization.CultureInfo.InvariantCulture)} output tokens: set CLAUDE_CODE_MAX_OUTPUT_TOKENS={most.ToString(System.Globalization.CultureInfo.InvariantCulture)}, start a New chat, then send it again", again);
             if (Has(e, "prompt is too long", "context window", "context_length"))
                 return Step("The conversation is too long for the context window", "/compact");
             // "Invalid API key · Fix external API key" (2.1.326, authentication_failed, 401): a key in the environment, not the sign-in
@@ -88,6 +92,21 @@ namespace ClaudeVS.Core.Cli
             if (kind == "server_error" || apiStatus >= 500 || Has(e, "overloaded", "timed out", "timeout", "connection error", "econnreset", "socket"))
                 return Step(Has(e, "overloaded") || apiStatus == 529 ? "The API is overloaded: try again" : "The request failed on the way: try again", again);
             return Step("The request failed", again);
+        }
+
+        private static readonly System.Text.RegularExpressions.Regex MaxTokensRefused = new System.Text.RegularExpressions.Regex(
+            @"max_tokens:\s*\d+\s*>\s*(\d+),\s*which is the maximum allowed", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        /// <summary>
+        /// The output limit the model takes, from the API's refusal of a larger one ("max_tokens: 128000 > 64000, which
+        /// is the maximum allowed number of output tokens for …"), or null. Up to 2.1.328 Claude Code sent the request
+        /// again at that limit; 2.1.329 doesn't, so behind a gateway whose model takes fewer output tokens the turn
+        /// fails until <c>CLAUDE_CODE_MAX_OUTPUT_TOKENS</c> is set to it.
+        /// </summary>
+        public static int? ModelOutputLimit(string error)
+        {
+            var m = MaxTokensRefused.Match(error ?? "");
+            return m.Success && int.TryParse(m.Groups[1].Value, out int most) && most > 0 ? most : (int?)null;
         }
 
         private static bool Has(string text, params string[] needles)
