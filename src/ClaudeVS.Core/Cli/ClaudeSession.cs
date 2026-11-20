@@ -111,6 +111,13 @@ namespace ClaudeVS.Core.Cli
                     RaiseRaw(RawLineDirection.Stdin, init);
                     _stdin.WriteLine(init);
                 }
+                // MCP servers turned off in this conversation stay off in a new process (a restart in place, a crash)
+                foreach (string server in McpServersOff)
+                {
+                    string toggle = new JObject { ["type"] = "control_request", ["request_id"] = Guid.NewGuid().ToString("N"), ["request"] = McpToggle(server, false) }.ToString(Formatting.None);
+                    RaiseRaw(RawLineDirection.Stdin, toggle);
+                    _stdin.WriteLine(toggle);
+                }
                 CurrentModel = Options.Model;
                 CurrentEffort = Options.Effort;
                 AppliedEffort = null; // a new process: read again
@@ -456,8 +463,24 @@ namespace ClaudeVS.Core.Cli
             return true;
         }
 
-        public Task<JObject> SetMcpServerEnabledAsync(string serverName, bool enabled) =>
-            RequestAsync(new JObject { ["subtype"] = "mcp_toggle", ["serverName"] = serverName, ["enabled"] = enabled }, TimeSpan.FromSeconds(30));
+        public Task<JObject> SetMcpServerEnabledAsync(string serverName, bool enabled)
+        {
+            lock (_mcpOff) { if (enabled) _mcpOff.Remove(serverName); else _mcpOff.Add(serverName); }
+            return RequestAsync(McpToggle(serverName, enabled), TimeSpan.FromSeconds(30));
+        }
+
+        /// <summary>
+        /// The MCP servers turned off in this conversation. <c>mcp_toggle</c> lasts as long as the process (2.1.329: a
+        /// server turned off came back connected after a restart in place, `--live-mcp-restart`), so every new process
+        /// gets them turned off again right after <c>initialize</c>.
+        /// </summary>
+        private readonly HashSet<string> _mcpOff = new HashSet<string>(StringComparer.Ordinal);
+
+        /// <summary>The servers turned off in this conversation (<see cref="SetMcpServerEnabledAsync"/>).</summary>
+        public IReadOnlyCollection<string> McpServersOff { get { lock (_mcpOff) return _mcpOff.ToList(); } }
+
+        private static JObject McpToggle(string serverName, bool enabled) =>
+            new JObject { ["subtype"] = "mcp_toggle", ["serverName"] = serverName, ["enabled"] = enabled };
 
         public Task<JObject> ReconnectMcpServerAsync(string serverName) =>
             RequestAsync(new JObject { ["subtype"] = "mcp_reconnect", ["serverName"] = serverName }, TimeSpan.FromSeconds(60));

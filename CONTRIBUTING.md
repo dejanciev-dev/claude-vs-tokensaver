@@ -47,6 +47,8 @@ up to Claude Code's total, the agent is named `Sonnet 5.5`, and Copy session sum
 `StopProcess` the next prompt resumes the same conversation and is cut off at the new one.
 `--live-restart` (about $0.002, in `--live-all`) does the same for *Restart Claude Code*: a `CLAUDE.md` written
 mid-conversation isn't read by the running process, and is after the restart, in the same conversation.
+`--live-mcp-restart` (no cost, in `--live-all`) turns the Error List MCP server off, restarts in place and checks it
+is still off, and that a server added to `.mcp.json` meanwhile is listed only after the restart.
 
 Each test also runs on its own. `--live [path-for-raw-output.txt] [mode]` runs two short turns, in Accept Edits
 unless a mode is named (`Plan` checks that plan mode keeps Haiku, also after a restart and a resume). To capture and answer permission

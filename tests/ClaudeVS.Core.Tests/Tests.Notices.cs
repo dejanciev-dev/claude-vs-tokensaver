@@ -505,6 +505,35 @@ namespace ClaudeVS.Core.Tests
             finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
         }
 
+        private static void Test_InstructionFiles()
+        {
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-instr-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(dir, ".claude"));
+                File.WriteAllText(Path.Combine(dir, "CLAUDE.md"), "# Rules\n");
+                var before = InstructionFiles.Snapshot(dir);
+                Eq(4, before.Count, "CLAUDE.md, .claude/CLAUDE.md, CLAUDE.local.md, .mcp.json");
+                Eq(0, InstructionFiles.Changed(before, InstructionFiles.Snapshot(dir)).Count, "nothing changed");
+
+                string md = Path.Combine(dir, "CLAUDE.md"), mcp = Path.Combine(dir, ".mcp.json");
+                File.SetLastWriteTimeUtc(md, DateTime.UtcNow.AddMinutes(1)); // edited
+                File.WriteAllText(mcp, "{}");                                // created
+                var changed = InstructionFiles.Changed(before, InstructionFiles.Snapshot(dir));
+                Eq(2, changed.Count, string.Join(", ", changed));
+                Eq(1, InstructionFiles.Changed(before, InstructionFiles.Snapshot(dir), new[] { md.ToUpperInvariant() }).Count, "Claude's own edit left out (any case)");
+                Eq("CLAUDE.md and .mcp.json changed since Claude Code started. It reads its instructions and MCP servers only when it starts, so this conversation still has the old ones. Restart Claude Code to use them; the conversation carries on.",
+                    InstructionFiles.Notice(changed, dir));
+                Eq(".claude/CLAUDE.md changed since Claude Code started. It reads its instructions only when it starts, so this conversation still has the old ones. Restart Claude Code to use them; the conversation carries on.",
+                    InstructionFiles.Notice(new[] { Path.Combine(dir, ".claude", "CLAUDE.md") }, dir));
+                File.Delete(md);
+                True(InstructionFiles.Changed(before, InstructionFiles.Snapshot(dir)).Contains(md), "deleted counts too");
+                Eq(null, InstructionFiles.Notice(new string[0], dir));
+                Eq(0, InstructionFiles.Snapshot(null).Count, "no folder");
+            }
+            finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
+        }
+
         private static void Test_SetLocalEnv()
         {
             string dir = Path.Combine(Path.GetTempPath(), "cvs-env-" + Guid.NewGuid().ToString("N"));

@@ -25,7 +25,7 @@ namespace ClaudeVS.ToolWindow
             Notice(SessionNotices.ApiKey(init), important: true);
             Notice(SessionNotices.McpServers(init));
             Tip(SessionNotices.OutputStyle(init));
-            if (ev.IsFirstInit) { SyncPermissionMode(init); CheckAuth(); ReadClaudeSettings(); }
+            if (ev.IsFirstInit) { SyncPermissionMode(init); CheckAuth(); ReadClaudeSettings(); SnapshotInstructionFiles(); }
         }
 
         /// <summary>
@@ -219,6 +219,46 @@ namespace ClaudeVS.ToolWindow
             try { said = Core.Setup.TokenSaverSetup.AddDenyRule(root, rule) ? $"Added {rule} to .claude/settings.json. It applies at once: Claude Code reads its permission rules again while it runs." : $"{rule} is already in .claude/settings.json."; }
             catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException || ex is Newtonsoft.Json.JsonException) { said = "Could not add the rule: " + ex.Message; }
             Append("\n" + said + "\n");
+        }
+
+        // ---------------- Instructions edited by hand ----------------
+
+        /// <summary>CLAUDE.md and .mcp.json as they were when this process started (<see cref="Core.Context.InstructionFiles"/>).</summary>
+        private System.Collections.Generic.Dictionary<string, DateTime?> _instructionFiles;
+        /// <summary>Files Claude changed with its own tools while this process ran: no notice for those.</summary>
+        private readonly System.Collections.Generic.HashSet<string> _claudeWrote = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        /// <summary>Files a notice was given for, in this process.</summary>
+        private readonly System.Collections.Generic.HashSet<string> _instructionNoticeGiven = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>On a process's first init: what it read. A restart in place starts over.</summary>
+        private void SnapshotInstructionFiles()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            _instructionFiles = Core.Context.InstructionFiles.Snapshot(_sessionDir);
+            _claudeWrote.Clear();
+            _instructionNoticeGiven.Clear();
+        }
+
+        /// <summary>
+        /// When the input box gets focus and when a turn ends: a CLAUDE.md or .mcp.json changed by hand since Claude Code
+        /// started isn't read until it starts again (Phase 76's --live-restart). A notice with Restart Claude Code, once
+        /// per file and process. Four file times; nothing while Claude is on a turn.
+        /// </summary>
+        private void CheckInstructionFiles()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (_instructionFiles == null || _session == null || !_session.IsRunning || _busy || _waitingForUser) return;
+            var changed = Core.Context.InstructionFiles.Changed(_instructionFiles, Core.Context.InstructionFiles.Snapshot(_sessionDir), _claudeWrote)
+                .Where(p => !_instructionNoticeGiven.Contains(p)).ToList();
+            if (changed.Count == 0) return;
+            foreach (var p in changed) _instructionNoticeGiven.Add(p);
+            string text = Core.Context.InstructionFiles.Notice(changed, _sessionDir);
+            _saidNotices.Remove(text); // the same files may change again after a restart: say it again
+            Notice(text);
+            _view.AppendActions(new System.Collections.Generic.List<(string, string, Action)>
+            {
+                ("Restart Claude Code", "Restarts it into this conversation, so it reads them", (Action)(() => RestartInPlace())),
+            });
         }
 
         // ---------------- Base context ----------------

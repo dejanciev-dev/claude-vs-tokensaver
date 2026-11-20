@@ -65,6 +65,7 @@ namespace ClaudeVS.Core.Tests
             {
                 ("dialogs", RunDialogs),
                 ("mcp", () => RunMcp()),
+                ("mcp-restart", RunMcpRestart), // an MCP server turned off stays off after a restart in place (Phase 77); no cost
                 ("haiku-router", RunHaikuRouter),
                 ("setup", () => RunSetup(null)),
                 ("edit-review", RunEditReview),
@@ -76,7 +77,7 @@ namespace ClaudeVS.Core.Tests
                 ("session", RunSession),
                 ("long-prompt", RunLongPrompt),
                 ("prompt-tokens", RunPromptTokens),
-                ("env", RunEnv), // a setting written, the process restarted into the same conversation (Phase 73)
+                ("env", RunEnv), // a setting written, the process restarted into the same conversation (Phase 73)
                 ("restart", RunRestart), // a CLAUDE.md written mid-conversation, read after a restart in place (Phase 76)
             };
             var results = new List<(string Name, int Code, double Cost, TimeSpan Time)>();
@@ -943,6 +944,69 @@ namespace ClaudeVS.Core.Tests
                     try { Directory.Delete(dir, true); } catch (IOException) { }
                 }
             }
+        }
+
+        /// <summary>
+        /// `--live-mcp-restart`: an MCP server turned off in *MCP servers…* (<c>mcp_toggle</c>) and a restart in place
+        /// (<see cref="ClaudeSession.StopProcess"/>, Phase 77): is it still off in the new process? No prompt, no cost:
+        /// a settings request starts the process.
+        /// </summary>
+        public static int RunMcpRestart()
+        {
+            if (ClaudeCliLocator.Resolve("") == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-live-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            var options = new ClaudeLaunchOptions { WorkingDirectory = dir, PermissionMode = PermissionModeChoice.Plan, EditNotesHook = true };
+            options.SdkMcpServers.Add(Context.IdeMcpServer.Create(
+                () => System.Threading.Tasks.Task.FromResult<IReadOnlyList<Context.BuildError>>(new Context.BuildError[0]), () => dir));
+            int failed = 0;
+            void Check(bool ok, string what) { Console.WriteLine($"  {(ok ? "ok  " : "FAIL")} {what}"); if (!ok) failed++; }
+            McpServerRow Row(ClaudeSession s, Func<McpServerRow, bool> until)
+            {
+                McpServerRow row = null;
+                for (int i = 0; i < 20; i++)
+                {
+                    if (i > 0) Thread.Sleep(500);
+                    row = s.GetMcpServersAsync().Result?.FirstOrDefault(r => r.Name == Context.IdeMcpServer.ServerName);
+                    if (row != null && until(row)) break;
+                }
+                return row;
+            }
+            try
+            {
+                using (var session = NewSession(options))
+                {
+                    session.GetSettingsAsync(start: true).Wait();
+                    var on = Row(session, r => r.Status == "connected");
+                    Console.WriteLine($"  start: {on?.Status ?? "missing"}");
+                    Check(on?.Status == "connected", "connected at the start");
+                    var toggled = session.SetMcpServerEnabledAsync(Context.IdeMcpServer.ServerName, false).Result;
+                    var off = Row(session, r => r.Status != "connected");
+                    Console.WriteLine($"  after mcp_toggle off: {off?.Status ?? "missing"} · answer {toggled?.ToString(Newtonsoft.Json.Formatting.None)}");
+                    Check(off != null && off.Status != "connected", "off after mcp_toggle");
+
+                    // A server added to .mcp.json while it runs (approved in the local settings): listed now, or only after a restart?
+                    File.WriteAllText(Path.Combine(dir, ".mcp.json"), "{\"mcpServers\":{\"probe\":{\"command\":\"cvs-no-such-command\",\"args\":[]}}}");
+                    Directory.CreateDirectory(Path.Combine(dir, ".claude"));
+                    File.WriteAllText(Path.Combine(dir, ".claude", "settings.local.json"), "{\"enabledMcpjsonServers\":[\"probe\"]}");
+                    Thread.Sleep(2000); // a file watcher, if there is one
+                    var added = session.GetMcpServersAsync().Result?.FirstOrDefault(r => r.Name == "probe");
+                    Console.WriteLine($"  .mcp.json server, same process: {added?.Status ?? "not listed"}");
+                    Console.WriteLine(added == null ? "  note .mcp.json is read when Claude Code starts" : "  note the running process read .mcp.json");
+
+                    session.StopProcess();
+                    session.GetSettingsAsync(start: true).Wait();
+                    var again = Row(session, r => r.Status != "pending");
+                    Console.WriteLine($"  after the restart: {again?.Status ?? "missing"}");
+                    Check(again != null && again.Status != "connected", "still off after a restart in place");
+                    var afterRestart = session.GetMcpServersAsync().Result?.FirstOrDefault(r => r.Name == "probe");
+                    Console.WriteLine($"  .mcp.json server, after the restart: {afterRestart?.Status ?? "not listed"}");
+                    Check(afterRestart != null, ".mcp.json read after a restart in place");
+                }
+            }
+            finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
+            Console.WriteLine(failed == 0 ? "PASS live mcp restart" : $"FAIL live mcp restart: {failed} check(s)");
+            return failed == 0 ? 0 : 1;
         }
 
         /// <summary>

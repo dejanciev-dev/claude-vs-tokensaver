@@ -143,7 +143,7 @@ namespace ClaudeVS.ToolWindow
             ChatTheme.Muted(_attachment);
             _ctxBar.SetResourceReference(ForegroundProperty, EnvironmentColors.SystemHighlightBrushKey);
             SetInputFocused(false);
-            _prompt.GotKeyboardFocus += (s, e) => SetInputFocused(true);
+            _prompt.GotKeyboardFocus += (s, e) => { SetInputFocused(true); CheckInstructionFiles(); };
             _prompt.LostKeyboardFocus += (s, e) => SetInputFocused(false);
 
             _send.Click += (s, e) =>
@@ -1983,7 +1983,8 @@ namespace ClaudeVS.ToolWindow
                         {
                             // Kept until the result, which may bring the CLI's own copy of the file (originalFile).
                             var call = new FileCall { ToolName = ev.ToolName, Input = ev.ToolInput, Path = changedPath, Snapshot = writeSnapshot };
-                            call.FirstInTurn = changedPath != null && _turnChanges.Record(changedPath, writeSnapshot); // for "Files changed" under the answer
+                            call.FirstInTurn = changedPath != null && _turnChanges.Record(changedPath, writeSnapshot); // for "Files changed" under the answer
+                            if (changedPath != null) _claudeWrote.Add(changedPath); // Claude knows what it wrote: no "changed since" notice
                             if (!string.IsNullOrEmpty(ev.ToolUseId)) _fileCalls[ev.ToolUseId] = call;
                             diff = () => { ThreadHelper.ThrowIfNotOnUIThread(); ShowDiff(change, call.Snapshot); };
                         }
@@ -2063,7 +2064,8 @@ namespace ClaudeVS.ToolWindow
                                 TurnFooter.ProviderNote(ev.ModelUsageSinceLastResult), _lastTurnReferences, modelName != null ? "Model: " + _turnModel : null));
                         _turnFiles.Reset(); // the next turn's reads
                         if (!string.IsNullOrWhiteSpace(answer)) _lastAnswer = answer;
-                        SuggestFromAnswer(answer, ev, turn.Prompt); // grey text in the input box (after a failed turn: what to do); not while queued prompts run
+                        SuggestFromAnswer(answer, ev, turn.Prompt); // grey text in the input box (after a failed turn: what to do); not while queued prompts run
+                        CheckInstructionFiles(); // a CLAUDE.md or .mcp.json edited by hand while Claude worked
                         ShowTurnChanges(); // "Files changed" with Diff links
                         Announce(ev.IsError ? "Claude stopped with an error. " + Short(ev.Text) : ScreenReaderText.AnswerFinished(answer));
                         if (_queuedBubbles.Count > 0) { _queuedBubbles.Dequeue().Render(); RefreshQueuedPanel(); } // Claude starts on the next one now
