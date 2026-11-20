@@ -37,8 +37,14 @@ namespace ClaudeVS.ToolWindow
             ThreadHelper.ThrowIfNotOnUIThread();
             if (result.IsError)
             {
-                if (ClaudeErrorHints.ModelOutputLimit(result.Text) is int most) OfferOutputLimit(most);
-                ShowNextStep(ClaudeErrorHints.NextStep(true, UsageRecord.EndOf(true, result.TerminalReason, result.ResultSubtype), result.ErrorKind, result.ApiErrorStatus, result.Text, prompt));
+                var step = ClaudeErrorHints.NextStep(true, UsageRecord.EndOf(true, result.TerminalReason, result.ResultSubtype), result.ErrorKind, result.ApiErrorStatus, result.Text, prompt);
+                if (ClaudeErrorHints.ModelOutputLimit(result.Text) is int most)
+                {
+                    // Managed settings rank above the project's files: a link would write a value that doesn't apply
+                    if (ClaudeErrorHints.ManagedOutputLimit(most, _settingsResponse) is string managed) step = new NextStep { Hint = managed };
+                    else OfferOutputLimit(most);
+                }
+                ShowNextStep(step);
                 return;
             }
             ShowSuggestion(NextPrompt.FromAnswer(answer), UsageRecord.SuggestionLocal);

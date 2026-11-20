@@ -35,6 +35,8 @@ The full list follows.
   it at the lower limit, so the hint says to set `CLAUDE_CODE_MAX_OUTPUT_TOKENS` to the limit the error names, and a
   link under the failed turn does it: it writes the variable into the project's `.claude/settings.local.json` and
   restarts Claude Code, which carries on in the same conversation from your next prompt (Tab puts the failed one back).
+  When managed settings set the variable, the project's file can't override it: the hint says so and names the
+  value they set, with no link.
 - **Behind a gateway** (`ANTHROPIC_BASE_URL` in Claude Code's settings or Visual Studio's environment), a
   `CLAUDE_CODE_MAX_OUTPUT_TOKENS` under 8,000 was listed as a setting that makes turns dearer, and the tip after
   cut-off answers said to raise it, though it may be all the gateway's model takes. Neither says so there now.

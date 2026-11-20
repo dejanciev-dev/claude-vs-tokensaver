@@ -103,6 +103,19 @@ namespace ClaudeVS.Core.Cli
         /// again at that limit; 2.1.329 doesn't, so behind a gateway whose model takes fewer output tokens the turn
         /// fails until <c>CLAUDE_CODE_MAX_OUTPUT_TOKENS</c> is set to it.
         /// </summary>
+        /// <summary>
+        /// The hint after the refusal when managed settings set <c>CLAUDE_CODE_MAX_OUTPUT_TOKENS</c> (to
+        /// <paramref name="managedValue"/>): the project's files rank below them, so only whoever manages Claude Code can
+        /// change it. Null when they don't set it, and the link can.
+        /// </summary>
+        public static string ManagedOutputLimit(int most, Newtonsoft.Json.Linq.JObject settingsResponse)
+        {
+            var (value, source) = SettingsCheck.EnvAsUsed(settingsResponse, "CLAUDE_CODE_MAX_OUTPUT_TOKENS", _ => null);
+            if (source != "policySettings") return null;
+            var c = System.Globalization.CultureInfo.InvariantCulture;
+            return $"The model takes at most {most.ToString("N0", c)} output tokens, and managed settings set CLAUDE_CODE_MAX_OUTPUT_TOKENS={value}: ask whoever manages Claude Code here to set it to {most.ToString(c)}";
+        }
+
         public static int? ModelOutputLimit(string error)
         {
             var m = MaxTokensRefused.Match(error ?? "");

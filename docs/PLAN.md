@@ -1983,9 +1983,11 @@ that managed settings can still override.
       `SettingsCheck.EnvAsUsed` (value and source; `ProcessEnvironment` → "Visual Studio's environment"),
       `SettingsCheck.OutputLimit`; `Find` lists the limit wherever it's set; the chat keeps the last `get_settings`
       answer for the tip. Tests in `Test_SettingsCheck`. Builds clean; not yet run in VS
-- [ ] **A limit managed settings set.** When managed settings set `CLAUDE_CODE_MAX_OUTPUT_TOKENS`, the link can't
+- [x] **A limit managed settings set.** When managed settings set `CLAUDE_CODE_MAX_OUTPUT_TOKENS`, the link can't
       change it: the local file ranks below them. It says so (with the managed value) instead of writing a file that
-      won't apply and restarting for nothing
+      won't apply and restarting for nothing. `ClaudeErrorHints.ManagedOutputLimit` (from the last `get_settings`
+      answer; before one is read, the link as before); the empty box gives that hint, with nothing for Tab. Not probed:
+      managed settings need an administrator's file. Tests in `Test_ErrorHints_NextStep`. Builds clean; not yet run in VS
 - [ ] **Manual checks for Phases 74 and 75.** Rows in section 28: the gateway's limit not called costly, a ranged
       read's total, the tip's limit with Visual Studio's environment and a file set differently, the managed case
 - [ ] **0.14.0 notes.** The changelog's 0.14.0 and the Marketplace overview say what Phases 74–75 changed
