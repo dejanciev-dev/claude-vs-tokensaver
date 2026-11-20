@@ -15,6 +15,9 @@ dotnet test tests/ClaudeVS.Core.Tests        # Core tests (exit code 0 = all pas
 msbuild ClaudeVS.sln /restore /p:Configuration=Release /warnaserror
 ```
 
+Or both at once, from any shell: `pwsh ./build.ps1` (`-NoTests` to build only). It finds MSBuild with `vswhere`, so it
+works outside a Developer prompt, Git Bash included (`powershell -ExecutionPolicy Bypass -File build.ps1`).
+
 To check the Core code against the real CLI (costs real money, never runs in CI), run every live test at once:
 
 ```

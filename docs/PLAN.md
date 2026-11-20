@@ -1913,9 +1913,10 @@ Planned on 2026-11-20, after Phase 72 (PR #89). Phase 72 fixed Read's line count
 told you what to set after a `max_tokens` refusal without doing it, and couldn't run the Release build from the shell.
 This phase closes those gaps and writes down the VS checks.
 
-- [ ] **Release build from the shell.** `build.ps1` finds MSBuild with `vswhere` and runs the Release
+- [x] **Release build from the shell.** `build.ps1` finds MSBuild with `vswhere` and runs the Release
       `/warnaserror` build of the solution (then, unless `-NoTests`, the Core tests), so "builds clean" is checked for
-      the VS project too. Phase 72 skipped it: `msbuild` isn't on the Git Bash PATH. CONTRIBUTING says how to run it
+      the VS project too. Phase 72 skipped it: `msbuild` isn't on the Git Bash PATH. CONTRIBUTING says how to run it. Clean with VS 18
+      (Enterprise) MSBuild, 237 tests pass
 - [ ] **Read counts from a real capture.** Probe the edge cases with 2.1.329: an empty file, a file that is only a
       newline, a ranged read (`offset`/`limit`) that reaches the end, one that stops before it. A sanitized capture
       replaces the hand-written JSON in the tests, and `ToolCallView.ReadLines` handles what the probe shows
