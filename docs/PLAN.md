@@ -1968,6 +1968,25 @@ still counts a final newline as a line. Then the live tests, measured rather tha
       one-click limit. Only `v0.11.0` is tagged: 0.12.0 (`3fc1755` on main) and 0.13.0 (`9ea7895`)
       aren't yet. After merging: `git tag v0.14.0 && git push origin v0.14.0`. The Release VSIX builds
 
+## Phase 75 — Which output limit Claude Code really uses
+
+Planned on 2026-11-20, after Phase 74, on the same branch (PR #90); 0.14.0 isn't merged, so what this phase changes
+goes into its notes. Probed with 2.1.329 (Haiku, $0.003, a 120-number count): with `CLAUDE_CODE_MAX_OUTPUT_TOKENS=8000`
+in the environment and `100` in `.claude/settings.local.json` the answer was cut off twice; with `100` in the environment
+and `8000` in the file, not at all; with `100` in the environment alone, twice. So the settings' `env` wins over the
+environment Claude Code starts with. The extension reads it the other way round, and Phase 73's link writes a file
+that managed settings can still override.
+
+- [ ] **The limit as Claude Code ranks it.** The cut-off tip names the limit Claude Code uses: the settings' `env`
+      (managed, local, project, user) before Visual Studio's environment. Today it reads the environment first, so a
+      file's value is hidden behind it. A low limit in Visual Studio's environment alone is a setting that costs, too
+- [ ] **A limit managed settings set.** When managed settings set `CLAUDE_CODE_MAX_OUTPUT_TOKENS`, the link can't
+      change it: the local file ranks below them. It says so (with the managed value) instead of writing a file that
+      won't apply and restarting for nothing
+- [ ] **Manual checks for Phases 74 and 75.** Rows in section 28: the gateway's limit not called costly, a ranged
+      read's total, the tip's limit with Visual Studio's environment and a file set differently, the managed case
+- [ ] **0.14.0 notes.** The changelog's 0.14.0 and the Marketplace overview say what Phases 74–75 changed
+
 ---
 
 ## Working in Visual Studio — daily loop
