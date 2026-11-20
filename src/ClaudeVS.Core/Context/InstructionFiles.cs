@@ -16,14 +16,18 @@ namespace ClaudeVS.Core.Context
         /// <summary>Relative to the folder Claude Code runs in.</summary>
         public static readonly string[] Names = { "CLAUDE.md", Path.Combine(".claude", "CLAUDE.md"), "CLAUDE.local.md", ".mcp.json" };
 
-        /// <summary>Each file's last write time (UTC), or null when it doesn't exist. Never throws.</summary>
-        public static Dictionary<string, DateTime?> Snapshot(string root)
+        /// <summary>
+        /// Each file's last write time (UTC), or null when it doesn't exist. Never throws. With <paramref name="home"/>,
+        /// your own <c>~/.claude/CLAUDE.md</c> too: Claude Code reads it at the start as well (Phase 79).
+        /// </summary>
+        public static Dictionary<string, DateTime?> Snapshot(string root, string home = null)
         {
             var d = new Dictionary<string, DateTime?>(StringComparer.OrdinalIgnoreCase);
             if (string.IsNullOrEmpty(root)) return d;
-            foreach (var name in Names)
+            var paths = Names.Select(n => Path.Combine(root, n)).ToList();
+            if (!string.IsNullOrEmpty(home)) paths.Add(Path.Combine(home, ".claude", "CLAUDE.md"));
+            foreach (var path in paths)
             {
-                string path = Path.Combine(root, name);
                 try { d[path] = File.Exists(path) ? File.GetLastWriteTimeUtc(path) : (DateTime?)null; }
                 catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is ArgumentException || ex is NotSupportedException) { d[path] = null; }
             }
@@ -49,10 +53,12 @@ namespace ClaudeVS.Core.Context
         }
 
         /// <summary>The notice for changed files: what Claude Code does with them, and that a restart reads them.</summary>
-        public static string Notice(IReadOnlyList<string> changedPaths, string root)
+        public static string Notice(IReadOnlyList<string> changedPaths, string root, string home = null)
         {
             if (changedPaths == null || changedPaths.Count == 0) return null;
-            string Rel(string p) => !string.IsNullOrEmpty(root) && p.StartsWith(root, StringComparison.OrdinalIgnoreCase) ? p.Substring(root.Length).TrimStart('\\', '/').Replace('\\', '/') : Path.GetFileName(p);
+            bool Under(string p, string dir) => !string.IsNullOrEmpty(dir) && p.StartsWith(dir, StringComparison.OrdinalIgnoreCase);
+            string After(string p, string dir) => p.Substring(dir.Length).TrimStart('\\', '/').Replace('\\', '/');
+            string Rel(string p) => Under(p, root) ? After(p, root) : Under(p, home) ? "~/" + After(p, home) : Path.GetFileName(p);
             var names = changedPaths.Select(Rel).ToList();
             string list = names.Count == 1 ? names[0] : string.Join(", ", names.Take(names.Count - 1)) + " and " + names.Last();
             bool mcp = names.Any(n => n.EndsWith(".mcp.json", StringComparison.OrdinalIgnoreCase));

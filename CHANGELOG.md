@@ -28,7 +28,7 @@ The full list follows.
   mid-conversation reached Claude only after a restart. Not while Claude is on a turn. The next turn still
   reads the prompt cache, so a restart costs nothing extra. Asked for while Claude is on a turn, it
   restarts once the turn ends.
-- **A notice when you edit `CLAUDE.md` or `.mcp.json` by hand** during a conversation: Claude Code reads them only
+- **A notice when you edit `CLAUDE.md` or `.mcp.json` by hand** (the solution's, or your own `~/.claude/CLAUDE.md`) during a conversation: Claude Code reads them only
   when it starts, so the notice says this conversation still has the old ones, with a *Restart Claude Code* link.
   Not for files Claude changed itself, and not for `.claude/settings*.json`, whose rules and hooks apply at once.
 
