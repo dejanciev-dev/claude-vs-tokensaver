@@ -9,6 +9,11 @@
 
   Add -DryRun to check the inputs and find VsixPublisher.exe without publishing.
 
+  The token (-Pat, or VS_MARKETPLACE_PAT) is an Azure DevOps personal access token for ONE organization, scope
+  Marketplace → Publish (or Manage). Not "All accessible organizations": global PATs are being retired, see
+  https://devblogs.microsoft.com/devops/retirement-of-global-personal-access-tokens-in-azure-devops. PATs expire:
+  renew it before its expiry date.
+
   The publisher ID goes into a temporary copy of publishManifest.json; the file in the repo keeps its placeholder.
   VsixPublisher.exe comes from the Microsoft.VSSDK.BuildTools package, using the version the extension project
   references: from the local NuGet cache, otherwise downloaded from nuget.org.
@@ -63,7 +68,7 @@ try {
     $publishArgs = @('publish', '-payload', (Resolve-Path $Vsix).Path, '-publishManifest', $tempManifest, '-personalAccessToken', $Pat)
     if ($IgnoreWarnings) { $publishArgs += @('-ignoreWarnings', $IgnoreWarnings) }
     & $publisherExe @publishArgs
-    if ($LASTEXITCODE -ne 0) { throw "VsixPublisher.exe failed with exit code $LASTEXITCODE." }
+    if ($LASTEXITCODE -ne 0) { throw "VsixPublisher.exe failed with exit code $LASTEXITCODE. If the log mentions authentication or 401/403, the PAT may have expired, lack the Marketplace scope, or be a retired global PAT." }
 }
 finally {
     Remove-Item $tempManifest -ErrorAction SilentlyContinue
