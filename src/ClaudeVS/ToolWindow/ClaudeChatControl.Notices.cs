@@ -223,6 +223,8 @@ namespace ClaudeVS.ToolWindow
 
         // ---------------- Instructions edited by hand ----------------
 
+        private static string UserHome => Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
         /// <summary>CLAUDE.md and .mcp.json as they were when this process started (<see cref="Core.Context.InstructionFiles"/>).</summary>
         private System.Collections.Generic.Dictionary<string, DateTime?> _instructionFiles;
         /// <summary>Files Claude changed with its own tools while this process ran: no notice for those.</summary>
@@ -234,7 +236,7 @@ namespace ClaudeVS.ToolWindow
         private void SnapshotInstructionFiles()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            _instructionFiles = Core.Context.InstructionFiles.Snapshot(_sessionDir);
+            _instructionFiles = Core.Context.InstructionFiles.Snapshot(_sessionDir, UserHome);
             _claudeWrote.Clear();
             _instructionNoticeGiven.Clear();
         }
@@ -248,11 +250,11 @@ namespace ClaudeVS.ToolWindow
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             if (_instructionFiles == null || _session == null || !_session.IsRunning || _busy || _waitingForUser) return;
-            var changed = Core.Context.InstructionFiles.Changed(_instructionFiles, Core.Context.InstructionFiles.Snapshot(_sessionDir), _claudeWrote)
+            var changed = Core.Context.InstructionFiles.Changed(_instructionFiles, Core.Context.InstructionFiles.Snapshot(_sessionDir, UserHome), _claudeWrote)
                 .Where(p => !_instructionNoticeGiven.Contains(p)).ToList();
             if (changed.Count == 0) return;
             foreach (var p in changed) _instructionNoticeGiven.Add(p);
-            string text = Core.Context.InstructionFiles.Notice(changed, _sessionDir);
+            string text = Core.Context.InstructionFiles.Notice(changed, _sessionDir, UserHome);
             _saidNotices.Remove(text); // the same files may change again after a restart: say it again
             Notice(text);
             _view.AppendActions(new System.Collections.Generic.List<(string, string, Action)>

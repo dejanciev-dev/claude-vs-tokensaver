@@ -530,6 +530,18 @@ namespace ClaudeVS.Core.Tests
                 True(InstructionFiles.Changed(before, InstructionFiles.Snapshot(dir)).Contains(md), "deleted counts too");
                 Eq(null, InstructionFiles.Notice(new string[0], dir));
                 Eq(0, InstructionFiles.Snapshot(null).Count, "no folder");
+
+                // Your own ~/.claude/CLAUDE.md is read at the start too (Phase 79)
+                string home = Path.Combine(dir, "home");
+                Directory.CreateDirectory(Path.Combine(home, ".claude"));
+                var withHome = InstructionFiles.Snapshot(dir, home);
+                Eq(5, withHome.Count, "and ~/.claude/CLAUDE.md");
+                string mine = Path.Combine(home, ".claude", "CLAUDE.md");
+                File.WriteAllText(mine, "# Mine\n");
+                var mineChanged = InstructionFiles.Changed(withHome, InstructionFiles.Snapshot(dir, home));
+                Eq(mine, mineChanged.Single());
+                // The project folder is checked first: a home inside it (this test) still reads as ~/
+                True(InstructionFiles.Notice(new[] { mine }, Path.Combine(dir, "project"), home).StartsWith("~/.claude/CLAUDE.md changed"), "named as ~/.claude/CLAUDE.md");
             }
             finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
         }

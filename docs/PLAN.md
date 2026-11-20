@@ -2099,7 +2099,10 @@ again (the price of a restart), and whether permissions you granted "for this se
       session (`_restartAfterTurn`); the end of a turn runs it once nothing is queued (`RestartAfterTurn`), and not if
       a New chat or another conversation came in between. Every caller goes through `RestartInPlace`, so the output-
       limit link and *Reinstall* wait the same way. MANUAL-CHECKS 29's row follows. Builds clean; not yet run in VS
-- [ ] **Your own CLAUDE.md.** `~/.claude/CLAUDE.md` is read at the start too: the edit notice watches it
+- [x] **Your own CLAUDE.md.** `~/.claude/CLAUDE.md` is read at the start too: the edit notice watches it.
+      `InstructionFiles.Snapshot` and `Notice` take the home folder; the notice names it `~/.claude/CLAUDE.md`. Not
+      probed on its own: it's loaded with the project's `CLAUDE.md`, which `--live-restart` checks. In
+      `Test_InstructionFiles`. Builds clean; not yet run in VS
 - [ ] **0.15.0 notes.** The changelog's 0.15.0 says what Phase 79 changed
 
 ---
