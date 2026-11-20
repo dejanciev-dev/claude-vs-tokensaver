@@ -1917,9 +1917,14 @@ This phase closes those gaps and writes down the VS checks.
       `/warnaserror` build of the solution (then, unless `-NoTests`, the Core tests), so "builds clean" is checked for
       the VS project too. Phase 72 skipped it: `msbuild` isn't on the Git Bash PATH. CONTRIBUTING says how to run it. Clean with VS 18
       (Enterprise) MSBuild, 237 tests pass
-- [ ] **Read counts from a real capture.** Probe the edge cases with 2.1.329: an empty file, a file that is only a
+- [x] **Read counts from a real capture.** Probe the edge cases with 2.1.329: an empty file, a file that is only a
       newline, a ranged read (`offset`/`limit`) that reaches the end, one that stops before it. A sanitized capture
-      replaces the hand-written JSON in the tests, and `ToolCallView.ReadLines` handles what the probe shows
+      replaces the hand-written JSON in the tests, and `ToolCallView.ReadLines` handles what the probe shows. Probed
+      with 2.1.329 ($0.004): an empty file is `content ""`, 1 of 1 ("Read 1 line", now "Read an empty file"); a file
+      that is only a newline, 2 of 2 (1 line, right already); line 7 to the end of ten lines, 5 of 11 (4 of 10, right
+      already); two CRLF lines come as `\n` content, 3 of 3 (2, right already). A read that stops before the end can't
+      tell: lines 2–4 of ten say "3 of 11 lines", left as it is. `Fixtures/cli-2.1.329-read-lines.jsonl` (the five
+      results, paths sanitized) replaces the hand-written JSON in `Test_ToolData_Shapes`
 - [ ] **One-click output-limit fix.** After the `max_tokens` refusal, the hint offers to set it: Tab (or a button)
       writes `env.CLAUDE_CODE_MAX_OUTPUT_TOKENS=<limit>` into the solution's `.claude/settings.local.json` and
       restarts the process with `--resume`, so the conversation carries on and the failed prompt goes back in the box
