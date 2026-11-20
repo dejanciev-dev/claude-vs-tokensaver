@@ -29,6 +29,31 @@ namespace ClaudeVS.Core.Cli
     {
         private static readonly string[] Precedence = { "policySettings", "localSettings", "projectSettings", "userSettings" };
 
+        /// <summary>The source name <see cref="EnvAsUsed"/> gives a variable from the environment Claude Code starts with.</summary>
+        public const string ProcessEnvironment = "environment";
+
+        /// <summary>
+        /// The value Claude Code uses for an environment variable, and where it comes from: its settings' <c>env</c> win
+        /// over the environment it starts with (probed with 2.1.329: <c>CLAUDE_CODE_MAX_OUTPUT_TOKENS</c> 8000 in the
+        /// environment and 100 in <c>.claude/settings.local.json</c> cut answers off at 100, and the other way round
+        /// didn't), the highest-precedence source first (managed, local, project, user). Then
+        /// <paramref name="processEnv"/> (Visual Studio's environment, by default), as <see cref="ProcessEnvironment"/>.
+        /// </summary>
+        public static (string Value, string Source) EnvAsUsed(JObject getSettingsResponse, string name, Func<string, string> processEnv = null)
+        {
+            var sources = (getSettingsResponse?["sources"] as JArray)?.OfType<JObject>()
+                .Where(s => Array.IndexOf(Precedence, (string)s["source"]) >= 0)
+                .OrderBy(s => Array.IndexOf(Precedence, (string)s["source"]));
+            foreach (var s in sources ?? Enumerable.Empty<JObject>())
+                if (s.SelectToken("settings.env") is JObject env && env[name] != null && env[name].Type != JTokenType.Null) return ((string)env[name], (string)s["source"]);
+            string fromProcess = (processEnv ?? Environment.GetEnvironmentVariable)(name);
+            return string.IsNullOrEmpty(fromProcess) ? (null, null) : (fromProcess, ProcessEnvironment);
+        }
+
+        /// <summary>The output limit Claude Code uses (<see cref="EnvAsUsed"/>), or null when none is set or it isn't a number.</summary>
+        public static int? OutputLimit(JObject getSettingsResponse, Func<string, string> processEnv = null) =>
+            int.TryParse(EnvAsUsed(getSettingsResponse, "CLAUDE_CODE_MAX_OUTPUT_TOKENS", processEnv).Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int v) ? v : (int?)null;
+
         public static string Where(string source)
         {
             switch (source)
@@ -37,6 +62,7 @@ namespace ClaudeVS.Core.Cli
                 case "localSettings": return ".claude/settings.local.json";
                 case "projectSettings": return ".claude/settings.json";
                 case "userSettings": return "~/.claude/settings.json";
+                case ProcessEnvironment: return "Visual Studio's environment";
                 default: return source;
             }
         }
@@ -109,7 +135,7 @@ namespace ClaudeVS.Core.Cli
             if (caching.Value == "1" || string.Equals(caching.Value, "true", StringComparison.OrdinalIgnoreCase))
                 Add("env DISABLE_PROMPT_CACHING=" + caching.Value, caching.Source, "the prompt cache is off: every turn sends the whole conversation at the full input price instead of a tenth. Remove it");
 
-            var output = Env("CLAUDE_CODE_MAX_OUTPUT_TOKENS");
+            var output = EnvAsUsed(getSettingsResponse, "CLAUDE_CODE_MAX_OUTPUT_TOKENS", processEnv); // Visual Studio's environment too: Claude Code gets it
             // Behind a gateway it may be the most its model takes (Phase 73's link sets it from the model's refusal)
             if (int.TryParse(output.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int o) && o < LowOutputLimit && !BehindGateway(getSettingsResponse, processEnv))
                 Add("env CLAUDE_CODE_MAX_OUTPUT_TOKENS=" + output.Value, output.Source, "a low output limit: long answers are cut off and Claude Code asks for the rest, each time reading the context again. Raise it, or remove it");

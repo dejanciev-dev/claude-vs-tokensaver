@@ -409,17 +409,12 @@ namespace ClaudeVS.ToolWindow
         }
 
         /// <summary>
-        /// <c>CLAUDE_CODE_MAX_OUTPUT_TOKENS</c> as Claude Code gets it: from Visual Studio's environment, or its settings'
-        /// env. Null behind a gateway, where it may be all the gateway's model takes: the tip doesn't say to raise it.
+        /// <c>CLAUDE_CODE_MAX_OUTPUT_TOKENS</c> as Claude Code uses it: its settings' env first, then Visual Studio's
+        /// environment (<see cref="SettingsCheck.OutputLimit"/>). Null behind a gateway, where it may be all the
+        /// gateway's model takes: the tip doesn't say to raise it.
         /// </summary>
-        private int? OutputLimitSet()
-        {
-            if (_behindGateway || SettingsCheck.BehindGateway(null)) return null;
-            string fromEnv = Environment.GetEnvironmentVariable("CLAUDE_CODE_MAX_OUTPUT_TOKENS");
-            if (int.TryParse(fromEnv, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int env)) return env;
-            var set = _costlySettings?.FirstOrDefault(c => c.Setting.StartsWith("env CLAUDE_CODE_MAX_OUTPUT_TOKENS=", StringComparison.Ordinal));
-            return set != null && int.TryParse(set.Setting.Substring(set.Setting.IndexOf('=') + 1), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int v) ? v : (int?)null;
-        }
+        private int? OutputLimitSet() =>
+            _behindGateway || SettingsCheck.BehindGateway(null) ? null : SettingsCheck.OutputLimit(_settingsResponse);
 
         private bool _gaveLongConversationTip;
 
