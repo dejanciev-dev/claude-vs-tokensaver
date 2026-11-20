@@ -152,6 +152,12 @@ namespace ClaudeVS.Core.Cli
         /// </summary>
         public List<SdkMcpServer> SdkMcpServers { get; } = new List<SdkMcpServer>();
         /// <summary>
+        /// Rules you allowed "for this session" in a permission prompt (<c>Bash(mkdir -p out)</c>). Claude Code keeps them
+        /// in the process only (2.1.329: after a restart in place it asked again, `--live-session-rules`), so a new
+        /// process of the same conversation gets them as <c>--allowedTools</c>, which lasts the session too.
+        /// </summary>
+        public List<string> SessionAllowRules { get; } = new List<string>();
+        /// <summary>
         /// Registers a PostToolUse hook for Edit and Write, so a note can be added to the tool result Claude sees
         /// (<see cref="ClaudeSession.SetToolResultNote"/>), e.g. when the user applied only part of an edit.
         /// </summary>
@@ -205,12 +211,14 @@ namespace ClaudeVS.Core.Cli
 
             if (o.PromptSuggestions) { parts.Add("--prompt-suggestions"); parts.Add("true"); }
 
+            var allowed = new List<string>();
             if (o.SdkMcpServers.Count > 0)
             {
                 parts.Add("--mcp-config"); parts.Add(SdkMcpServer.ConfigJson(o.SdkMcpServers));
-                var readOnly = o.SdkMcpServers.SelectMany(s => s.Tools.Where(t => t.ReadOnly).Select(s.QualifiedName)).ToList();
-                if (readOnly.Count > 0) { parts.Add("--allowedTools"); parts.Add(string.Join(",", readOnly)); }
+                allowed.AddRange(o.SdkMcpServers.SelectMany(s => s.Tools.Where(t => t.ReadOnly).Select(s.QualifiedName)));
             }
+            allowed.AddRange(o.SessionAllowRules.Where(r => !string.IsNullOrWhiteSpace(r) && !allowed.Contains(r)));
+            if (allowed.Count > 0) { parts.Add("--allowedTools"); parts.Add(string.Join(",", allowed)); }
 
             var sb = new StringBuilder();
             foreach (var p in parts)

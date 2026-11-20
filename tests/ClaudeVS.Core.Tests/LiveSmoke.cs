@@ -78,7 +78,8 @@ namespace ClaudeVS.Core.Tests
                 ("long-prompt", RunLongPrompt),
                 ("prompt-tokens", RunPromptTokens),
                 ("env", RunEnv), // a setting written, the process restarted into the same conversation (Phase 73)
-                ("restart", RunRestart), // a CLAUDE.md written mid-conversation, read after a restart in place (Phase 76)
+                ("restart", RunRestart), // a CLAUDE.md written mid-conversation, read after a restart in place (Phase 76)
+                ("session-rules", RunSessionRules), // what you allowed for the session, kept across a restart in place (Phase 79)
             };
             var results = new List<(string Name, int Code, double Cost, TimeSpan Time)>();
             foreach (var (name, run) in steps)
@@ -558,6 +559,61 @@ namespace ClaudeVS.Core.Tests
             catch (TimeoutException ex) { Console.WriteLine("FAIL live restart: " + ex.Message); return 1; }
             finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
             Console.WriteLine(failed == 0 ? "PASS live restart" : $"FAIL live restart: {failed} check(s)");
+            return failed == 0 ? 0 : 1;
+        }
+
+        /// <summary>
+        /// `--live-session-rules`: a shell command allowed "for this session" (the prompt's suggestion, with
+        /// <c>destination: "session"</c>), then a restart in place (Phase 79): does Claude Code ask again? It must not, or
+        /// the extension answers for you. About $0.01.
+        /// </summary>
+        public static int RunSessionRules()
+        {
+            if (ClaudeCliLocator.Resolve("") == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-live-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            var turns = new BlockingCollection<ClaudeEvent>();
+            int asked = 0, failed = 0;
+            void Check(bool ok, string what) { Console.WriteLine($"  {(ok ? "ok  " : "FAIL")} {what}"); if (!ok) failed++; }
+            string Prompt() => "Run this exact shell command with the Bash tool, even if the folder exists, then reply with the word done: mkdir -p cvs-folder";
+            try
+            {
+                using (var session = NewSession(new ClaudeLaunchOptions { WorkingDirectory = dir, Model = ModelChoice.Haiku, Effort = EffortChoice.Low, PermissionMode = PermissionModeChoice.Default }))
+                {
+                    session.EventReceived += (s, ev) =>
+                    {
+                        if (ev.Kind == ClaudeEventKind.TurnCompleted) turns.Add(ev);
+                        if (ev.Kind != ClaudeEventKind.PermissionRequest) return;
+                        Interlocked.Increment(ref asked);
+                        // Allow, and for this session: Claude Code's own suggestion, scoped to the session
+                        var suggestions = (ev.Payload as Newtonsoft.Json.Linq.JObject)?["permission_suggestions"] as Newtonsoft.Json.Linq.JArray;
+                        var forSession = new Newtonsoft.Json.Linq.JArray();
+                        foreach (var sug in suggestions ?? new Newtonsoft.Json.Linq.JArray())
+                            if (sug is Newtonsoft.Json.Linq.JObject o && (string)o["type"] == "addRules") { var c = (Newtonsoft.Json.Linq.JObject)o.DeepClone(); c["destination"] = "session"; forSession.Add(c); }
+                        Console.WriteLine($"  asked for {ev.ToolName}; allowing for the session: {forSession.ToString(Newtonsoft.Json.Formatting.None)}");
+                        session.RespondToPermissionAsync(ev.RequestId, ev.ToolInput, true, null, forSession).Wait();
+                    };
+                    ClaudeEvent Ask(string label)
+                    {
+                        int before = asked;
+                        session.SendPromptAsync(Prompt()).Wait();
+                        if (!turns.TryTake(out var t, TimeSpan.FromSeconds(120))) throw new TimeoutException("no answer to " + label);
+                        Console.WriteLine($"  {label}: \"{(t.Text ?? "").Trim()}\" · asked {asked - before}× · session {t.SessionId}");
+                        return t;
+                    }
+                    int a0 = asked; var first = Ask("turn 1"); int firstAsked = asked - a0;
+                    Check(firstAsked == 1, "turn 1 asked once");
+                    int a1 = asked; Ask("turn 2, same process"); Check(asked - a1 == 0, "turn 2 not asked: allowed for the session");
+                    session.StopProcess();
+                    int a2 = asked; var third = Ask("turn 3, restarted");
+                    Check(third.SessionId == first.SessionId, "same conversation");
+                    Console.WriteLine(asked - a2 == 0 ? "  note the session's allow survived the restart" : "  note a restart forgets what you allowed for the session");
+                    Check(asked - a2 == 0, "turn 3 not asked after the restart");
+                }
+            }
+            catch (TimeoutException ex) { Console.WriteLine("FAIL live session rules: " + ex.Message); return 1; }
+            finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
+            Console.WriteLine(failed == 0 ? "PASS live session rules" : $"FAIL live session rules: {failed} check(s)");
             return failed == 0 ? 0 : 1;
         }
 

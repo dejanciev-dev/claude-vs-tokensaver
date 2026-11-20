@@ -309,6 +309,25 @@ namespace ClaudeVS.Core.Tests
             True(!ClaudeArgsBuilder.Build(new ClaudeLaunchOptions()).Contains("--mcp-config"), "no servers, no flag");
         }
 
+        private static void Test_SessionAllowRules()
+        {
+            // As the prompt's answer sends them (2.1.329's suggestion, scoped to the session; `--live-session-rules`)
+            var updated = JArray.Parse(@"[{""type"":""addRules"",""rules"":[{""toolName"":""Bash"",""ruleContent"":""mkdir -p cvs-folder""},{""toolName"":""WebFetch""}],""behavior"":""allow"",""destination"":""session""},
+                {""type"":""addRules"",""rules"":[{""toolName"":""Bash"",""ruleContent"":""npm test""}],""behavior"":""allow"",""destination"":""localSettings""},
+                {""type"":""setMode"",""mode"":""acceptEdits"",""destination"":""session""}]");
+            Eq("Bash(mkdir -p cvs-folder)|WebFetch", string.Join("|", ClaudeSession.SessionRules(updated)), "the session's allow rules only: a settings file keeps the others itself");
+            Eq(0, ClaudeSession.SessionRules(null).Count);
+
+            var o = new ClaudeLaunchOptions();
+            o.SessionAllowRules.Add("Bash(mkdir -p cvs-folder)");
+            string a = ClaudeArgsBuilder.Build(o);
+            True(a.Contains("--allowedTools \"Bash(mkdir -p cvs-folder)\""), a);
+            o.SdkMcpServers.Add(TestIdeServer());
+            a = ClaudeArgsBuilder.Build(o);
+            True(a.Contains("--allowedTools \"mcp__visualstudio__get_error_list,Bash(mkdir -p cvs-folder)\""), "one flag with both: " + a);
+            Eq(1, System.Text.RegularExpressions.Regex.Matches(a, "--allowedTools").Count);
+        }
+
         private static void Test_Parser_McpMessage()
         {
             // Captured from Claude Code 2.1.318.

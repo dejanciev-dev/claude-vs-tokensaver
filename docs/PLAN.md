@@ -2085,9 +2085,15 @@ again (the price of a restart), and whether permissions you granted "for this se
       changed, read 7,963 and wrote 73. A changed `CLAUDE.md` doesn't land in the cached prefix. So no price to give:
       the menu entry, the notice and the restart's message say the prompt cache carries on and it costs nothing extra
       (within the cache's lifetime, as any turn)
-- [ ] **Session permissions across a restart.** Probe: a tool allowed "for this session" in a permission prompt, then
+- [x] **Session permissions across a restart.** Probe: a tool allowed "for this session" in a permission prompt, then
       a restart in place: does Claude Code ask again? If it does, the session answers those prompts itself, as the
-      allow you already gave
+      allow you already gave. `--live-session-rules` (in `--live-all`, $0.005 with 2.1.329): `mkdir -p cvs-folder`
+      allowed with Claude Code's suggestion scoped to `session` (`Bash(mkdir -p cvs-folder)`); turn 2 not asked, and
+      after the restart turn 3 asked again. Rather than answering for Claude Code, a new process gets the rules as
+      `--allowedTools` (session-scoped too): `ClaudeSession.SessionRules` records them from each answer,
+      `ClaudeLaunchOptions.SessionAllowRules` joins the SDK server's tools in one flag. After it, turn 3 not asked.
+      (The probe's first try used `echo` and `mkdir` with a new folder each turn: `echo` needs no permission, and the
+      suggestion is the exact command.) `Test_SessionAllowRules`
 - [ ] **Restart after this turn.** *Restart Claude Code* while Claude is on a turn restarts once the turn ends, instead
       of saying "once it ends"; the notice's link and *Reinstall* the same
 - [ ] **Your own CLAUDE.md.** `~/.claude/CLAUDE.md` is read at the start too: the edit notice watches it
