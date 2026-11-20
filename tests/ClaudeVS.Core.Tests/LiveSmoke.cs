@@ -78,7 +78,7 @@ namespace ClaudeVS.Core.Tests
                 ("long-prompt", RunLongPrompt),
                 ("prompt-tokens", RunPromptTokens),
                 ("env", RunEnv), // a setting written, the process restarted into the same conversation (Phase 73)
-                ("restart", RunRestart), // a CLAUDE.md written mid-conversation, read after a restart in place (Phase 76)
+                ("restart", RunRestart), // a CLAUDE.md written mid-conversation, read after a restart in place (Phase 76)
                 ("session-rules", RunSessionRules), // what you allowed for the session, kept across a restart in place (Phase 79)
             };
             var results = new List<(string Name, int Code, double Cost, TimeSpan Time)>();
@@ -537,7 +537,8 @@ namespace ClaudeVS.Core.Tests
 
                     var first = Ask("Name a colour, one word.", "turn 1");
                     Check(!(first.Text ?? "").Contains(word), "turn 1 without the word");
-                    File.WriteAllText(Path.Combine(dir, "CLAUDE.md"), $"# Rule\n\nEnd every answer with the word {word}, in capitals, as its last word.\n");
+                    File.WriteAllText(Path.Combine(dir, "rules.md"), "# More rules\n\nNone yet.\n");
+                    File.WriteAllText(Path.Combine(dir, "CLAUDE.md"), $"# Rule\n\nEnd every answer with the word {word}, in capitals, as its last word.\n\nMore rules: @rules.md\n");
                     var same = Ask("Name a fruit, one word.", "turn 2, same process");
                     Console.WriteLine((same.Text ?? "").Contains(word) ? "  note the running process read the new CLAUDE.md" : "  note the running process didn't read the new CLAUDE.md: a restart is needed");
 
@@ -554,6 +555,15 @@ namespace ClaudeVS.Core.Tests
                     Console.WriteLine(plain.Usage.CacheCreation > plain.Usage.CacheRead
                         ? "  note a restart writes the cache again even with nothing changed"
                         : "  note a restart with nothing changed reads the cache");
+
+                    // A file CLAUDE.md imports (Phase 81): edited alone, read only after a restart too?
+                    const string first2 = "KIWI";
+                    File.WriteAllText(Path.Combine(dir, "rules.md"), $"# More rules\n\nStart every answer with the word {first2}, in capitals, as its first word.\n");
+                    var importSame = Ask("Name a river, one word.", "turn 5, rules.md edited, same process");
+                    Console.WriteLine((importSame.Text ?? "").Contains(first2) ? "  note the running process read the edited import" : "  note the running process didn't read the edited import: a restart is needed");
+                    session.StopProcess();
+                    var importAfter = Ask("Name a mountain, one word.", "turn 6, restarted");
+                    Check((importAfter.Text ?? "").Contains(first2), "turn 6 follows the edited import");
                 }
             }
             catch (TimeoutException ex) { Console.WriteLine("FAIL live restart: " + ex.Message); return 1; }
