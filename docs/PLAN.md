@@ -2065,8 +2065,8 @@ Claude Code doesn't read a `CLAUDE.md` or `.mcp.json` edited mid-conversation (P
 
 Planned on 2026-11-20, with Phase 77. Phases 76–77 (and whatever 2.1.329 still needs) become 0.15.0.
 
-- [ ] **Verify with `--live-all`.** Every live test against 2.1.329 (with `--live-restart` and Phase 77's); CONTRIBUTING
-      gets the measured count, cost and time
+- [x] **Verify with `--live-all`.** Every live test against 2.1.329 (with `--live-restart` and Phase 77's); CONTRIBUTING
+      gets the measured count, cost and time. 16 of 16 pass ($0.20, 5.4 min), `mcp-restart` and `restart` among them
 - [ ] **Version 0.15.0.** Manifest, assembly and package registration at 0.15.0, still a preview; the Unreleased
       changelog becomes `## [0.15.0]` with highlights; the Marketplace overview adds what's new. Tagging after the merge
 
