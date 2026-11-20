@@ -11,6 +11,34 @@ namespace ClaudeVS.Core.Tokens
     public static class TurnFooter
     {
         /// <summary>
+        /// A line for the cost tooltip when a model of the turn isn't served by the Anthropic API (the result's
+        /// <c>modelUsage.provider</c> other than "firstParty"): the provider bills you, and the costs shown are Claude
+        /// Code's estimate at list prices. Null for the Anthropic API, or when Claude Code doesn't say.
+        /// </summary>
+        public static string ProviderNote(IReadOnlyDictionary<string, ModelUsageEntry> modelUsage)
+        {
+            if (modelUsage == null) return null;
+            foreach (var e in modelUsage.Values)
+            {
+                if (string.IsNullOrEmpty(e?.Provider) || e.Provider == "firstParty") continue;
+                string basis = string.IsNullOrEmpty(e.CostBasis) || e.CostBasis == "list" ? "list prices" : e.CostBasis + " prices";
+                return $"Served by {ProviderName(e.Provider)}, which bills you itself: these costs are Claude Code's estimate at {basis}, not your bill.";
+            }
+            return null;
+        }
+
+        private static string ProviderName(string p)
+        {
+            switch (p.ToLowerInvariant())
+            {
+                case "bedrock": return "Amazon Bedrock";
+                case "vertex": return "Google Vertex AI";
+                case "foundry": return "Microsoft Foundry";
+                default: return p;
+            }
+        }
+
+        /// <summary>
         /// The tooltip of the line under an answer: what its cost was made of, each part of the main agent's tokens at
         /// <paramref name="model"/>'s price (fast mode and Haiku's long-context tier included), then the subagents, the
         /// sum, and Claude Code's own figure when it differs by a cent or more. Null without a known price or tokens.

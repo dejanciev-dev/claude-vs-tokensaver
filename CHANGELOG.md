@@ -18,6 +18,10 @@ All notable changes to this project are listed here. The format follows
   its permission rules and hooks again while it runs), and *Reinstall* in the setup check restarts Claude Code into the
   same conversation for the shell output cap, which it reads only when it starts. The *Install Token-Saving Settings*
   dialog says which part applies when, instead of "Restart the chat (New)".
+- **Amazon Bedrock, Google Vertex AI and Microsoft Foundry** (`CLAUDE_CODE_USE_BEDROCK`, `_VERTEX`, `_FOUNDRY`) count
+  like a gateway: a low output limit isn't called costly there, and the cut-off tip doesn't say to raise it. When
+  Claude Code says a turn was served by another provider than the Anthropic API, the cost tooltip says the costs are
+  Claude Code's estimate at list prices, not your bill.
 
 ## [0.14.0] - 2026-11-20
 

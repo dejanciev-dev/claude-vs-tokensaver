@@ -105,6 +105,14 @@ namespace ClaudeVS.Core.Cli
     {
         public TokenUsage Usage;
         public double CostUsd;
+        /// <summary>
+        /// Who serves the model, as Claude Code says (<c>provider</c>, 2.1.329: "firstParty" for the Anthropic API); null
+        /// when not sent. Another provider (Bedrock, Vertex, Foundry) bills you itself: <see cref="CostUsd"/> is Claude
+        /// Code's estimate.
+        /// </summary>
+        public string Provider;
+        /// <summary>What <see cref="CostUsd"/> is based on (<c>costBasis</c>, 2.1.329: "list", list prices); null when not sent.</summary>
+        public string CostBasis;
 
         /// <summary>Model id → its cumulative usage; empty when the result has no modelUsage.</summary>
         public static Dictionary<string, ModelUsageEntry> Parse(JToken modelUsage)
@@ -124,6 +132,8 @@ namespace ClaudeVS.Core.Cli
                         CacheCreation5m = L("cacheCreationEphemeral5mInputTokens"), Thinking = L("thinkingTokens"),
                     },
                     CostUsd = m["costUSD"]?.Type == JTokenType.Float || m["costUSD"]?.Type == JTokenType.Integer ? (double)m["costUSD"] : 0,
+                    Provider = m["provider"]?.Type == JTokenType.String ? (string)m["provider"] : null,
+                    CostBasis = m["costBasis"]?.Type == JTokenType.String ? (string)m["costBasis"] : null,
                 };
             }
             return d;

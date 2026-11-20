@@ -168,6 +168,13 @@ namespace ClaudeVS.Core.Tests
             True(SettingsCheck.BehindGateway(JObject.Parse(@"{""effective"":{""env"":{""ANTHROPIC_BASE_URL"":""http://localhost:4000""}}}"), _ => null), "effective env");
             True(!SettingsCheck.BehindGateway(JObject.Parse(@"{""sources"":[{""source"":""userSettings"",""settings"":{""env"":{""ANTHROPIC_BASE_URL"":""""}}}]}"), _ => null), "an empty one is none");
 
+            // Bedrock, Vertex and Foundry count like a gateway (Phase 76), as Claude Code ranks the variable
+            Func<string, string> bedrock = n => n == "CLAUDE_CODE_USE_BEDROCK" ? "1" : null;
+            True(SettingsCheck.BehindGateway(null, bedrock), "Bedrock in Visual Studio's environment");
+            Eq(0, SettingsCheck.Find(JObject.Parse(low.Replace("%GW%", "")), bedrock).Count, "not costly on Bedrock");
+            True(SettingsCheck.BehindGateway(JObject.Parse(@"{""sources"":[{""source"":""userSettings"",""settings"":{""env"":{""CLAUDE_CODE_USE_VERTEX"":""true""}}}]}"), _ => null), "Vertex in the settings");
+            True(!SettingsCheck.BehindGateway(JObject.Parse(@"{""sources"":[{""source"":""localSettings"",""settings"":{""env"":{""CLAUDE_CODE_USE_FOUNDRY"":""0""}}}]}"), n => n == "CLAUDE_CODE_USE_FOUNDRY" ? "1" : null), "the file's 0 wins over the environment's 1");
+
             // The settings' env wins over the environment Claude Code starts with (probed with 2.1.329), managed first
             Func<string, string> vsLimit = n => n == "CLAUDE_CODE_MAX_OUTPUT_TOKENS" ? "100" : null;
             var fileLimit = JObject.Parse(@"{""sources"":[{""source"":""userSettings"",""settings"":{""env"":{""CLAUDE_CODE_MAX_OUTPUT_TOKENS"":""32000""}}},{""source"":""localSettings"",""settings"":{""env"":{""CLAUDE_CODE_MAX_OUTPUT_TOKENS"":""16000""}}}]}");

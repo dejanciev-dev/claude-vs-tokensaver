@@ -2060,7 +2060,7 @@ namespace ClaudeVS.ToolWindow
                         _view.AppendTurnFooter($"✓ {ev.DurationMs / 1000.0:0.0}s · {TokenMeter.Format(ev.Usage.Total)} tok · {TurnFooter.Cost(_meterModel?.LastTurnCostUsd ?? 0, _meterModel?.LastTurnSubagentCostUsd ?? 0)}{usual}{used}{TurnFooter.Extras(ev.Usage, _meterModel?.LastTurnCacheSavedUsd ?? 0)}",
                             string.IsNullOrWhiteSpace(answer) ? null : BookmarkToggle(turn.Prompt, answer, turn.Anchor), answer,
                             tooltip: JoinLines(_meterModel == null ? null : TurnFooter.CostBreakdown(_meterModel.LastModel, _meterModel.LastTurn, _meterModel.LastTurnSubagentCostUsd, _meterModel.LastTurnCostUsd, _meterModel.Prices),
-                                _lastTurnReferences, modelName != null ? "Model: " + _turnModel : null));
+                                TurnFooter.ProviderNote(ev.ModelUsageSinceLastResult), _lastTurnReferences, modelName != null ? "Model: " + _turnModel : null));
                         _turnFiles.Reset(); // the next turn's reads
                         if (!string.IsNullOrWhiteSpace(answer)) _lastAnswer = answer;
                         SuggestFromAnswer(answer, ev, turn.Prompt); // grey text in the input box (after a failed turn: what to do); not while queued prompts run

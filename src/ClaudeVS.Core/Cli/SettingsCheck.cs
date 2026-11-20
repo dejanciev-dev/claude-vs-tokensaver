@@ -78,9 +78,18 @@ namespace ClaudeVS.Core.Cli
             const string name = "ANTHROPIC_BASE_URL";
             if (!string.IsNullOrWhiteSpace((processEnv ?? Environment.GetEnvironmentVariable)(name))) return true;
             if (getSettingsResponse?.SelectToken("effective.env." + name) is JToken e && !string.IsNullOrWhiteSpace((string)e)) return true;
-            return (getSettingsResponse?["sources"] as JArray)?.OfType<JObject>()
-                .Any(s => s.SelectToken("settings.env." + name) is JToken v && v.Type == JTokenType.String && !string.IsNullOrWhiteSpace((string)v)) == true;
+            if ((getSettingsResponse?["sources"] as JArray)?.OfType<JObject>()
+                .Any(s => s.SelectToken("settings.env." + name) is JToken v && v.Type == JTokenType.String && !string.IsNullOrWhiteSpace((string)v)) == true) return true;
+            // Amazon Bedrock, Google Vertex AI and Microsoft Foundry serve their own models' limits too (Phase 76)
+            foreach (var cloud in CloudProviderVariables)
+                if (IsOn(EnvAsUsed(getSettingsResponse, cloud, processEnv).Value)) return true;
+            return false;
         }
+
+        /// <summary>The variables that send Claude Code to a cloud provider instead of the Anthropic API.</summary>
+        public static readonly string[] CloudProviderVariables = { "CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX", "CLAUDE_CODE_USE_FOUNDRY" };
+
+        private static bool IsOn(string v) => v != null && (v.Trim() == "1" || v.Trim().Equals("true", StringComparison.OrdinalIgnoreCase));
 
         public static List<CostlySetting> Find(JObject getSettingsResponse, Func<string, string> processEnv = null)
         {
