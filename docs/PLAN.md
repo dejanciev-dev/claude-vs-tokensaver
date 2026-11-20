@@ -2127,6 +2127,19 @@ exact on a new process too; `total_cost_usd` carries on with `--resume`, and a l
 - [x] **0.15.0 notes.** The changelog's 0.15.0 says what Phase 80 changed. The notice's entry went in with item 1; the
       first highlight adds what a `CLAUDE.md` change costs per request
 
+## Phase 81 — Files that CLAUDE.md imports
+
+Planned on 2026-11-20, after Phase 80, on the same branch (PR #92); in 0.15.0. A `CLAUDE.md` can import other files
+(`@docs/rules.md`, `@~/.claude/mine.md`): Claude Code reads them with it, when it starts, and sends them with every
+request. Phase 77's notice watches only the `CLAUDE.md` files themselves, so an edit to an imported file goes unseen.
+
+- [ ] **Imports watched.** The edit notice also watches the files `CLAUDE.md` imports (`@path` outside code, relative to
+      the importing file or `~/`, imports of imports up to five deep), and counts their size in what an edit adds per
+      request. `InstructionFiles.Imports`
+- [ ] **Imports in the live test.** `--live-restart` imports a second file from `CLAUDE.md` and checks that an edit to
+      it, too, is read only after a restart
+- [ ] **Manual check and 0.15.0 notes.** A row in section 29; the changelog's 0.15.0 entry for the notice names imports
+
 ---
 
 ## Working in Visual Studio — daily loop
