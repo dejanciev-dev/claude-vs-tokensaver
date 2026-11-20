@@ -1907,6 +1907,24 @@ Checked, nothing to change:
   pre-warmed process
 - The Agent tool's `effort` for named teammates: the extension doesn't run agent teams
 
+## Phase 73 — Reads and output limits, checked end to end
+
+Planned on 2026-11-20, after Phase 72 (PR #89). Phase 72 fixed Read's line counts from one probe and hand-written JSON,
+told you what to set after a `max_tokens` refusal without doing it, and couldn't run the Release build from the shell.
+This phase closes those gaps and writes down the VS checks.
+
+- [ ] **Release build from the shell.** `build.ps1` finds MSBuild with `vswhere` and runs the Release
+      `/warnaserror` build of the solution (then, unless `-NoTests`, the Core tests), so "builds clean" is checked for
+      the VS project too. Phase 72 skipped it: `msbuild` isn't on the Git Bash PATH. CONTRIBUTING says how to run it
+- [ ] **Read counts from a real capture.** Probe the edge cases with 2.1.329: an empty file, a file that is only a
+      newline, a ranged read (`offset`/`limit`) that reaches the end, one that stops before it. A sanitized capture
+      replaces the hand-written JSON in the tests, and `ToolCallView.ReadLines` handles what the probe shows
+- [ ] **One-click output-limit fix.** After the `max_tokens` refusal, the hint offers to set it: Tab (or a button)
+      writes `env.CLAUDE_CODE_MAX_OUTPUT_TOKENS=<limit>` into the solution's `.claude/settings.local.json` and
+      restarts the process with `--resume`, so the conversation carries on and the failed prompt goes back in the box
+- [ ] **Manual checks for Phases 72 and 73.** A section in [MANUAL-CHECKS.md](MANUAL-CHECKS.md): the read count of a
+      file that ends in a newline, no placeholder suggestion, the output-limit hint and its fix; Release moves down one
+
 ---
 
 ## Working in Visual Studio — daily loop
