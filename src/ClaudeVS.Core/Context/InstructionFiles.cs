@@ -58,7 +58,7 @@ namespace ClaudeVS.Core.Context
             bool mcp = names.Any(n => n.EndsWith(".mcp.json", StringComparison.OrdinalIgnoreCase));
             bool md = names.Any(n => n.EndsWith(".md", StringComparison.OrdinalIgnoreCase));
             string what = md && mcp ? "instructions and MCP servers" : mcp ? "MCP servers" : "instructions";
-            return $"{list} changed since Claude Code started. It reads its {what} only when it starts, so this conversation still has the old ones. Restart Claude Code to use them; the conversation carries on.";
+            return $"{list} changed since Claude Code started. It reads its {what} only when it starts, so this conversation still has the old ones. Restart Claude Code to use them: the conversation carries on, and its prompt cache too.";
         }
     }
 }

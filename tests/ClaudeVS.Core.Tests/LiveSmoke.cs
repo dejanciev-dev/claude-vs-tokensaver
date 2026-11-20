@@ -530,7 +530,7 @@ namespace ClaudeVS.Core.Tests
                     {
                         session.SendPromptAsync(prompt).Wait();
                         if (!turns.TryTake(out var t, TimeSpan.FromSeconds(120))) throw new TimeoutException("no answer to " + label);
-                        Console.WriteLine($"  {label}: \"{(t.Text ?? "").Trim()}\" · session {t.SessionId}");
+                        Console.WriteLine($"  {label}: \"{(t.Text ?? "").Trim()}\" · cache read {t.Usage.CacheRead:N0} · write {t.Usage.CacheCreation:N0} · session {t.SessionId}");
                         return t;
                     }
 
@@ -545,6 +545,14 @@ namespace ClaudeVS.Core.Tests
                     Check(starts == 2, $"started again ({starts} processes)");
                     Check(after.SessionId == first.SessionId, "same conversation (--resume)");
                     Check((after.Text ?? "").Contains(word), "turn 3 follows the new CLAUDE.md");
+
+                    // What a restart costs when nothing changed (Phase 79): the next turn reads the cache, or writes it again?
+                    session.StopProcess();
+                    var plain = Ask("Name a tree, one word.", "turn 4, restarted, nothing changed");
+                    Check(plain.SessionId == first.SessionId, "turn 4 in the same conversation");
+                    Console.WriteLine(plain.Usage.CacheCreation > plain.Usage.CacheRead
+                        ? "  note a restart writes the cache again even with nothing changed"
+                        : "  note a restart with nothing changed reads the cache");
                 }
             }
             catch (TimeoutException ex) { Console.WriteLine("FAIL live restart: " + ex.Message); return 1; }
