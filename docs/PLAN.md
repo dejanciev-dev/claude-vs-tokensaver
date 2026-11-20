@@ -2106,6 +2106,21 @@ again (the price of a restart), and whether permissions you granted "for this se
 - [x] **0.15.0 notes.** The changelog's 0.15.0 says what Phase 79 changed. Each item's entry went into 0.15.0 with it;
       the first highlight adds the prompt cache, the session's permissions and the restart after a turn
 
+## Phase 80 — What an edit to CLAUDE.md costs, and checks for Phase 79
+
+Planned on 2026-11-20, after Phase 79, on the same branch (PR #92); in 0.15.0. Checked first: the meter after a restart
+in place needs nothing. A turn's cost and its subagents come from `model_usage_since_last_result` (since 2.1.316),
+exact on a new process too; `total_cost_usd` carries on with `--resume`, and a lower one adds an offset.
+
+- [ ] **What the edit costs.** `CLAUDE.md` goes with every request. The edit notice says how many tokens the change adds
+      or takes away per request (its size when Claude Code started against now), so a long paste into `CLAUDE.md` is
+      seen before it is paid on every turn
+- [ ] **Manual checks for Phase 79.** Rows in section 29: a command allowed for the session not asked again after a
+      restart, the restart after a turn, `~/.claude/CLAUDE.md`, the notice's size
+- [ ] **Verify with `--live-all`.** All 17 live tests (with `--live-session-rules`) against 2.1.329; CONTRIBUTING gets the
+      measured cost and time instead of Phase 79's estimate
+- [ ] **0.15.0 notes.** The changelog's 0.15.0 says what Phase 80 changed
+
 ---
 
 ## Working in Visual Studio — daily loop
