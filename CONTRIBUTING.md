@@ -95,25 +95,9 @@ Experimental Instance* from the Start menu.
 
 ## Releasing
 
-1. Set the new version in `src/ClaudeVS/source.extension.vsixmanifest` (`Identity Version`).
-2. In `CHANGELOG.md`, rename **Unreleased** to `[x.y.z] - YYYY-MM-DD` and add a new empty **Unreleased** section above it.
-3. Merge to `main`, then tag and push: `git tag vX.Y.Z && git push origin vX.Y.Z`.
-4. The *Release* workflow checks that the tag matches the manifest version, builds, runs the tests and creates a
-   **draft** GitHub Release with the `.vsix` and that version's changelog notes. Review the draft and publish it.
-5. Publishing the release starts *Publish to Marketplace* (`.github/workflows/publish.yml`). It waits for approval
-   in the `marketplace` environment, then uploads that release's `.vsix` with `marketplace/publish.ps1`
-   (Marketplace page text: `marketplace/overview.md`). Pre-releases are not published; run the workflow by hand
-   with a tag to publish one anyway.
-
-One-time Marketplace setup:
-- Create a publisher at <https://marketplace.visualstudio.com/manage> and set its ID as the repository variable
-  `MARKETPLACE_PUBLISHER`.
-- Create an Azure DevOps personal access token (organization: *All accessible organizations*, scope:
-  *Marketplace → Manage*) and save it as the secret `VS_MARKETPLACE_PAT`.
-- Create the environment `marketplace` (Settings → Environments) with yourself as a required reviewer.
-
-To check a local build without publishing:
-`./marketplace/publish.ps1 -Vsix src/ClaudeVS/bin/Release/ClaudeVS.vsix -Publisher <id> -DryRun`.
+See [docs/RELEASING.md](docs/RELEASING.md): the version in three places, the changelog, a tag, a draft release you
+publish, and the Marketplace upload you approve. It also covers the one-time setup (a publisher, a PAT for one
+organization, the `marketplace` environment), the token's expiry and uploading by hand.
 
 ## Reporting bugs
 

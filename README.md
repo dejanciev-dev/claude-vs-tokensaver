@@ -394,8 +394,9 @@ msbuild ClaudeVS.sln /restore /p:Configuration=Release /warnaserror     # → sr
 
 ## Contributing, changelog and license
 
-- [CONTRIBUTING.md](CONTRIBUTING.md): setup, where code goes, PR checklist, live tests, releasing
+- [CONTRIBUTING.md](CONTRIBUTING.md): setup, where code goes, PR checklist, live tests
 - [CHANGELOG.md](CHANGELOG.md): what changed
+- [docs/RELEASING.md](docs/RELEASING.md): how a version gets to GitHub Releases and the Marketplace
 - [docs/PLAN.md](docs/PLAN.md): roadmap and status
 - Credit: the CLI protocol notes were cross-checked against
   [dliedke/ClaudeCodeExtension](https://github.com/dliedke/ClaudeCodeExtension) (MIT). No code was copied.
