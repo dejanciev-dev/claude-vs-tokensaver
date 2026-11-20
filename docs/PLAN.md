@@ -2144,7 +2144,8 @@ request. Phase 77's notice watches only the `CLAUDE.md` files themselves, so an 
       it, too, is read only after a restart. `CLAUDE.md` imports `@rules.md`; after turn 4 only `rules.md` changes (start
       every answer with KIWI): turn 5, same process, "Nile PINEAPPLE"; turn 6, restarted, "KIWI Everest PINEAPPLE".
       Six turns, $0.0018 with 2.1.329
-- [ ] **Manual check and 0.15.0 notes.** A row in section 29; the changelog's 0.15.0 entry for the notice names imports
+- [x] **Manual check and 0.15.0 notes.** A row in section 29; the changelog's 0.15.0 entry for the notice names imports.
+      Section 29 is now *Phases 76–81*
 
 ---
 
