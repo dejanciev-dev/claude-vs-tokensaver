@@ -25,7 +25,7 @@ dotnet run --project tests/ClaudeVS.Core.Tests -- --live-all
 ```
 
 It runs them one after another, each in an empty temp folder and asking for Haiku, then prints a summary with each
-test's cost and the total (17 tests, about $0.21 and 6 minutes with Claude Code 2.1.329; a single `--live-…` test
+test's cost and the total (17 tests, about $0.20 and 6 minutes with Claude Code 2.1.329; a single `--live-…` test
 prints its cost too). The exit code is 0 only when all pass. `live (Plan)` checks that plan mode still answers with
 Haiku: Claude Code turns the alias `haiku` into Sonnet there, so the session asks for Haiku by its full ID. It does so
 for four turns: two in one process, one after the process was killed (restarted with `--resume`), one in a new session
