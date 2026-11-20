@@ -355,6 +355,22 @@ namespace ClaudeVS.Core.Cli
         }
 
         /// <summary>
+        /// Read's line counts (<c>tool_use_result.file</c>: <c>numLines</c>, <c>totalLines</c>, <c>startLine</c>) as
+        /// Claude Code shows them. For a file that ends in a newline it counts the empty "line" after it: probed with
+        /// 2.1.329, three lines read whole come back as 4 of 4 (2.1.329 fixed only its own view). So when the read
+        /// reaches the end and its <c>content</c> ends in a newline, that line is taken off both counts.
+        /// </summary>
+        public static (long? Read, long? Total, long? Start) ReadLines(JObject file)
+        {
+            long? N(JToken t) => t != null && (t.Type == JTokenType.Integer) ? (long?)t : null;
+            long? read = N(file?["numLines"]), total = N(file?["totalLines"]), start = N(file?["startLine"]);
+            if (read > 0 && total != null && (start ?? 1) + read - 1 == total
+                && file["content"]?.Type == JTokenType.String && ((string)file["content"]).EndsWith("\n", StringComparison.Ordinal))
+            { read--; total--; }
+            return (read, total, start);
+        }
+
+        /// <summary>
         /// The ⎿ line from the structured result: "Read 20 of 301 lines (from line 10)" for part of a file,
         /// "Found 2 files" for Glob and Grep's file lists, "Found 4 lines" for Grep's content mode. Null otherwise.
         /// </summary>
@@ -365,8 +381,7 @@ namespace ClaudeVS.Core.Cli
             {
                 case "Read":
                 {
-                    var file = data["file"] as JObject;
-                    long? read = N(file?["numLines"]), total = N(file?["totalLines"]), start = N(file?["startLine"]);
+                    var (read, total, start) = ReadLines(data["file"] as JObject);
                     if (read == null) return null;
                     bool part = (start ?? 1) > 1 || (total != null && read < total);
                     if (!part) return $"Read {Lines((int)read)}";

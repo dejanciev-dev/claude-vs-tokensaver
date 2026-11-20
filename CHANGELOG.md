@@ -6,6 +6,12 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **A file that ends in a newline** was one line longer than it is: "Read 4 lines" for a three-line file, on the tool
+  row and in the large-read tip. Claude Code counts the empty line after the last newline (2.1.329 fixed only its own
+  view); the extension counts the lines you see in the editor now.
+
 ## [0.13.0] - 2026-11-19
 
 Still a **preview**, for Claude Code 2.1.318 or newer (tested with 2.1.328). This release names and prices models the
