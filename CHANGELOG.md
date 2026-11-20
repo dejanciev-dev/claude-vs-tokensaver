@@ -6,6 +6,21 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-11-20
+
+Still a **preview**, for Claude Code 2.1.318 or newer (tested with 2.1.329). This release applies what you change
+without losing the conversation: Claude Code restarts in place when it has to, and says when it has to.
+
+### Highlights
+
+- **Restart Claude Code, keep the conversation:** a `/` menu entry, and a notice with the same link when you edit
+  `CLAUDE.md` or `.mcp.json` by hand (Claude Code reads them only when it starts). An MCP server you turned off stays
+  off across the restart.
+- **Settings without a New chat:** a read-deny rule applies at once; *Reinstall* restarts in place for the rest.
+- **Bedrock, Vertex and Foundry:** no advice to raise an output limit, and the cost tooltip says the cloud bills you.
+
+The full list follows.
+
 ### Added
 
 - **Restart Claude Code** (`/` menu): restarts it into the same conversation, so it reads the settings, `CLAUDE.md`
