@@ -2118,8 +2118,9 @@ exact on a new process too; `total_cost_usd` carries on with `--resume`, and a l
       `TokensPerRequest` (the change in characters as tokens; nothing under 50); the notice ends "Once read, it adds
       ~2.8k tokens to every request; a shorter one costs less on every turn." or "takes ~… off". In
       `Test_InstructionFiles`. Builds clean; not yet run in VS
-- [ ] **Manual checks for Phase 79.** Rows in section 29: a command allowed for the session not asked again after a
-      restart, the restart after a turn, `~/.claude/CLAUDE.md`, the notice's size
+- [x] **Manual checks for Phase 79.** Rows in section 29: a command allowed for the session not asked again after a
+      restart, the restart after a turn, `~/.claude/CLAUDE.md`, the notice's size. Five rows;
+      section 29 is now *Phases 76–80*
 - [ ] **Verify with `--live-all`.** All 17 live tests (with `--live-session-rules`) against 2.1.329; CONTRIBUTING gets the
       measured cost and time instead of Phase 79's estimate
 - [ ] **0.15.0 notes.** The changelog's 0.15.0 says what Phase 80 changed
