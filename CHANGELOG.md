@@ -17,6 +17,10 @@ All notable changes to this project are listed here. The format follows
   gateway whose model takes fewer output tokens) got only "The request failed". Claude Code 2.1.329 no longer retries
   it at the lower limit, so the hint says to set `CLAUDE_CODE_MAX_OUTPUT_TOKENS` to the limit the error names.
 
+### Changed
+
+- Tested with Claude Code 2.1.329 (still needs 2.1.318 or newer).
+
 ## [0.13.0] - 2026-11-19
 
 Still a **preview**, for Claude Code 2.1.318 or newer (tested with 2.1.328). This release names and prices models the

@@ -1892,8 +1892,9 @@ gateway, macOS and VS Code entries are left out.
       `ClaudeErrorHints.ModelOutputLimit` reads the limit from the error; the empty-box hint ("The model takes at most
       64,000 output tokens: set CLAUDE_CODE_MAX_OUTPUT_TOKENS=64000, start a New chat, then send it again") and the
       error's explanation say where to set it. Tests in `Test_ErrorHints_NextStep`
-- [ ] **Verify with 2.1.329 and raise `CliVersion.Tested`.** All live tests with 2.1.329, the offline tests, and
-      `CliVersion.Tested` 2.1.329 in the code and the docs
+- [x] **Verify with 2.1.329 and raise `CliVersion.Tested`.** All 13 live tests pass with 2.1.329 ($0.20, 5.5 min;
+      `live (Plan)` answered by Haiku on every turn, after the restart and the resume too); 237 offline tests pass.
+      `CliVersion.Tested` is 2.1.329 (`Required` stays 2.1.318); README and the Marketplace overview say so
 
 Checked, nothing to change:
 - `/status` naming the model that `haiku` uses in plan mode: still Sonnet for the alias; Phase 67's full-ID pin is
