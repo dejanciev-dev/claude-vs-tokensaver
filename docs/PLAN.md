@@ -2057,8 +2057,9 @@ Claude Code doesn't read a `CLAUDE.md` or `.mcp.json` edited mid-conversation (P
       file and process, so again after a restart. `--live-mcp-restart` checks the `.mcp.json` half (no cost): a server
       added while it ran was not listed, and was (`pending`) after the restart. `Test_InstructionFiles`. Builds clean;
       not yet run in VS
-- [ ] **Manual checks for Phases 76 and 77.** A section in [MANUAL-CHECKS.md](MANUAL-CHECKS.md): Restart Claude Code,
-      a rule applied at once, Reinstall restarting in place, the edit notice, an MCP server kept off; Release moves down
+- [x] **Manual checks for Phases 76 and 77.** A section in [MANUAL-CHECKS.md](MANUAL-CHECKS.md): Restart Claude Code,
+      a rule applied at once, Reinstall restarting in place, the edit notice, an MCP server kept off; Release moves down.
+      Section 29, *Restart in place*: eleven rows, Bedrock's needs an account; Release is now 30
 
 ## Phase 78 — Release 0.15.0
 
