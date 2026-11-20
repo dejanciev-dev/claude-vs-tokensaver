@@ -47,6 +47,9 @@ The full list follows.
 - **An MCP server you turned off** in *MCP servers…* came back on when Claude Code started again in the same
   conversation (after a crash, or *Restart Claude Code*): the switch lasts only as long as the process. It stays off
   now, until you turn it on or start a New chat.
+- **What you allowed "for this session"** in a permission prompt was asked again after Claude Code started again in the
+  same conversation (a crash, or *Restart Claude Code*): Claude Code keeps those rules in the process only. They
+  carry over now.
 
 ## [0.14.0] - 2026-11-20
 
