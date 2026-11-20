@@ -1940,6 +1940,24 @@ This phase closes those gaps and writes down the VS checks.
       file that ends in a newline, no placeholder suggestion, the output-limit hint and its fix; Release moves down one. Section 28, *Reads, suggestions and
       output limits*: the output-limit rows need a gateway whose model takes fewer output tokens; Release is now 29
 
+## Phase 74 — Output limits behind a gateway, ranged reads, and 0.14.0
+
+Planned on 2026-11-20, after Phase 73, on the same branch (PR #90). Phase 73's one-click fix sets the output limit a
+gateway's model names, but the settings check still calls a limit under 8,000 costly and says to raise it, and the
+cut-off tip says "a higher limit cuts off less": advice the model can't take. A ranged read that stops before the end
+still counts a final newline as a line. Then the live tests, measured rather than estimated, and a release.
+
+- [ ] **A gateway's limit isn't "low".** When Claude Code talks to a gateway (`ANTHROPIC_BASE_URL` in its settings'
+      `env` or in Visual Studio's environment), a low `CLAUDE_CODE_MAX_OUTPUT_TOKENS` is not listed as a setting that
+      makes turns dearer, and the cut-off tip doesn't tell you to raise it: it may be all the gateway's model takes
+- [ ] **Ranged reads, counted from the file.** A read that stops before the end can't tell from its result whether the
+      file ends in a newline ("3 of 11 lines" for ten). The extension runs where the file is: the tool row checks the
+      file's last byte and counts as the editor does. A file that's gone or unreadable keeps Claude Code's count
+- [ ] **Verify with `--live-all`.** All 14 live tests (with `--live-env`) against 2.1.329; CONTRIBUTING gets the measured
+      cost and time instead of Phase 73's estimate
+- [ ] **Version 0.14.0.** Manifest, assembly and package registration at 0.14.0, still a preview; the Unreleased changelog
+      becomes `## [0.14.0]` with highlights, and the Marketplace overview adds what's new. Tagging stays yours
+
 ---
 
 ## Working in Visual Studio — daily loop
