@@ -29,12 +29,12 @@ warm, and shows what every turn costs.
 
 ## Status
 
-Pre-release (v0.1 → v0.2).
+Preview (0.15).
 
 | Layer | State |
 |---|---|
-| Core library (CLI session, parser, router, meter, context, Markdown, usage log) | ✅ 237 automated tests, many replaying real CLI output (2.1.316–2.1.328) |
-| Core against the real `claude` CLI | ✅ Verified with Claude Code 2.1.329 via the opt-in live tests: streaming, usage, cost, prompt cache, model switch, resume, `/compact`, dialogs, edit review, MCP, question and plan approval. Needs 2.1.318 or newer |
+| Core library (CLI session, parser, router, meter, context, Markdown, usage log) | ✅ 242 automated tests, many replaying real CLI output (2.1.316–2.1.329) |
+| Core against the real `claude` CLI | ✅ Verified with Claude Code 2.1.329 via the opt-in live tests: streaming, usage, cost, prompt cache, model switch, resume, `/compact`, dialogs, edit review, MCP, question and plan approval, restart in place. Needs 2.1.318 or newer |
 | Visual Studio extension (UI) | ⚠️ Builds with zero warnings in CI, but not yet run in the experimental instance |
 
 ## Why this exists
