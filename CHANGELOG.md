@@ -16,7 +16,8 @@ without losing the conversation: Claude Code restarts in place when it has to, a
 - **Restart Claude Code, keep the conversation:** a `/` menu entry, and a notice with the same link when you edit
   `CLAUDE.md` or `.mcp.json` by hand (Claude Code reads them only when it starts). It keeps the prompt cache, so it
   costs nothing extra; an MCP server you turned off stays off, and what you allowed for the session stays allowed.
-  Asked for during a turn, it waits for the turn to end.
+  Asked for during a turn, it waits for the turn to end. The notice also says how many tokens a `CLAUDE.md` change
+  adds to every request.
 - **Settings without a New chat:** a read-deny rule applies at once; *Reinstall* restarts in place for the rest.
 - **Bedrock, Vertex and Foundry:** no advice to raise an output limit, and the cost tooltip says the cloud bills you.
 
