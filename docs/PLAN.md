@@ -1995,6 +1995,25 @@ that managed settings can still override.
       item's *Fixed* entry went into 0.14.0 with it; the first highlight adds the limit Claude Code uses. The overview
       already says what Phase 73 added (one click sets the limit); Phases 74–75 only fix around it, so it stays
 
+## Phase 76 — Settings applied in place, and other providers
+
+Planned on 2026-11-20, after 0.14.0 (PR #90; v0.12.0, v0.13.0 and v0.14.0 tagged). Phase 73's `StopProcess` restarts
+Claude Code into the same conversation; this phase uses it wherever the chat now says "start a New chat", checks which
+settings need it at all, moves Phase 74's file check off the UI thread, and treats the cloud providers like a gateway.
+
+- [ ] **Restart Claude Code command.** `/` → *Restart Claude Code (keep this conversation)*: for after you edit
+      `settings.json`, `CLAUDE.md` or an MCP server by hand. `StopProcess`, and the next prompt resumes the same
+      session. Not while a turn runs. A live test checks a `CLAUDE.md` line written mid-conversation reaches Claude
+- [ ] **Settings without New chat.** Probe with 2.1.329 which settings a running Claude Code picks up by itself
+      (`permissions.deny`, hooks, `env`). For the ones it doesn't, *Add rule* and *Reinstall* restart it in the same
+      conversation instead of "applies from the next New chat"; for the ones it does, they say it applies now
+- [ ] **Read rows off the UI thread.** Phase 74's file check runs on the UI thread for each ranged Read row, and a
+      resumed conversation draws many at once. Check each file once, in the background, and draw the row with Claude
+      Code's count until the answer comes, so a slow or network drive can't stall the chat
+- [ ] **Bedrock, Vertex and Foundry.** `CLAUDE_CODE_USE_BEDROCK`, `_VERTEX` and `_FOUNDRY` (settings `env` or Visual
+      Studio's environment) count like a gateway: no "raise the limit" advice. The cost tooltip says the price is
+      Claude Code's estimate at list prices, not the cloud bill
+
 ---
 
 ## Working in Visual Studio — daily loop
