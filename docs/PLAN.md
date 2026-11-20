@@ -1991,7 +1991,9 @@ that managed settings can still override.
 - [x] **Manual checks for Phases 74 and 75.** Rows in section 28: the gateway's limit not called costly, a ranged
       read's total, the tip's limit with Visual Studio's environment and a file set differently, the managed case.
       Six rows; the section is now *Phases 72–75*. The managed row needs an administrator's file and a gateway
-- [ ] **0.14.0 notes.** The changelog's 0.14.0 and the Marketplace overview say what Phases 74–75 changed
+- [x] **0.14.0 notes.** The changelog's 0.14.0 and the Marketplace overview say what Phases 74–75 changed. Each
+      item's *Fixed* entry went into 0.14.0 with it; the first highlight adds the limit Claude Code uses. The overview
+      already says what Phase 73 added (one click sets the limit); Phases 74–75 only fix around it, so it stays
 
 ---
 
