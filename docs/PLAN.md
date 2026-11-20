@@ -2042,13 +2042,21 @@ thinking switch: the session sends them again to a new process. An MCP server tu
 request (`mcp_toggle`), not a setting, and may not survive. And the restart only helps if you know you need it:
 Claude Code doesn't read a `CLAUDE.md` or `.mcp.json` edited mid-conversation (Phase 76's `--live-restart`).
 
-- [ ] **What a restart keeps.** Probe with 2.1.329: an MCP server turned off with `mcp_toggle`, then `StopProcess` and
+- [x] **What a restart keeps.** Probe with 2.1.329: an MCP server turned off with `mcp_toggle`, then `StopProcess` and
       `--resume`: is it off in the new process? If not, the session turns it off again after the start, as it does
-      the thinking switch. A live test
-- [ ] **Offer the restart when you edit by hand.** When `CLAUDE.md` (the solution's, or `.claude/CLAUDE.md`) or
+      the thinking switch. A live test. `--live-mcp-restart` (no prompt, no cost; in `--live-all`): the Error List
+      server, `disabled` after `mcp_toggle`, was `connected` again after the restart. Now `ClaudeSession` keeps the
+      servers turned off (`McpServersOff`) and every new process gets an `mcp_toggle` off for each right after
+      `initialize`: `disabled` after the restart. Skills need nothing: their switch is a setting (`claude` subcommand)
+- [x] **Offer the restart when you edit by hand.** When `CLAUDE.md` (the solution's, or `.claude/CLAUDE.md`) or
       `.mcp.json` changes during a conversation, a notice says Claude Code reads it when it starts, with a
       *Restart Claude Code* link. Once per file and conversation; not for `.claude/settings*.json` (rules and hooks
-      apply at once), nor for changes the extension or Claude itself made
+      apply at once), nor for changes the extension or Claude itself made. `Core.Context.InstructionFiles`
+      (`CLAUDE.md`, `.claude/CLAUDE.md`, `CLAUDE.local.md`, `.mcp.json`: write times at the process's first init,
+      compared when the input box gets focus and when a turn ends; Claude's own Edit/Write paths left out). Once per
+      file and process, so again after a restart. `--live-mcp-restart` checks the `.mcp.json` half (no cost): a server
+      added while it ran was not listed, and was (`pending`) after the restart. `Test_InstructionFiles`. Builds clean;
+      not yet run in VS
 - [ ] **Manual checks for Phases 76 and 77.** A section in [MANUAL-CHECKS.md](MANUAL-CHECKS.md): Restart Claude Code,
       a rule applied at once, Reinstall restarting in place, the edit notice, an MCP server kept off; Release moves down
 

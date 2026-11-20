@@ -11,6 +11,9 @@ All notable changes to this project are listed here. The format follows
 - **Restart Claude Code** (`/` menu): restarts it into the same conversation, so it reads the settings, `CLAUDE.md`
   and MCP servers you changed by hand. A running Claude Code doesn't read them again: a `CLAUDE.md` written
   mid-conversation reached Claude only after a restart. Not while Claude is on a turn.
+- **A notice when you edit `CLAUDE.md` or `.mcp.json` by hand** during a conversation: Claude Code reads them only
+  when it starts, so the notice says this conversation still has the old ones, with a *Restart Claude Code* link.
+  Not for files Claude changed itself, and not for `.claude/settings*.json`, whose rules and hooks apply at once.
 
 ### Changed
 
@@ -22,6 +25,12 @@ All notable changes to this project are listed here. The format follows
   like a gateway: a low output limit isn't called costly there, and the cut-off tip doesn't say to raise it. When
   Claude Code says a turn was served by another provider than the Anthropic API, the cost tooltip says the costs are
   Claude Code's estimate at list prices, not your bill.
+
+### Fixed
+
+- **An MCP server you turned off** in *MCP servers…* came back on when Claude Code started again in the same
+  conversation (after a crash, or *Restart Claude Code*): the switch lasts only as long as the process. It stays off
+  now, until you turn it on or start a New chat.
 
 ## [0.14.0] - 2026-11-20
 
