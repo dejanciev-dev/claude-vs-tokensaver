@@ -2001,9 +2001,14 @@ Planned on 2026-11-20, after 0.14.0 (PR #90; v0.12.0, v0.13.0 and v0.14.0 tagged
 Claude Code into the same conversation; this phase uses it wherever the chat now says "start a New chat", checks which
 settings need it at all, moves Phase 74's file check off the UI thread, and treats the cloud providers like a gateway.
 
-- [ ] **Restart Claude Code command.** `/` → *Restart Claude Code (keep this conversation)*: for after you edit
+- [x] **Restart Claude Code command.** `/` → *Restart Claude Code (keep this conversation)*: for after you edit
       `settings.json`, `CLAUDE.md` or an MCP server by hand. `StopProcess`, and the next prompt resumes the same
-      session. Not while a turn runs. A live test checks a `CLAUDE.md` line written mid-conversation reaches Claude
+      session. Not while a turn runs. A live test checks a `CLAUDE.md` line written mid-conversation reaches Claude.
+      `--live-restart` (in `--live-all`, $0.0014 with 2.1.329): a `CLAUDE.md` asking for a code word, written after
+      turn 1, wasn't followed in turn 2 by the same process ("Mango."), and was after `StopProcess` ("Otter
+      PINEAPPLE"), same session. `RestartInPlace` (the `/` entry *Restart Claude Code*, after *Fork this session*);
+      Phase 73's output-limit link uses it too, and no longer reads `_busy` off the UI thread. MCP servers are taken
+      on trust: Claude Code connects them when it starts. Builds clean; not yet run in VS
 - [ ] **Settings without New chat.** Probe with 2.1.329 which settings a running Claude Code picks up by itself
       (`permissions.deny`, hooks, `env`). For the ones it doesn't, *Add rule* and *Reinstall* restart it in the same
       conversation instead of "applies from the next New chat"; for the ones it does, they say it applies now

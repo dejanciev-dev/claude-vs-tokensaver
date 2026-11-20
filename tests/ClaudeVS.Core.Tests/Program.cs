@@ -49,6 +49,7 @@ namespace ClaudeVS.Core.Tests
             if (args.Length > 0 && args[0] == "--live-edit-review") return LiveSmoke.RunEditReview();
             if (args.Length > 0 && args[0] == "--live-long-prompt") return LiveSmoke.RunLongPrompt();
             if (args.Length > 0 && args[0] == "--live-env") return LiveSmoke.RunEnv();
+            if (args.Length > 0 && args[0] == "--live-restart") return LiveSmoke.RunRestart();
             if (args.Length > 0 && args[0] == "--live-prices") return LiveSmoke.RunPrices(olderOnly: args.Length > 1 && args[1] == "older");
             if (args.Length > 0 && args[0] == "--live-prompt-tokens") return LiveSmoke.RunPromptTokens();
             if (args.Length > 0 && args[0] == "--live-suggestions") return LiveSmoke.RunSuggestions(args.Length > 1 ? args[1] : null);

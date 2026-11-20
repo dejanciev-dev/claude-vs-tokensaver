@@ -76,7 +76,8 @@ namespace ClaudeVS.Core.Tests
                 ("session", RunSession),
                 ("long-prompt", RunLongPrompt),
                 ("prompt-tokens", RunPromptTokens),
-                ("env", RunEnv), // a setting written, the process restarted into the same conversation (Phase 73)
+                ("env", RunEnv), // a setting written, the process restarted into the same conversation (Phase 73)
+                ("restart", RunRestart), // a CLAUDE.md written mid-conversation, read after a restart in place (Phase 76)
             };
             var results = new List<(string Name, int Code, double Cost, TimeSpan Time)>();
             foreach (var (name, run) in steps)
@@ -503,6 +504,54 @@ namespace ClaudeVS.Core.Tests
         /// <c>modelUsage.maxOutputTokens</c> is the model's maximum (128000 for Haiku 5.5 even with the variable set), so
         /// the cut-off is the proof. About $0.01.
         /// </summary>
+        /// <summary>
+        /// `--live-restart`: Restart Claude Code (Phase 76) against the real CLI. Haiku answers once; then a
+        /// <c>CLAUDE.md</c> appears that asks for a code word at the end of every answer. The same process answers
+        /// again (does it see the file?), then <see cref="ClaudeSession.StopProcess"/>, and the next answer, in the same
+        /// conversation, must end with the word. About $0.005.
+        /// </summary>
+        public static int RunRestart()
+        {
+            if (ClaudeCliLocator.Resolve("") == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-live-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            var turns = new BlockingCollection<ClaudeEvent>();
+            int failed = 0, starts = 0;
+            void Check(bool ok, string what) { Console.WriteLine($"  {(ok ? "ok  " : "FAIL")} {what}"); if (!ok) failed++; }
+            const string word = "PINEAPPLE";
+            try
+            {
+                using (var session = NewSession(new ClaudeLaunchOptions { WorkingDirectory = dir, Model = ModelChoice.Haiku, Effort = EffortChoice.Low, PermissionMode = PermissionModeChoice.Default, ExtraArguments = "--tools \"\"" }))
+                {
+                    session.RawLine += (s, e) => { if (e.Direction == RawLineDirection.Stdin && e.Line.Contains("\"subtype\":\"initialize\"")) Interlocked.Increment(ref starts); };
+                    session.EventReceived += (s, ev) => { if (ev.Kind == ClaudeEventKind.TurnCompleted) turns.Add(ev); };
+                    ClaudeEvent Ask(string prompt, string label)
+                    {
+                        session.SendPromptAsync(prompt).Wait();
+                        if (!turns.TryTake(out var t, TimeSpan.FromSeconds(120))) throw new TimeoutException("no answer to " + label);
+                        Console.WriteLine($"  {label}: \"{(t.Text ?? "").Trim()}\" · session {t.SessionId}");
+                        return t;
+                    }
+
+                    var first = Ask("Name a colour, one word.", "turn 1");
+                    Check(!(first.Text ?? "").Contains(word), "turn 1 without the word");
+                    File.WriteAllText(Path.Combine(dir, "CLAUDE.md"), $"# Rule\n\nEnd every answer with the word {word}, in capitals, as its last word.\n");
+                    var same = Ask("Name a fruit, one word.", "turn 2, same process");
+                    Console.WriteLine((same.Text ?? "").Contains(word) ? "  note the running process read the new CLAUDE.md" : "  note the running process didn't read the new CLAUDE.md: a restart is needed");
+
+                    session.StopProcess();
+                    var after = Ask("Name an animal, one word.", "turn 3, restarted");
+                    Check(starts == 2, $"started again ({starts} processes)");
+                    Check(after.SessionId == first.SessionId, "same conversation (--resume)");
+                    Check((after.Text ?? "").Contains(word), "turn 3 follows the new CLAUDE.md");
+                }
+            }
+            catch (TimeoutException ex) { Console.WriteLine("FAIL live restart: " + ex.Message); return 1; }
+            finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
+            Console.WriteLine(failed == 0 ? "PASS live restart" : $"FAIL live restart: {failed} check(s)");
+            return failed == 0 ? 0 : 1;
+        }
+
         public static int RunEnv()
         {
             if (ClaudeCliLocator.Resolve("") == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }

@@ -91,6 +91,36 @@ namespace ClaudeVS.ToolWindow
             return actions;
         }
 
+        /// <summary>
+        /// Restarts Claude Code into this conversation, so it reads its settings, CLAUDE.md and MCP servers again: a
+        /// running process doesn't (2.1.329: a CLAUDE.md written mid-conversation reached Claude only after the
+        /// restart, `--live-restart`; an env setting likewise, `--live-env`). Ends the process now; the next prompt
+        /// starts it with --resume. Not while a turn runs. <paramref name="done"/> goes first in what it says.
+        /// </summary>
+        private void RestartInPlace(string done = null)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            string lead = string.IsNullOrEmpty(done) ? "" : done + " ";
+            var s = _session;
+            if (_busy || _waitingForUser)
+            {
+                Append("\n" + lead + "Claude is still on this turn: restart Claude Code once it ends (/ → Restart Claude Code), or it applies from the next New chat.\n");
+                return;
+            }
+            if (s == null || !s.IsRunning)
+            {
+                Append("\n" + lead + "Claude Code starts with it on your next prompt" + (s?.SessionId != null || _resumeId != null ? ", in this conversation." : ".") + "\n");
+                return;
+            }
+            Jtf.RunAsync(async () =>
+            {
+                await System.Threading.Tasks.Task.Run(() => s.StopProcess());
+                await Jtf.SwitchToMainThreadAsync();
+                ClaudeOutputPane.WriteLine("Claude Code stopped to restart in place; the next prompt resumes " + s.SessionId);
+                Append("\n" + lead + "Claude Code restarts on your next prompt, in this conversation, with the settings, CLAUDE.md and MCP servers as they are now.\n");
+            }).FileAndForget("ClaudeVS/ChatControl/RestartInPlace");
+        }
+
         private void ReinstallSetup(string root)
         {
             ThreadHelper.ThrowIfNotOnUIThread();

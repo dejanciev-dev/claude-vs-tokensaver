@@ -72,28 +72,21 @@ namespace ClaudeVS.ToolWindow
         private void SetOutputLimit(string root, string value)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            var s = _session;
             Jtf.RunAsync(async () =>
             {
-                string said;
                 try
                 {
                     await System.Threading.Tasks.Task.Run(() => Core.Setup.TokenSaverSetup.SetLocalEnv(root, OutputLimitVariable, value));
-                    said = $"Set {OutputLimitVariable}={value} in .claude/settings.local.json.";
-                    if (s != null && !_busy)
-                    {
-                        // Claude Code reads settings when it starts: the next prompt starts it again with --resume.
-                        await System.Threading.Tasks.Task.Run(() => s.StopProcess());
-                        said += " Claude Code restarts with it on your next prompt, in this conversation.";
-                    }
-                    else said += " It applies once Claude Code starts again (New chat, or after this turn).";
                 }
                 catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException || ex is Newtonsoft.Json.JsonException)
                 {
-                    said = $"Could not set {OutputLimitVariable}: " + ex.Message;
+                    await Jtf.SwitchToMainThreadAsync();
+                    Append($"\nCould not set {OutputLimitVariable}: " + ex.Message + "\n");
+                    return;
                 }
                 await Jtf.SwitchToMainThreadAsync();
-                Append("\n" + said + "\n");
+                // Claude Code reads settings when it starts (Phase 73's --live-env): restart it into this conversation
+                RestartInPlace($"Set {OutputLimitVariable}={value} in .claude/settings.local.json.");
             }).FileAndForget("ClaudeVS/ChatControl/SetOutputLimit");
         }
 
