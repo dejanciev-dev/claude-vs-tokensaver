@@ -356,7 +356,23 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | With the variable at 2000 and no file, ask for long answers until the cut-off tip comes | It says *CLAUDE_CODE_MAX_OUTPUT_TOKENS is 2000*; with the file's 32000 it doesn't name a limit |
 | Managed settings (an administrator's `managed-settings.json`) set `CLAUDE_CODE_MAX_OUTPUT_TOKENS`, behind the gateway as above (skip without both) | No link; the empty box says *… managed settings set CLAUDE_CODE_MAX_OUTPUT_TOKENS=… : ask whoever manages Claude Code here to set it to N* |
 
-## 29. Release (Phase 5)
+## 29. Restart in place (Phases 76–77)
+
+| Do | Expect |
+|---|---|
+| A conversation of a few turns; add a line to the solution's `CLAUDE.md` in VS (*End every answer with OK.*), save, click into the chat's input box | A notice: *CLAUDE.md changed since Claude Code started …*, with **Restart Claude Code** |
+| Send a prompt without restarting | The answer doesn't follow the new line |
+| Click **Restart Claude Code**, send a prompt | *Claude Code restarts on your next prompt, in this conversation …*; the answer follows the new line, and the conversation goes on (Claude remembers the earlier turns); model, effort, mode and thinking as before |
+| Ask Claude to add a line to `CLAUDE.md` | No notice for that change |
+| `/` → **Restart Claude Code** while Claude answers | *Claude is still on this turn …*; nothing restarts |
+| `/` → **MCP servers…**, turn **visualstudio** off; `/` → **Restart Claude Code**, send a prompt, open **MCP servers…** again | **visualstudio** is still off |
+| Add a server to `.mcp.json` by hand | The notice names `.mcp.json` and MCP servers; after **Restart Claude Code** and a prompt, **MCP servers…** lists it |
+| A token tip's **Add Read(./\*\*/obj/\*\*)**, then ask Claude to read a file under `obj` in the same conversation | *… It applies at once …*; Claude can't read it, no restart |
+| `/` → **Check token-saving setup** with something missing, **Reinstall** | *… The read-deny rules and the quiet-build hook apply at once; the shell output cap once Claude Code restarts …*; after a prompt, the check says *all in effect* |
+| **Tools → Install Token-Saving Settings and Hooks** | The dialog says the rules and hook apply at once and the output cap after *Restart Claude Code* |
+| On Bedrock (`CLAUDE_CODE_USE_BEDROCK=1`; skip without an account), hover the cost under an answer | The tooltip ends with *Served by …, which bills you itself: these costs are Claude Code's estimate at list prices, not your bill.* |
+
+## 30. Release (Phase 5)
 
 These need you rather than a check list:
 
