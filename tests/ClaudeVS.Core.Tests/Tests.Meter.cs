@@ -930,6 +930,18 @@ namespace ClaudeVS.Core.Tests
             Eq(0, m.ResultTokensByTool().Count, "reset");
         }
 
+        private static void Test_TurnFooter_ProviderNote()
+        {
+            // As 2.1.329 sends it on the Anthropic API (a probe's result, numbers trimmed)
+            var firstParty = ModelUsageEntry.Parse(JObject.Parse(@"{""claude-haiku-5-5"":{""inputTokens"":2,""outputTokens"":4,""costUSD"":0.0018,""provider"":""firstParty"",""costBasis"":""list""}}"));
+            Eq("firstParty", firstParty["claude-haiku-5-5"].Provider); Eq("list", firstParty["claude-haiku-5-5"].CostBasis);
+            Eq(null, TurnFooter.ProviderNote(firstParty), "the Anthropic API: no note");
+            var bedrock = ModelUsageEntry.Parse(JObject.Parse(@"{""claude-sonnet-5-5"":{""costUSD"":0.02,""provider"":""bedrock"",""costBasis"":""list""}}"));
+            Eq("Served by Amazon Bedrock, which bills you itself: these costs are Claude Code's estimate at list prices, not your bill.", TurnFooter.ProviderNote(bedrock));
+            Eq(null, TurnFooter.ProviderNote(ModelUsageEntry.Parse(JObject.Parse(@"{""claude-haiku-5-5"":{""costUSD"":0.001}}"))), "an older Claude Code doesn't say");
+            Eq(null, TurnFooter.ProviderNote(null));
+        }
+
         private static void Test_TurnFooter_CostBreakdown()
         {
             var prices = new PriceTable();

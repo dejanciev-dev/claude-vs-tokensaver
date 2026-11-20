@@ -2025,9 +2025,15 @@ settings need it at all, moves Phase 74's file check off the UI thread, and trea
       is asked again), else draws Claude Code's count and redraws the ⎿ line when the background check says the file
       ends in a newline (`DrawSummary`, split from `ShowResult` with `ShowOutput`). The whole-file tip never asks the
       file. Tests in `Test_ToolData_Shapes`. Builds clean; not yet run in VS
-- [ ] **Bedrock, Vertex and Foundry.** `CLAUDE_CODE_USE_BEDROCK`, `_VERTEX` and `_FOUNDRY` (settings `env` or Visual
+- [x] **Bedrock, Vertex and Foundry.** `CLAUDE_CODE_USE_BEDROCK`, `_VERTEX` and `_FOUNDRY` (settings `env` or Visual
       Studio's environment) count like a gateway: no "raise the limit" advice. The cost tooltip says the price is
-      Claude Code's estimate at list prices, not the cloud bill
+      Claude Code's estimate at list prices, not the cloud bill. `SettingsCheck.BehindGateway` takes them too
+      (`CloudProviderVariables`, "1" or "true", ranked by `EnvAsUsed`: a file's 0 wins over the environment's 1).
+      The tooltip doesn't guess from the variables: 2.1.329's `modelUsage` names the `provider` ("firstParty" on the
+      Anthropic API) and `costBasis` ("list") per model, now in `ModelUsageEntry`; `TurnFooter.ProviderNote` adds a
+      line for any other provider. Not probed: the values a cloud provider gets ("bedrock" → *Amazon Bedrock* is a
+      guess; another value is shown as sent). Tests in `Test_SettingsCheck`, `Test_TurnFooter_ProviderNote`. Builds
+      clean; not yet run in VS
 
 ---
 
