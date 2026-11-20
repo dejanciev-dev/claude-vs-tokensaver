@@ -408,9 +408,13 @@ namespace ClaudeVS.ToolWindow
             Tip(tip);
         }
 
-        /// <summary><c>CLAUDE_CODE_MAX_OUTPUT_TOKENS</c> as Claude Code gets it: from Visual Studio's environment, or its settings' env.</summary>
+        /// <summary>
+        /// <c>CLAUDE_CODE_MAX_OUTPUT_TOKENS</c> as Claude Code gets it: from Visual Studio's environment, or its settings'
+        /// env. Null behind a gateway, where it may be all the gateway's model takes: the tip doesn't say to raise it.
+        /// </summary>
         private int? OutputLimitSet()
         {
+            if (_behindGateway || SettingsCheck.BehindGateway(null)) return null;
             string fromEnv = Environment.GetEnvironmentVariable("CLAUDE_CODE_MAX_OUTPUT_TOKENS");
             if (int.TryParse(fromEnv, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int env)) return env;
             var set = _costlySettings?.FirstOrDefault(c => c.Setting.StartsWith("env CLAUDE_CODE_MAX_OUTPUT_TOKENS=", StringComparison.Ordinal));

@@ -25,12 +25,16 @@ namespace ClaudeVS.Core.Cli
         /// <summary>The whole <c>get_settings</c> answer, for checks that need more (<see cref="SetupCheck"/>).</summary>
         public JObject Response { get; set; }
 
+        /// <summary>Claude Code talks to a gateway (<see cref="SettingsCheck.BehindGateway"/>).</summary>
+        public bool BehindGateway { get; set; }
+
         public static ClaudeSettings Parse(JObject response)
         {
             var effective = response?["effective"] as JObject;
             return new ClaudeSettings
             {
                 Response = response,
+                BehindGateway = SettingsCheck.BehindGateway(response),
                 MaxEffort = Effort((string)effective?["maxEffortLevel"]),
                 PromptSuggestionEnabled = effective?["promptSuggestionEnabled"]?.Type == JTokenType.Boolean ? (bool?)(bool)effective["promptSuggestionEnabled"] : null,
                 AppliedEffort = response?.SelectToken("applied.effort")?.Type == JTokenType.String ? (string)response.SelectToken("applied.effort") : null,

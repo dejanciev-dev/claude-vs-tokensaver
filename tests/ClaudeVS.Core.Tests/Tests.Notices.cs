@@ -139,7 +139,7 @@ namespace ClaudeVS.Core.Tests
                     ""enableAllProjectMcpServers"":true,""madeUpKey"":1,""env"":{""MAX_THINKING_TOKENS"":""32000"",""CLAUDE_CODE_MAX_OUTPUT_TOKENS"":""4000"",""DISABLE_PROMPT_CACHING"":""1""}}},
                 {""source"":""localSettings"",""settings"":{""outputStyle"":""default""}},
                 {""source"":""flagSettings"",""settings"":{""effortLevel"":""max""}}]}");
-            var found = SettingsCheck.Find(r);
+            var found = SettingsCheck.Find(r, _ => null); // not behind a gateway, whatever this machine has
             var names = found.Select(f => f.Setting).ToList();
             Eq("model: opus|alwaysThinkingEnabled: true|env MAX_THINKING_TOKENS=32000|effortLevel: high|env DISABLE_PROMPT_CACHING=1|env CLAUDE_CODE_MAX_OUTPUT_TOKENS=4000|enableAllProjectMcpServers: true",
                 string.Join("|", names), "known keys only; fastMode left out (not in this kind of session)");
@@ -156,6 +156,17 @@ namespace ClaudeVS.Core.Tests
             var managed = SettingsCheck.Find(JObject.Parse(@"{""sources"":[{""source"":""userSettings"",""settings"":{""model"":""haiku""}},{""source"":""policySettings"",""settings"":{""model"":""claude-fable-5-2""}}]}"));
             Eq("model: claude-fable-5-2", managed.Single().Setting); Eq("managed settings", managed.Single().Where, "managed wins");
             Eq(0, SettingsCheck.Find(null).Count, "no answer");
+
+            // Behind a gateway a low output limit may be all its model takes (Phase 73's link sets it): not "costly"
+            const string low = @"{""sources"":[{""source"":""localSettings"",""settings"":{""env"":{""CLAUDE_CODE_MAX_OUTPUT_TOKENS"":""4096""}}}%GW%]}";
+            Eq("env CLAUDE_CODE_MAX_OUTPUT_TOKENS=4096", SettingsCheck.Find(JObject.Parse(low.Replace("%GW%", "")), _ => null).Single().Setting, "the Anthropic API");
+            var viaSettings = JObject.Parse(low.Replace("%GW%", @",{""source"":""userSettings"",""settings"":{""env"":{""ANTHROPIC_BASE_URL"":""https://gateway.example""}}}"));
+            True(SettingsCheck.BehindGateway(viaSettings, _ => null), "a gateway in the user's settings");
+            Eq(0, SettingsCheck.Find(viaSettings, _ => null).Count, "not listed behind a gateway (settings)");
+            Func<string, string> vsEnv = n => n == "ANTHROPIC_BASE_URL" ? "https://gateway.example" : null;
+            Eq(0, SettingsCheck.Find(JObject.Parse(low.Replace("%GW%", "")), vsEnv).Count, "not listed behind a gateway (Visual Studio's environment)");
+            True(SettingsCheck.BehindGateway(JObject.Parse(@"{""effective"":{""env"":{""ANTHROPIC_BASE_URL"":""http://localhost:4000""}}}"), _ => null), "effective env");
+            True(!SettingsCheck.BehindGateway(JObject.Parse(@"{""sources"":[{""source"":""userSettings"",""settings"":{""env"":{""ANTHROPIC_BASE_URL"":""""}}}]}"), _ => null), "an empty one is none");
         }
 
         private static void Test_SessionNotices_CutOffTip()

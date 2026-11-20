@@ -1947,9 +1947,12 @@ gateway's model names, but the settings check still calls a limit under 8,000 co
 cut-off tip says "a higher limit cuts off less": advice the model can't take. A ranged read that stops before the end
 still counts a final newline as a line. Then the live tests, measured rather than estimated, and a release.
 
-- [ ] **A gateway's limit isn't "low".** When Claude Code talks to a gateway (`ANTHROPIC_BASE_URL` in its settings'
+- [x] **A gateway's limit isn't "low".** When Claude Code talks to a gateway (`ANTHROPIC_BASE_URL` in its settings'
       `env` or in Visual Studio's environment), a low `CLAUDE_CODE_MAX_OUTPUT_TOKENS` is not listed as a setting that
-      makes turns dearer, and the cut-off tip doesn't tell you to raise it: it may be all the gateway's model takes
+      makes turns dearer, and the cut-off tip doesn't tell you to raise it: it may be all the gateway's model takes.
+      `SettingsCheck.BehindGateway` (any source's `env`, `effective.env`, or the process environment; an empty value is
+      none), `ClaudeSettings.BehindGateway`; `Find` takes the process environment as a parameter, so the tests don't
+      depend on the machine's. Tests in `Test_SettingsCheck`. Builds clean; not yet run in VS
 - [ ] **Ranged reads, counted from the file.** A read that stops before the end can't tell from its result whether the
       file ends in a newline ("3 of 11 lines" for ten). The extension runs where the file is: the tool row checks the
       file's last byte and counts as the editor does. A file that's gone or unreadable keeps Claude Code's count
