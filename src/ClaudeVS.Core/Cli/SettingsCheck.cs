@@ -41,7 +41,22 @@ namespace ClaudeVS.Core.Cli
             }
         }
 
-        public static List<CostlySetting> Find(JObject getSettingsResponse)
+        /// <summary>
+        /// True when Claude Code talks to a gateway rather than the Anthropic API: <c>ANTHROPIC_BASE_URL</c> in its
+        /// settings' <c>env</c> (any source, or <c>effective.env</c>) or in the environment it was started with
+        /// (<paramref name="processEnv"/>; Visual Studio's, by default). A gateway's model may take fewer output tokens
+        /// than Claude Code asks for, so a low <c>CLAUDE_CODE_MAX_OUTPUT_TOKENS</c> may be all it takes.
+        /// </summary>
+        public static bool BehindGateway(JObject getSettingsResponse, Func<string, string> processEnv = null)
+        {
+            const string name = "ANTHROPIC_BASE_URL";
+            if (!string.IsNullOrWhiteSpace((processEnv ?? Environment.GetEnvironmentVariable)(name))) return true;
+            if (getSettingsResponse?.SelectToken("effective.env." + name) is JToken e && !string.IsNullOrWhiteSpace((string)e)) return true;
+            return (getSettingsResponse?["sources"] as JArray)?.OfType<JObject>()
+                .Any(s => s.SelectToken("settings.env." + name) is JToken v && v.Type == JTokenType.String && !string.IsNullOrWhiteSpace((string)v)) == true;
+        }
+
+        public static List<CostlySetting> Find(JObject getSettingsResponse, Func<string, string> processEnv = null)
         {
             var found = new List<CostlySetting>();
             var sources = (getSettingsResponse?["sources"] as JArray)?.OfType<JObject>()
@@ -95,7 +110,8 @@ namespace ClaudeVS.Core.Cli
                 Add("env DISABLE_PROMPT_CACHING=" + caching.Value, caching.Source, "the prompt cache is off: every turn sends the whole conversation at the full input price instead of a tenth. Remove it");
 
             var output = Env("CLAUDE_CODE_MAX_OUTPUT_TOKENS");
-            if (int.TryParse(output.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int o) && o < LowOutputLimit)
+            // Behind a gateway it may be the most its model takes (Phase 73's link sets it from the model's refusal)
+            if (int.TryParse(output.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int o) && o < LowOutputLimit && !BehindGateway(getSettingsResponse, processEnv))
                 Add("env CLAUDE_CODE_MAX_OUTPUT_TOKENS=" + output.Value, output.Source, "a low output limit: long answers are cut off and Claude Code asks for the rest, each time reading the context again. Raise it, or remove it");
 
             var mcp = Get("enableAllProjectMcpServers");
