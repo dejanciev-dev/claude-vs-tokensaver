@@ -1866,6 +1866,38 @@ the unreleased work (Phases 68–70) becomes 0.13.0.
       `git tag v0.13.0 && git push origin v0.13.0`. Four highlights (names, older models priced, effort, cost by
       model); the overview's *See what you spend* adds a bullet. The Release VSIX builds
 
+## Phase 72 — Keep up with the CLI (from the Claude Code CHANGELOG 2.1.329)
+
+Checked on 2026-11-20 with 2.1.329 installed. The 2.1.329 section read for what the extension sends or reads (from
+the CHANGELOG on GitHub); Code Mode, self-hosted runner, terminal, `/mcp`, `/code-review`, cloud, Remote Control,
+gateway, macOS and VS Code entries are left out.
+
+- [ ] **Reads of a file that ends in a newline.** 2.1.329 fixes "Read and @-mentions showing one line too many for
+      files that end in a newline", but only in its own view: probed with 2.1.329, a three-line file read whole comes
+      back as `numLines: 4, totalLines: 4`, its `content` ending in `\n`. The tool row says "Read 4 lines". Count the
+      lines as Claude Code shows them now; the large-read tip (`numLines == totalLines`) still holds
+- [ ] **No placeholder suggestions.** 2.1.329 fixes "prompt suggestions sometimes showing placeholder text such as
+      `_(no suggestion)_`". Before 2.1.329 the suggested next prompt could be such a placeholder; drop it as the bare
+      tags are dropped (Phase 51)
+- [ ] **Output limit a gateway's model refuses.** 2.1.329 removes 2.1.326's automatic retry at the limit named in a
+      `max_tokens` error ("max_tokens: 128000 > 64000, which is the maximum allowed number of output tokens for …"):
+      behind a gateway whose model takes fewer output tokens, the turn now fails. The failed-turn hint says to set
+      `CLAUDE_CODE_MAX_OUTPUT_TOKENS` to the limit the error names. Not probed: first-party Claude Code clamps the
+      setting to the model's own maximum (`CLAUDE_CODE_MAX_OUTPUT_TOKENS=500000` on Haiku ran with 128000)
+- [ ] **Verify with 2.1.329 and raise `CliVersion.Tested`.** All live tests with 2.1.329, the offline tests, and
+      `CliVersion.Tested` 2.1.329 in the code and the docs
+
+Checked, nothing to change:
+- `/status` naming the model that `haiku` uses in plan mode: still Sonnet for the alias; Phase 67's full-ID pin is
+  what keeps Haiku, and `--live raw.jsonl Plan` checks it
+- Headless rewind and fork waiting for a message sent right after a model change: the fix is in Claude Code; the
+  extension's `rewind_files` and `--fork-session` send nothing that needs to change
+- Stop and SubagentStop hooks listing a Monitor as `monitor` in `background_tasks`: the extension's hooks don't read
+  `background_tasks`; the Agents panel reads the stream's `background_tasks_changed`, which is unchanged
+- `autoCompactWindow` and `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` fixes: the extension sets neither and doesn't start from a
+  pre-warmed process
+- The Agent tool's `effort` for named teammates: the extension doesn't run agent teams
+
 ---
 
 ## Working in Visual Studio — daily loop
