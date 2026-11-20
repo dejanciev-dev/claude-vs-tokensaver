@@ -63,6 +63,7 @@ A suggested next prompt in the empty box when an answer ends with an offer, and 
 (Tab takes it; no model call). Behind a gateway whose model takes fewer output tokens, one click sets the limit it
 names and the conversation carries on. Markdown answers with syntax-colored code blocks (Copy, Insert), diffs for Claude's edits and per-change review,
 question and plan cards, Manual / Edit automatically / Plan / Auto modes, sessions with resume, rename and fork,
+restart in place (Claude Code reads a `CLAUDE.md` or `.mcp.json` you edited, and the conversation goes on),
 rewind, images, bookmarks, export, Claude Code dialogs (status, usage, memory, output style, rules, hooks) and
 screen reader announcements.
 

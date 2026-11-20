@@ -2067,8 +2067,10 @@ Planned on 2026-11-20, with Phase 77. Phases 76–77 (and whatever 2.1.329 still
 
 - [x] **Verify with `--live-all`.** Every live test against 2.1.329 (with `--live-restart` and Phase 77's); CONTRIBUTING
       gets the measured count, cost and time. 16 of 16 pass ($0.20, 5.4 min), `mcp-restart` and `restart` among them
-- [ ] **Version 0.15.0.** Manifest, assembly and package registration at 0.15.0, still a preview; the Unreleased
-      changelog becomes `## [0.15.0]` with highlights; the Marketplace overview adds what's new. Tagging after the merge
+- [x] **Version 0.15.0.** Manifest, assembly and package registration at 0.15.0, still a preview; the Unreleased
+      changelog becomes `## [0.15.0]` with highlights; the Marketplace overview adds what's new. Tagging after the merge.
+      Three highlights (restart in place, settings without a New chat, the cloud providers); the overview's *Chat*
+      section adds restart in place. The Release VSIX builds
 
 ---
 

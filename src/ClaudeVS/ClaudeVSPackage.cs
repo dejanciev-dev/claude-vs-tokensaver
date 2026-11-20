@@ -10,7 +10,7 @@ using Task = System.Threading.Tasks.Task;
 namespace ClaudeVS
 {
     [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
-    [InstalledProductRegistration("Claude Code for Visual Studio — Token Saver", "Token-efficient Claude Code chat for Visual Studio. Community project, not affiliated with Anthropic.", "0.14.0")]
+    [InstalledProductRegistration("Claude Code for Visual Studio — Token Saver", "Token-efficient Claude Code chat for Visual Studio. Community project, not affiliated with Anthropic.", "0.15.0")]
     [Guid(PackageIds.PackageGuidString)]
     [ProvideMenuResource("Menus.ctmenu", 2)]
     // Docked next to Solution Explorer by default.
