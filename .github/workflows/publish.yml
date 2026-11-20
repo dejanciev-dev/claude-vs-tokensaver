@@ -6,8 +6,12 @@ name: Publish to Marketplace
 #
 # Needs, in Settings → Secrets and variables → Actions:
 #   variable MARKETPLACE_PUBLISHER  your Visual Studio Marketplace publisher ID
-#   secret   VS_MARKETPLACE_PAT     Azure DevOps personal access token, organization "All accessible
-#                                   organizations", scope Marketplace → Manage
+#   secret   VS_MARKETPLACE_PAT     Azure DevOps personal access token for ONE organization (not
+#                                   "All accessible organizations": global PATs are being retired, see
+#                                   https://devblogs.microsoft.com/devops/retirement-of-global-personal-access-tokens-in-azure-devops),
+#                                   scope Marketplace → Publish (or Manage).
+#                                   PATs expire: renew it before its expiry date, or this job fails
+#                                   with an authentication error from VsixPublisher.
 on:
   release:
     types: [published]
