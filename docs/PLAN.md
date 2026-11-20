@@ -1879,9 +1879,11 @@ gateway, macOS and VS Code entries are left out.
       many. `ToolCallView.ReadLines` takes the line after a final newline off both counts when the read reaches the
       end (its `content` says so); the tool row and the tip use it. Tests in `Test_ToolData_Shapes` and
       `Test_SessionNotices_WholeFileRead`
-- [ ] **No placeholder suggestions.** 2.1.329 fixes "prompt suggestions sometimes showing placeholder text such as
+- [x] **No placeholder suggestions.** 2.1.329 fixes "prompt suggestions sometimes showing placeholder text such as
       `_(no suggestion)_`". Before 2.1.329 the suggested next prompt could be such a placeholder; drop it as the bare
-      tags are dropped (Phase 51)
+      tags are dropped (Phase 51). `ClaudeStreamParser` drops "no suggestion" or "none", in
+      brackets or Markdown emphasis or neither; with words after it, it is a prompt (`no suggestions from the linter,
+      run it` stays). Tests in `Test_PromptSuggestion_RealCli_2_1_325`
 - [ ] **Output limit a gateway's model refuses.** 2.1.329 removes 2.1.326's automatic retry at the limit named in a
       `max_tokens` error ("max_tokens: 128000 > 64000, which is the maximum allowed number of output tokens for …"):
       behind a gateway whose model takes fewer output tokens, the turn now fails. The failed-turn hint says to set
