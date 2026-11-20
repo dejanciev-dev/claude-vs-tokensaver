@@ -104,7 +104,9 @@ namespace ClaudeVS.ToolWindow
             var s = _session;
             if (_busy || _waitingForUser)
             {
-                Append("\n" + lead + "Claude is still on this turn: restart Claude Code once it ends (/ → Restart Claude Code), or it applies from the next New chat.\n");
+                // Once the turn (and any queued prompt) ends: RestartAfterTurn
+                _restartAfterTurn = (s, done);
+                Append("\n" + lead + "Claude Code restarts once Claude is done with this turn, in this conversation.\n");
                 return;
             }
             if (s == null || !s.IsRunning)
@@ -119,6 +121,19 @@ namespace ClaudeVS.ToolWindow
                 ClaudeOutputPane.WriteLine("Claude Code stopped to restart in place; the next prompt resumes " + s.SessionId);
                 Append("\n" + lead + "Claude Code restarts on your next prompt, in this conversation, with the settings, CLAUDE.md and MCP servers as they are now. It reads the prompt cache as before, so the restart costs nothing extra.\n");
             }).FileAndForget("ClaudeVS/ChatControl/RestartInPlace");
+        }
+
+        /// <summary>A restart asked for while Claude was on a turn: for which session, and what to say first.</summary>
+        private (ClaudeSession Session, string Done)? _restartAfterTurn;
+
+        /// <summary>At the end of a turn: the restart asked for during it, once nothing else is queued.</summary>
+        private void RestartAfterTurn()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (!(_restartAfterTurn is var (session, done)) || _busy || _waitingForUser) return;
+            _restartAfterTurn = null;
+            if (session != _session) return; // a New chat or another conversation since: it starts fresh anyway
+            RestartInPlace(done);
         }
 
         private void ReinstallSetup(string root)

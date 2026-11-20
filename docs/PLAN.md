@@ -2094,8 +2094,11 @@ again (the price of a restart), and whether permissions you granted "for this se
       `ClaudeLaunchOptions.SessionAllowRules` joins the SDK server's tools in one flag. After it, turn 3 not asked.
       (The probe's first try used `echo` and `mkdir` with a new folder each turn: `echo` needs no permission, and the
       suggestion is the exact command.) `Test_SessionAllowRules`
-- [ ] **Restart after this turn.** *Restart Claude Code* while Claude is on a turn restarts once the turn ends, instead
-      of saying "once it ends"; the notice's link and *Reinstall* the same
+- [x] **Restart after this turn.** *Restart Claude Code* while Claude is on a turn restarts once the turn ends, instead
+      of saying "once it ends"; the notice's link and *Reinstall* the same. `RestartInPlace` keeps the request with its
+      session (`_restartAfterTurn`); the end of a turn runs it once nothing is queued (`RestartAfterTurn`), and not if
+      a New chat or another conversation came in between. Every caller goes through `RestartInPlace`, so the output-
+      limit link and *Reinstall* wait the same way. MANUAL-CHECKS 29's row follows. Builds clean; not yet run in VS
 - [ ] **Your own CLAUDE.md.** `~/.claude/CLAUDE.md` is read at the start too: the edit notice watches it
 - [ ] **0.15.0 notes.** The changelog's 0.15.0 says what Phase 79 changed
 

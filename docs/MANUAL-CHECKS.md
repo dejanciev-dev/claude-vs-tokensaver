@@ -364,7 +364,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Send a prompt without restarting | The answer doesn't follow the new line |
 | Click **Restart Claude Code**, send a prompt | *Claude Code restarts on your next prompt, in this conversation …*; the answer follows the new line, and the conversation goes on (Claude remembers the earlier turns); model, effort, mode and thinking as before |
 | Ask Claude to add a line to `CLAUDE.md` | No notice for that change |
-| `/` → **Restart Claude Code** while Claude answers | *Claude is still on this turn …*; nothing restarts |
+| `/` → **Restart Claude Code** while Claude answers | *Claude Code restarts once Claude is done with this turn …*; the turn finishes, then *Claude Code restarts on your next prompt …*; the next answer is in the same conversation |
 | `/` → **MCP servers…**, turn **visualstudio** off; `/` → **Restart Claude Code**, send a prompt, open **MCP servers…** again | **visualstudio** is still off |
 | Add a server to `.mcp.json` by hand | The notice names `.mcp.json` and MCP servers; after **Restart Claude Code** and a prompt, **MCP servers…** lists it |
 | A token tip's **Add Read(./\*\*/obj/\*\*)**, then ask Claude to read a file under `obj` in the same conversation | *… It applies at once …*; Claude can't read it, no restart |
