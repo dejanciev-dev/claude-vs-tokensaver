@@ -45,7 +45,7 @@ up to Claude Code's total, the agent is named `Sonnet 5.5`, and Copy session sum
 `--live-env` (about $0.002, in `--live-all`) writes `CLAUDE_CODE_MAX_OUTPUT_TOKENS=100` into a project's
 `.claude/settings.local.json`, as the output-limit link does: the running process keeps its limit, and after
 `StopProcess` the next prompt resumes the same conversation and is cut off at the new one.
-`--live-restart` (about $0.002, in `--live-all`) does the same for *Restart Claude Code*: a `CLAUDE.md` written
+`--live-restart` (about $0.002, in `--live-all`) does the same for *Restart Claude Code*: a `CLAUDE.md` (and a file it imports) written
 mid-conversation isn't read by the running process, and is after the restart, in the same conversation.
 `--live-mcp-restart` (no cost, in `--live-all`) turns the Error List MCP server off, restarts in place and checks it
 is still off, and that a server added to `.mcp.json` meanwhile is listed only after the restart.

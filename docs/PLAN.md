@@ -2140,8 +2140,10 @@ request. Phase 77's notice watches only the `CLAUDE.md` files themselves, so an 
       start; the check on focus only compares write times of those paths (`Refresh`), reading nothing, since a new
       import changes its `CLAUDE.md` anyway. Sizes and the notice count any file but `.mcp.json` as instructions.
       `Test_InstructionFiles_Imports`. Builds clean; not yet run in VS
-- [ ] **Imports in the live test.** `--live-restart` imports a second file from `CLAUDE.md` and checks that an edit to
-      it, too, is read only after a restart
+- [x] **Imports in the live test.** `--live-restart` imports a second file from `CLAUDE.md` and checks that an edit to
+      it, too, is read only after a restart. `CLAUDE.md` imports `@rules.md`; after turn 4 only `rules.md` changes (start
+      every answer with KIWI): turn 5, same process, "Nile PINEAPPLE"; turn 6, restarted, "KIWI Everest PINEAPPLE".
+      Six turns, $0.0018 with 2.1.329
 - [ ] **Manual check and 0.15.0 notes.** A row in section 29; the changelog's 0.15.0 entry for the notice names imports
 
 ---
