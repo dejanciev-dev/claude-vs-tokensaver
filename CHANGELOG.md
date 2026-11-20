@@ -6,6 +6,12 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Restart Claude Code** (`/` menu): restarts it into the same conversation, so it reads the settings, `CLAUDE.md`
+  and MCP servers you changed by hand. A running Claude Code doesn't read them again: a `CLAUDE.md` written
+  mid-conversation reached Claude only after a restart. Not while Claude is on a turn.
+
 ## [0.14.0] - 2026-11-20
 
 Still a **preview**, for Claude Code 2.1.318 or newer (tested with 2.1.329). This release keeps up with Claude Code
