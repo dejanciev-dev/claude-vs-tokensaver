@@ -1988,8 +1988,9 @@ that managed settings can still override.
       won't apply and restarting for nothing. `ClaudeErrorHints.ManagedOutputLimit` (from the last `get_settings`
       answer; before one is read, the link as before); the empty box gives that hint, with nothing for Tab. Not probed:
       managed settings need an administrator's file. Tests in `Test_ErrorHints_NextStep`. Builds clean; not yet run in VS
-- [ ] **Manual checks for Phases 74 and 75.** Rows in section 28: the gateway's limit not called costly, a ranged
-      read's total, the tip's limit with Visual Studio's environment and a file set differently, the managed case
+- [x] **Manual checks for Phases 74 and 75.** Rows in section 28: the gateway's limit not called costly, a ranged
+      read's total, the tip's limit with Visual Studio's environment and a file set differently, the managed case.
+      Six rows; the section is now *Phases 72–75*. The managed row needs an administrator's file and a gateway
 - [ ] **0.14.0 notes.** The changelog's 0.14.0 and the Marketplace overview say what Phases 74–75 changed
 
 ---
