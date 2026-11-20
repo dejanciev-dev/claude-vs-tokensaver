@@ -226,6 +226,12 @@ namespace ClaudeVS.Core.Tests
             Eq("The model takes at most 64,000 output tokens: set CLAUDE_CODE_MAX_OUTPUT_TOKENS=64000 (the link above sets it), then send it again · Tab puts your prompt back",
                 Of(kind: "invalid_request", status: 400, text: refused).Display());
             True(ClaudeErrorHints.Explain(refused)?.Contains("CLAUDE_CODE_MAX_OUTPUT_TOKENS=64000") == true, "the error's explanation too");
+            // Managed settings rank above the project's files: no link, ask whoever manages Claude Code (Phase 75)
+            var managedLimit = JObject.Parse(@"{""sources"":[{""source"":""localSettings"",""settings"":{""env"":{""CLAUDE_CODE_MAX_OUTPUT_TOKENS"":""64000""}}},{""source"":""policySettings"",""settings"":{""env"":{""CLAUDE_CODE_MAX_OUTPUT_TOKENS"":""128000""}}}]}");
+            Eq("The model takes at most 64,000 output tokens, and managed settings set CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000: ask whoever manages Claude Code here to set it to 64000",
+                ClaudeErrorHints.ManagedOutputLimit(64000, managedLimit));
+            Eq(null, ClaudeErrorHints.ManagedOutputLimit(64000, JObject.Parse(@"{""sources"":[{""source"":""userSettings"",""settings"":{""env"":{""CLAUDE_CODE_MAX_OUTPUT_TOKENS"":""128000""}}}]}")), "the user's: the link can override it");
+            Eq(null, ClaudeErrorHints.ManagedOutputLimit(64000, null), "settings not read yet: the link");
             var policy = Of(text: "API Error: Claude Code is unable to respond to this request, which appears to violate our Usage Policy. Run /rewind and change the message, or run /clear.");
             Eq("Blocked by the usage policy: rewind your message to change it, or start a New chat", policy.Display(), "a policy block: the hint alone");
             Eq(null, policy.Prompt, "nothing for Tab: the same prompt would be blocked again");
