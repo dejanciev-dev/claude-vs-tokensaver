@@ -38,6 +38,9 @@ The full list follows.
 - **Behind a gateway** (`ANTHROPIC_BASE_URL` in Claude Code's settings or Visual Studio's environment), a
   `CLAUDE_CODE_MAX_OUTPUT_TOKENS` under 8,000 was listed as a setting that makes turns dearer, and the tip after
   cut-off answers said to raise it, though it may be all the gateway's model takes. Neither says so there now.
+- **The output limit Claude Code uses:** with `CLAUDE_CODE_MAX_OUTPUT_TOKENS` set both in Visual Studio's environment and
+  in a settings file, the cut-off tip named the environment's value, but Claude Code uses the settings file's. It names
+  that one now, and a low limit set only in Visual Studio's environment is listed under *Settings that cost* too.
 
 ### Changed
 

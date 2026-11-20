@@ -16,6 +16,8 @@ namespace ClaudeVS.ToolWindow
         private System.Collections.Generic.List<CostlySetting> _costlySettings;
         /// <summary>Claude Code talks to a gateway: a low output limit may be all its model takes (no "raise it").</summary>
         private bool _behindGateway;
+        /// <summary>Claude Code's last <c>get_settings</c> answer: which source sets what (<see cref="SettingsCheck.EnvAsUsed"/>).</summary>
+        private Newtonsoft.Json.Linq.JObject _settingsResponse;
 
         /// <summary>
         /// / → Settings that cost: reads Claude Code's settings now (starting it if needed, no model call) and says in the
@@ -37,6 +39,7 @@ namespace ClaudeVS.ToolWindow
                 if (settings == null) { Append("\nClaude Code didn't answer with its settings (an older Claude Code may not offer them). Try again once it runs.\n"); return; }
                 _costlySettings = settings.Costly;
                 _behindGateway = settings.BehindGateway;
+                _settingsResponse = settings.Response;
                 Append("\n" + SettingsCheck.Text(settings.Costly) + "\n");
             }).FileAndForget("ClaudeVS/ChatControl/SettingsCheck");
         }
@@ -128,6 +131,7 @@ namespace ClaudeVS.ToolWindow
                 ApplyEffortCap(settings.MaxEffort);
                 _costlySettings = settings.Costly;
                 _behindGateway = settings.BehindGateway;
+                _settingsResponse = settings.Response;
                 _setupProblems = SetupCheck.Find(settings.Response, WorkFolder);
                 if (_setupProblems != null && _setupProblems.Count > 0)
                     ClaudeOutputPane.WriteLine(SetupCheck.Text(_setupProblems));

@@ -1977,9 +1977,12 @@ and `8000` in the file, not at all; with `100` in the environment alone, twice. 
 environment Claude Code starts with. The extension reads it the other way round, and Phase 73's link writes a file
 that managed settings can still override.
 
-- [ ] **The limit as Claude Code ranks it.** The cut-off tip names the limit Claude Code uses: the settings' `env`
+- [x] **The limit as Claude Code ranks it.** The cut-off tip names the limit Claude Code uses: the settings' `env`
       (managed, local, project, user) before Visual Studio's environment. Today it reads the environment first, so a
-      file's value is hidden behind it. A low limit in Visual Studio's environment alone is a setting that costs, too
+      file's value is hidden behind it. A low limit in Visual Studio's environment alone is a setting that costs, too.
+      `SettingsCheck.EnvAsUsed` (value and source; `ProcessEnvironment` → "Visual Studio's environment"),
+      `SettingsCheck.OutputLimit`; `Find` lists the limit wherever it's set; the chat keeps the last `get_settings`
+      answer for the tip. Tests in `Test_SettingsCheck`. Builds clean; not yet run in VS
 - [ ] **A limit managed settings set.** When managed settings set `CLAUDE_CODE_MAX_OUTPUT_TOKENS`, the link can't
       change it: the local file ranks below them. It says so (with the managed value) instead of writing a file that
       won't apply and restarting for nothing

@@ -155,7 +155,7 @@ namespace ClaudeVS.Core.Tests
             Eq("Claude Code settings that cost: none of the settings known to make turns dearer is set (managed, project or yours).", SettingsCheck.Text(clean));
             var managed = SettingsCheck.Find(JObject.Parse(@"{""sources"":[{""source"":""userSettings"",""settings"":{""model"":""haiku""}},{""source"":""policySettings"",""settings"":{""model"":""claude-fable-5-2""}}]}"));
             Eq("model: claude-fable-5-2", managed.Single().Setting); Eq("managed settings", managed.Single().Where, "managed wins");
-            Eq(0, SettingsCheck.Find(null).Count, "no answer");
+            Eq(0, SettingsCheck.Find(null, _ => null).Count, "no answer");
 
             // Behind a gateway a low output limit may be all its model takes (Phase 73's link sets it): not "costly"
             const string low = @"{""sources"":[{""source"":""localSettings"",""settings"":{""env"":{""CLAUDE_CODE_MAX_OUTPUT_TOKENS"":""4096""}}}%GW%]}";
@@ -167,6 +167,18 @@ namespace ClaudeVS.Core.Tests
             Eq(0, SettingsCheck.Find(JObject.Parse(low.Replace("%GW%", "")), vsEnv).Count, "not listed behind a gateway (Visual Studio's environment)");
             True(SettingsCheck.BehindGateway(JObject.Parse(@"{""effective"":{""env"":{""ANTHROPIC_BASE_URL"":""http://localhost:4000""}}}"), _ => null), "effective env");
             True(!SettingsCheck.BehindGateway(JObject.Parse(@"{""sources"":[{""source"":""userSettings"",""settings"":{""env"":{""ANTHROPIC_BASE_URL"":""""}}}]}"), _ => null), "an empty one is none");
+
+            // The settings' env wins over the environment Claude Code starts with (probed with 2.1.329), managed first
+            Func<string, string> vsLimit = n => n == "CLAUDE_CODE_MAX_OUTPUT_TOKENS" ? "100" : null;
+            var fileLimit = JObject.Parse(@"{""sources"":[{""source"":""userSettings"",""settings"":{""env"":{""CLAUDE_CODE_MAX_OUTPUT_TOKENS"":""32000""}}},{""source"":""localSettings"",""settings"":{""env"":{""CLAUDE_CODE_MAX_OUTPUT_TOKENS"":""16000""}}}]}");
+            Eq(("16000", "localSettings"), SettingsCheck.EnvAsUsed(fileLimit, "CLAUDE_CODE_MAX_OUTPUT_TOKENS", vsLimit), "the local file over the user's and over Visual Studio's environment");
+            Eq(16000, SettingsCheck.OutputLimit(fileLimit, vsLimit));
+            Eq(0, SettingsCheck.Find(fileLimit, vsLimit).Count, "a low limit in the environment, overridden: not costly");
+            Eq(("100", SettingsCheck.ProcessEnvironment), SettingsCheck.EnvAsUsed(null, "CLAUDE_CODE_MAX_OUTPUT_TOKENS", vsLimit), "the environment alone");
+            var vsOnly = SettingsCheck.Find(JObject.Parse(@"{""sources"":[]}"), vsLimit).Single();
+            Eq("env CLAUDE_CODE_MAX_OUTPUT_TOKENS=100", vsOnly.Setting); Eq("Visual Studio's environment", vsOnly.Where, "a low limit in Visual Studio's environment costs too");
+            Eq((null, null), SettingsCheck.EnvAsUsed(null, "CLAUDE_CODE_MAX_OUTPUT_TOKENS", _ => null), "none");
+            Eq(null, SettingsCheck.OutputLimit(JObject.Parse(@"{""sources"":[{""source"":""userSettings"",""settings"":{""env"":{""CLAUDE_CODE_MAX_OUTPUT_TOKENS"":""lots""}}}]}"), _ => null), "not a number");
         }
 
         private static void Test_SessionNotices_CutOffTip()
