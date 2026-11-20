@@ -16,7 +16,9 @@ All notable changes to this project are listed here. The format follows
   no longer offered.
 - **An output limit the model refuses** ("max_tokens: 128000 > 64000, which is the maximum allowed …", behind a
   gateway whose model takes fewer output tokens) got only "The request failed". Claude Code 2.1.329 no longer retries
-  it at the lower limit, so the hint says to set `CLAUDE_CODE_MAX_OUTPUT_TOKENS` to the limit the error names.
+  it at the lower limit, so the hint says to set `CLAUDE_CODE_MAX_OUTPUT_TOKENS` to the limit the error names, and a
+  link under the failed turn does it: it writes the variable into the project's `.claude/settings.local.json` and
+  restarts Claude Code, which carries on in the same conversation from your next prompt (Tab puts the failed one back).
 
 ### Changed
 

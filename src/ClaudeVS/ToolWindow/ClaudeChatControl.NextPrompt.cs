@@ -35,8 +35,60 @@ namespace ClaudeVS.ToolWindow
         private void SuggestFromAnswer(string answer, ClaudeEvent result, string prompt)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            if (result.IsError) { ShowNextStep(ClaudeErrorHints.NextStep(true, UsageRecord.EndOf(true, result.TerminalReason, result.ResultSubtype), result.ErrorKind, result.ApiErrorStatus, result.Text, prompt)); return; }
+            if (result.IsError)
+            {
+                if (ClaudeErrorHints.ModelOutputLimit(result.Text) is int most) OfferOutputLimit(most);
+                ShowNextStep(ClaudeErrorHints.NextStep(true, UsageRecord.EndOf(true, result.TerminalReason, result.ResultSubtype), result.ErrorKind, result.ApiErrorStatus, result.Text, prompt));
+                return;
+            }
             ShowSuggestion(NextPrompt.FromAnswer(answer), UsageRecord.SuggestionLocal);
+        }
+
+        private const string OutputLimitVariable = "CLAUDE_CODE_MAX_OUTPUT_TOKENS";
+
+        /// <summary>
+        /// The model refused Claude Code's output limit (a gateway's model, 2.1.329 no longer retries lower): a link
+        /// under the failed turn sets the limit the error names and restarts Claude Code into the same conversation.
+        /// </summary>
+        private void OfferOutputLimit(int most)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            string root = WorkFolder, value = most.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            if (string.IsNullOrEmpty(root)) return;
+            _view.AppendActions(new System.Collections.Generic.List<(string, string, Action)>
+            {
+                ($"Set {OutputLimitVariable}={value}",
+                    $"Writes it into env in {System.IO.Path.Combine(root, ".claude", "settings.local.json")} and restarts Claude Code; the conversation carries on",
+                    (Action)(() => SetOutputLimit(root, value))),
+            });
+        }
+
+        private void SetOutputLimit(string root, string value)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var s = _session;
+            Jtf.RunAsync(async () =>
+            {
+                string said;
+                try
+                {
+                    await System.Threading.Tasks.Task.Run(() => Core.Setup.TokenSaverSetup.SetLocalEnv(root, OutputLimitVariable, value));
+                    said = $"Set {OutputLimitVariable}={value} in .claude/settings.local.json.";
+                    if (s != null && !_busy)
+                    {
+                        // Claude Code reads settings when it starts: the next prompt starts it again with --resume.
+                        await System.Threading.Tasks.Task.Run(() => s.StopProcess());
+                        said += " Claude Code restarts with it on your next prompt, in this conversation.";
+                    }
+                    else said += " It applies once Claude Code starts again (New chat, or after this turn).";
+                }
+                catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException || ex is Newtonsoft.Json.JsonException)
+                {
+                    said = $"Could not set {OutputLimitVariable}: " + ex.Message;
+                }
+                await Jtf.SwitchToMainThreadAsync();
+                Append("\n" + said + "\n");
+            }).FileAndForget("ClaudeVS/ChatControl/SetOutputLimit");
         }
 
         /// <summary>The hint after a failed turn is showing (with or without a prompt for Tab): Claude Code's suggestion doesn't replace it.</summary>

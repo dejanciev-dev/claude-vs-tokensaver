@@ -184,6 +184,27 @@ namespace ClaudeVS.Core.Cli
         public Task InterruptAsync() => SendControlAsync(new JObject { ["subtype"] = "interrupt" });
 
         /// <summary>
+        /// Ends the process but not the conversation: the next prompt starts it again with <c>--resume</c>, so Claude
+        /// Code reads its settings afresh (an <c>env</c> just written) and carries on. Closes stdin (a clean exit, code
+        /// 0) and kills the process after 2 s. Blocks for that long at most: call it off the UI thread.
+        /// </summary>
+        public void StopProcess()
+        {
+            lock (_gate)
+            {
+                if (_disposed || _process == null || _process.HasExited) return;
+                try
+                {
+                    _stdin?.Close();
+                    if (!_process.WaitForExit(2000)) _process.Kill();
+                }
+                catch (InvalidOperationException) { }
+                catch (System.ComponentModel.Win32Exception) { }
+                catch (IOException) { }
+            }
+        }
+
+        /// <summary>
         /// Stops one subagent or background command (control request <c>stop_task</c>, verified with 2.1.318; the
         /// tasks it started stop too). Throws <see cref="InvalidOperationException"/> when the CLI refuses.
         /// </summary>

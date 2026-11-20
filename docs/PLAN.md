@@ -1925,9 +1925,17 @@ This phase closes those gaps and writes down the VS checks.
       already); two CRLF lines come as `\n` content, 3 of 3 (2, right already). A read that stops before the end can't
       tell: lines 2–4 of ten say "3 of 11 lines", left as it is. `Fixtures/cli-2.1.329-read-lines.jsonl` (the five
       results, paths sanitized) replaces the hand-written JSON in `Test_ToolData_Shapes`
-- [ ] **One-click output-limit fix.** After the `max_tokens` refusal, the hint offers to set it: Tab (or a button)
+- [x] **One-click output-limit fix.** After the `max_tokens` refusal, the hint offers to set it: Tab (or a button)
       writes `env.CLAUDE_CODE_MAX_OUTPUT_TOKENS=<limit>` into the solution's `.claude/settings.local.json` and
-      restarts the process with `--resume`, so the conversation carries on and the failed prompt goes back in the box
+      restarts the process with `--resume`, so the conversation carries on and the failed prompt goes back in the box.
+      A link under the failed turn (`Set CLAUDE_CODE_MAX_OUTPUT_TOKENS=64000`); Tab keeps putting the prompt back.
+      `TokenSaverSetup.SetLocalEnv` (keeps the rest of the file), `ClaudeSession.StopProcess` (ends the process, not
+      the conversation: the next prompt starts it with `--resume`). `--live-env` (in `--live-all`, $0.0024 with
+      2.1.329): with `CLAUDE_CODE_MAX_OUTPUT_TOKENS=100` written, the running process still answered a 360-token count
+      whole, so the restart is needed; after `StopProcess`, the same session's answer was cut off 3×, and
+      `get_settings` showed it in `effective.env`. Found on the way: `modelUsage.maxOutputTokens` is the model's
+      maximum (128000 for Haiku 5.5 with the variable set to 4000), not the limit in effect.
+      `Test_SetLocalEnv`. Builds clean; not yet run in VS
 - [ ] **Manual checks for Phases 72 and 73.** A section in [MANUAL-CHECKS.md](MANUAL-CHECKS.md): the read count of a
       file that ends in a newline, no placeholder suggestion, the output-limit hint and its fix; Release moves down one
 

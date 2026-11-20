@@ -82,6 +82,24 @@ namespace ClaudeVS.Core.Setup
             return true;
         }
 
+        /// <summary>
+        /// Sets <paramref name="name"/> in <c>env</c> of the project's <c>.claude/settings.local.json</c> (yours, not
+        /// committed), keeping everything else in it. Claude Code reads it when it starts. False when it already has
+        /// that value.
+        /// </summary>
+        public static bool SetLocalEnv(string rootDir, string name, string value)
+        {
+            string claudeDir = Path.Combine(rootDir, ".claude");
+            Directory.CreateDirectory(claudeDir);
+            string settingsPath = Path.Combine(claudeDir, "settings.local.json");
+            JObject settings = File.Exists(settingsPath) && File.ReadAllText(settingsPath) is string text && text.Trim().Length > 0 ? JObject.Parse(text) : new JObject();
+            var env = GetOrAdd<JObject>(settings, "env");
+            if (env[name]?.Type == JTokenType.String && (string)env[name] == value) return false;
+            env[name] = value;
+            File.WriteAllText(settingsPath, settings.ToString(Formatting.Indented) + Environment.NewLine, new UTF8Encoding(false));
+            return true;
+        }
+
         public static SetupResult Apply(string rootDir, bool autoApproveRewrites = false)
         {
             var result = new SetupResult();

@@ -74,7 +74,7 @@ namespace ClaudeVS.Core.Cli
             if (kind == "max_output_tokens" || Has(e, "output token maximum", "max_output_tokens"))
                 return Step("The answer hit the output limit", "Go on from where you stopped, in smaller parts");
             if (ModelOutputLimit(text) is int most)
-                return Step($"The model takes at most {most.ToString("N0", System.Globalization.CultureInfo.InvariantCulture)} output tokens: set CLAUDE_CODE_MAX_OUTPUT_TOKENS={most.ToString(System.Globalization.CultureInfo.InvariantCulture)}, start a New chat, then send it again", again);
+                return Step($"The model takes at most {most.ToString("N0", System.Globalization.CultureInfo.InvariantCulture)} output tokens: set CLAUDE_CODE_MAX_OUTPUT_TOKENS={most.ToString(System.Globalization.CultureInfo.InvariantCulture)} (the link above sets it), then send it again", again);
             if (Has(e, "prompt is too long", "context window", "context_length"))
                 return Step("The conversation is too long for the context window", "/compact");
             // "Invalid API key · Fix external API key" (2.1.326, authentication_failed, 401): a key in the environment, not the sign-in

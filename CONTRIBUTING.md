@@ -25,7 +25,7 @@ dotnet run --project tests/ClaudeVS.Core.Tests -- --live-all
 ```
 
 It runs them one after another, each in an empty temp folder and asking for Haiku, then prints a summary with each
-test's cost and the total (13 tests, about $0.20 and 5.5 minutes with Claude Code 2.1.329; a single `--live-…` test
+test's cost and the total (14 tests, about $0.20 and 6 minutes with Claude Code 2.1.329; a single `--live-…` test
 prints its cost too). The exit code is 0 only when all pass. `live (Plan)` checks that plan mode still answers with
 Haiku: Claude Code turns the alias `haiku` into Sonnet there, so the session asks for Haiku by its full ID. It does so
 for four turns: two in one process, one after the process was killed (restarted with `--resume`), one in a new session
@@ -42,6 +42,9 @@ After a Claude Code update that touches subagents, run `--live-reads [rawPath]` 
 results carry its Agent call and that the agent's read counts as a re-read of the conversation's file.
 `--live-models [rawPath]` (about $0.06) has Haiku answer with an Explore agent on Sonnet: each model's billed cost adds
 up to Claude Code's total, the agent is named `Sonnet 5.5`, and Copy session summary has its `By model:` line.
+`--live-env` (about $0.003, in `--live-all`) writes `CLAUDE_CODE_MAX_OUTPUT_TOKENS=100` into a project's
+`.claude/settings.local.json`, as the output-limit link does: the running process keeps its limit, and after
+`StopProcess` the next prompt resumes the same conversation and is cut off at the new one.
 
 Each test also runs on its own. `--live [path-for-raw-output.txt] [mode]` runs two short turns, in Accept Edits
 unless a mode is named (`Plan` checks that plan mode keeps Haiku, also after a restart and a resume). To capture and answer permission
