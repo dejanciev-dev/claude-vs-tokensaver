@@ -358,7 +358,9 @@ namespace ClaudeVS.Core.Cli
         /// Read's line counts (<c>tool_use_result.file</c>: <c>numLines</c>, <c>totalLines</c>, <c>startLine</c>) as
         /// Claude Code shows them. For a file that ends in a newline it counts the empty "line" after it: probed with
         /// 2.1.329, three lines read whole come back as 4 of 4 (2.1.329 fixed only its own view). So when the read
-        /// reaches the end and its <c>content</c> ends in a newline, that line is taken off both counts.
+        /// reaches the end and its <c>content</c> ends in a newline, that line is taken off both counts; an empty file
+        /// is 0 of 0. A read that stops before the end can't tell: its total keeps the extra line ("3 of 11" for ten
+        /// lines). Fixtures/cli-2.1.329-read-lines.jsonl.
         /// </summary>
         public static (long? Read, long? Total, long? Start) ReadLines(JObject file)
         {
@@ -367,6 +369,9 @@ namespace ClaudeVS.Core.Cli
             if (read > 0 && total != null && (start ?? 1) + read - 1 == total
                 && file["content"]?.Type == JTokenType.String && ((string)file["content"]).EndsWith("\n", StringComparison.Ordinal))
             { read--; total--; }
+            // An empty file comes back as one line of nothing (2.1.329: content "", 1 of 1).
+            else if (read == 1 && total == 1 && (start ?? 1) == 1 && file["content"]?.Type == JTokenType.String && ((string)file["content"]).Length == 0)
+            { read = 0; total = 0; }
             return (read, total, start);
         }
 
@@ -383,6 +388,7 @@ namespace ClaudeVS.Core.Cli
                 {
                     var (read, total, start) = ReadLines(data["file"] as JObject);
                     if (read == null) return null;
+                    if (read == 0 && total == 0) return "Read an empty file";
                     bool part = (start ?? 1) > 1 || (total != null && read < total);
                     if (!part) return $"Read {Lines((int)read)}";
                     return $"Read {read:N0} of {total:N0} lines" + ((start ?? 1) > 1 ? $" (from line {start:N0})" : "");
