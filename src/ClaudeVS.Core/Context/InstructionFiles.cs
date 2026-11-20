@@ -52,8 +52,37 @@ namespace ClaudeVS.Core.Context
             return changed;
         }
 
-        /// <summary>The notice for changed files: what Claude Code does with them, and that a restart reads them.</summary>
-        public static string Notice(IReadOnlyList<string> changedPaths, string root, string home = null)
+        /// <summary>The instruction files' sizes (bytes; 0 when missing), the same paths as <see cref="Snapshot"/>. Never throws.</summary>
+        public static Dictionary<string, long> Sizes(string root, string home = null)
+        {
+            var d = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+            foreach (var path in Snapshot(root, home).Keys.Where(p => p.EndsWith(".md", StringComparison.OrdinalIgnoreCase)))
+            {
+                try { d[path] = File.Exists(path) ? new FileInfo(path).Length : 0; }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is ArgumentException || ex is NotSupportedException) { d[path] = 0; }
+            }
+            return d;
+        }
+
+        /// <summary>
+        /// How many tokens the changed instruction files add to every request (negative: take away), from their sizes
+        /// then and now. Null when under 50 either way, or no instruction file changed.
+        /// </summary>
+        public static long? TokensPerRequest(IEnumerable<string> changedPaths, IReadOnlyDictionary<string, long> before, IReadOnlyDictionary<string, long> now)
+        {
+            if (changedPaths == null || before == null || now == null) return null;
+            long delta = 0;
+            foreach (var p in changedPaths.Where(p => p.EndsWith(".md", StringComparison.OrdinalIgnoreCase)))
+                delta += (now.TryGetValue(p, out var n) ? n : 0) - (before.TryGetValue(p, out var b) ? b : 0);
+            long tokens = Math.Sign(delta) * (long)Tokens.TokenEstimate.FromChars(Math.Abs(delta));
+            return Math.Abs(tokens) < 50 ? (long?)null : tokens;
+        }
+
+        /// <summary>
+        /// The notice for changed files: what Claude Code does with them, and that a restart reads them. With
+        /// <paramref name="tokensPerRequest"/> (<see cref="TokensPerRequest"/>), what the change will cost on every request.
+        /// </summary>
+        public static string Notice(IReadOnlyList<string> changedPaths, string root, string home = null, long? tokensPerRequest = null)
         {
             if (changedPaths == null || changedPaths.Count == 0) return null;
             bool Under(string p, string dir) => !string.IsNullOrEmpty(dir) && p.StartsWith(dir, StringComparison.OrdinalIgnoreCase);
@@ -64,7 +93,11 @@ namespace ClaudeVS.Core.Context
             bool mcp = names.Any(n => n.EndsWith(".mcp.json", StringComparison.OrdinalIgnoreCase));
             bool md = names.Any(n => n.EndsWith(".md", StringComparison.OrdinalIgnoreCase));
             string what = md && mcp ? "instructions and MCP servers" : mcp ? "MCP servers" : "instructions";
-            return $"{list} changed since Claude Code started. It reads its {what} only when it starts, so this conversation still has the old ones. Restart Claude Code to use them: the conversation carries on, and its prompt cache too.";
+            string cost = tokensPerRequest is long t
+                ? (t > 0 ? $" Once read, it adds ~{Tokens.TokenMeter.Format(t)} tokens to every request; a shorter one costs less on every turn."
+                         : $" Once read, it takes ~{Tokens.TokenMeter.Format(-t)} tokens off every request.")
+                : "";
+            return $"{list} changed since Claude Code started. It reads its {what} only when it starts, so this conversation still has the old ones. Restart Claude Code to use them: the conversation carries on, and its prompt cache too.{cost}";
         }
     }
 }

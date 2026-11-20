@@ -2112,9 +2112,12 @@ Planned on 2026-11-20, after Phase 79, on the same branch (PR #92); in 0.15.0. C
 in place needs nothing. A turn's cost and its subagents come from `model_usage_since_last_result` (since 2.1.316),
 exact on a new process too; `total_cost_usd` carries on with `--resume`, and a lower one adds an offset.
 
-- [ ] **What the edit costs.** `CLAUDE.md` goes with every request. The edit notice says how many tokens the change adds
+- [x] **What the edit costs.** `CLAUDE.md` goes with every request. The edit notice says how many tokens the change adds
       or takes away per request (its size when Claude Code started against now), so a long paste into `CLAUDE.md` is
-      seen before it is paid on every turn
+      seen before it is paid on every turn. `InstructionFiles.Sizes` (the `.md` files, with the snapshot) and
+      `TokensPerRequest` (the change in characters as tokens; nothing under 50); the notice ends "Once read, it adds
+      ~2.8k tokens to every request; a shorter one costs less on every turn." or "takes ~… off". In
+      `Test_InstructionFiles`. Builds clean; not yet run in VS
 - [ ] **Manual checks for Phase 79.** Rows in section 29: a command allowed for the session not asked again after a
       restart, the restart after a turn, `~/.claude/CLAUDE.md`, the notice's size
 - [ ] **Verify with `--live-all`.** All 17 live tests (with `--live-session-rules`) against 2.1.329; CONTRIBUTING gets the
