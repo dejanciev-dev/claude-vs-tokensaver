@@ -356,7 +356,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | With the variable at 2000 and no file, ask for long answers until the cut-off tip comes | It says *CLAUDE_CODE_MAX_OUTPUT_TOKENS is 2000*; with the file's 32000 it doesn't name a limit |
 | Managed settings (an administrator's `managed-settings.json`) set `CLAUDE_CODE_MAX_OUTPUT_TOKENS`, behind the gateway as above (skip without both) | No link; the empty box says *… managed settings set CLAUDE_CODE_MAX_OUTPUT_TOKENS=… : ask whoever manages Claude Code here to set it to N* |
 
-## 29. Restart in place (Phases 76–80)
+## 29. Restart in place (Phases 76–81)
 
 | Do | Expect |
 |---|---|
@@ -371,6 +371,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | `/` → **Restart Claude Code**, send the same prompt | Still not asked: what you allowed for the session carries over |
 | Paste ~8,000 characters into `CLAUDE.md`, save, click into the input box | The notice ends *Once read, it adds ~2.8k tokens to every request; a shorter one costs less on every turn.* |
 | Edit `~/.claude/CLAUDE.md` (your own) during a conversation | The notice names `~/.claude/CLAUDE.md` |
+| Add `@docs/rules.md` to `CLAUDE.md`, restart, then edit only `docs/rules.md` | The notice names `docs/rules.md` (an imported file) and what it adds per request |
 | After a restart, hover the cost under the next answer | Mostly *Cache reads*: the restart didn't write the cache again |
 | A token tip's **Add Read(./\*\*/obj/\*\*)**, then ask Claude to read a file under `obj` in the same conversation | *… It applies at once …*; Claude can't read it, no restart |
 | `/` → **Check token-saving setup** with something missing, **Reinstall** | *… The read-deny rules and the quiet-build hook apply at once; the shell output cap once Claude Code restarts …*; after a prompt, the check says *all in effect* |
