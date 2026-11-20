@@ -2066,6 +2066,7 @@ namespace ClaudeVS.ToolWindow
                         if (!string.IsNullOrWhiteSpace(answer)) _lastAnswer = answer;
                         SuggestFromAnswer(answer, ev, turn.Prompt); // grey text in the input box (after a failed turn: what to do); not while queued prompts run
                         CheckInstructionFiles(); // a CLAUDE.md or .mcp.json edited by hand while Claude worked
+                        RestartAfterTurn(); // Restart Claude Code asked for during the turn
                         ShowTurnChanges(); // "Files changed" with Diff links
                         Announce(ev.IsError ? "Claude stopped with an error. " + Short(ev.Text) : ScreenReaderText.AnswerFinished(answer));
                         if (_queuedBubbles.Count > 0) { _queuedBubbles.Dequeue().Render(); RefreshQueuedPanel(); } // Claude starts on the next one now
