@@ -6,6 +6,22 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-11-20
+
+Still a **preview**, for Claude Code 2.1.318 or newer (tested with 2.1.329). This release keeps up with Claude Code
+2.1.329: reads counted as the editor counts them, and a turn that fails behind a gateway fixed in one click.
+
+### Highlights
+
+- **Output limits behind a gateway:** when the gateway's model takes fewer output tokens than Claude Code asks for,
+  Claude Code 2.1.329 no longer retries lower and the turn fails. A link under it sets `CLAUDE_CODE_MAX_OUTPUT_TOKENS`
+  to the limit the error names, and the conversation carries on from your next prompt. That limit is no longer
+  called costly.
+- **Reads counted right:** "Read 3 lines" for a three-line file, not 4; "Read an empty file"; and a read of part of a
+  file gets its total from the file.
+
+The full list follows.
+
 ### Fixed
 
 - **A file that ends in a newline** was one line longer than it is: "Read 4 lines" for a three-line file, on the tool

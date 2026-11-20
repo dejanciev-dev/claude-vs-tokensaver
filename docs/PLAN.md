@@ -1962,8 +1962,11 @@ still counts a final newline as a line. Then the live tests, measured rather tha
 - [x] **Verify with `--live-all`.** All 14 live tests (with `--live-env`) against 2.1.329; CONTRIBUTING gets the measured
       cost and time instead of Phase 73's estimate. 14 of 14 pass ($0.20, 5.1 min); `env` $0.0021: the running process
       again kept its limit, and the restarted one was cut off twice
-- [ ] **Version 0.14.0.** Manifest, assembly and package registration at 0.14.0, still a preview; the Unreleased changelog
-      becomes `## [0.14.0]` with highlights, and the Marketplace overview adds what's new. Tagging stays yours
+- [x] **Version 0.14.0.** Manifest, assembly and package registration at 0.14.0, still a preview; the Unreleased changelog
+      becomes `## [0.14.0]` with highlights, and the Marketplace overview adds what's new. Tagging stays yours. Two
+      highlights (output limits behind a gateway, reads counted right); the overview's *Chat* section adds the
+      one-click limit. Only `v0.11.0` is tagged: 0.12.0 (`3fc1755` on main) and 0.13.0 (`9ea7895`)
+      aren't yet. After merging: `git tag v0.14.0 && git push origin v0.14.0`. The Release VSIX builds
 
 ---
 
