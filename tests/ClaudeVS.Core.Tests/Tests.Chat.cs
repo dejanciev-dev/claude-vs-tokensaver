@@ -708,6 +708,10 @@ namespace ClaudeVS.Core.Tests
             Eq(0, parser.Parse("{\"type\":\"prompt_suggestion\",\"suggestion\":\"<signal type=\\\"empty\\\" />\"}").Count, "bare tag ignored");
             Eq(0, parser.Parse("{\"type\":\"prompt_suggestion\",\"suggestion\":\"<empty></empty>\"}").Count, "tags only ignored");
             Eq("use <T> here", parser.Parse("{\"type\":\"prompt_suggestion\",\"suggestion\":\"use <T> here\"}").Single().Text, "a tag inside words is kept");
+            // Fixed in 2.1.329: "prompt suggestions sometimes showing placeholder text such as _(no suggestion)_"
+            foreach (var placeholder in new[] { "_(no suggestion)_", "(no suggestion)", "*No suggestion.*", "[none]", "none" })
+                Eq(0, parser.Parse(new JObject { ["type"] = "prompt_suggestion", ["suggestion"] = placeholder }.ToString()).Count, "placeholder ignored: " + placeholder);
+            Eq("no suggestions from the linter, run it", parser.Parse("{\"type\":\"prompt_suggestion\",\"suggestion\":\"no suggestions from the linter, run it\"}").Single().Text, "words after it are a prompt");
 
             True(ClaudeArgsBuilder.Build(new ClaudeLaunchOptions { PromptSuggestions = true }).Contains("--prompt-suggestions true"), "flag when on");
             True(!ClaudeArgsBuilder.Build(new ClaudeLaunchOptions()).Contains("--prompt-suggestions"), "off by default");
