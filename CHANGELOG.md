@@ -13,6 +13,9 @@ All notable changes to this project are listed here. The format follows
   view); the extension counts the lines you see in the editor now.
 - **A suggested next prompt that was only a placeholder**, such as `_(no suggestion)_` (Claude Code before 2.1.329), is
   no longer offered.
+- **An output limit the model refuses** ("max_tokens: 128000 > 64000, which is the maximum allowed …", behind a
+  gateway whose model takes fewer output tokens) got only "The request failed". Claude Code 2.1.329 no longer retries
+  it at the lower limit, so the hint says to set `CLAUDE_CODE_MAX_OUTPUT_TOKENS` to the limit the error names.
 
 ## [0.13.0] - 2026-11-19
 

@@ -1884,11 +1884,14 @@ gateway, macOS and VS Code entries are left out.
       tags are dropped (Phase 51). `ClaudeStreamParser` drops "no suggestion" or "none", in
       brackets or Markdown emphasis or neither; with words after it, it is a prompt (`no suggestions from the linter,
       run it` stays). Tests in `Test_PromptSuggestion_RealCli_2_1_325`
-- [ ] **Output limit a gateway's model refuses.** 2.1.329 removes 2.1.326's automatic retry at the limit named in a
+- [x] **Output limit a gateway's model refuses.** 2.1.329 removes 2.1.326's automatic retry at the limit named in a
       `max_tokens` error ("max_tokens: 128000 > 64000, which is the maximum allowed number of output tokens for …"):
       behind a gateway whose model takes fewer output tokens, the turn now fails. The failed-turn hint says to set
       `CLAUDE_CODE_MAX_OUTPUT_TOKENS` to the limit the error names. Not probed: first-party Claude Code clamps the
-      setting to the model's own maximum (`CLAUDE_CODE_MAX_OUTPUT_TOKENS=500000` on Haiku ran with 128000)
+      setting to the model's own maximum (`CLAUDE_CODE_MAX_OUTPUT_TOKENS=500000` on Haiku ran with 128000).
+      `ClaudeErrorHints.ModelOutputLimit` reads the limit from the error; the empty-box hint ("The model takes at most
+      64,000 output tokens: set CLAUDE_CODE_MAX_OUTPUT_TOKENS=64000, start a New chat, then send it again") and the
+      error's explanation say where to set it. Tests in `Test_ErrorHints_NextStep`
 - [ ] **Verify with 2.1.329 and raise `CliVersion.Tested`.** All live tests with 2.1.329, the offline tests, and
       `CliVersion.Tested` 2.1.329 in the code and the docs
 
