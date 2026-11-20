@@ -12,6 +12,13 @@ All notable changes to this project are listed here. The format follows
   and MCP servers you changed by hand. A running Claude Code doesn't read them again: a `CLAUDE.md` written
   mid-conversation reached Claude only after a restart. Not while Claude is on a turn.
 
+### Changed
+
+- **Settings applied without a New chat:** a read-deny rule added from a tip says it applies at once (Claude Code reads
+  its permission rules and hooks again while it runs), and *Reinstall* in the setup check restarts Claude Code into the
+  same conversation for the shell output cap, which it reads only when it starts. The *Install Token-Saving Settings*
+  dialog says which part applies when, instead of "Restart the chat (New)".
+
 ## [0.14.0] - 2026-11-20
 
 Still a **preview**, for Claude Code 2.1.318 or newer (tested with 2.1.329). This release keeps up with Claude Code

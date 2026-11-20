@@ -148,7 +148,7 @@ namespace ClaudeVS.Commands
             string written = result.Written.Count == 0 ? "Nothing to change — already installed." : "Updated: " + string.Join(", ", result.Written);
             Message("Claude Code",
                 written + "\n\n• Claude won't read bin/obj/node_modules/packages/dist\n• Shell output capped at "
-                + TokenSaverSetup.DefaultBashMaxOutput + " chars\n• dotnet build/test, msbuild and git log run in quiet mode\n\nRestart the chat (New) for the settings to apply. Commit .claude/ to share with your team.",
+                + TokenSaverSetup.DefaultBashMaxOutput + " chars\n• dotnet build/test, msbuild and git log run in quiet mode\n\nThe read-deny rules and the quiet-build hook apply at once. The output cap applies once Claude Code restarts: / → Restart Claude Code keeps your conversation. Commit .claude/ to share with your team.",
                 OLEMSGICON.OLEMSGICON_INFO);
         }
 
