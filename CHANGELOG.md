@@ -32,6 +32,7 @@ The full list follows.
 - **A notice when you edit `CLAUDE.md` or `.mcp.json` by hand** (the solution's, or your own `~/.claude/CLAUDE.md`) during a conversation: Claude Code reads them only
   when it starts, so the notice says this conversation still has the old ones, with a *Restart Claude Code* link.
   Not for files Claude changed itself, and not for `.claude/settings*.json`, whose rules and hooks apply at once.
+  It also says how many tokens the change adds to (or takes off) every request once read, as `CLAUDE.md` goes with each.
 
 ### Changed
 

@@ -227,6 +227,8 @@ namespace ClaudeVS.ToolWindow
 
         /// <summary>CLAUDE.md and .mcp.json as they were when this process started (<see cref="Core.Context.InstructionFiles"/>).</summary>
         private System.Collections.Generic.Dictionary<string, DateTime?> _instructionFiles;
+        /// <summary>The instruction files' sizes then, for what an edit adds to every request.</summary>
+        private System.Collections.Generic.Dictionary<string, long> _instructionSizes;
         /// <summary>Files Claude changed with its own tools while this process ran: no notice for those.</summary>
         private readonly System.Collections.Generic.HashSet<string> _claudeWrote = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
         /// <summary>Files a notice was given for, in this process.</summary>
@@ -237,6 +239,7 @@ namespace ClaudeVS.ToolWindow
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             _instructionFiles = Core.Context.InstructionFiles.Snapshot(_sessionDir, UserHome);
+            _instructionSizes = Core.Context.InstructionFiles.Sizes(_sessionDir, UserHome);
             _claudeWrote.Clear();
             _instructionNoticeGiven.Clear();
         }
@@ -254,7 +257,8 @@ namespace ClaudeVS.ToolWindow
                 .Where(p => !_instructionNoticeGiven.Contains(p)).ToList();
             if (changed.Count == 0) return;
             foreach (var p in changed) _instructionNoticeGiven.Add(p);
-            string text = Core.Context.InstructionFiles.Notice(changed, _sessionDir, UserHome);
+            long? perRequest = Core.Context.InstructionFiles.TokensPerRequest(changed, _instructionSizes, Core.Context.InstructionFiles.Sizes(_sessionDir, UserHome));
+            string text = Core.Context.InstructionFiles.Notice(changed, _sessionDir, UserHome, perRequest);
             _saidNotices.Remove(text); // the same files may change again after a restart: say it again
             Notice(text);
             _view.AppendActions(new System.Collections.Generic.List<(string, string, Action)>

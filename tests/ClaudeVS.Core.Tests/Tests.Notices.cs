@@ -531,6 +531,23 @@ namespace ClaudeVS.Core.Tests
                 Eq(null, InstructionFiles.Notice(new string[0], dir));
                 Eq(0, InstructionFiles.Snapshot(null).Count, "no folder");
 
+                // What an edit adds to every request (Phase 80): sizes then and now, instruction files only
+                File.WriteAllText(md, "# Rules\n");
+                var sizesBefore = InstructionFiles.Sizes(dir);
+                Eq(3, sizesBefore.Count, "the three .md files, not .mcp.json");
+                File.WriteAllText(md, "# Rules\n" + new string('x', 8000));
+                File.WriteAllText(mcp, "{\"mcpServers\":{}}" + new string(' ', 4000)); // .mcp.json's size doesn't go with requests
+                long? added = InstructionFiles.TokensPerRequest(new[] { md, mcp }, sizesBefore, InstructionFiles.Sizes(dir));
+                True(added > 2000 && added < 3500, "~8k characters, ~2.8k tokens: " + added);
+                True(InstructionFiles.Notice(new[] { md }, dir, null, added).EndsWith("tokens to every request; a shorter one costs less on every turn."), "says what it adds");
+                var bigger = InstructionFiles.Sizes(dir);
+                File.WriteAllText(md, "# Rules\n");
+                long? taken = InstructionFiles.TokensPerRequest(new[] { md }, bigger, InstructionFiles.Sizes(dir));
+                True(taken < -2000, "shorter: " + taken);
+                True(InstructionFiles.Notice(new[] { md }, dir, null, taken).EndsWith("tokens off every request."), "says what it saves");
+                File.AppendAllText(md, "One more line.\n");
+                Eq(null, InstructionFiles.TokensPerRequest(new[] { md }, InstructionFiles.Sizes(dir), new Dictionary<string, long> { [md] = new FileInfo(md).Length + 20 }), "a small change: nothing to say");
+
                 // Your own ~/.claude/CLAUDE.md is read at the start too (Phase 79)
                 string home = Path.Combine(dir, "home");
                 Directory.CreateDirectory(Path.Combine(home, ".claude"));
