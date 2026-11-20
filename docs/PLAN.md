@@ -2124,7 +2124,8 @@ exact on a new process too; `total_cost_usd` carries on with `--resume`, and a l
 - [x] **Verify with `--live-all`.** All 17 live tests (with `--live-session-rules`) against 2.1.329; CONTRIBUTING gets the
       measured cost and time instead of Phase 79's estimate. 17 of 17
       pass ($0.20, 6.2 min)
-- [ ] **0.15.0 notes.** The changelog's 0.15.0 says what Phase 80 changed
+- [x] **0.15.0 notes.** The changelog's 0.15.0 says what Phase 80 changed. The notice's entry went in with item 1; the
+      first highlight adds what a `CLAUDE.md` change costs per request
 
 ---
 
