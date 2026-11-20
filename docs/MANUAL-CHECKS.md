@@ -281,7 +281,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | With the token-saving setup installed, ask Claude to run `dotnet build`, Allow the quiet form; then **Show Savings Report** | `Quiet-build hook: 1 command made quiet (dotnet build 1), ~… tok came back`; **Export Usage as CSV…**: `quiet_runs` is `dotnet build:1`, `ref_ceiling_tokens` / `ref_read_tokens` filled on the earlier turns |
 | After a few turns that read files, **Show Savings Report** | *Folders read most* lists the folders, largest first, with their share; a read under `obj` or `node_modules` (if any) says which `Read(./**/…/**)` rule to add |
 | Set `{"bashOutputMaxChars": 200000}` in `.claude/settings.local.json`, **New chat**, `/` → **Check token-saving setup** | Under the problem: **Open .claude/settings.local.json** (opens it); no **Reinstall**, since that wouldn't fix it |
-| Delete `.claude/hooks/trim-output.ps1` (the installer writes it again), check again | **Reinstall** shows; clicking it says what was written and to start a New chat; after a New chat the check says *all in effect* |
+| Delete `.claude/hooks/trim-output.ps1` (the installer writes it again), check again | **Reinstall** shows; clicking it says what was written, that the rules and the hook apply at once and that Claude Code restarts on the next prompt; after a prompt, the check says *all in effect*, in the same conversation |
 | The meter → context breakdown → *Token-saving setup: … isn't in effect* | Runs the check: the same message and links |
 
 ## 23. Reads and loud commands: from numbers to fixes (Phase 60)
@@ -289,7 +289,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Do | Expect |
 |---|---|
 | A solution without the token-saving setup and with a built project; ask *Read obj/project.assets.json and tell me the package count* | After the turn, a token tip: `Claude read ~… tokens from …/obj, which holds build output …`, with **Add Read(./\*\*/obj/\*\*)** under it |
-| Click **Add Read(./\*\*/obj/\*\*)** | *Added … to .claude/settings.json*; the file has the rule and your other settings. **New chat**, ask the same: Claude can't read it, and no tip |
+| Click **Add Read(./\*\*/obj/\*\*)** | *Added … to .claude/settings.json. It applies at once …*; the file has the rule and your other settings. Ask the same in the same conversation: Claude can't read it, and no tip |
 | Ask Claude to read the same unchanged file twice in two turns, then **Show Savings Report** and **Export Usage as CSV…** | *Read again, unchanged: ~… tok in 1 turn*; the second turn's `repeat_read_tokens` is filled |
 | With the setup installed, ask Claude to run `dotnet build -v detailed` | One tip: the command put ~… tokens into the context, *the quiet-build hook left it alone because it named a verbosity; ask Claude for the plain `dotnet build`*. No second, general large-output tip. The report has *Loud builds and logs: 1 (dotnet build 1)*, the CSV `loud_runs` |
 | Without the setup, a large `git log` | The tip says to install the hook instead |

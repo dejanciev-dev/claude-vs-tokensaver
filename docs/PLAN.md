@@ -2009,9 +2009,15 @@ settings need it at all, moves Phase 74's file check off the UI thread, and trea
       PINEAPPLE"), same session. `RestartInPlace` (the `/` entry *Restart Claude Code*, after *Fork this session*);
       Phase 73's output-limit link uses it too, and no longer reads `_busy` off the UI thread. MCP servers are taken
       on trust: Claude Code connects them when it starts. Builds clean; not yet run in VS
-- [ ] **Settings without New chat.** Probe with 2.1.329 which settings a running Claude Code picks up by itself
+- [x] **Settings without New chat.** Probe with 2.1.329 which settings a running Claude Code picks up by itself
       (`permissions.deny`, hooks, `env`). For the ones it doesn't, *Add rule* and *Reinstall* restart it in the same
-      conversation instead of "applies from the next New chat"; for the ones it does, they say it applies now
+      conversation instead of "applies from the next New chat"; for the ones it does, they say it applies now.
+      Probed with 2.1.329 (stream-json, Haiku, $0.011): `permissions.deny` `Read(./secret.txt)` written into
+      `.claude/settings.json` after turn 1 refused turn 2's Read ("denied by your permission settings"); a
+      `PreToolUse` hook written the same way ran on turn 2's Read, once, as one there from the start did. `env`
+      (Phase 73) and `CLAUDE.md` (`--live-restart`) need a restart. So *Add rule* says it applies at once;
+      *Reinstall* (hook, deny rules, and `BASH_MAX_OUTPUT_LENGTH` in `env`) restarts in place (`RestartInPlace`); the
+      Install dialog says which part applies when. MANUAL-CHECKS 22 and 23's rows follow. Builds clean; not yet run in VS
 - [ ] **Read rows off the UI thread.** Phase 74's file check runs on the UI thread for each ranged Read row, and a
       resumed conversation draws many at once. Check each file once, in the background, and draw the row with Claude
       Code's count until the answer comes, so a slow or network drive can't stall the chat

@@ -127,18 +127,22 @@ namespace ClaudeVS.ToolWindow
             bool autoApprove = Options?.AutoApproveHookRewrites ?? false;
             Jtf.RunAsync(async () =>
             {
-                string said;
+                Core.Setup.SetupResult result;
                 try
                 {
-                    var result = await System.Threading.Tasks.Task.Run(() => Core.Setup.TokenSaverSetup.Apply(root, autoApprove));
-                    said = result.Written.Count == 0 ? "Token-saving setup: nothing to change in the project's files." : "Token-saving setup reinstalled: " + string.Join(", ", result.Written) + ".";
+                    result = await System.Threading.Tasks.Task.Run(() => Core.Setup.TokenSaverSetup.Apply(root, autoApprove));
                 }
                 catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException || ex is Newtonsoft.Json.JsonException)
                 {
-                    said = "Could not reinstall the token-saving setup: " + ex.Message;
+                    await Jtf.SwitchToMainThreadAsync();
+                    Append("\nCould not reinstall the token-saving setup: " + ex.Message + "\n");
+                    return;
                 }
                 await Jtf.SwitchToMainThreadAsync();
-                Append("\n" + said + " Start a New chat for Claude Code to load it, then check again.\n");
+                if (result.Written.Count == 0) { Append("\nToken-saving setup: nothing to change in the project's files.\n"); return; }
+                // The read-deny rules and the hook apply at once (probed with 2.1.329); the shell output cap is env, read
+                // when Claude Code starts: restart it into this conversation, then check again.
+                RestartInPlace("Token-saving setup reinstalled: " + string.Join(", ", result.Written) + ". The read-deny rules and the quiet-build hook apply at once; the shell output cap once Claude Code restarts (check again then).");
             }).FileAndForget("ClaudeVS/ChatControl/ReinstallSetup");
         }
 

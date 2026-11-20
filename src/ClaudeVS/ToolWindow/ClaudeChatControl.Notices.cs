@@ -207,7 +207,7 @@ namespace ClaudeVS.ToolWindow
             if (!TipsOn) return; // the tip went to the Output pane only
             _view.AppendActions(new System.Collections.Generic.List<(string, string, Action)>
             {
-                ("Add " + rule, "Adds it to permissions.deny in " + System.IO.Path.Combine(root, ".claude", "settings.json") + "; applies from the next New chat",
+                ("Add " + rule, "Adds it to permissions.deny in " + System.IO.Path.Combine(root, ".claude", "settings.json") + "; applies at once",
                     (Action)(() => AddDenyRule(root, rule))),
             });
         }
@@ -216,7 +216,7 @@ namespace ClaudeVS.ToolWindow
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             string said;
-            try { said = Core.Setup.TokenSaverSetup.AddDenyRule(root, rule) ? $"Added {rule} to .claude/settings.json. It applies from the next New chat." : $"{rule} is already in .claude/settings.json."; }
+            try { said = Core.Setup.TokenSaverSetup.AddDenyRule(root, rule) ? $"Added {rule} to .claude/settings.json. It applies at once: Claude Code reads its permission rules again while it runs." : $"{rule} is already in .claude/settings.json."; }
             catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException || ex is Newtonsoft.Json.JsonException) { said = "Could not add the rule: " + ex.Message; }
             Append("\n" + said + "\n");
         }
