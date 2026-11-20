@@ -76,6 +76,7 @@ namespace ClaudeVS.Core.Tests
                 ("session", RunSession),
                 ("long-prompt", RunLongPrompt),
                 ("prompt-tokens", RunPromptTokens),
+                ("env", RunEnv), // a setting written, the process restarted into the same conversation (Phase 73)
             };
             var results = new List<(string Name, int Code, double Cost, TimeSpan Time)>();
             foreach (var (name, run) in steps)
@@ -493,6 +494,65 @@ namespace ClaudeVS.Core.Tests
         /// model Options doesn't price: its first turn teaches its price from costUSD, which must give the second turn's
         /// bill. `--live-prices older` runs only that (about $0.01).
         /// </summary>
+        /// <summary>
+        /// `--live-env`: the one-click output-limit fix (Phase 73) against the real CLI. Haiku answers once; then
+        /// <c>CLAUDE_CODE_MAX_OUTPUT_TOKENS=100</c> goes into the project's <c>.claude/settings.local.json</c>
+        /// (<see cref="Setup.TokenSaverSetup.SetLocalEnv"/>). A long answer before the restart shows whether the running
+        /// process picks it up by itself; then <see cref="ClaudeSession.StopProcess"/>, and the same long answer must be
+        /// cut off at the limit (Claude Code's "Output token limit hit." retry), in the same conversation. The result's
+        /// <c>modelUsage.maxOutputTokens</c> is the model's maximum (128000 for Haiku 5.5 even with the variable set), so
+        /// the cut-off is the proof. About $0.01.
+        /// </summary>
+        public static int RunEnv()
+        {
+            if (ClaudeCliLocator.Resolve("") == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-live-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            var turns = new BlockingCollection<(ClaudeEvent Turn, int CutOffs)>();
+            int cutOffs = 0, failed = 0, starts = 0;
+            void Check(bool ok, string what) { Console.WriteLine($"  {(ok ? "ok  " : "FAIL")} {what}"); if (!ok) failed++; }
+            const string longAnswer = "Count from 1 to 120, numbers only, separated by commas, on one line.";
+            try
+            {
+                using (var session = NewSession(new ClaudeLaunchOptions { WorkingDirectory = dir, Model = ModelChoice.Haiku, Effort = EffortChoice.Low, PermissionMode = PermissionModeChoice.Default, ExtraArguments = "--tools \"\"" }))
+                {
+                    session.RawLine += (s, e) => { if (e.Direction == RawLineDirection.Stdin && e.Line.Contains("\"subtype\":\"initialize\"")) Interlocked.Increment(ref starts); };
+                    session.EventReceived += (s, ev) =>
+                    {
+                        if (ev.Kind == ClaudeEventKind.OutputLimitRetry) Interlocked.Increment(ref cutOffs);
+                        if (ev.Kind == ClaudeEventKind.TurnCompleted) turns.Add((ev, Interlocked.Exchange(ref cutOffs, 0)));
+                    };
+                    (ClaudeEvent Turn, int CutOffs) Ask(string prompt, string label)
+                    {
+                        session.SendPromptAsync(prompt).Wait();
+                        if (!turns.TryTake(out var t, TimeSpan.FromSeconds(120))) throw new TimeoutException("no answer to " + label);
+                        Console.WriteLine($"  {label}: {t.Turn.Usage.Output} output tokens · cut off {t.CutOffs}× · {(t.Turn.IsError ? "error: " + t.Turn.Text : "answered")} · session {t.Turn.SessionId}");
+                        return t;
+                    }
+
+                    var first = Ask(longAnswer, "turn 1, no limit");
+                    Check(first.CutOffs == 0 && !first.Turn.IsError, "turn 1 not cut off");
+
+                    Check(Setup.TokenSaverSetup.SetLocalEnv(dir, "CLAUDE_CODE_MAX_OUTPUT_TOKENS", "100"), "CLAUDE_CODE_MAX_OUTPUT_TOKENS=100 written to .claude/settings.local.json");
+                    var before = Ask(longAnswer, "turn 2, same process");
+                    Console.WriteLine(before.CutOffs > 0 || before.Turn.IsError ? "  note the running process picked the limit up by itself" : "  note the running process keeps its limit: a restart is needed");
+
+                    session.StopProcess();
+                    Check(!session.IsRunning, "process stopped");
+                    var after = Ask(longAnswer, "turn 3, restarted");
+                    Check(starts == 2, $"started again ({starts} processes)");
+                    Check(after.Turn.SessionId == first.Turn.SessionId, "same conversation (--resume)");
+                    Check(after.CutOffs > 0 || after.Turn.IsError, "turn 3 cut off at the new limit");
+                    var settings = session.GetSettingsAsync().Result;
+                    Check((string)settings?.Response?.SelectToken("effective.env.CLAUDE_CODE_MAX_OUTPUT_TOKENS") == "100", "get_settings: effective env has it");
+                }
+            }
+            catch (TimeoutException ex) { Console.WriteLine("FAIL live env: " + ex.Message); return 1; }
+            finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
+            Console.WriteLine(failed == 0 ? "PASS live env" : $"FAIL live env: {failed} check(s)");
+            return failed == 0 ? 0 : 1;
+        }
+
         public static int RunPrices(bool olderOnly = false)
         {
             if (ClaudeCliLocator.Resolve("") == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }

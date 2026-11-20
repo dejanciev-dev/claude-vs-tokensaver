@@ -200,7 +200,7 @@ namespace ClaudeVS.Core.Tests
             const string refused = "API Error: 400 {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"max_tokens: 128000 > 64000, which is the maximum allowed number of output tokens for claude-sonnet-4-5\"}}";
             Eq(64000, ClaudeErrorHints.ModelOutputLimit(refused));
             Eq(null, ClaudeErrorHints.ModelOutputLimit("API Error: 400 max_tokens must be at least 1"), "another max_tokens error");
-            Eq("The model takes at most 64,000 output tokens: set CLAUDE_CODE_MAX_OUTPUT_TOKENS=64000, start a New chat, then send it again · Tab puts your prompt back",
+            Eq("The model takes at most 64,000 output tokens: set CLAUDE_CODE_MAX_OUTPUT_TOKENS=64000 (the link above sets it), then send it again · Tab puts your prompt back",
                 Of(kind: "invalid_request", status: 400, text: refused).Display());
             True(ClaudeErrorHints.Explain(refused)?.Contains("CLAUDE_CODE_MAX_OUTPUT_TOKENS=64000") == true, "the error's explanation too");
             var policy = Of(text: "API Error: Claude Code is unable to respond to this request, which appears to violate our Usage Policy. Run /rewind and change the message, or run /clear.");
@@ -465,6 +465,26 @@ namespace ClaudeVS.Core.Tests
                 True(TokenSaverSetup.HasDenyRule(dir, "Read(./**/node_modules/**)"), "the local file counts too");
                 File.WriteAllText(Path.Combine(dir, ".claude", "settings.local.json"), "{ not json");
                 True(!TokenSaverSetup.HasDenyRule(dir, "Read(./**/dist/**)"), "a broken file is skipped");
+            }
+            finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
+        }
+
+        private static void Test_SetLocalEnv()
+        {
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-env-" + Guid.NewGuid().ToString("N"));
+            string local = Path.Combine(dir, ".claude", "settings.local.json");
+            try
+            {
+                True(TokenSaverSetup.SetLocalEnv(dir, "CLAUDE_CODE_MAX_OUTPUT_TOKENS", "64000"), "written to a new file");
+                Eq("64000", (string)JObject.Parse(File.ReadAllText(local)).SelectToken("env.CLAUDE_CODE_MAX_OUTPUT_TOKENS"));
+                File.WriteAllText(local, "{\"permissions\":{\"allow\":[\"Bash(ls)\"]},\"env\":{\"FOO\":\"1\",\"CLAUDE_CODE_MAX_OUTPUT_TOKENS\":\"128000\"}}");
+                True(TokenSaverSetup.SetLocalEnv(dir, "CLAUDE_CODE_MAX_OUTPUT_TOKENS", "64000"), "changed");
+                var s = JObject.Parse(File.ReadAllText(local));
+                Eq("64000", (string)s.SelectToken("env.CLAUDE_CODE_MAX_OUTPUT_TOKENS"));
+                Eq("1", (string)s.SelectToken("env.FOO"), "other variables kept");
+                Eq("Bash(ls)", (string)s.SelectToken("permissions.allow[0]"), "other settings kept");
+                True(!TokenSaverSetup.SetLocalEnv(dir, "CLAUDE_CODE_MAX_OUTPUT_TOKENS", "64000"), "already set");
+                True(!File.Exists(Path.Combine(dir, ".claude", "settings.json")), "the shared settings.json untouched");
             }
             finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
         }
