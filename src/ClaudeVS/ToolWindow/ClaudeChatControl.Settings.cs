@@ -117,7 +117,7 @@ namespace ClaudeVS.ToolWindow
                 await System.Threading.Tasks.Task.Run(() => s.StopProcess());
                 await Jtf.SwitchToMainThreadAsync();
                 ClaudeOutputPane.WriteLine("Claude Code stopped to restart in place; the next prompt resumes " + s.SessionId);
-                Append("\n" + lead + "Claude Code restarts on your next prompt, in this conversation, with the settings, CLAUDE.md and MCP servers as they are now.\n");
+                Append("\n" + lead + "Claude Code restarts on your next prompt, in this conversation, with the settings, CLAUDE.md and MCP servers as they are now. It reads the prompt cache as before, so the restart costs nothing extra.\n");
             }).FileAndForget("ClaudeVS/ChatControl/RestartInPlace");
         }
 

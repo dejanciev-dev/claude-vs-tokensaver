@@ -2078,9 +2078,13 @@ Planned on 2026-11-20, after Phase 78, on the same branch (PR #92); 0.15.0 isn't
 Two things about a restart in place are not known yet: whether the next turn reads the prompt cache or writes it
 again (the price of a restart), and whether permissions you granted "for this session" survive it.
 
-- [ ] **What a restart costs.** Probe with 2.1.329: the turn after a restart in place with nothing changed, and with a
+- [x] **What a restart costs.** Probe with 2.1.329: the turn after a restart in place with nothing changed, and with a
       `CLAUDE.md` changed: cache read or cache write? The restart's link and menu entry say what it will cost (the
-      context at the cache-write price, from the meter) when it writes the cache again
+      context at the cache-write price, from the meter) when it writes the cache again. It doesn't: `--live-restart`
+      (now a fourth turn, $0.0015) with `CLAUDE.md` changed read 7,731 cached tokens and wrote 257; with nothing
+      changed, read 7,963 and wrote 73. A changed `CLAUDE.md` doesn't land in the cached prefix. So no price to give:
+      the menu entry, the notice and the restart's message say the prompt cache carries on and it costs nothing extra
+      (within the cache's lifetime, as any turn)
 - [ ] **Session permissions across a restart.** Probe: a tool allowed "for this session" in a permission prompt, then
       a restart in place: does Claude Code ask again? If it does, the session answers those prompts itself, as the
       allow you already gave

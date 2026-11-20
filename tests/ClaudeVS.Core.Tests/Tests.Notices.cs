@@ -522,9 +522,9 @@ namespace ClaudeVS.Core.Tests
                 var changed = InstructionFiles.Changed(before, InstructionFiles.Snapshot(dir));
                 Eq(2, changed.Count, string.Join(", ", changed));
                 Eq(1, InstructionFiles.Changed(before, InstructionFiles.Snapshot(dir), new[] { md.ToUpperInvariant() }).Count, "Claude's own edit left out (any case)");
-                Eq("CLAUDE.md and .mcp.json changed since Claude Code started. It reads its instructions and MCP servers only when it starts, so this conversation still has the old ones. Restart Claude Code to use them; the conversation carries on.",
+                Eq("CLAUDE.md and .mcp.json changed since Claude Code started. It reads its instructions and MCP servers only when it starts, so this conversation still has the old ones. Restart Claude Code to use them: the conversation carries on, and its prompt cache too.",
                     InstructionFiles.Notice(changed, dir));
-                Eq(".claude/CLAUDE.md changed since Claude Code started. It reads its instructions only when it starts, so this conversation still has the old ones. Restart Claude Code to use them; the conversation carries on.",
+                Eq(".claude/CLAUDE.md changed since Claude Code started. It reads its instructions only when it starts, so this conversation still has the old ones. Restart Claude Code to use them: the conversation carries on, and its prompt cache too.",
                     InstructionFiles.Notice(new[] { Path.Combine(dir, ".claude", "CLAUDE.md") }, dir));
                 File.Delete(md);
                 True(InstructionFiles.Changed(before, InstructionFiles.Snapshot(dir)).Contains(md), "deleted counts too");
