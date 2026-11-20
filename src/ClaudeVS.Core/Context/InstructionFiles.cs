@@ -26,12 +26,78 @@ namespace ClaudeVS.Core.Context
             if (string.IsNullOrEmpty(root)) return d;
             var paths = Names.Select(n => Path.Combine(root, n)).ToList();
             if (!string.IsNullOrEmpty(home)) paths.Add(Path.Combine(home, ".claude", "CLAUDE.md"));
+            // The files the CLAUDE.md files import, which Claude Code reads with them (Phase 81)
+            foreach (var md in paths.Where(p => p.EndsWith(".md", StringComparison.OrdinalIgnoreCase)).ToList())
+                foreach (var imported in Imports(md, home))
+                    if (!paths.Contains(imported, StringComparer.OrdinalIgnoreCase)) paths.Add(imported);
             foreach (var path in paths)
             {
                 try { d[path] = File.Exists(path) ? File.GetLastWriteTimeUtc(path) : (DateTime?)null; }
                 catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is ArgumentException || ex is NotSupportedException) { d[path] = null; }
             }
             return d;
+        }
+
+        /// <summary>
+        /// The same files' write times again, without reading them for imports: what the chat checks on focus. A new
+        /// import changes its CLAUDE.md, which is noticed anyway.
+        /// </summary>
+        public static Dictionary<string, DateTime?> Refresh(IEnumerable<string> paths)
+        {
+            var d = new Dictionary<string, DateTime?>(StringComparer.OrdinalIgnoreCase);
+            foreach (var path in paths ?? Enumerable.Empty<string>())
+            {
+                try { d[path] = File.Exists(path) ? File.GetLastWriteTimeUtc(path) : (DateTime?)null; }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is ArgumentException || ex is NotSupportedException) { d[path] = null; }
+            }
+            return d;
+        }
+
+        /// <summary>Instructions (a CLAUDE.md or a file it imports) go with every request; .mcp.json doesn't.</summary>
+        private static bool IsInstructions(string path) => !path.EndsWith(".mcp.json", StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>How deep imports of imports go, as Claude Code documents it.</summary>
+        public const int MaxImportDepth = 5;
+
+        private static readonly System.Text.RegularExpressions.Regex Fences = new System.Text.RegularExpressions.Regex(@"^\s*(```|~~~).*?^\s*\1[^\n]*$", System.Text.RegularExpressions.RegexOptions.Multiline | System.Text.RegularExpressions.RegexOptions.Singleline);
+        private static readonly System.Text.RegularExpressions.Regex InlineCode = new System.Text.RegularExpressions.Regex(@"`[^`\n]*`");
+        private static readonly System.Text.RegularExpressions.Regex Import = new System.Text.RegularExpressions.Regex(@"(?<=^|\s)@((?:~[\\/])?[\w.\-][^\s`)\]]*)", System.Text.RegularExpressions.RegexOptions.Multiline);
+
+        /// <summary>
+        /// The files <paramref name="mdPath"/> imports (<c>@docs/rules.md</c>, <c>@~/.claude/mine.md</c>, <c>@README</c>),
+        /// and theirs, up to <see cref="MaxImportDepth"/> deep: <c>@path</c> starting a word, outside code blocks and
+        /// inline code; relative to the importing file's folder, <c>~/</c> to <paramref name="home"/>. Only files that
+        /// exist; no file twice. Never throws.
+        /// </summary>
+        public static List<string> Imports(string mdPath, string home = null)
+        {
+            var found = new List<string>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { mdPath ?? "" };
+            void Walk(string file, int depth)
+            {
+                if (depth > MaxImportDepth) return;
+                string text;
+                try { if (!File.Exists(file) || new FileInfo(file).Length > 1_000_000) return; text = File.ReadAllText(file); }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is ArgumentException || ex is NotSupportedException) { return; }
+                text = InlineCode.Replace(Fences.Replace(text, ""), "");
+                foreach (System.Text.RegularExpressions.Match m in Import.Matches(text))
+                {
+                    string target = m.Groups[1].Value.TrimEnd('.', ',', ';', ':');
+                    string full;
+                    try
+                    {
+                        full = target.StartsWith("~/", StringComparison.Ordinal) || target.StartsWith("~\\", StringComparison.Ordinal)
+                            ? (string.IsNullOrEmpty(home) ? null : Path.GetFullPath(Path.Combine(home, target.Substring(2))))
+                            : Path.GetFullPath(Path.Combine(Path.GetDirectoryName(file) ?? "", target));
+                    }
+                    catch (Exception ex) when (ex is ArgumentException || ex is NotSupportedException || ex is PathTooLongException) { continue; }
+                    if (full == null || !seen.Add(full) || !File.Exists(full)) continue;
+                    found.Add(full);
+                    Walk(full, depth + 1);
+                }
+            }
+            if (!string.IsNullOrEmpty(mdPath)) Walk(mdPath, 1);
+            return found;
         }
 
         /// <summary>
@@ -56,7 +122,7 @@ namespace ClaudeVS.Core.Context
         public static Dictionary<string, long> Sizes(string root, string home = null)
         {
             var d = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
-            foreach (var path in Snapshot(root, home).Keys.Where(p => p.EndsWith(".md", StringComparison.OrdinalIgnoreCase)))
+            foreach (var path in Snapshot(root, home).Keys.Where(IsInstructions))
             {
                 try { d[path] = File.Exists(path) ? new FileInfo(path).Length : 0; }
                 catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is ArgumentException || ex is NotSupportedException) { d[path] = 0; }
@@ -72,7 +138,7 @@ namespace ClaudeVS.Core.Context
         {
             if (changedPaths == null || before == null || now == null) return null;
             long delta = 0;
-            foreach (var p in changedPaths.Where(p => p.EndsWith(".md", StringComparison.OrdinalIgnoreCase)))
+            foreach (var p in changedPaths.Where(IsInstructions))
                 delta += (now.TryGetValue(p, out var n) ? n : 0) - (before.TryGetValue(p, out var b) ? b : 0);
             long tokens = Math.Sign(delta) * (long)Tokens.TokenEstimate.FromChars(Math.Abs(delta));
             return Math.Abs(tokens) < 50 ? (long?)null : tokens;
@@ -91,7 +157,7 @@ namespace ClaudeVS.Core.Context
             var names = changedPaths.Select(Rel).ToList();
             string list = names.Count == 1 ? names[0] : string.Join(", ", names.Take(names.Count - 1)) + " and " + names.Last();
             bool mcp = names.Any(n => n.EndsWith(".mcp.json", StringComparison.OrdinalIgnoreCase));
-            bool md = names.Any(n => n.EndsWith(".md", StringComparison.OrdinalIgnoreCase));
+            bool md = changedPaths.Any(IsInstructions);
             string what = md && mcp ? "instructions and MCP servers" : mcp ? "MCP servers" : "instructions";
             string cost = tokensPerRequest is long t
                 ? (t > 0 ? $" Once read, it adds ~{Tokens.TokenMeter.Format(t)} tokens to every request; a shorter one costs less on every turn."

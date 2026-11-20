@@ -253,7 +253,7 @@ namespace ClaudeVS.ToolWindow
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             if (_instructionFiles == null || _session == null || !_session.IsRunning || _busy || _waitingForUser) return;
-            var changed = Core.Context.InstructionFiles.Changed(_instructionFiles, Core.Context.InstructionFiles.Snapshot(_sessionDir, UserHome), _claudeWrote)
+            var changed = Core.Context.InstructionFiles.Changed(_instructionFiles, Core.Context.InstructionFiles.Refresh(_instructionFiles.Keys), _claudeWrote)
                 .Where(p => !_instructionNoticeGiven.Contains(p)).ToList();
             if (changed.Count == 0) return;
             foreach (var p in changed) _instructionNoticeGiven.Add(p);

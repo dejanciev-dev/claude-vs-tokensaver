@@ -563,6 +563,43 @@ namespace ClaudeVS.Core.Tests
             finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
         }
 
+        private static void Test_InstructionFiles_Imports()
+        {
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-imp-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                string home = Path.Combine(dir, "home"), root = Path.Combine(dir, "repo");
+                Directory.CreateDirectory(Path.Combine(root, "docs")); Directory.CreateDirectory(Path.Combine(home, ".claude"));
+                File.WriteAllText(Path.Combine(root, "CLAUDE.md"), string.Join("\n",
+                    "# Rules", "See @docs/rules.md and @README for more.", "Mine: @~/.claude/mine.md.", "Mail me at dev@example.com.",
+                    "Not this: `@docs/inline.md`", "```", "@docs/fenced.md", "```", "Missing: @docs/nope.md", "Again @docs/rules.md"));
+                File.WriteAllText(Path.Combine(root, "docs", "rules.md"), "Deeper: @deep.md\n");
+                File.WriteAllText(Path.Combine(root, "docs", "deep.md"), "Back up: @rules.md\n"); // a loop: once each
+                File.WriteAllText(Path.Combine(root, "README"), "Readme\n");
+                File.WriteAllText(Path.Combine(root, "docs", "inline.md"), "x"); File.WriteAllText(Path.Combine(root, "docs", "fenced.md"), "x");
+                File.WriteAllText(Path.Combine(home, ".claude", "mine.md"), "Mine\n");
+
+                var imports = InstructionFiles.Imports(Path.Combine(root, "CLAUDE.md"), home).Select(p => p.Substring(dir.Length + 1).Replace('\\', '/')).ToList();
+                Eq("repo/docs/rules.md|repo/docs/deep.md|repo/README|home/.claude/mine.md", string.Join("|", imports),
+                    "relative to the file, imports of imports, ~/, not inline or fenced code, not an e-mail, only files that exist, once each");
+
+                // Watched, and counted in what an edit adds per request
+                var before = InstructionFiles.Snapshot(root, home);
+                True(before.ContainsKey(Path.Combine(root, "docs", "deep.md")), "an import's import is watched");
+                var sizes = InstructionFiles.Sizes(root, home);
+                string deep = Path.Combine(root, "docs", "deep.md");
+                File.WriteAllText(deep, "Back up: @rules.md\n" + new string('y', 6000));
+                File.SetLastWriteTimeUtc(deep, DateTime.UtcNow.AddMinutes(1));
+                var changed = InstructionFiles.Changed(before, InstructionFiles.Snapshot(root, home));
+                Eq(deep, changed.Single(), "only the imported file changed");
+                long? added = InstructionFiles.TokensPerRequest(changed, sizes, InstructionFiles.Sizes(root, home));
+                True(added > 1500, "counted: " + added);
+                True(InstructionFiles.Notice(changed, root, home, added).StartsWith("docs/deep.md changed since Claude Code started. It reads its instructions only when it starts"), "named and called instructions");
+                Eq(0, InstructionFiles.Imports(Path.Combine(root, "nothing.md")).Count, "a file that doesn't exist");
+            }
+            finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
+        }
+
         private static void Test_SetLocalEnv()
         {
             string dir = Path.Combine(Path.GetTempPath(), "cvs-env-" + Guid.NewGuid().ToString("N"));

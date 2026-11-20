@@ -2133,9 +2133,13 @@ Planned on 2026-11-20, after Phase 80, on the same branch (PR #92); in 0.15.0. A
 (`@docs/rules.md`, `@~/.claude/mine.md`): Claude Code reads them with it, when it starts, and sends them with every
 request. Phase 77's notice watches only the `CLAUDE.md` files themselves, so an edit to an imported file goes unseen.
 
-- [ ] **Imports watched.** The edit notice also watches the files `CLAUDE.md` imports (`@path` outside code, relative to
+- [x] **Imports watched.** The edit notice also watches the files `CLAUDE.md` imports (`@path` outside code, relative to
       the importing file or `~/`, imports of imports up to five deep), and counts their size in what an edit adds per
-      request. `InstructionFiles.Imports`
+      request. `InstructionFiles.Imports` (a word starting with `@`, so not an e-mail; fenced and inline code left out;
+      files that exist, once each, so a loop ends; files over 1 MB not read). `Snapshot` adds them at the process's
+      start; the check on focus only compares write times of those paths (`Refresh`), reading nothing, since a new
+      import changes its `CLAUDE.md` anyway. Sizes and the notice count any file but `.mcp.json` as instructions.
+      `Test_InstructionFiles_Imports`. Builds clean; not yet run in VS
 - [ ] **Imports in the live test.** `--live-restart` imports a second file from `CLAUDE.md` and checks that an edit to
       it, too, is read only after a restart
 - [ ] **Manual check and 0.15.0 notes.** A row in section 29; the changelog's 0.15.0 entry for the notice names imports
