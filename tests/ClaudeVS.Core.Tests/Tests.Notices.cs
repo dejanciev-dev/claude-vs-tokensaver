@@ -282,6 +282,9 @@ namespace ClaudeVS.Core.Tests
             string tip = SessionNotices.WholeFileRead(Read(2400, 2400), 120_000);
             True(tip?.StartsWith("Claude read all 2,400 lines of Big.cs (~40") == true, tip);
             True(tip.Contains("look at Save() in Big.cs"), "names the file in the example");
+            var endsInNewline = Read(2401, 2401);
+            ((JObject)endsInNewline["file"])["content"] = "a\nb\n";
+            True(SessionNotices.WholeFileRead(endsInNewline, 120_000)?.StartsWith("Claude read all 2,400 lines") == true, "a newline at the end is no line (2.1.329)");
             Eq(null, SessionNotices.WholeFileRead(Read(200, 2400), 120_000), "only part of it");
             Eq(null, SessionNotices.WholeFileRead(Read(2400, 2400, 10), 120_000), "not from the start");
             Eq(null, SessionNotices.WholeFileRead(Read(300, 300), 9_000), "small file");

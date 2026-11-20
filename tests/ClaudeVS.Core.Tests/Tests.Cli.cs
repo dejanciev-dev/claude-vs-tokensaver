@@ -779,6 +779,10 @@ namespace ClaudeVS.Core.Tests
         private static void Test_ToolData_Shapes()
         {
             Eq("Read 4 lines", ToolCallView.FromData("Read", JObject.Parse("{\"file\":{\"numLines\":4,\"startLine\":1,\"totalLines\":4}}")), "whole file");
+            // Probed with 2.1.329: a three-line file with a newline at the end comes back as 4 of 4 lines.
+            Eq("Read 3 lines", ToolCallView.FromData("Read", JObject.Parse("{\"file\":{\"content\":\"one\\ntwo\\nthree\\n\",\"numLines\":4,\"startLine\":1,\"totalLines\":4}}")), "whole file ending in a newline");
+            Eq("Read 2 lines", ToolCallView.FromData("Read", JObject.Parse("{\"file\":{\"content\":\"a\\nb\",\"numLines\":2,\"startLine\":1,\"totalLines\":2}}")), "no newline at the end");
+            Eq("Read 2 of 4 lines (from line 3)", ToolCallView.FromData("Read", JObject.Parse("{\"file\":{\"content\":\"c\\nd\\n\",\"numLines\":3,\"startLine\":3,\"totalLines\":5}}")), "the end of a file");
             Eq("Read 50 of 2,000 lines", ToolCallView.FromData("Read", JObject.Parse("{\"file\":{\"numLines\":50,\"startLine\":1,\"totalLines\":2000}}")), "the start of a file");
             Eq(null, ToolCallView.FromData("Read", JObject.Parse("{\"type\":\"image\",\"file\":{\"base64\":\"x\"}}")), "an image: no line counts");
             Eq("Found 1 file (list cut short)", ToolCallView.FromData("Glob", JObject.Parse("{\"numFiles\":1,\"truncated\":true}")), "truncated glob");

@@ -1872,10 +1872,13 @@ Checked on 2026-11-20 with 2.1.329 installed. The 2.1.329 section read for what 
 the CHANGELOG on GitHub); Code Mode, self-hosted runner, terminal, `/mcp`, `/code-review`, cloud, Remote Control,
 gateway, macOS and VS Code entries are left out.
 
-- [ ] **Reads of a file that ends in a newline.** 2.1.329 fixes "Read and @-mentions showing one line too many for
+- [x] **Reads of a file that ends in a newline.** 2.1.329 fixes "Read and @-mentions showing one line too many for
       files that end in a newline", but only in its own view: probed with 2.1.329, a three-line file read whole comes
       back as `numLines: 4, totalLines: 4`, its `content` ending in `\n`. The tool row says "Read 4 lines". Count the
-      lines as Claude Code shows them now; the large-read tip (`numLines == totalLines`) still holds
+      lines as Claude Code shows them now; the large-read tip (`numLines == totalLines`) still fires, but said one line too
+      many. `ToolCallView.ReadLines` takes the line after a final newline off both counts when the read reaches the
+      end (its `content` says so); the tool row and the tip use it. Tests in `Test_ToolData_Shapes` and
+      `Test_SessionNotices_WholeFileRead`
 - [ ] **No placeholder suggestions.** 2.1.329 fixes "prompt suggestions sometimes showing placeholder text such as
       `_(no suggestion)_`". Before 2.1.329 the suggested next prompt could be such a placeholder; drop it as the bare
       tags are dropped (Phase 51)
