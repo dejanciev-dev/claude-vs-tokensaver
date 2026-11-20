@@ -2072,6 +2072,23 @@ Planned on 2026-11-20, with Phase 77. Phases 76–77 (and whatever 2.1.329 still
       Three highlights (restart in place, settings without a New chat, the cloud providers); the overview's *Chat*
       section adds restart in place. The Release VSIX builds
 
+## Phase 79 — What a restart costs, and what it keeps
+
+Planned on 2026-11-20, after Phase 78, on the same branch (PR #92); 0.15.0 isn't merged, so this goes into its notes.
+Two things about a restart in place are not known yet: whether the next turn reads the prompt cache or writes it
+again (the price of a restart), and whether permissions you granted "for this session" survive it.
+
+- [ ] **What a restart costs.** Probe with 2.1.329: the turn after a restart in place with nothing changed, and with a
+      `CLAUDE.md` changed: cache read or cache write? The restart's link and menu entry say what it will cost (the
+      context at the cache-write price, from the meter) when it writes the cache again
+- [ ] **Session permissions across a restart.** Probe: a tool allowed "for this session" in a permission prompt, then
+      a restart in place: does Claude Code ask again? If it does, the session answers those prompts itself, as the
+      allow you already gave
+- [ ] **Restart after this turn.** *Restart Claude Code* while Claude is on a turn restarts once the turn ends, instead
+      of saying "once it ends"; the notice's link and *Reinstall* the same
+- [ ] **Your own CLAUDE.md.** `~/.claude/CLAUDE.md` is read at the start too: the edit notice watches it
+- [ ] **0.15.0 notes.** The changelog's 0.15.0 says what Phase 79 changed
+
 ---
 
 ## Working in Visual Studio — daily loop
