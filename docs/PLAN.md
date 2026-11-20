@@ -1936,8 +1936,9 @@ This phase closes those gaps and writes down the VS checks.
       `get_settings` showed it in `effective.env`. Found on the way: `modelUsage.maxOutputTokens` is the model's
       maximum (128000 for Haiku 5.5 with the variable set to 4000), not the limit in effect.
       `Test_SetLocalEnv`. Builds clean; not yet run in VS
-- [ ] **Manual checks for Phases 72 and 73.** A section in [MANUAL-CHECKS.md](MANUAL-CHECKS.md): the read count of a
-      file that ends in a newline, no placeholder suggestion, the output-limit hint and its fix; Release moves down one
+- [x] **Manual checks for Phases 72 and 73.** A section in [MANUAL-CHECKS.md](MANUAL-CHECKS.md): the read count of a
+      file that ends in a newline, no placeholder suggestion, the output-limit hint and its fix; Release moves down one. Section 28, *Reads, suggestions and
+      output limits*: the output-limit rows need a gateway whose model takes fewer output tokens; Release is now 29
 
 ---
 

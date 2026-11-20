@@ -338,7 +338,19 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Close VS, clear the variable, start it again, **Show Savings Report** | The agents' cost of those turns is at Haiku 4.5's price, not a tenth of it |
 | Open the model picker in a new chat, after the first answer | *Haiku 5.5* `$0.10 / $0.50 per Mtok in / out`, *Sonnet 5.5*, *Opus 5.5*, *Fable 5.2* with "2× the Opus price; Auto never picks it" |
 
-## 28. Release (Phase 5)
+## 28. Reads, suggestions and output limits (Phases 72–73)
+
+| Do | Expect |
+|---|---|
+| Ask *Read README.md* (a file that ends in a newline) | The Read row says `Read N lines`, the line count VS shows for the file, not one more |
+| Ask *Read the lines from 3 to the end of README.md* | `Read … of N lines (from line 3)`, N as above |
+| Create an empty `empty.txt`, ask *Read empty.txt* | `Read an empty file` |
+| Read a large file whole (5k+ tokens) | The token tip says *Claude read all N lines*, N as VS shows it |
+| Options → **Ask Claude Code for suggestions** on (and **Suggest the next prompt**), New chat; a few turns | No grey suggestion that is only a placeholder such as `_(no suggestion)_` |
+| Behind a gateway (`ANTHROPIC_BASE_URL`) whose model takes fewer output tokens than Claude Code asks for, send a prompt (skip without one) | The turn fails; the empty box says *The model takes at most N output tokens: set CLAUDE_CODE_MAX_OUTPUT_TOKENS=N (the link above sets it), then send it again · Tab puts your prompt back*; a link **Set CLAUDE_CODE_MAX_OUTPUT_TOKENS=N** under the turn |
+| Click the link, then Tab and send | *Set … in .claude/settings.local.json. Claude Code restarts with it on your next prompt, in this conversation.*; `.claude/settings.local.json` has it under `env`, with whatever was there before; the answer comes, in the same conversation (the Output pane shows a new `claude` start with `--resume`) |
+
+## 29. Release (Phase 5)
 
 These need you rather than a check list:
 
