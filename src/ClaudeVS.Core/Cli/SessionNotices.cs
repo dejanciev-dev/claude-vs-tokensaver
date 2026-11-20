@@ -374,7 +374,7 @@ namespace ClaudeVS.Core.Cli
         public static string WholeFileRead(JObject readData, int resultChars)
         {
             if (!(readData?["file"] is JObject file)) return null;
-            var (lines, total, from) = ToolCallView.ReadLines(file);
+            var (lines, total, from) = ToolCallView.ReadLines(file, _ => null); // whole reads only: no need to ask the file
             long start = from ?? 1;
             int tokens = Tokens.TokenEstimate.FromChars(resultChars);
             if (lines == null || total == null || lines < total || start > 1 || tokens < LargeReadTokens) return null;

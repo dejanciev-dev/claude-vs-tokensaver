@@ -704,7 +704,44 @@ namespace ClaudeVS.ToolWindow
         /// <summary>The ⎿ lines under a finished tool call, and its whole output in the row's body.</summary>
         private void ShowResult(ToolRow row, string resultText, bool isError, ChatTheme.AccentSet a, Newtonsoft.Json.Linq.JObject resultData = null)
         {
-            var summary = Core.Cli.ToolCallView.Summarize(row.ToolName, resultText, isError, row.Diff, resultData);
+            // A Read that stops before the end asks the file whether it ends in a newline (Phase 74). Not on the UI thread:
+            // from the cache, else Claude Code's count now and the file's once a background check answers (Phase 76).
+            string missing = null, key = null;
+            Func<string, bool?> cached = path =>
+            {
+                key = path + "|" + (string)resultData?["file"]?["totalLines"]; // the same file, as long as its length is the same
+                if (NewlineCache.TryGetValue(key, out bool? known)) return known;
+                missing = path;
+                return null;
+            };
+            DrawSummary(row, Core.Cli.ToolCallView.Summarize(row.ToolName, resultText, isError, row.Diff, resultData, cached), a);
+            if (missing != null)
+            {
+                string path = missing, k = key;
+                Jtf.RunAsync(async () =>
+                {
+                    bool? ends = await System.Threading.Tasks.Task.Run(() => Core.Cli.ToolCallView.FileEndsInNewline(path));
+                    NewlineCache[k] = ends;
+                    if (ends != true) return; // Claude Code's count stands
+                    await Jtf.SwitchToMainThreadAsync();
+                    DrawSummary(row, Core.Cli.ToolCallView.Summarize(row.ToolName, resultText, isError, row.Diff, resultData, p => ends), a);
+                }).FileAndForget("ClaudeVS/Transcript/ReadLines");
+            }
+            // A failed change didn't happen: hide its diff.
+            if (isError && row.DiffElement != null) row.DiffElement.Visibility = Visibility.Collapsed;
+            ShowOutput(row, resultText);
+        }
+
+        /// <summary>The package's task factory (as the chat control uses), so VS waits for these on close.</summary>
+        private static Microsoft.VisualStudio.Threading.JoinableTaskFactory Jtf => ClaudeVSPackage.Instance?.JoinableTaskFactory ?? ThreadHelper.JoinableTaskFactory;
+
+        /// <summary>Whether a file ends in a newline, by path and Claude Code's line count; null when it couldn't be read.</summary>
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool?> NewlineCache =
+            new System.Collections.Concurrent.ConcurrentDictionary<string, bool?>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>The ⎿ lines under a finished tool call (drawn again when a file check answers).</summary>
+        private void DrawSummary(ToolRow row, Core.Cli.ToolResultSummary summary, ChatTheme.AccentSet a)
+        {
             row.Result.Children.Clear();
             for (int i = 0; i < summary.Lines.Count; i++)
             {
@@ -726,9 +763,11 @@ namespace ClaudeVS.ToolWindow
                 ChatTheme.Muted(more);
                 row.Result.Children.Add(more);
             }
-            // A failed change didn't happen: hide its diff.
-            if (isError && row.DiffElement != null) row.DiffElement.Visibility = Visibility.Collapsed;
+        }
 
+        /// <summary>The tool's whole output in the row's body.</summary>
+        private void ShowOutput(ToolRow row, string resultText)
+        {
             if (!string.IsNullOrWhiteSpace(resultText))
             {
                 var label = new TextBlock { Text = "Output", FontSize = 11, FontWeight = FontWeights.SemiBold, Margin = new Thickness(16, 4, 0, 0) };

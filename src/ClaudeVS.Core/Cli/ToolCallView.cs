@@ -314,9 +314,9 @@ namespace ClaudeVS.Core.Cli
         /// <summary>What the ⎿ line says once the result is in.</summary>
         /// <param name="data">The CLI's structured result (<c>tool_use_result</c>, 2.1.319), when there is one: exact
         /// counts for Read, Glob and Grep instead of counting output lines.</param>
-        public static ToolResultSummary Summarize(string toolName, string resultText, bool isError, InlineDiff diff = null, JObject data = null)
+        public static ToolResultSummary Summarize(string toolName, string resultText, bool isError, InlineDiff diff = null, JObject data = null, Func<string, bool?> endsInNewline = null)
         {
-            if (!isError && data != null && FromData(toolName, data) is string exact) return One(exact);
+            if (!isError && data != null && FromData(toolName, data, endsInNewline) is string exact) return One(exact);
             var output = SplitOutput(resultText);
             if (isError)
                 return new ToolResultSummary { IsError = true, Lines = output.Take(PreviewLines).Select(Cut).DefaultIfEmpty("Error").ToList(), MoreLines = Math.Max(0, output.Count - PreviewLines) };
@@ -410,14 +410,14 @@ namespace ClaudeVS.Core.Cli
         /// The ⎿ line from the structured result: "Read 20 of 301 lines (from line 10)" for part of a file,
         /// "Found 2 files" for Glob and Grep's file lists, "Found 4 lines" for Grep's content mode. Null otherwise.
         /// </summary>
-        public static string FromData(string toolName, JObject data)
+        public static string FromData(string toolName, JObject data, Func<string, bool?> endsInNewline = null)
         {
             long? N(JToken t) => t != null && (t.Type == JTokenType.Integer) ? (long?)t : null;
             switch (toolName)
             {
                 case "Read":
                 {
-                    var (read, total, start) = ReadLines(data["file"] as JObject);
+                    var (read, total, start) = ReadLines(data["file"] as JObject, endsInNewline);
                     if (read == null) return null;
                     if (read == 0 && total == 0) return "Read an empty file";
                     bool part = (start ?? 1) > 1 || (total != null && read < total);

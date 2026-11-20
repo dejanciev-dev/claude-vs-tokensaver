@@ -2018,9 +2018,13 @@ settings need it at all, moves Phase 74's file check off the UI thread, and trea
       (Phase 73) and `CLAUDE.md` (`--live-restart`) need a restart. So *Add rule* says it applies at once;
       *Reinstall* (hook, deny rules, and `BASH_MAX_OUTPUT_LENGTH` in `env`) restarts in place (`RestartInPlace`); the
       Install dialog says which part applies when. MANUAL-CHECKS 22 and 23's rows follow. Builds clean; not yet run in VS
-- [ ] **Read rows off the UI thread.** Phase 74's file check runs on the UI thread for each ranged Read row, and a
+- [x] **Read rows off the UI thread.** Phase 74's file check runs on the UI thread for each ranged Read row, and a
       resumed conversation draws many at once. Check each file once, in the background, and draw the row with Claude
-      Code's count until the answer comes, so a slow or network drive can't stall the chat
+      Code's count until the answer comes, so a slow or network drive can't stall the chat. `Summarize` and `FromData`
+      take the probe; the transcript's answers from a cache (by path and Claude Code's line count, so a file that grew
+      is asked again), else draws Claude Code's count and redraws the ⎿ line when the background check says the file
+      ends in a newline (`DrawSummary`, split from `ShowResult` with `ShowOutput`). The whole-file tip never asks the
+      file. Tests in `Test_ToolData_Shapes`. Builds clean; not yet run in VS
 - [ ] **Bedrock, Vertex and Foundry.** `CLAUDE_CODE_USE_BEDROCK`, `_VERTEX` and `_FOUNDRY` (settings `env` or Visual
       Studio's environment) count like a gateway: no "raise the limit" advice. The cost tooltip says the price is
       Claude Code's estimate at list prices, not the cloud bill

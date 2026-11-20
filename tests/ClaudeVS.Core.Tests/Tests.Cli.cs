@@ -792,6 +792,12 @@ namespace ClaudeVS.Core.Tests
             Eq(10L, ToolCallView.ReadLines(middle, _ => true).Total, "ends in a newline: ten lines");
             Eq(11L, ToolCallView.ReadLines(middle, _ => false).Total, "no newline at the end: eleven");
             Eq(3L, ToolCallView.ReadLines(middle, _ => true).Read, "the lines read stay");
+            // The transcript passes its own probe (a cache, then a background check, Phase 76): Summarize hands it on
+            var middleData = new JObject { ["file"] = middle };
+            Eq("Read 3 of 10 lines (from line 2)", ToolCallView.Summarize("Read", "", false, null, middleData, _ => true).Lines.Single(), "Summarize asks the probe");
+            string asked = null;
+            Eq("Read 3 of 11 lines (from line 2)", ToolCallView.Summarize("Read", "", false, null, middleData, p => { asked = p; return null; }).Lines.Single(), "not known yet: Claude Code's count");
+            Eq("C:/repo/ten.txt", asked, "for that file");
             string tmp = Path.Combine(Path.GetTempPath(), "cvs-nl-" + Guid.NewGuid().ToString("N"));
             try
             {
