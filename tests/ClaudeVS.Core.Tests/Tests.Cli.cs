@@ -786,7 +786,23 @@ namespace ClaudeVS.Core.Tests
             Eq("Read an empty file", reads[0], "empty.txt: 1 of 1, content \"\"");
             Eq("Read 1 line", reads[1], "nl.txt, only a newline: 2 of 2");
             Eq("Read 4 of 10 lines (from line 7)", reads[2], "ten.txt from line 7 to the end: 5 of 11");
-            Eq("Read 3 of 11 lines (from line 2)", reads[3], "ten.txt lines 2-4: before the end, the total can't be told");
+            Eq("Read 3 of 11 lines (from line 2)", reads[3], "ten.txt lines 2-4, the file not on this machine: Claude Code's count");
+            // Before the end, the file on disk says whether its last line ends in a newline (Phase 74)
+            var middle = (JObject)JObject.Parse(File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.329-read-lines.jsonl"))[3])["tool_use_result"]["file"];
+            Eq(10L, ToolCallView.ReadLines(middle, _ => true).Total, "ends in a newline: ten lines");
+            Eq(11L, ToolCallView.ReadLines(middle, _ => false).Total, "no newline at the end: eleven");
+            Eq(3L, ToolCallView.ReadLines(middle, _ => true).Read, "the lines read stay");
+            string tmp = Path.Combine(Path.GetTempPath(), "cvs-nl-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                File.WriteAllText(tmp, "a\nb\n"); Eq(true, ToolCallView.FileEndsInNewline(tmp), "LF");
+                File.WriteAllText(tmp, "a\r\nb\r\n"); Eq(true, ToolCallView.FileEndsInNewline(tmp), "CRLF");
+                File.WriteAllText(tmp, "a\nb"); Eq(false, ToolCallView.FileEndsInNewline(tmp), "none");
+                File.WriteAllText(tmp, "a\nb\n", new System.Text.UnicodeEncoding(false, false)); Eq(true, ToolCallView.FileEndsInNewline(tmp), "UTF-16 LE");
+                File.WriteAllText(tmp, ""); Eq(null, ToolCallView.FileEndsInNewline(tmp), "empty");
+            }
+            finally { File.Delete(tmp); }
+            Eq(null, ToolCallView.FileEndsInNewline(tmp), "gone");
             Eq("Read 2 lines", reads[4], "crlf.txt, two CRLF lines: content comes with \\n, 3 of 3");
             Eq("Read 50 of 2,000 lines", ToolCallView.FromData("Read", JObject.Parse("{\"file\":{\"numLines\":50,\"startLine\":1,\"totalLines\":2000}}")), "the start of a file");
             Eq(null, ToolCallView.FromData("Read", JObject.Parse("{\"type\":\"image\",\"file\":{\"base64\":\"x\"}}")), "an image: no line counts");

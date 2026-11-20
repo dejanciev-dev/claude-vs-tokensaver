@@ -1953,9 +1953,12 @@ still counts a final newline as a line. Then the live tests, measured rather tha
       `SettingsCheck.BehindGateway` (any source's `env`, `effective.env`, or the process environment; an empty value is
       none), `ClaudeSettings.BehindGateway`; `Find` takes the process environment as a parameter, so the tests don't
       depend on the machine's. Tests in `Test_SettingsCheck`. Builds clean; not yet run in VS
-- [ ] **Ranged reads, counted from the file.** A read that stops before the end can't tell from its result whether the
+- [x] **Ranged reads, counted from the file.** A read that stops before the end can't tell from its result whether the
       file ends in a newline ("3 of 11 lines" for ten). The extension runs where the file is: the tool row checks the
-      file's last byte and counts as the editor does. A file that's gone or unreadable keeps Claude Code's count
+      file's last byte and counts as the editor does. A file that's gone or unreadable keeps Claude Code's count.
+      `ToolCallView.FileEndsInNewline` (two bytes from the end, so UTF-16 LE's `\n\0` counts; shared read, any
+      size), passed to `ReadLines` (tests pass their own). A row drawn again later (a resumed conversation) asks the
+      file as it is then. Tests in `Test_ToolData_Shapes`. Builds clean; not yet run in VS
 - [ ] **Verify with `--live-all`.** All 14 live tests (with `--live-env`) against 2.1.329; CONTRIBUTING gets the measured
       cost and time instead of Phase 73's estimate
 - [ ] **Version 0.14.0.** Manifest, assembly and package registration at 0.14.0, still a preview; the Unreleased changelog

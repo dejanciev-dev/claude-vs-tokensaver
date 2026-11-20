@@ -11,7 +11,7 @@ All notable changes to this project are listed here. The format follows
 - **A file that ends in a newline** was one line longer than it is: "Read 4 lines" for a three-line file, on the tool
   row and in the large-read tip. Claude Code counts the empty line after the last newline (2.1.329 fixed only its own
   view); the extension counts the lines you see in the editor now. An empty file says "Read an empty file", not "Read 1
-  line".
+  line". A read of part of a file ("Read 3 of 10 lines") gets the total from the file itself.
 - **A suggested next prompt that was only a placeholder**, such as `_(no suggestion)_` (Claude Code before 2.1.329), is
   no longer offered.
 - **An output limit the model refuses** ("max_tokens: 128000 > 64000, which is the maximum allowed …", behind a
