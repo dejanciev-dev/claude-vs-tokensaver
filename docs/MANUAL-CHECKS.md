@@ -386,6 +386,9 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | The same with 2.1.329 (`claude install 2.1.329`; skip without the gateway) | The explanation ends *Or update Claude Code (`claude update`): 2.1.330 and newer retry at that limit by themselves*; the link is there as in section 28 |
 | Ask *Use Grep, not the shell, for the pattern `foo\nbar` in the solution, without multiline* | The Grep row is an error (red), not *No matches*: one line, *ripgrep refused the pattern: a line break needs multiline: true* |
 | Type `/comp`, then hold Enter for a second | `/compact` is in the box, not run; release and press Enter once to run it |
+| Ask *Ask me two questions with options before you start* (AskUserQuestion); Tab into the card's first option, ↓ ↓ | Focus moves down the options and each one is picked as you go (one choice); on a multiple choice only the focus moves |
+| Enter on an option of the first question | It's picked; focus goes to the second question's first option |
+| ↓ to the Other box, type an answer, ↑, then ↓ again and Enter | ↑ leaves the Other box for the last option (arrow keys still work after typing); Enter in the Other box sends the answers, *Other* with your text; *Answered*, and a second Enter sends nothing |
 | Type a prompt and hold Enter | Sent once; nothing else is sent while the key is held. Shift+Enter held still adds new lines |
 | Point the temp folder at a nearly full drive (`TEMP`/`TMP` to a small, full USB stick or VHD; skip without one), start VS, send a prompt | The empty box says *The disk is full: free some space, then send it again · Tab puts your prompt back*; the explanation says where to free it; Tab puts the prompt back |
 | Sign in to an organization whose Enterprise Admin Console picks a cloud provider or gateway (skip without one), ask for long answers until one is cut off | No tip to raise the output limit; the cost tooltip says who served it |

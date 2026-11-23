@@ -2282,10 +2282,16 @@ Planned on 2026-11-23, after Phase 84, on the same branch (PR #95); in 0.16.0.
       writes to a string, then `SafeFile.Replace` with a BOM; `Test_SafeFile` checks the BOM. No `File.WriteAllText`
       or `StreamWriter` is left on a file the user keeps, but for the empty new ones (a memory file, `settings.json`)
       and the read-only command copy in the temp folder
-- [ ] **Question cards by keyboard.** As VS Code's 2.1.330 fix ("Enter on a question card sending your earlier answer
+- [x] **Question cards by keyboard.** As VS Code's 2.1.330 fix ("Enter on a question card sending your earlier answer
       instead of picking the focused one, and arrow keys not working after an Other answer"): arrow keys move between
       a question's options, Enter picks the focused one and, on the last question, submits; the Other box takes Enter
-      too. Check what the WPF card does now and fix what's missing. Rows in MANUAL-CHECKS 30
+      too. Check what the WPF card does now and fix what's missing. Rows in MANUAL-CHECKS 30. It had nothing: ↑/↓ only
+      moved focus as WPF does, through every question; Enter on an option did nothing; Enter in the Other box neither
+      picked nor answered. Now each question's stops are its options, then the Other box (focusing it picks Other):
+      ↑/↓ stay within the question and pick as they go on a single choice; Enter picks (never un-picks: Space toggles)
+      and goes to the next question's first option, or answers after the last; the Other check box's Enter or ↓ goes
+      to its text. One answer only (a second Enter does nothing). No focus taken when the card appears: the input box
+      keeps it. Three rows in MANUAL-CHECKS 30. Builds clean; not yet run in VS
 - [ ] **Option: Escape doesn't stop Claude.** As VS Code's `claudeCode.escapeStopsClaude`: Tools → Options → Claude Code
       → *Escape stops Claude* (on by default). Off, Escape in the box doesn't interrupt a turn; the Stop button and
       the stop command still do. A row in MANUAL-CHECKS 30
