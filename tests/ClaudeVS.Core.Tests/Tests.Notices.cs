@@ -226,13 +226,14 @@ namespace ClaudeVS.Core.Tests
             Eq("Out of credit: send it again once you have more · Tab puts your prompt back", Of(text: "Credit balance is too low").Display());
             Eq("Sign in again, then send it again · Tab puts your prompt back", Of(kind: "authentication_failed", status: 401).Display());
             Eq("The conversation is too long for the context window · Tab: /compact", Of(text: "Prompt is too long").Display());
-            // 2.1.329 no longer retries at the limit the API names: behind a gateway whose model takes fewer output tokens
+            // 2.1.329 doesn't retry at the limit the API names (2.1.330 does again): behind a gateway whose model takes fewer output tokens
             const string refused = "API Error: 400 {\"type\":\"error\",\"error\":{\"type\":\"invalid_request_error\",\"message\":\"max_tokens: 128000 > 64000, which is the maximum allowed number of output tokens for claude-sonnet-4-5\"}}";
             Eq(64000, ClaudeErrorHints.ModelOutputLimit(refused));
             Eq(null, ClaudeErrorHints.ModelOutputLimit("API Error: 400 max_tokens must be at least 1"), "another max_tokens error");
             Eq("The model takes at most 64,000 output tokens: set CLAUDE_CODE_MAX_OUTPUT_TOKENS=64000 (the link above sets it), then send it again · Tab puts your prompt back",
                 Of(kind: "invalid_request", status: 400, text: refused).Display());
             True(ClaudeErrorHints.Explain(refused)?.Contains("CLAUDE_CODE_MAX_OUTPUT_TOKENS=64000") == true, "the error's explanation too");
+            True(ClaudeErrorHints.Explain(refused)?.Contains("2.1.330 and newer retry at that limit") == true, "updating is a way out too (2.1.330 reverted 2.1.329)");
             // Managed settings rank above the project's files: no link, ask whoever manages Claude Code (Phase 75)
             var managedLimit = JObject.Parse(@"{""sources"":[{""source"":""localSettings"",""settings"":{""env"":{""CLAUDE_CODE_MAX_OUTPUT_TOKENS"":""64000""}}},{""source"":""policySettings"",""settings"":{""env"":{""CLAUDE_CODE_MAX_OUTPUT_TOKENS"":""128000""}}}]}");
             Eq("The model takes at most 64,000 output tokens, and managed settings set CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000: ask whoever manages Claude Code here to set it to 64000",
