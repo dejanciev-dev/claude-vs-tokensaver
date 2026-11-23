@@ -33,8 +33,8 @@ The full list follows.
 ### Fixed
 
 - **A full disk** now says to free some space, instead of "The request failed" (2.1.330 reports it).
-- **A full disk in the extension's own files** (bookmarks, session names, exports, the savings report, setup's
-  settings) says "The disk is full: free some space on C:, then try again." instead of Windows' error, and the file
+- **A full disk in the extension's own files** (bookmarks, session names, exports, the usage CSV, the savings report,
+  setup's settings) says "The disk is full: free some space on C:, then try again." instead of Windows' error, and the file
   that was there stays as it was instead of being left half written.
 - **A held Enter** sends once: it no longer runs the command just picked from the `/` list, or sends what you typed
   while it was held (as Claude Code 2.1.330 fixed in VS Code).

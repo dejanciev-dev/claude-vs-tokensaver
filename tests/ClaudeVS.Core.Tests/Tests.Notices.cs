@@ -648,6 +648,11 @@ namespace ClaudeVS.Core.Tests
                 SafeFile.Replace(file, "two");
                 Eq("two", File.ReadAllText(file), "replaced");
                 True(!File.Exists(file + ".tmp"), "no temp file left");
+                // The usage CSV keeps its byte-order mark for Excel
+                SafeFile.Replace(file, "a,b\r\n", new System.Text.UTF8Encoding(true));
+                var bytes = File.ReadAllBytes(file);
+                True(bytes.Length == 8 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF, "BOM written");
+                SafeFile.Replace(file, "two");
                 // A write that fails (here the temp path is a folder) keeps the old file whole
                 Directory.CreateDirectory(file + ".tmp");
                 bool threw = false;
