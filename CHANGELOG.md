@@ -6,6 +6,20 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+Tested with Claude Code 2.1.330.
+
+### Changed
+
+- **The output-limit refusal** (a gateway's model that takes fewer output tokens) also says that updating Claude Code
+  fixes it: 2.1.330 retries at the model's limit again, as 2.1.326–2.1.328 did. The link that sets
+  `CLAUDE_CODE_MAX_OUTPUT_TOKENS` stays for 2.1.329.
+- **A cloud provider or gateway your organization picks** (2.1.330 applies it at `claude auth login`, with no variable
+  set) is seen from the turn's usage: the chat no longer advises raising the output limit there.
+
+### Fixed
+
+- **A full disk** now says to free some space, instead of "The request failed" (2.1.330 reports it).
+
 ## [0.15.0] - 2026-11-20
 
 Still a **preview**, for Claude Code 2.1.318 or newer (tested with 2.1.329). This release applies what you change
