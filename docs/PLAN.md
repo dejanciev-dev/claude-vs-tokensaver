@@ -2268,6 +2268,23 @@ Checked, nothing to change (added to Phase 82's list):
   without one), so a pasted command doesn't run
 - VS Code missing files whose path contains `#` (a `C#` folder): the extension never makes a URI of a path
 
+## Phase 85 — The last direct save, keyboard question cards, and Escape
+
+Planned on 2026-11-23, after Phase 84, on the same branch (PR #95); in 0.16.0.
+
+- [ ] **One kind of line ending in `ClaudeChatControl.cs`.** Git stores it with CRLF, CR and LF mixed (`-text` in
+      `git ls-files --eol`), so any edit commits as a rewrite of ~6,000 lines unless spliced by hand. One commit that
+      only normalizes it (no other change: `git diff -w --ignore-cr-at-eol` empty); later commits touch their lines only
+- [ ] **Usage CSV through a temp file.** *Export Usage (CSV)* still writes straight to the target, so a full disk leaves
+      half a file. Write it as Phase 83's other saves do (`SafeFile`), the byte-order mark kept for Excel
+- [ ] **Question cards by keyboard.** As VS Code's 2.1.330 fix ("Enter on a question card sending your earlier answer
+      instead of picking the focused one, and arrow keys not working after an Other answer"): arrow keys move between
+      a question's options, Enter picks the focused one and, on the last question, submits; the Other box takes Enter
+      too. Check what the WPF card does now and fix what's missing. Rows in MANUAL-CHECKS 30
+- [ ] **Option: Escape doesn't stop Claude.** As VS Code's `claudeCode.escapeStopsClaude`: Tools → Options → Claude Code
+      → *Escape stops Claude* (on by default). Off, Escape in the box doesn't interrupt a turn; the Stop button and
+      the stop command still do. A row in MANUAL-CHECKS 30
+
 ---
 
 ## Working in Visual Studio — daily loop
