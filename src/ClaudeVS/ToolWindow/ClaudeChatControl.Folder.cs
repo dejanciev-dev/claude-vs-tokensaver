@@ -113,7 +113,7 @@ namespace ClaudeVS.ToolWindow
         private void SetWorkFolder(string folder)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            if (_busy) { Append("Stop Claude first (Esc), then change the folder."); return; }
+            if (_busy) { Append($"Stop Claude first ({StopHow}), then change the folder."); return; }
             string solution = VsContext.GetSolutionDirectory();
             if (folder != null && solution != null && string.Equals(folder.TrimEnd('\\'), solution.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase)) folder = null;
             string before = _sessionDir ?? WorkFolder;

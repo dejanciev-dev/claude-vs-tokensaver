@@ -2292,9 +2292,13 @@ Planned on 2026-11-23, after Phase 84, on the same branch (PR #95); in 0.16.0.
       and goes to the next question's first option, or answers after the last; the Other check box's Enter or ↓ goes
       to its text. One answer only (a second Enter does nothing). No focus taken when the card appears: the input box
       keeps it. Three rows in MANUAL-CHECKS 30. Builds clean; not yet run in VS
-- [ ] **Option: Escape doesn't stop Claude.** As VS Code's `claudeCode.escapeStopsClaude`: Tools → Options → Claude Code
+- [x] **Option: Escape doesn't stop Claude.** As VS Code's `claudeCode.escapeStopsClaude`: Tools → Options → Claude Code
       → *Escape stops Claude* (on by default). Off, Escape in the box doesn't interrupt a turn; the Stop button and
-      the stop command still do. A row in MANUAL-CHECKS 30
+      the stop command still do. A row in MANUAL-CHECKS 30. `EscapeStopsClaude` in *Chat*; off, Esc during a turn does
+      nothing (not Esc Esc's rewind either), and still clears attachments and closes lists. The send button (Stop
+      during a turn) is the way to stop then; there is no separate stop command. What named Esc as the way to stop
+      names the Stop button instead (`StopHow`): the activity row's hint, the not-responding line, "Stop Claude first
+      (…)". Builds clean; not yet run in VS
 
 ---
 

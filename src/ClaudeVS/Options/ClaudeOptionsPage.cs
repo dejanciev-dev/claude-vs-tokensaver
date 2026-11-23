@@ -36,6 +36,9 @@ namespace ClaudeVS.Options
         [Category("Chat"), DisplayName("Show message timestamps"), Description("A small time above each prompt and at the end of each answer's line, with a date line where the day changes.")]
         public bool ShowTimestamps { get; set; } = true;
 
+        [Category("Chat"), DisplayName("Escape stops Claude"), Description("Esc in the input box stops Claude's answer, as in the terminal. Off, Esc doesn't stop it (so a stray Esc can't cut a long turn short); the send button, which reads Stop while Claude answers, still does. Esc still clears attachments and closes lists.")]
+        public bool EscapeStopsClaude { get; set; } = true;
+
         [Category("Chat"), DisplayName("Suggest the next prompt"), Description("When an answer ends with an offer (\"tell me and I'll split them out\", \"Want me to run the tests?\"), the empty input box shows the reply that takes it up in grey. Tab or → puts it into the box to edit or send; it is never sent on its own. Read from the answer, with no model call. Off also when promptSuggestionEnabled is false in Claude Code's settings.")]
         public bool SuggestNextPrompt { get; set; } = true;
 

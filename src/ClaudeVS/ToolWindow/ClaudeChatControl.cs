@@ -476,7 +476,7 @@ namespace ClaudeVS.ToolWindow
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             if (string.IsNullOrEmpty(sessionId)) { Append("Nothing to fork yet: send a prompt first."); return; }
-            if (_busy) { Append("Stop Claude first (Esc), then fork."); return; }
+            if (_busy) { Append($"Stop Claude first ({StopHow}), then fork."); return; }
             DisposeSession();
             ResetMeter();
             if (!keepTranscript) ClearTranscript();
@@ -499,7 +499,7 @@ namespace ClaudeVS.ToolWindow
         private void RewindTo(string messageId, string prompt)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            if (_busy) { Append("Stop Claude first (Esc), then rewind."); return; }
+            if (_busy) { Append($"Stop Claude first ({StopHow}), then rewind."); return; }
             string dir = _sessionDir ?? WorkFolder;
             EnsureSession(dir); // a resumed conversation has no process yet; starting one makes no model call
             var session = _session;
@@ -1102,6 +1102,12 @@ namespace ClaudeVS.ToolWindow
 
         // ---------------- Sending ----------------
 
+        /// <summary>Tools → Options → Escape stops Claude (on by default).</summary>
+        private bool EscapeStops => Options?.EscapeStopsClaude ?? true;
+
+        /// <summary>How to stop Claude, for messages: "Esc", or the send button (Stop during a turn) when Esc doesn't.</summary>
+        private string StopHow => EscapeStops ? "Esc" : "the Stop button";
+
         private void OnPromptKeyDown(object sender, KeyEventArgs e)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -1142,7 +1148,10 @@ namespace ClaudeVS.ToolWindow
             }
             else if (e.Key == Key.Escape && _busy)
             {
-                e.Handled = true; // Esc stops the answer, like the CLI
+                // Esc stops the answer, like the CLI, unless the option turns that off (as VS Code's
+                // claudeCode.escapeStopsClaude, 2.1.330); then it does nothing during a turn, not Esc Esc's rewind either.
+                if (!EscapeStops) return;
+                e.Handled = true;
                 Stop();
             }
             else if (e.Key == Key.Escape)
@@ -2796,7 +2805,7 @@ namespace ClaudeVS.ToolWindow
         {
             bool wasStalled = _stall.Visibility == Visibility.Visible;
             _stall.Visibility = stalled ? Visibility.Visible : Visibility.Collapsed;
-            if (stalled) _stall.Text = $"⚠ Not responding: no output from Claude Code for {(int)quiet.TotalMinutes} min. A long command may still be running; Esc stops it.";
+            if (stalled) _stall.Text = $"⚠ Not responding: no output from Claude Code for {(int)quiet.TotalMinutes} min. A long command may still be running; " + (EscapeStops ? "Esc stops it." : "the Stop button stops it.");
             if (stalled && !wasStalled) Announce("Claude Code is not responding. A long command may still be running. Press Escape in the prompt box to stop it.");
             if (stalled != wasStalled) RenderActivity(); // the red notice replaces the activity strip
         }

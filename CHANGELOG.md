@@ -35,6 +35,9 @@ The full list follows.
 - **Question cards by keyboard:** ↑ and ↓ move between a question's options (picking one, for a single choice), Enter
   picks the focused option and goes to the next question, and after the last one sends the answers; Enter in the
   *Other* box does the same with what you typed (as Claude Code 2.1.330 fixed in VS Code).
+- **Escape stops Claude** (Tools → Options → Claude Code, on by default): off, Esc in the input box no longer stops an
+  answer, so a stray Esc can't cut a long turn short; the Stop button does. As VS Code's `claudeCode.escapeStopsClaude`
+  (2.1.330).
 
 ### Fixed
 
