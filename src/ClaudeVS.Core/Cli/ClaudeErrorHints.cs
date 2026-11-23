@@ -38,7 +38,7 @@ namespace ClaudeVS.Core.Cli
             if (Has(e, "output token maximum", "max_output_tokens"))
                 return "Claude's answer hit the output token limit and was cut off. Ask it to continue, or to work in smaller steps (one file or one part at a time).";
             if (ModelOutputLimit(error) is int most)
-                return $"The model takes at most {most.ToString(System.Globalization.CultureInfo.InvariantCulture)} output tokens, fewer than Claude Code asked for (often a gateway's model). Set CLAUDE_CODE_MAX_OUTPUT_TOKENS={most.ToString(System.Globalization.CultureInfo.InvariantCulture)} in Claude Code's settings.json (env) or Visual Studio's environment, restart the chat (New), then send again.";
+                return $"The model takes at most {most.ToString(System.Globalization.CultureInfo.InvariantCulture)} output tokens, fewer than Claude Code asked for (often a gateway's model). Set CLAUDE_CODE_MAX_OUTPUT_TOKENS={most.ToString(System.Globalization.CultureInfo.InvariantCulture)} in Claude Code's settings.json (env) or Visual Studio's environment, restart the chat (New), then send again. Or update Claude Code (`claude update`): 2.1.330 and newer retry at that limit by themselves.";
             if (Has(e, "credit balance", "insufficient_quota", "billing", "usage limit", "limit reached"))
                 return "Your Claude plan or API credit limit was reached. Check your usage at claude.ai or console.anthropic.com.";
             if (Has(e, "rate_limit", "rate limit", "too many requests"))
@@ -98,12 +98,6 @@ namespace ClaudeVS.Core.Cli
             @"max_tokens:\s*\d+\s*>\s*(\d+),\s*which is the maximum allowed", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
         /// <summary>
-        /// The output limit the model takes, from the API's refusal of a larger one ("max_tokens: 128000 > 64000, which
-        /// is the maximum allowed number of output tokens for …"), or null. Up to 2.1.328 Claude Code sent the request
-        /// again at that limit; 2.1.329 doesn't, so behind a gateway whose model takes fewer output tokens the turn
-        /// fails until <c>CLAUDE_CODE_MAX_OUTPUT_TOKENS</c> is set to it.
-        /// </summary>
-        /// <summary>
         /// The hint after the refusal when managed settings set <c>CLAUDE_CODE_MAX_OUTPUT_TOKENS</c> (to
         /// <paramref name="managedValue"/>): the project's files rank below them, so only whoever manages Claude Code can
         /// change it. Null when they don't set it, and the link can.
@@ -116,6 +110,12 @@ namespace ClaudeVS.Core.Cli
             return $"The model takes at most {most.ToString("N0", c)} output tokens, and managed settings set CLAUDE_CODE_MAX_OUTPUT_TOKENS={value}: ask whoever manages Claude Code here to set it to {most.ToString(c)}";
         }
 
+        /// <summary>
+        /// The output limit the model takes, from the API's refusal of a larger one ("max_tokens: 128000 > 64000, which
+        /// is the maximum allowed number of output tokens for …"), or null. Claude Code 2.1.326–2.1.328 and 2.1.330 on
+        /// send the request again at that limit; before 2.1.326 and in 2.1.329 (2.1.330 reverted it), behind a gateway
+        /// whose model takes fewer output tokens, the turn fails until <c>CLAUDE_CODE_MAX_OUTPUT_TOKENS</c> is set to it.
+        /// </summary>
         public static int? ModelOutputLimit(string error)
         {
             var m = MaxTokensRefused.Match(error ?? "");

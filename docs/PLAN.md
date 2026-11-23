@@ -2153,9 +2153,12 @@ Checked on 2026-11-23 with 2.1.330 installed. The 2.1.330 section read for what 
 Mode, self-hosted runner, terminal, `/mcp`, `/plugin`, cloud, Remote Control, easel (macOS and Linux only), Bedrock
 Mantle and VS Code entries are left out.
 
-- [ ] **The output-limit retry is back.** 2.1.330 reverts 2.1.329's removal of the automatic retry when `max_tokens`
-      is over a model's or gateway's limit, so the refusal Phases 72 and 73 handle fails a turn only with 2.1.329.
-      Keep the hint and the link (2.1.329 is still in range) and say in them and the code which version fails
+- [x] **The output-limit retry is back.** 2.1.330 reverts 2.1.329's removal of the automatic retry when `max_tokens`
+      is over a model's or gateway's limit, so the refusal Phases 72 and 73 handle fails a turn only with 2.1.329
+      (and before 2.1.326, when the retry came). Keep the hint and the link (both are still in range) and say in them
+      and the code which version fails. The error's explanation ends "Or update Claude Code (`claude update`): 2.1.330
+      and newer retry at that limit by themselves"; `ModelOutputLimit`'s comment (it had slid onto
+      `ManagedOutputLimit`) names the versions. Test in `Test_ErrorHints_NextStep`
 - [ ] **Grep's rejected pattern.** 2.1.330 reports ripgrep's refusal of a pattern with a line break (no multiline)
       instead of "No matches". Probed with 2.1.330 ($0.003): an `is_error` result, "Search failed — ripgrep rejected
       the pattern, glob, or file type without searching: …", `tool_use_result` a string. The tool row should show it

@@ -53,7 +53,7 @@ namespace ClaudeVS.ToolWindow
         private const string OutputLimitVariable = "CLAUDE_CODE_MAX_OUTPUT_TOKENS";
 
         /// <summary>
-        /// The model refused Claude Code's output limit (a gateway's model, 2.1.329 no longer retries lower): a link
+        /// The model refused Claude Code's output limit (a gateway's model; 2.1.329 and versions before 2.1.326 don't retry lower, 2.1.330 does again): a link
         /// under the failed turn sets the limit the error names and restarts Claude Code into the same conversation.
         /// </summary>
         private void OfferOutputLimit(int most)
