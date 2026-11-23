@@ -1242,6 +1242,10 @@ namespace ClaudeVS.Core.Tests
             session.EventReceived += (s, e) => events.Add(e);
             session.RawLine += (s, e) => { lock (raw) raw.Append(e.Direction).Append('\t').Append(e.Line).Append('\n'); };
             int requests = 0;
+            // Phase 87: the row an answered question gets from the real stream (tool_use_result), as the chat draws it
+            var askIds = new HashSet<string>();
+            var expectedLines = new List<string>();
+            string answerRow = null;
             try
             {
                 Console.WriteLine($"mode: {mode.ToCli()}");
@@ -1253,6 +1257,12 @@ namespace ClaudeVS.Core.Tests
                     if (!events.TryTake(out var e, TimeSpan.FromMilliseconds(200))) continue;
                     if (e.Kind == ClaudeEventKind.TextDelta) text.Append(e.Text);
                     if (e.Kind == ClaudeEventKind.ToolUse) Console.WriteLine($"  tool_use: {e.ToolName}");
+                    if (e.Kind == ClaudeEventKind.ToolUse && e.ToolName == AskUserQuestionTool.Name && e.ToolUseId != null) askIds.Add(e.ToolUseId);
+                    if (e.Kind == ClaudeEventKind.ToolResult && e.ToolUseId != null && askIds.Contains(e.ToolUseId))
+                    {
+                        answerRow = string.Join(" | ", ToolCallView.Summarize(AskUserQuestionTool.Name, e.ResultText, e.IsError, data: e.ResultData).Lines);
+                        Console.WriteLine("  answer row: " + answerRow);
+                    }
                     if (e.Kind == ClaudeEventKind.PermissionRequest)
                     {
                         requests++;
@@ -1266,6 +1276,8 @@ namespace ClaudeVS.Core.Tests
                             var chosen = AskUserQuestionTool.Parse(e.ToolInput).ToDictionary(q => q.Text,
                                 q => (IReadOnlyList<string>)q.Options.Take(q.MultiSelect ? 2 : 1).Select(o => o.Label).ToList());
                             answer = AskUserQuestionTool.BuildAnswer(e.ToolInput, chosen);
+                            foreach (var q in AskUserQuestionTool.Parse(e.ToolInput))
+                                expectedLines.Add((string.IsNullOrWhiteSpace(q.Header) ? q.Text : q.Header) + ": " + string.Join(", ", chosen[q.Text]));
                             Console.WriteLine("    answering: " + answer["answers"]?.ToString(Newtonsoft.Json.Formatting.None));
                         }
                         session.RespondToPermissionAsync(e.RequestId, answer, allow: true).GetAwaiter().GetResult();
@@ -1283,6 +1295,13 @@ namespace ClaudeVS.Core.Tests
                 session.Dispose();
                 if (!string.IsNullOrEmpty(rawLogPath)) File.WriteAllText(rawLogPath, raw.ToString());
                 try { Directory.Delete(dir, true); } catch { }
+            }
+            if (expectedLines.Count > 0)
+            {
+                string expected = string.Join(" | ", expectedLines);
+                bool same = answerRow == expected;
+                Console.WriteLine((same ? "  ok   " : "  FAIL ") + $"the answered question's row reads \"{expected}\" (got \"{answerRow}\")");
+                if (!same) return 1;
             }
             Console.WriteLine($"permission requests: {requests}");
             return requests > 0 ? 0 : 1; // the prompt is meant to raise at least one

@@ -2352,9 +2352,12 @@ Planned on 2026-11-23, after Phase 86, on the same branch (PR #95); in 0.16.0.
       Marketplace overview where it lists the same. README: *Question cards* (keys, the answer line), *Sessions*
       (groups with *Move to group…*, ↑ ↓ in the picker), *Diagnostics* (the disk full), the key table (a held Enter,
       what Esc does), and *Escape stops Claude* in Settings. Overview: question cards by keyboard, sessions with groups
-- [ ] **The live test checks the answer line.** The question live test (`live (Accept Edits)` in `--live-all`) also
+- [x] **The live test checks the answer line.** The question live test (`live (Accept Edits)` in `--live-all`) also
       checks that the tool row from the real stream reads "Header: answers" (`ToolCallView.QuestionAnswers` on its
-      `tool_use_result`), so a change in Claude Code's shape shows up
+      `tool_use_result`), so a change in Claude Code's shape shows up. It is the `ask` step (`RunInteractive`, Default
+      mode), not `live (Accept Edits)`. The row is drawn by `ToolCallView.Summarize` from the tool result event, as the
+      chat does, and compared with the header and the labels the test picked; a mismatch fails it. With 2.1.330:
+      "Fruits: Apple, Banana", $0.0033
 - [ ] **Verify 0.16.0 with `--live-all`.** Every live test against 2.1.330 again, as Phases 83–86 changed tool rows and
       the transcript; CONTRIBUTING gets the measured cost and time
 
