@@ -2159,10 +2159,12 @@ Mantle and VS Code entries are left out.
       and the code which version fails. The error's explanation ends "Or update Claude Code (`claude update`): 2.1.330
       and newer retry at that limit by themselves"; `ModelOutputLimit`'s comment (it had slid onto
       `ManagedOutputLimit`) names the versions. Test in `Test_ErrorHints_NextStep`
-- [ ] **Grep's rejected pattern.** 2.1.330 reports ripgrep's refusal of a pattern with a line break (no multiline)
+- [x] **Grep's rejected pattern.** 2.1.330 reports ripgrep's refusal of a pattern with a line break (no multiline)
       instead of "No matches". Probed with 2.1.330 ($0.003): an `is_error` result, "Search failed — ripgrep rejected
       the pattern, glob, or file type without searching: …", `tool_use_result` a string. The tool row should show it
-      as an error, not "No matches"; a test from the capture
+      as an error, not "No matches"; a test from the capture. It does already: a string `tool_use_result` gives no
+      `ResultData`, and the error's first lines are the ⎿ line. `Fixtures/cli-2.1.330-grep-rejected.jsonl` (ids
+      blanked), test in `Test_ToolData_Shapes`
 - [ ] **A provider the organization picks.** 2.1.330 signs in to organizations managed in the Enterprise Admin
       Console: after `claude auth login` Claude Code uses the organization's cloud provider or gateway, which may set
       no variable the extension reads. Count a turn whose `modelUsage.provider` isn't "firstParty" as behind a
