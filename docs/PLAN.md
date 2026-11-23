@@ -2342,9 +2342,11 @@ Planned on 2026-11-23, after Phase 85, on the same branch (PR #95); in 0.16.0. M
 
 Planned on 2026-11-23, after Phase 86, on the same branch (PR #95); in 0.16.0.
 
-- [ ] **Rewind asks with Cancel first.** As VS Code's 2.1.330 fix for "holding Enter on `/rewind` restoring files …
+- [x] **Rewind asks with Cancel first.** As VS Code's 2.1.330 fix for "holding Enter on `/rewind` restoring files …
       without confirmation": Enter in the rewind list opens a confirmation whose default button is OK, so a held
-      Enter confirms it. Make Cancel the default; OK still restores. A row in MANUAL-CHECKS 30
+      Enter confirms it. Make Cancel the default; OK still restores. A row in MANUAL-CHECKS 30. Nothing to change:
+      the plan was wrong. `RewindTo`'s confirmation already has Cancel as its default (`OLEMSGDEFBUTTON_SECOND`), so
+      a held Enter cancels; it lists the files first, after a dry run. The row checks it
 - [ ] **README for Phases 84–86.** The feature table says what question cards did before: add the keyboard and the
       answers on resume, groups in your order, the *Escape stops Claude* option and the full-disk message; the
       Marketplace overview where it lists the same
