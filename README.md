@@ -96,11 +96,11 @@ This extension attacks all three, and shows the numbers so you can see the effec
 | **Diff for Claude's edits** | Every file change shows up in the chat as numbered red and green lines under its row: Edit / MultiEdit, Write (against the file as it was), and shell commands that write a file (`cat > file <<'EOF'`). Above the lines, **Open diff** opens Visual Studio's diff window and **Open file** the file. |
 | **Files changed** | After each answer, a list of the files it added, changed or deleted, with `+added −removed`. Click a path to open the file, or **Diff** for the file before the answer against now. |
 | **Review each change** | In Manual mode, an edit or write with several changes asks with a card listing each one (− and + lines) with a check box. **Apply** only the checked ones, **Reject all**, or **Open diff** for the whole file. Claude is told which changes you rejected, so it neither assumes they are in the file nor applies them again. |
-| **Question cards** | When Claude asks a question, you get its options (plus "Other") and your answer goes back to Claude. |
+| **Question cards** | When Claude asks a question, you get its options (plus "Other") and your answer goes back to Claude. By keyboard: `↑ ↓` move between a question's options (picking as they go on a single choice), `Enter` picks one and goes to the next question, or answers after the last; Space toggles on a multiple choice. Once answered, the question's row says what you picked (`Fruits: Apple, Banana`), also in a resumed conversation. |
 | **Plan approval cards** | Plans render as Markdown with **Approve** or **Request changes** (with feedback). |
 | **Permission card** | Other tool calls that need approval show a card: the question ("Run this command?"), Claude's description, why a hook asks for it (Claude Code 2.1.327 or newer), the command or file, and **Allow**, **Always allow** (the rule Claude Code suggests, saved for this project), **Deny**, or a line telling Claude what to do instead. |
 | **Working folder** | Shown under the title: the folder Claude Code runs in (the solution folder by default), which relative paths are based on. Click it to pick another folder (a subfolder or another repository), go back to the solution folder, open it in File Explorer or copy the path. A new folder starts a new conversation. |
-| **Sessions** | Resume an earlier conversation for the same solution (`claude --resume`); `/` → *Restart Claude Code* restarts it into the same conversation, so it reads settings, `CLAUDE.md` and MCP servers you changed by hand (a running Claude Code doesn't); its earlier prompts, answers and tool calls are redrawn. When its prompt cache has expired, a /compact button by the meter summarizes it before the first prompt. Each session in the list shows what it cost (`$0.42 ($0.12 agents) · 3h`, at API prices, subagents included and their part named), the footer the total, and **Costliest first** sorts by cost. Click the title to rename a session (also passed to the CLI as `--name`); hover a session in the list to rename or archive it. |
+| **Sessions** | Resume an earlier conversation for the same solution (`claude --resume`); `/` → *Restart Claude Code* restarts it into the same conversation, so it reads settings, `CLAUDE.md` and MCP servers you changed by hand (a running Claude Code doesn't); its earlier prompts, answers and tool calls are redrawn. When its prompt cache has expired, a /compact button by the meter summarizes it before the first prompt. Each session in the list shows what it cost (`$0.42 ($0.12 agents) · 3h`, at API prices, subagents included and their part named), the footer the total, and **Costliest first** sorts by cost. Click the title to rename a session (also passed to the CLI as `--name`); hover a session in the list to rename or archive it. Put sessions in groups with *Move to group…* (the folder button on hover); in that picker, `↑ ↓` beside a group move it, and the list shows your groups in that order. |
 | **Images** | Paste a screenshot (`Ctrl+V`) or pick image files with **+ → Upload** and they are sent with the prompt. Thumbnails show above the input box with their token cost (≈ width × height / 750); images are scaled to 1568 px first, since the API would scale larger ones down anyway. |
 | **Rewind** | Hover one of your messages → **Rewind** puts the files Claude changed since that prompt back the way they were. You see the list of files first; the conversation stays as it is. |
 | **Export** | `/` → *Export conversation…* saves the whole conversation (also what came before a resume or a compaction) as Markdown: your prompts, Claude's answers, and one line per tool call. |
@@ -112,7 +112,7 @@ This extension attacks all three, and shows the numbers so you can see the effec
 | **Screen readers** | Announcements through a UIA live region when Claude finishes (with the start of the answer), asks for permission, has a question or a plan, wants an edit reviewed, stops responding, or hits a usage limit. **Focus last message** (`Ctrl+Alt+K, M`) puts the keyboard at the start of Claude's last answer; `Esc` returns to the prompt box. |
 | **Several chat windows** | Each window has its own conversation, meter and model. |
 | **Prompt box helpers** | A suggested next prompt in grey once an answer ends with an offer (Tab takes it; no model call), and after a failed turn what to do next (try again, /compact, go on in parts, rewind); `Ctrl+Up/Down` prompt history; typing `/` opens a list of commands above the box (`/compact` and your own `.claude/commands`), each with what it does; Tab or Enter puts it in the box for its arguments. Your skills (project, user and plugin skills, as Claude Code reports them) are in the `/` button menu under Skills; `@` picks a file (each with its size in tokens, `~3.2k tok`). |
-| **Diagnostics** | An **Output → Claude Code** pane with route decisions, errors and plain-language hints (not logged in, sign-in expired, answer cut off at the output limit, rate limited, context too long…), plus optional raw CLI traffic. If Claude Code is older than 2.1.318, the chat says so once. |
+| **Diagnostics** | An **Output → Claude Code** pane with route decisions, errors and plain-language hints (not logged in, sign-in expired, answer cut off at the output limit, rate limited, context too long, the disk full…), plus optional raw CLI traffic. If Claude Code is older than 2.1.318, the chat says so once. |
 
 ## How it works
 
@@ -272,12 +272,12 @@ In the prompt box:
 
 | Key | Action |
 |---|---|
-| `Enter` / `Shift+Enter` | Send / new line |
+| `Enter` / `Shift+Enter` | Send / new line (a held `Enter` sends once) |
 | `Ctrl+Up` / `Ctrl+Down` | Previous / next prompt (your unsent text is kept) |
 | `@` + name | Pick a solution file to attach (`↑ ↓`, `Enter` or `Tab`, `Esc`) |
 | `/` | A list of matching commands above the box (`/compact` and your `.claude/commands/*.md`; skills are in the `/` button menu): ↑ ↓ to choose, Tab or Enter to insert, Esc to close |
 | `Tab` or `→` in the empty box | Take the suggested next prompt shown in grey (after a failed turn: your prompt again, or the next step), to edit or send |
-| `Esc` | Remove attachments |
+| `Esc` | Remove attachments; while Claude answers, stop it (unless *Escape stops Claude* is off); twice, the rewind list |
 
 Editor commands go to the chat window you used last.
 
@@ -290,6 +290,7 @@ Editor commands go to the chat window you used last.
 | CLI | Claude executable path | *(auto)* | Finds `claude.exe` / `claude.cmd` automatically. |
 | CLI | Permission mode | AcceptEdits | Edits are applied; shell commands ask. In **Plan** mode the CLI answered with Sonnet even when Haiku was requested. |
 | Chat | Archive inactive sessions after (days) | 14 | Unused sessions move to the Archived group of the sessions list; 0 = never. |
+| Chat | Escape stops Claude | On | `Esc` in the input box stops Claude's answer, as in the terminal. Off, it doesn't (a stray `Esc` can't cut a long turn short); the Stop button still does. |
 | Chat | Focus view | Off | Consecutive tool calls collapse into one summary row; also / → Focus view. |
 | Chat | Screen reader announcements | On | Narrator, NVDA or JAWS announce finished answers (their start), permission requests, questions, plans, edits to review, stalls and usage limits. Nothing is sent without a screen reader. |
 | Chat | Show message timestamps | On | Time above each prompt and at the end of each answer line; a date line where the day changes. |

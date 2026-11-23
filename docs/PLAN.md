@@ -2347,9 +2347,11 @@ Planned on 2026-11-23, after Phase 86, on the same branch (PR #95); in 0.16.0.
       Enter confirms it. Make Cancel the default; OK still restores. A row in MANUAL-CHECKS 30. Nothing to change:
       the plan was wrong. `RewindTo`'s confirmation already has Cancel as its default (`OLEMSGDEFBUTTON_SECOND`), so
       a held Enter cancels; it lists the files first, after a dry run. The row checks it
-- [ ] **README for Phases 84–86.** The feature table says what question cards did before: add the keyboard and the
+- [x] **README for Phases 84–86.** The feature table says what question cards did before: add the keyboard and the
       answers on resume, groups in your order, the *Escape stops Claude* option and the full-disk message; the
-      Marketplace overview where it lists the same
+      Marketplace overview where it lists the same. README: *Question cards* (keys, the answer line), *Sessions*
+      (groups with *Move to group…*, ↑ ↓ in the picker), *Diagnostics* (the disk full), the key table (a held Enter,
+      what Esc does), and *Escape stops Claude* in Settings. Overview: question cards by keyboard, sessions with groups
 - [ ] **The live test checks the answer line.** The question live test (`live (Accept Edits)` in `--live-all`) also
       checks that the tool row from the real stream reads "Header: answers" (`ToolCallView.QuestionAnswers` on its
       `tool_use_result`), so a change in Claude Code's shape shows up
