@@ -1881,7 +1881,7 @@ namespace ClaudeVS.ToolWindow
                         _view.AppendTool(item.ToolUseId, item.Text, item.ToolInput?.ToString(), null,
                             item.ToolName == "Write" ? null : InlineDiff.FromToolUse(item.ToolName, item.ToolInput), // the content before an old Write is unknown
                             item.ToolName, item.ToolInput, _sessionDir);
-                        if (item.ResultChars >= 0) _view.CompleteTool(item.ToolUseId, item.ResultChars, item.IsError, item.ResultText);
+                        if (item.ResultChars >= 0) _view.CompleteTool(item.ToolUseId, item.ResultChars, item.IsError, item.ResultText, resultData: item.ResultData);
                         break;
                     case TranscriptItemKind.Compacted:
                         _view.AppendCompaction(item.PreTokens, item.Trigger, item.Text);

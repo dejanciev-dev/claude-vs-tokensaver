@@ -2312,9 +2312,15 @@ Planned on 2026-11-23, after Phase 85, on the same branch (PR #95); in 0.16.0. M
       ranked, then by name); a rename keeps the place, a delete or a merge into another group leaves it. The group
       picker's rows get ↑/↓ beside the delete button and stay open after a move; the sessions list sorts by the same
       rank. `Test_SessionMeta_GroupOrder`; a row in MANUAL-CHECKS 30. Builds clean; not yet run in VS
-- [ ] **Answered questions on resume.** A resumed conversation shows an AskUserQuestion as a plain tool row. Show the
+- [x] **Answered questions on resume.** A resumed conversation shows an AskUserQuestion as a plain tool row. Show the
       questions and the answer you gave (from the tool's result), as the card reads once answered. Test from a
-      transcript with an answered question
+      transcript with an answered question. Captured with 2.1.330 (`--live-ask`, $0.0033): the session file's
+      `toolUseResult` is `{ questions, answers{ question: "Apple, Banana" } }`, and the stream's `tool_use_result` the
+      same. `ToolCallView.QuestionAnswers` gives one ⎿ line per question ("Fruits: Apple, Banana", the question when
+      there is no header, "(no answer)" for one left out), live and on resume; `SessionTranscript` keeps
+      `toolUseResult` for AskUserQuestion only, so other resumed rows are drawn as before.
+      `Fixtures/cli-2.1.330-question-answered.jsonl` (ids and paths blanked), `Test_SessionTranscript_AnsweredQuestion`;
+      a row in MANUAL-CHECKS 30. Builds clean; not yet run in VS
 - [ ] **Question card keys under test.** Phase 85's ↑/↓ and Enter rules live in WPF code. Move what a key does
       (which stop next, pick or not, next question or answer) into Core, tested; the card only wires it up
 - [ ] **Chat doesn't take the keyboard.** As VS Code's fix for "a slow-starting Claude tab taking the keyboard away

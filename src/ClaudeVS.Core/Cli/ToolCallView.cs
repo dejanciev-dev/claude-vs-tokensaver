@@ -318,6 +318,8 @@ namespace ClaudeVS.Core.Cli
         {
             if (!isError && data != null && FromData(toolName, data, endsInNewline) is string exact) return One(exact);
             var output = SplitOutput(resultText);
+            if (!isError && toolName == AskUserQuestionTool.Name && QuestionAnswers(data) is List<string> answered)
+                return new ToolResultSummary { Lines = answered.Take(PreviewLines).Select(Cut).ToList(), MoreLines = Math.Max(0, answered.Count - PreviewLines) };
             if (isError && toolName == "Grep" && GrepRejected(output) is string why)
                 return new ToolResultSummary { IsError = true, Lines = new[] { why } };
             if (isError)
@@ -354,6 +356,27 @@ namespace ClaudeVS.Core.Cli
             }
             if (output.Count == 0) return One("Done");
             return new ToolResultSummary { Lines = output.Take(PreviewLines).Select(Cut).ToList(), MoreLines = Math.Max(0, output.Count - PreviewLines) };
+        }
+
+        /// <summary>
+        /// An answered AskUserQuestion, one line per question: "Fruits: Apple, Banana" (its header, else the question),
+        /// "(no answer)" for one left out. From <c>tool_use_result</c> = <c>{ questions, answers{ question: labels } }</c>,
+        /// the same in the stream and in the session file (captured with 2.1.330), so a resumed conversation shows what
+        /// you answered as the live card did. Null without answers.
+        /// </summary>
+        internal static List<string> QuestionAnswers(JObject data)
+        {
+            if (!(data?["answers"] is JObject answers)) return null;
+            var lines = new List<string>();
+            foreach (var q in AskUserQuestionTool.Parse(data))
+            {
+                string label = string.IsNullOrWhiteSpace(q.Header) ? q.Text : q.Header;
+                string answer = answers[q.Text]?.Type == JTokenType.String ? ((string)answers[q.Text]).Trim() : null;
+                lines.Add(label + ": " + (string.IsNullOrEmpty(answer) ? "(no answer)" : answer));
+            }
+            if (lines.Count == 0) // no questions given back: the answers alone
+                lines.AddRange(answers.Properties().Where(p => p.Value.Type == JTokenType.String).Select(p => p.Name + ": " + (string)p.Value));
+            return lines.Count == 0 ? null : lines;
         }
 
         /// <summary>
