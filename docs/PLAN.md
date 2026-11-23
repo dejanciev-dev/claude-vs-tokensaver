@@ -2277,8 +2277,11 @@ Planned on 2026-11-23, after Phase 84, on the same branch (PR #95); in 0.16.0.
       only normalizes it (no other change: `git diff -w --ignore-cr-at-eol` empty); later commits touch their lines only.
       It held 2,972 CRLF, 4 LF and 3 stray CRs (CR CR LF, at the end of three lines). Now stored as LF like every other
       file (`i/lf`); ignoring line ends the diff is those three CRs only. Builds clean, 244 tests pass
-- [ ] **Usage CSV through a temp file.** *Export Usage (CSV)* still writes straight to the target, so a full disk leaves
-      half a file. Write it as Phase 83's other saves do (`SafeFile`), the byte-order mark kept for Excel
+- [x] **Usage CSV through a temp file.** *Export Usage (CSV)* still writes straight to the target, so a full disk leaves
+      half a file. Write it as Phase 83's other saves do (`SafeFile`), the byte-order mark kept for Excel. `UsageCsv`
+      writes to a string, then `SafeFile.Replace` with a BOM; `Test_SafeFile` checks the BOM. No `File.WriteAllText`
+      or `StreamWriter` is left on a file the user keeps, but for the empty new ones (a memory file, `settings.json`)
+      and the read-only command copy in the temp folder
 - [ ] **Question cards by keyboard.** As VS Code's 2.1.330 fix ("Enter on a question card sending your earlier answer
       instead of picking the focused one, and arrow keys not working after an Other answer"): arrow keys move between
       a question's options, Enter picks the focused one and, on the last question, submits; the Other box takes Enter

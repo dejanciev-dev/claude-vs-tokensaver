@@ -244,11 +244,14 @@ namespace ClaudeVS.Commands
             string target = dlg.FileName;
             try
             {
-                // UTF-8 with a BOM, so Excel reads non-ASCII prompts and paths correctly.
+                // UTF-8 with a BOM, so Excel reads non-ASCII prompts and paths correctly. Through a temp file, so a full
+                // disk leaves the file that was there instead of half a CSV.
                 int rows = await Task.Run(() =>
                 {
-                    using (var w = new System.IO.StreamWriter(target, false, new System.Text.UTF8Encoding(true)))
-                        return UsageCsv.Write(log.ReadAll(), w);
+                    var csv = new System.IO.StringWriter();
+                    int n = UsageCsv.Write(log.ReadAll(), csv);
+                    Core.SafeFile.Replace(target, csv.ToString(), new System.Text.UTF8Encoding(true));
+                    return n;
                 });
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                 ClaudeOutputPane.WriteLine($"Exported {rows} turns to {target}");
