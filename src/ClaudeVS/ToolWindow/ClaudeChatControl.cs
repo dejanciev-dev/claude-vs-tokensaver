@@ -803,7 +803,7 @@ namespace ClaudeVS.ToolWindow
                 new ChatPopup.Entry { Group = "Context", Label = "Compact conversation", Description = "Summarize to shrink the context", Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); SendText("/compact", routed: false); } },
                 new ChatPopup.Entry { Group = "Context", Label = "Resume a session…", Run = ShowHistoryMenu },
                 new ChatPopup.Entry { Group = "Context", Label = "Rename session", Run = StartTitleEdit },
-                new ChatPopup.Entry { Group = "Context", Label = "Fork this session", Description = "Continue in a new session with this history; the original stays", Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); ForkSession(_session?.SessionId ?? _resumeId, _fullTitle, keepTranscript: true); } },
+                new ChatPopup.Entry { Group = "Context", Label = "Fork this session", Description = "Continue in a new session with this history; the original stays", Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); ForkSession(_session?.SessionId ?? _resumeId, _fullTitle, keepTranscript: true); } },
                 new ChatPopup.Entry { Group = "Context", Label = "Restart Claude Code", Description = "Keep this conversation and its prompt cache; picks up settings, CLAUDE.md and MCP servers you changed by hand", Run = () => RestartInPlace() },
                 new ChatPopup.Entry { Group = "Context", Label = "Rewind…", Detail = "Esc Esc", Description = "Put files back to before one of your prompts", Run = ShowRewindPicker },
                 new ChatPopup.Entry { Group = "Context", Label = "Focus view", Description = "Collapse tool calls into one summary row", Checked = Options?.FocusView == true, Run = ToggleFocusView },
@@ -1986,7 +1986,7 @@ namespace ClaudeVS.ToolWindow
                         {
                             // Kept until the result, which may bring the CLI's own copy of the file (originalFile).
                             var call = new FileCall { ToolName = ev.ToolName, Input = ev.ToolInput, Path = changedPath, Snapshot = writeSnapshot };
-                            call.FirstInTurn = changedPath != null && _turnChanges.Record(changedPath, writeSnapshot); // for "Files changed" under the answer
+                            call.FirstInTurn = changedPath != null && _turnChanges.Record(changedPath, writeSnapshot); // for "Files changed" under the answer
                             if (changedPath != null) _claudeWrote.Add(changedPath); // Claude knows what it wrote: no "changed since" notice
                             if (!string.IsNullOrEmpty(ev.ToolUseId)) _fileCalls[ev.ToolUseId] = call;
                             diff = () => { ThreadHelper.ThrowIfNotOnUIThread(); ShowDiff(change, call.Snapshot); };
@@ -2068,7 +2068,7 @@ namespace ClaudeVS.ToolWindow
                                 TurnFooter.ProviderNote(ev.ModelUsageSinceLastResult), _lastTurnReferences, modelName != null ? "Model: " + _turnModel : null));
                         _turnFiles.Reset(); // the next turn's reads
                         if (!string.IsNullOrWhiteSpace(answer)) _lastAnswer = answer;
-                        SuggestFromAnswer(answer, ev, turn.Prompt); // grey text in the input box (after a failed turn: what to do); not while queued prompts run
+                        SuggestFromAnswer(answer, ev, turn.Prompt); // grey text in the input box (after a failed turn: what to do); not while queued prompts run
                         CheckInstructionFiles(); // a CLAUDE.md or .mcp.json edited by hand while Claude worked
                         RestartAfterTurn(); // Restart Claude Code asked for during the turn
                         ShowTurnChanges(); // "Files changed" with Diff links

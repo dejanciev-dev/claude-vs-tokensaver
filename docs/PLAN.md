@@ -2272,9 +2272,11 @@ Checked, nothing to change (added to Phase 82's list):
 
 Planned on 2026-11-23, after Phase 84, on the same branch (PR #95); in 0.16.0.
 
-- [ ] **One kind of line ending in `ClaudeChatControl.cs`.** Git stores it with CRLF, CR and LF mixed (`-text` in
+- [x] **One kind of line ending in `ClaudeChatControl.cs`.** Git stores it with CRLF, CR and LF mixed (`-text` in
       `git ls-files --eol`), so any edit commits as a rewrite of ~6,000 lines unless spliced by hand. One commit that
-      only normalizes it (no other change: `git diff -w --ignore-cr-at-eol` empty); later commits touch their lines only
+      only normalizes it (no other change: `git diff -w --ignore-cr-at-eol` empty); later commits touch their lines only.
+      It held 2,972 CRLF, 4 LF and 3 stray CRs (CR CR LF, at the end of three lines). Now stored as LF like every other
+      file (`i/lf`); ignoring line ends the diff is those three CRs only. Builds clean, 244 tests pass
 - [ ] **Usage CSV through a temp file.** *Export Usage (CSV)* still writes straight to the target, so a full disk leaves
       half a file. Write it as Phase 83's other saves do (`SafeFile`), the byte-order mark kept for Excel
 - [ ] **Question cards by keyboard.** As VS Code's 2.1.330 fix ("Enter on a question card sending your earlier answer
