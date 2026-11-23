@@ -49,6 +49,8 @@ namespace ClaudeVS.ToolWindow
         public const string IconSort = "";    // Segoe MDL2 "Sort"
         public const string IconArchive = "";    // box
         public const string IconUnarchive = "";  // undo
+        public const string IconUp = "";       // Segoe MDL2 "ChevronUp": move up
+        public const string IconDown = "";     // "ChevronDown": move down
 
         public static string ModeGlyph(Core.Cli.PermissionModeChoice m)
         {
