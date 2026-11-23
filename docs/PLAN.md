@@ -2326,9 +2326,17 @@ Planned on 2026-11-23, after Phase 85, on the same branch (PR #95); in 0.16.0. M
       `QuestionCardKeys.OnStop`, `OnOtherCheckBox` and `NextQuestion` return a `CardStep` (focus, pick the focused,
       pick here, go on); the card turns keys into `CardKey` and carries the step out. Same behaviour as Phase 85.
       `Test_QuestionCardKeys`. Builds clean; not yet run in VS
-- [ ] **Chat doesn't take the keyboard.** As VS Code's fix for "a slow-starting Claude tab taking the keyboard away
+- [x] **Chat doesn't take the keyboard.** As VS Code's fix for "a slow-starting Claude tab taking the keyboard away
       from the file you had gone on typing in": find where the chat focuses its input box on its own (start, a
-      session loaded, a restart) and do it only when the chat window is active, so typing in an editor isn't moved
+      session loaded, a restart) and do it only when the chat window is active, so typing in an editor isn't moved.
+      Found: no focus on its own (not at start, on a resumed session's load, a restart, a card or a result); every
+      `_prompt.Focus()` follows a click or key in the chat, or an editor command. The editor commands (attach a
+      selection, a file, files from Solution Explorer) open the chat, then focus its box once the window is there:
+      the one race, when the window takes a moment and you went back to the editor. `UpdateAttachments` now focuses
+      only while `ChatWindowActive()`: keyboard focus inside the chat, or VS's active window frame
+      (`SEID_WindowFrame`) is this chat's, the same object or the same tool window slot and instance; true when it
+      can't tell. `ClaudeToolWindow` hands the control its frame. A row in MANUAL-CHECKS 30. Builds clean; not yet run
+      in VS (only VS can show it)
 
 ---
 
