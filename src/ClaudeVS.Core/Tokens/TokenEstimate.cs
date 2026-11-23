@@ -80,17 +80,13 @@ namespace ClaudeVS.Core.Tokens
             if (string.IsNullOrEmpty(path)) return;
             try
             {
-                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path));
                 var o = new Newtonsoft.Json.Linq.JObject
                 {
                     ["chars"] = Math.Round(chars),
                     ["tokens"] = Math.Round(tokens),
                     ["charsPerToken"] = Math.Round(chars / tokens, 3), // for a person reading it; not read back
                 };
-                string tmp = path + ".tmp";
-                System.IO.File.WriteAllText(tmp, o.ToString(Newtonsoft.Json.Formatting.None));
-                if (System.IO.File.Exists(path)) System.IO.File.Replace(tmp, path, null);
-                else System.IO.File.Move(tmp, path);
+                SafeFile.Replace(path, o.ToString(Newtonsoft.Json.Formatting.None));
             }
             catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException) { }
         }

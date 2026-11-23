@@ -109,7 +109,7 @@ namespace ClaudeVS.Commands
                 catch (Exception ex)
                 {
                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                    Message("Claude Code", ex.Message, OLEMSGICON.OLEMSGICON_CRITICAL);
+                    Message("Claude Code", Core.SafeFile.Explain(ex, null), OLEMSGICON.OLEMSGICON_CRITICAL);
                 }
             }).FileAndForget("ClaudeVS/Commands/Run");
         }
@@ -127,7 +127,7 @@ namespace ClaudeVS.Commands
             {
                 int existing = ClaudeMdGenerator.EstimateTokens(File.ReadAllText(path));
                 string draft = Path.Combine(root, "CLAUDE.generated.md");
-                File.WriteAllText(draft, content);
+                Core.SafeFile.Replace(draft, content);
                 Message("Claude Code", $"CLAUDE.md already exists (~{existing} tokens per request). A lean draft (~{tokens} tokens) was saved as CLAUDE.generated.md for you to compare and merge.", OLEMSGICON.OLEMSGICON_INFO);
                 OpenFile(draft);
                 return;
@@ -209,7 +209,7 @@ namespace ClaudeVS.Commands
                 {
                     var now = DateTime.UtcNow;
                     // The log's folder is left out: the file is for sharing
-                    File.WriteAllText(target, SavingsReportText.Markdown(SavingsReportText.Full(log.ReadAll(), prices, solution, now, period: period), now), new System.Text.UTF8Encoding(false));
+                    Core.SafeFile.Replace(target, SavingsReportText.Markdown(SavingsReportText.Full(log.ReadAll(), prices, solution, now, period: period), now));
                 });
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                 ClaudeOutputPane.WriteLine("Saved the savings report to " + target);
@@ -218,7 +218,7 @@ namespace ClaudeVS.Commands
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                Message("Claude Code", "Could not save the report: " + ex.Message, OLEMSGICON.OLEMSGICON_WARNING);
+                Message("Claude Code", "Could not save the report: " + Core.SafeFile.Explain(ex, target), OLEMSGICON.OLEMSGICON_WARNING);
             }
         }
 
@@ -257,7 +257,7 @@ namespace ClaudeVS.Commands
             catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException)
             {
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                Message("Claude Code", "Could not export usage: " + ex.Message, OLEMSGICON.OLEMSGICON_WARNING);
+                Message("Claude Code", "Could not export usage: " + Core.SafeFile.Explain(ex, target), OLEMSGICON.OLEMSGICON_WARNING);
             }
         }
 

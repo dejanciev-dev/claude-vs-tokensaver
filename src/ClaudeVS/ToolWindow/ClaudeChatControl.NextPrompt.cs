@@ -81,7 +81,7 @@ namespace ClaudeVS.ToolWindow
                 catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException || ex is Newtonsoft.Json.JsonException)
                 {
                     await Jtf.SwitchToMainThreadAsync();
-                    Append($"\nCould not set {OutputLimitVariable}: " + ex.Message + "\n");
+                    Append($"\nCould not set {OutputLimitVariable}: " + Core.SafeFile.Explain(ex, root) + "\n");
                     return;
                 }
                 await Jtf.SwitchToMainThreadAsync();

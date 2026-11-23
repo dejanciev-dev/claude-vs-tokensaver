@@ -129,7 +129,7 @@ namespace ClaudeVS.Core.Cli
         /// Node's error for a full disk (lower-cased text). Since 2.1.330 <c>claude -p</c> says so and exits 1 when its
         /// output can't be written; before, it exited 0 with nothing. The wording isn't captured: Node's code and message.
         /// </summary>
-        private static bool DiskFull(string lowered) => Has(lowered, "enospc", "no space left on device", "not enough space on the disk");
+        private static bool DiskFull(string lowered) => SafeFile.IsDiskFullText(lowered);
 
         private static bool Has(string text, params string[] needles)
         {
