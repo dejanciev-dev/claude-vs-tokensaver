@@ -298,6 +298,17 @@ namespace ClaudeVS.Core.Tests
             Eq(0, r.InlinedLines);
         }
 
+        /// <summary>Lines 3-5 selected to column 1 of line 6: three lines, as the range says (Phase 84).</summary>
+        private static void Test_Context_WholeLineSelectionCount()
+        {
+            var whole = new EditorSelection { FilePath = @"C:\repo\A.cs", StartLine = 3, EndLine = 5, Text = "a\r\nb\r\nc\r\n" };
+            Eq(3, new PromptContextBuilder().Build("Explain", @"C:\repo", whole).InlinedLines, "inlined: three lines");
+            var r = new PromptContextBuilder(new ContextSettings { InlineMaxLines = 2 }).Build("Explain", @"C:\repo", whole);
+            True(r.Text.Contains("`A.cs:L3-5` (3 lines, not inlined"), "told three lines: " + r.Text);
+            Eq(3, new PromptContextBuilder(new ContextSettings { InlineMaxLines = 3 }).Build("Explain", @"C:\repo", whole).InlinedLines, "three lines fit a limit of three");
+            Eq(1, new PromptContextBuilder().Build("Explain", @"C:\repo", new EditorSelection { FilePath = @"C:\repo\A.cs", StartLine = 4, EndLine = 4, Text = "\r\n" }).InlinedLines, "one empty line is one line");
+        }
+
         private static string TempFile(params string[] lines)
         {
             string f = Path.Combine(Path.GetTempPath(), "claudevs-sess-" + Guid.NewGuid().ToString("N") + ".jsonl");

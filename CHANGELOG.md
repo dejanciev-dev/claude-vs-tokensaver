@@ -38,6 +38,8 @@ The full list follows.
   that was there stays as it was instead of being left half written.
 - **A held Enter** sends once: it no longer runs the command just picked from the `/` list, or sends what you typed
   while it was held (as Claude Code 2.1.330 fixed in VS Code).
+- **A selection of whole lines** (to the start of the next line) tells Claude how many lines it has, not one more, and
+  is inlined up to the limit (as Claude Code 2.1.330 fixed in VS Code).
 
 ## [0.15.0] - 2026-11-20
 
