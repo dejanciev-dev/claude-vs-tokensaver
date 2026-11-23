@@ -60,7 +60,7 @@ warm, and shows what every turn costs.
 ## Chat
 
 A suggested next prompt in the empty box when an answer ends with an offer, and after a failed turn what to do next
-(Tab takes it; no model call). Behind a gateway whose model takes fewer output tokens, one click sets the limit it
+(Tab takes it; no model call), a full disk included. Behind a gateway whose model takes fewer output tokens, one click sets the limit it
 names and the conversation carries on. Markdown answers with syntax-colored code blocks (Copy, Insert), diffs for Claude's edits and per-change review,
 question and plan cards, Manual / Edit automatically / Plan / Auto modes, sessions with resume, rename and fork,
 restart in place (Claude Code reads a `CLAUDE.md` or `.mcp.json` you edited, and the conversation goes on),

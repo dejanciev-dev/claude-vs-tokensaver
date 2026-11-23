@@ -2230,9 +2230,11 @@ fails quietly or as a raw exception. Grep's rejected pattern shows as an error, 
       `ToolCallView.GrepRejected` (the line break from rg's `"\n" is not allowed` or its multiline advice; otherwise
       "ripgrep refused it: " and rg's reason); other Grep errors as before. In `Test_ToolData_Shapes`; the row in
       MANUAL-CHECKS 30 names the line. Builds clean; not yet run in VS
-- [ ] **Release 0.16.0.** Manifest, assembly and package registration at 0.16.0, still a preview; the Unreleased
+- [x] **Release 0.16.0.** Manifest, assembly and package registration at 0.16.0, still a preview; the Unreleased
       changelog becomes `## [0.16.0]` with highlights; the Marketplace overview adds what's new. Tagging after the
-      merge. The Release VSIX builds
+      merge. The Release VSIX builds. Two highlights (2.1.330, a full disk); the overview's *Chat* section adds the
+      full disk to what a failed turn says next. Not run live again: Phase 82's `--live-all` with 2.1.330 covers it,
+      and Phase 83 changed nothing that talks to Claude Code
 
 ---
 
