@@ -2300,6 +2300,22 @@ Planned on 2026-11-23, after Phase 84, on the same branch (PR #95); in 0.16.0.
       names the Stop button instead (`StopHow`): the activity row's hint, the not-responding line, "Stop Claude first
       (…)". Builds clean; not yet run in VS
 
+## Phase 86 — Groups in your order, answered questions, and the keyboard
+
+Planned on 2026-11-23, after Phase 85, on the same branch (PR #95); in 0.16.0. More of what VS Code got in 2.1.330.
+
+- [ ] **Session groups in your order.** The sessions list sorts groups by name. A group's menu gets *Move up* and
+      *Move down*, and the order is kept with the groups (`SessionMetaStore`); groups never moved keep sorting by
+      name after the ordered ones. Ungrouped first and *Archived* last, as now. Test in `Test_SessionMeta_*`
+- [ ] **Answered questions on resume.** A resumed conversation shows an AskUserQuestion as a plain tool row. Show the
+      questions and the answer you gave (from the tool's result), as the card reads once answered. Test from a
+      transcript with an answered question
+- [ ] **Question card keys under test.** Phase 85's ↑/↓ and Enter rules live in WPF code. Move what a key does
+      (which stop next, pick or not, next question or answer) into Core, tested; the card only wires it up
+- [ ] **Chat doesn't take the keyboard.** As VS Code's fix for "a slow-starting Claude tab taking the keyboard away
+      from the file you had gone on typing in": find where the chat focuses its input box on its own (start, a
+      session loaded, a restart) and do it only when the chat window is active, so typing in an editor isn't moved
+
 ---
 
 ## Working in Visual Studio — daily loop
