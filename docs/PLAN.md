@@ -2338,6 +2338,22 @@ Planned on 2026-11-23, after Phase 85, on the same branch (PR #95); in 0.16.0. M
       can't tell. `ClaudeToolWindow` hands the control its frame. A row in MANUAL-CHECKS 30. Builds clean; not yet run
       in VS (only VS can show it)
 
+## Phase 87 — Rewind's safe default, the README, and 0.16.0 checked live
+
+Planned on 2026-11-23, after Phase 86, on the same branch (PR #95); in 0.16.0.
+
+- [ ] **Rewind asks with Cancel first.** As VS Code's 2.1.330 fix for "holding Enter on `/rewind` restoring files …
+      without confirmation": Enter in the rewind list opens a confirmation whose default button is OK, so a held
+      Enter confirms it. Make Cancel the default; OK still restores. A row in MANUAL-CHECKS 30
+- [ ] **README for Phases 84–86.** The feature table says what question cards did before: add the keyboard and the
+      answers on resume, groups in your order, the *Escape stops Claude* option and the full-disk message; the
+      Marketplace overview where it lists the same
+- [ ] **The live test checks the answer line.** The question live test (`live (Accept Edits)` in `--live-all`) also
+      checks that the tool row from the real stream reads "Header: answers" (`ToolCallView.QuestionAnswers` on its
+      `tool_use_result`), so a change in Claude Code's shape shows up
+- [ ] **Verify 0.16.0 with `--live-all`.** Every live test against 2.1.330 again, as Phases 83–86 changed tool rows and
+      the transcript; CONTRIBUTING gets the measured cost and time
+
 ---
 
 ## Working in Visual Studio — daily loop
