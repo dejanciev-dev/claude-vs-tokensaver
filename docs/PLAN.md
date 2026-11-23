@@ -2165,10 +2165,14 @@ Mantle and VS Code entries are left out.
       as an error, not "No matches"; a test from the capture. It does already: a string `tool_use_result` gives no
       `ResultData`, and the error's first lines are the ⎿ line. `Fixtures/cli-2.1.330-grep-rejected.jsonl` (ids
       blanked), test in `Test_ToolData_Shapes`
-- [ ] **A provider the organization picks.** 2.1.330 signs in to organizations managed in the Enterprise Admin
+- [x] **A provider the organization picks.** 2.1.330 signs in to organizations managed in the Enterprise Admin
       Console: after `claude auth login` Claude Code uses the organization's cloud provider or gateway, which may set
       no variable the extension reads. Count a turn whose `modelUsage.provider` isn't "firstParty" as behind a
-      gateway too, so the cut-off tip doesn't say to raise the output limit. Not probed (no such organization)
+      gateway too, so the cut-off tip doesn't say to raise the output limit. Not probed (no such organization).
+      `TurnFooter.ServedElsewhere` (the cost tooltip's `ProviderNote` uses it too); once a turn names another
+      provider, `OutputLimitSet` gives no limit to raise for the rest of the chat. A gateway that reports
+      "firstParty" still needs `ANTHROPIC_BASE_URL` in some settings to be seen. Test in
+      `Test_TurnFooter_ProviderNote`
 - [ ] **A full disk.** 2.1.330's `claude -p` prints an error and exits 1 when its output can't be written to a full
       disk, instead of exiting 0 with nothing. Say what to do when an error names `ENOSPC` or "no space left on device"
 - [ ] **Verify with 2.1.330 and raise `CliVersion.Tested`.** All live tests with 2.1.330; README and the Marketplace

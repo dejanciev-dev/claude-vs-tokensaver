@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using ClaudeVS.Core.Cli;
 
 namespace ClaudeVS.Core.Tokens
@@ -17,15 +18,18 @@ namespace ClaudeVS.Core.Tokens
         /// </summary>
         public static string ProviderNote(IReadOnlyDictionary<string, ModelUsageEntry> modelUsage)
         {
-            if (modelUsage == null) return null;
-            foreach (var e in modelUsage.Values)
-            {
-                if (string.IsNullOrEmpty(e?.Provider) || e.Provider == "firstParty") continue;
-                string basis = string.IsNullOrEmpty(e.CostBasis) || e.CostBasis == "list" ? "list prices" : e.CostBasis + " prices";
-                return $"Served by {ProviderName(e.Provider)}, which bills you itself: these costs are Claude Code's estimate at {basis}, not your bill.";
-            }
-            return null;
+            if (!(ServedElsewhere(modelUsage) is ModelUsageEntry e)) return null;
+            string basis = string.IsNullOrEmpty(e.CostBasis) || e.CostBasis == "list" ? "list prices" : e.CostBasis + " prices";
+            return $"Served by {ProviderName(e.Provider)}, which bills you itself: these costs are Claude Code's estimate at {basis}, not your bill.";
         }
+
+        /// <summary>
+        /// The turn's first model served by someone other than the Anthropic API (<c>modelUsage.provider</c> other than
+        /// "firstParty"), or null. It says so even when no variable does: since 2.1.330, an organization managed in the
+        /// Enterprise Admin Console picks the cloud provider or gateway at <c>claude auth login</c>.
+        /// </summary>
+        public static ModelUsageEntry ServedElsewhere(IReadOnlyDictionary<string, ModelUsageEntry> modelUsage) =>
+            modelUsage?.Values.FirstOrDefault(e => !string.IsNullOrEmpty(e?.Provider) && e.Provider != "firstParty");
 
         private static string ProviderName(string p)
         {

@@ -940,6 +940,11 @@ namespace ClaudeVS.Core.Tests
             Eq("Served by Amazon Bedrock, which bills you itself: these costs are Claude Code's estimate at list prices, not your bill.", TurnFooter.ProviderNote(bedrock));
             Eq(null, TurnFooter.ProviderNote(ModelUsageEntry.Parse(JObject.Parse(@"{""claude-haiku-5-5"":{""costUSD"":0.001}}"))), "an older Claude Code doesn't say");
             Eq(null, TurnFooter.ProviderNote(null));
+            // The gateway check takes it too: an organization's provider (2.1.330) may set no variable
+            Eq("bedrock", TurnFooter.ServedElsewhere(bedrock)?.Provider);
+            Eq(null, TurnFooter.ServedElsewhere(firstParty), "the Anthropic API");
+            var mixed = ModelUsageEntry.Parse(JObject.Parse(@"{""claude-haiku-5-5"":{""costUSD"":0.001,""provider"":""firstParty""},""claude-sonnet-5-5"":{""costUSD"":0.02,""provider"":""vertex""}}"));
+            Eq("vertex", TurnFooter.ServedElsewhere(mixed)?.Provider, "any model of the turn");
         }
 
         private static void Test_TurnFooter_CostBreakdown()
