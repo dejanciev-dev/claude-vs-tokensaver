@@ -799,6 +799,13 @@ namespace ClaudeVS.Core.Tests
         {
             Eq("Read 4 lines", ToolCallView.FromData("Read", JObject.Parse("{\"file\":{\"numLines\":4,\"startLine\":1,\"totalLines\":4}}")), "whole file");
             Eq("Read 2 lines", ToolCallView.FromData("Read", JObject.Parse("{\"file\":{\"content\":\"a\\nb\",\"numLines\":2,\"startLine\":1,\"totalLines\":2}}")), "no newline at the end");
+            // 2.1.330: a Grep pattern with a line break and no multiline is refused by ripgrep, not "No matches"
+            var rejected = new ClaudeStreamParser().Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.330-grep-rejected.jsonl")).Trim())
+                .Single(e => e.Kind == ClaudeEventKind.ToolResult);
+            True(rejected.IsError && rejected.ResultData == null, "an error, its tool_use_result a string");
+            var grepRow = ToolCallView.Summarize("Grep", rejected.ResultText, rejected.IsError, data: rejected.ResultData);
+            True(grepRow.IsError, "the row is an error");
+            Eq("Search failed — ripgrep rejected the pattern, glob, or file type without searching:", grepRow.Lines[0], "says why, not No matches");
             // The real 2.1.329 reads: Claude Code counts the empty line after a final newline (and calls an empty file one line).
             var reads = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.329-read-lines.jsonl"))
                 .Select(l => ToolCallView.FromData("Read", (JObject)JObject.Parse(l)["tool_use_result"])).ToList();
