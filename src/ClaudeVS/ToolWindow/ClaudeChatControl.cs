@@ -1105,6 +1105,9 @@ namespace ClaudeVS.ToolWindow
         private void OnPromptKeyDown(object sender, KeyEventArgs e)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
+            // A held Enter sends (or picks) once: its repeat would run the command just picked from the / list, or send
+            // what was typed by then (as VS Code's fix in 2.1.330). Shift+Enter still repeats its new lines.
+            if (e.Key == Key.Enter && e.IsRepeat && (Keyboard.Modifiers & ModifierKeys.Shift) == 0) { e.Handled = true; return; }
             if (_filePopup.IsOpen && HandleFilePickerKey(e.Key)) { e.Handled = true; return; }
             if (_commandPopup.IsOpen && HandleCommandPickerKey(e.Key)) { e.Handled = true; return; }
             if (TryPasteImage(e)) { e.Handled = true; return; }

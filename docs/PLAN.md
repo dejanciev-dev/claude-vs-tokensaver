@@ -2241,10 +2241,12 @@ fails quietly or as a raw exception. Grep's rejected pattern shows as an error, 
 Planned on 2026-11-23, after Phase 83, on the same branch (PR #95); in 0.16.0. The 2.1.330 changelog read again, its
 `[VSCode]` entries included: two of the VS Code extension's fixes are bugs in this extension too.
 
-- [ ] **A held Enter sends once.** Holding Enter in the `/` list puts the command in the box, and the key's repeat then
+- [x] **A held Enter sends once.** Holding Enter in the `/` list puts the command in the box, and the key's repeat then
       runs it (the picker's Enter sends a command typed in full); in the box, a repeat sends whatever was typed by
       then. As VS Code's "a held-down Enter key sending a half-written message or running a typed slash command": a
-      repeated Enter (`KeyEventArgs.IsRepeat`) neither sends nor picks. A row in MANUAL-CHECKS 30
+      repeated Enter (`KeyEventArgs.IsRepeat`) neither sends nor picks. First in the box's
+      `PreviewKeyDown`, so the `/` list, the file list and sending all see one Enter; Shift+Enter still repeats.
+      Two rows in MANUAL-CHECKS 30. Builds clean; not yet run in VS
 - [ ] **A whole-line selection counts its lines right.** `VsContext.GetSelection` gives `L3-5` for lines 3–5 selected
       to column 1 of line 6, but `PromptContextBuilder` counts the text's line breaks, 4 with the final one: Claude is
       told "(4 lines, not inlined …)" and the inline limit is one line short. As VS Code's "whole-line selections
