@@ -2236,6 +2236,35 @@ fails quietly or as a raw exception. Grep's rejected pattern shows as an error, 
       full disk to what a failed turn says next. Not run live again: Phase 82's `--live-all` with 2.1.330 covers it,
       and Phase 83 changed nothing that talks to Claude Code
 
+## Phase 84 — Two VS Code fixes from 2.1.330 that apply here too
+
+Planned on 2026-11-23, after Phase 83, on the same branch (PR #95); in 0.16.0. The 2.1.330 changelog read again, its
+`[VSCode]` entries included: two of the VS Code extension's fixes are bugs in this extension too.
+
+- [ ] **A held Enter sends once.** Holding Enter in the `/` list puts the command in the box, and the key's repeat then
+      runs it (the picker's Enter sends a command typed in full); in the box, a repeat sends whatever was typed by
+      then. As VS Code's "a held-down Enter key sending a half-written message or running a typed slash command": a
+      repeated Enter (`KeyEventArgs.IsRepeat`) neither sends nor picks. A row in MANUAL-CHECKS 30
+- [ ] **A whole-line selection counts its lines right.** `VsContext.GetSelection` gives `L3-5` for lines 3–5 selected
+      to column 1 of line 6, but `PromptContextBuilder` counts the text's line breaks, 4 with the final one: Claude is
+      told "(4 lines, not inlined …)" and the inline limit is one line short. As VS Code's "whole-line selections
+      counting one line too many … in what Claude is told". Count without the final line break. Test in
+      `Test_Context_*`
+
+Checked, nothing to change (added to Phase 82's list):
+- A subagent's own subagents and forks on the plan-mode model under `opusplan` or `haiku`: with Phase 67's Haiku in
+  Plan mode they now run on their own model and may cost more; the Agents panel names each agent's model and cost from
+  what Claude Code reports
+- A background agent stopped just as it finished, in sessions run by an app or the SDK: the Agents panel's stop sends
+  `stop_task`; fixed in Claude Code
+- Environment variables from a SessionStart hook lost with `claude -p --continue`: the extension resumes with
+  `--resume <id>`
+- "JSON schema is invalid" with many MCP tools, and `/rewind` with queued prompts: fixed in Claude Code; the extension
+  sends nothing different
+- VS Code's code block Copy adding a final newline: the extension's Copy has none (`MarkdownParser` joins the lines
+  without one), so a pasted command doesn't run
+- VS Code missing files whose path contains `#` (a `C#` folder): the extension never makes a URI of a path
+
 ---
 
 ## Working in Visual Studio — daily loop
