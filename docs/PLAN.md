@@ -2173,8 +2173,12 @@ Mantle and VS Code entries are left out.
       provider, `OutputLimitSet` gives no limit to raise for the rest of the chat. A gateway that reports
       "firstParty" still needs `ANTHROPIC_BASE_URL` in some settings to be seen. Test in
       `Test_TurnFooter_ProviderNote`
-- [ ] **A full disk.** 2.1.330's `claude -p` prints an error and exits 1 when its output can't be written to a full
-      disk, instead of exiting 0 with nothing. Say what to do when an error names `ENOSPC` or "no space left on device"
+- [x] **A full disk.** 2.1.330's `claude -p` prints an error and exits 1 when its output can't be written to a full
+      disk, instead of exiting 0 with nothing. Say what to do when an error names `ENOSPC` or "no space left on device".
+      `ClaudeErrorHints.DiskFull` (also Windows' "not enough space on the disk"): the explanation says to free space
+      where `~/.claude` or the temp folder is; the empty box says "The disk is full: free some space, then send it
+      again", Tab puts the prompt back. Not probed (filling a disk): the words are Node's. Test in
+      `Test_ErrorHints_NextStep`
 - [ ] **Verify with 2.1.330 and raise `CliVersion.Tested`.** All live tests with 2.1.330; README and the Marketplace
       overview say so
 

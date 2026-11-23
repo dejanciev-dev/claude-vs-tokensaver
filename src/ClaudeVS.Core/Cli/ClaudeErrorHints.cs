@@ -49,6 +49,8 @@ namespace ClaudeVS.Core.Cli
                 return "The conversation no longer fits the context window. Run /compact or start a New chat.";
             if (Has(e, "is not recognized as an internal or external command", "enoent", "cannot find the path"))
                 return "Claude Code CLI could not be started. Install it or set its path under Tools > Options > Claude Code.";
+            if (DiskFull(e))
+                return "The disk is full: Claude Code couldn't write its output or its session file. Free some space (the drive with your user folder, where ~/.claude is, or the temp folder), then send again.";
             return null;
         }
 
@@ -91,6 +93,7 @@ namespace ClaudeVS.Core.Cli
                 return Step("That model isn't available: pick another in the model menu, then send it again", again);
             if (kind == "server_error" || apiStatus >= 500 || Has(e, "overloaded", "timed out", "timeout", "connection error", "econnreset", "socket"))
                 return Step(Has(e, "overloaded") || apiStatus == 529 ? "The API is overloaded: try again" : "The request failed on the way: try again", again);
+            if (DiskFull(e)) return Step("The disk is full: free some space, then send it again", again);
             return Step("The request failed", again);
         }
 
@@ -121,6 +124,12 @@ namespace ClaudeVS.Core.Cli
             var m = MaxTokensRefused.Match(error ?? "");
             return m.Success && int.TryParse(m.Groups[1].Value, out int most) && most > 0 ? most : (int?)null;
         }
+
+        /// <summary>
+        /// Node's error for a full disk (lower-cased text). Since 2.1.330 <c>claude -p</c> says so and exits 1 when its
+        /// output can't be written; before, it exited 0 with nothing. The wording isn't captured: Node's code and message.
+        /// </summary>
+        private static bool DiskFull(string lowered) => Has(lowered, "enospc", "no space left on device", "not enough space on the disk");
 
         private static bool Has(string text, params string[] needles)
         {
