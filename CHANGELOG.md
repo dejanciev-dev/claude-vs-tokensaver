@@ -17,6 +17,8 @@ Still a **preview**, for Claude Code 2.1.318 or newer (tested with 2.1.330). Thi
   gateway your organization picks counts as one; a Grep pattern ripgrep refuses says what fixes it.
 - **A full disk:** a failed turn, or a file the extension saves, says to free some space (and on which drive), instead
   of a raw error. A file that was there is never left half written.
+- **The keyboard, as VS Code got it in 2.1.330:** question cards by arrow keys and Enter, an option to keep Esc from
+  stopping Claude, and a held Enter that sends once.
 
 The full list follows.
 
