@@ -16,6 +16,8 @@ namespace ClaudeVS.ToolWindow
         private System.Collections.Generic.List<CostlySetting> _costlySettings;
         /// <summary>Claude Code talks to a gateway: a low output limit may be all its model takes (no "raise it").</summary>
         private bool _behindGateway;
+        /// <summary>A turn's model was served by a cloud provider or gateway, though no variable said so (<see cref="ClaudeVS.Core.Tokens.TurnFooter.ServedElsewhere"/>).</summary>
+        private bool _servedElsewhere;
         /// <summary>Claude Code's last <c>get_settings</c> answer: which source sets what (<see cref="SettingsCheck.EnvAsUsed"/>).</summary>
         private Newtonsoft.Json.Linq.JObject _settingsResponse;
 

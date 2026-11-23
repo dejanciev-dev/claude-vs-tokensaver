@@ -456,11 +456,12 @@ namespace ClaudeVS.ToolWindow
 
         /// <summary>
         /// <c>CLAUDE_CODE_MAX_OUTPUT_TOKENS</c> as Claude Code uses it: its settings' env first, then Visual Studio's
-        /// environment (<see cref="SettingsCheck.OutputLimit"/>). Null behind a gateway, where it may be all the
-        /// gateway's model takes: the tip doesn't say to raise it.
+        /// environment (<see cref="SettingsCheck.OutputLimit"/>). Null behind a gateway or cloud provider, set by a
+        /// variable or seen in a turn's <c>modelUsage</c> (an organization's pick, 2.1.330), where it may be all the
+        /// model takes: the tip doesn't say to raise it.
         /// </summary>
         private int? OutputLimitSet() =>
-            _behindGateway || SettingsCheck.BehindGateway(null) ? null : SettingsCheck.OutputLimit(_settingsResponse);
+            _behindGateway || _servedElsewhere || SettingsCheck.BehindGateway(null) ? null : SettingsCheck.OutputLimit(_settingsResponse);
 
         private bool _gaveLongConversationTip;
 

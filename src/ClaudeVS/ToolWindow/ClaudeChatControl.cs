@@ -2040,6 +2040,7 @@ namespace ClaudeVS.ToolWindow
                         RecordUsage(ev, _turnModel);
                         _meterModel?.AddTurnEffort(_lastTurnEffort); // for Copy session summary
                         SaveModelUsage(ev.SessionId, ev.ModelUsage);
+                        if (TurnFooter.ServedElsewhere(ev.ModelUsageSinceLastResult) != null) _servedElsewhere = true; // before CutOffTip
                         CheckCost();
                         CacheBreakTip();
                         if (_meterModel != null && SessionNotices.FailedTurnCost(ev.IsError, UsageRecord.EndOf(ev.IsError, ev.TerminalReason, ev.ResultSubtype), _meterModel.LastTurnCostUsd) is string failedCost)
