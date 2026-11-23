@@ -58,10 +58,48 @@ namespace ClaudeVS.Core.Chat
             Update(sessionId, m => m.Group = group);
         }
 
-        /// <summary>All group names in use, sorted.</summary>
+        /// <summary>
+        /// Your order of the groups (Move up / Move down, as VS Code got in 2.1.330), next to the sessions file: a JSON
+        /// list of names. Its own file, so the sessions file keeps its shape for older versions.
+        /// </summary>
+        public string GroupOrderPath => System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Path) ?? "", "session-groups.json");
+
+        /// <summary>All group names in use, in your order: the ones you moved first, then the rest by name.</summary>
         public List<string> Groups()
         {
-            lock (Gate) return Read().Values.Select(m => m.Group).Where(g => !string.IsNullOrEmpty(g)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(g => g, StringComparer.OrdinalIgnoreCase).ToList();
+            lock (Gate) return Order(GroupsIn(Read()), ReadOrder());
+        }
+
+        /// <summary>
+        /// <paramref name="groups"/> as listed: those in <paramref name="order"/> first, in that order, then the others by
+        /// name. Names compare without case; a name in the order that no session uses is left out.
+        /// </summary>
+        public static List<string> Order(IEnumerable<string> groups, IReadOnlyList<string> order)
+        {
+            var rank = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            for (int i = 0; i < (order?.Count ?? 0); i++) if (!string.IsNullOrEmpty(order[i]) && !rank.ContainsKey(order[i])) rank[order[i]] = i;
+            return groups.Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(g => rank.TryGetValue(g, out int r) ? r : int.MaxValue)
+                .ThenBy(g => g, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        /// <summary>
+        /// Moves a group one place up (<paramref name="step"/> -1) or down (+1) among <see cref="Groups"/>, and keeps
+        /// that order for all of them. False when it is already first or last, or not in use.
+        /// </summary>
+        public bool MoveGroup(string group, int step)
+        {
+            lock (Gate)
+            {
+                var list = Order(GroupsIn(Read()), ReadOrder());
+                int i = list.FindIndex(g => string.Equals(g, group, StringComparison.OrdinalIgnoreCase));
+                int j = i + step;
+                if (i < 0 || j < 0 || j >= list.Count || step == 0) return false;
+                (list[i], list[j]) = (list[j], list[i]);
+                SafeFile.Replace(GroupOrderPath, JsonConvert.SerializeObject(list, Formatting.Indented));
+                return true;
+            }
         }
 
         /// <summary>Renames a group for every session in it; an empty new name ungroups them (deletes the group).</summary>
@@ -78,7 +116,27 @@ namespace ClaudeVS.Core.Chat
                         if (IsEmpty(kv.Value)) all.Remove(kv.Key);
                     }
                 Write(all);
+                // A renamed group keeps its place; a deleted one leaves the order
+                var order = ReadOrder();
+                int at = order.FindIndex(g => string.Equals(g, oldName, StringComparison.OrdinalIgnoreCase));
+                if (at < 0) return;
+                if (newName == null || order.Any(g => string.Equals(g, newName, StringComparison.OrdinalIgnoreCase))) order.RemoveAt(at);
+                else order[at] = newName;
+                SafeFile.Replace(GroupOrderPath, JsonConvert.SerializeObject(order, Formatting.Indented));
             }
+        }
+
+        private static IEnumerable<string> GroupsIn(Dictionary<string, SessionMeta> all) =>
+            all.Values.Select(m => m.Group).Where(g => !string.IsNullOrEmpty(g));
+
+        private List<string> ReadOrder()
+        {
+            try
+            {
+                if (!File.Exists(GroupOrderPath)) return new List<string>();
+                return JsonConvert.DeserializeObject<List<string>>(File.ReadAllText(GroupOrderPath))?.Where(g => !string.IsNullOrEmpty(g)).ToList() ?? new List<string>();
+            }
+            catch (JsonException) { return new List<string>(); } // a damaged file: by name, until the next move
         }
 
         /// <summary>

@@ -612,6 +612,40 @@ namespace ClaudeVS.Core.Tests
             finally { if (Directory.Exists(dir)) Directory.Delete(dir, true); }
         }
 
+        /// <summary>Groups in your order: Move up / Move down (Phase 86, as VS Code got in 2.1.330).</summary>
+        private static void Test_SessionMeta_GroupOrder()
+        {
+            string dir = Path.Combine(Path.GetTempPath(), "claudevs-order-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                var store = new SessionMetaStore(Path.Combine(dir, "sessions.json"));
+                store.SetGroup("a", "Work");
+                store.SetGroup("b", "Personal");
+                store.SetGroup("c", "Archive me");
+                Eq("Archive me|Personal|Work", string.Join("|", store.Groups()), "never moved: by name");
+                True(store.MoveGroup("work", -1), "case-insensitive");
+                Eq("Archive me|Work|Personal", string.Join("|", store.Groups()));
+                True(store.MoveGroup("Work", -1), "to the top");
+                True(!store.MoveGroup("Work", -1), "already first");
+                True(!store.MoveGroup("Personal", 1), "already last");
+                True(!store.MoveGroup("Nope", 1), "not in use");
+                Eq("Work|Archive me|Personal", string.Join("|", store.Groups()));
+                Eq("Work|Archive me|Personal", string.Join("|", new SessionMetaStore(Path.Combine(dir, "sessions.json")).Groups()), "kept");
+                store.SetGroup("d", "Bugs");
+                Eq("Work|Archive me|Personal|Bugs", string.Join("|", store.Groups()), "a new group after the ordered ones");
+                store.RenameGroup("Work", "Client");
+                Eq("Client|Archive me|Personal|Bugs", string.Join("|", store.Groups()), "a renamed group keeps its place");
+                store.RenameGroup("Archive me", null);
+                Eq("Client|Personal|Bugs", string.Join("|", store.Groups()), "a deleted one leaves");
+                store.RenameGroup("Client", "Personal");
+                Eq("Personal|Bugs", string.Join("|", store.Groups()), "merged into another: that one's place");
+                File.WriteAllText(store.GroupOrderPath, "{ broken");
+                Eq("Bugs|Personal", string.Join("|", store.Groups()), "a damaged order file: by name");
+                Eq("B|a|c", string.Join("|", SessionMetaStore.Order(new[] { "a", "B", "c", "A" }, new[] { "b", "gone" })), "Order: ranked first, then by name, once each");
+            }
+            finally { if (Directory.Exists(dir)) Directory.Delete(dir, true); }
+        }
+
         private static void Test_RunningSessions_Registry()
         {
             string dir = Path.Combine(Path.GetTempPath(), "claudevs-run-" + Guid.NewGuid().ToString("N"));

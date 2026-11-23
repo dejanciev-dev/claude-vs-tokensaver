@@ -2304,9 +2304,14 @@ Planned on 2026-11-23, after Phase 84, on the same branch (PR #95); in 0.16.0.
 
 Planned on 2026-11-23, after Phase 85, on the same branch (PR #95); in 0.16.0. More of what VS Code got in 2.1.330.
 
-- [ ] **Session groups in your order.** The sessions list sorts groups by name. A group's menu gets *Move up* and
+- [x] **Session groups in your order.** The sessions list sorts groups by name. A group's menu gets *Move up* and
       *Move down*, and the order is kept with the groups (`SessionMetaStore`); groups never moved keep sorting by
-      name after the ordered ones. Ungrouped first and *Archived* last, as now. Test in `Test_SessionMeta_*`
+      name after the ordered ones. Ungrouped first and *Archived* last, as now. Test in `Test_SessionMeta_*`. The
+      order is its own file, `session-groups.json` beside `sessions.json`, so that file keeps its shape for older
+      versions. `MoveGroup` swaps with the neighbour and saves the whole order; `Groups()` lists in it (`Order`:
+      ranked, then by name); a rename keeps the place, a delete or a merge into another group leaves it. The group
+      picker's rows get ↑/↓ beside the delete button and stay open after a move; the sessions list sorts by the same
+      rank. `Test_SessionMeta_GroupOrder`; a row in MANUAL-CHECKS 30. Builds clean; not yet run in VS
 - [ ] **Answered questions on resume.** A resumed conversation shows an AskUserQuestion as a plain tool row. Show the
       questions and the answer you gave (from the tool's result), as the card reads once answered. Test from a
       transcript with an answered question

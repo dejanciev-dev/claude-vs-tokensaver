@@ -1625,6 +1625,10 @@ namespace ClaudeVS.ToolWindow
                 .ToList();
             // Costliest first: sessions not read yet go last until they are (the list refreshes then).
             if (_sessionsByCost) visible = visible.OrderByDescending(s => SessionCost.Cached(s)?.CostUsd ?? -1).ToList();
+            // Your groups in your order (Move up / Move down in a session's group picker)
+            var groupRank = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            try { foreach (var g in SessionMeta.Groups()) groupRank[g] = groupRank.Count; }
+            catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException) { }
             var entries = visible.Select(s =>
             {
                 open.TryGetValue(s.Id, out var elsewhere);
@@ -1674,6 +1678,7 @@ namespace ClaudeVS.ToolWindow
                 };
             })
             .OrderBy(e => e.Group == "Archived" ? 2 : e.Group == null ? 0 : 1)
+            .ThenBy(e => e.Group != null && groupRank.TryGetValue(e.Group, out int rank) ? rank : int.MaxValue)
             .ThenBy(e => e.Group ?? "", StringComparer.OrdinalIgnoreCase)
             .ToList(); // OrderBy is stable: newest first within each group
 
@@ -1766,9 +1771,21 @@ namespace ClaudeVS.ToolWindow
             {
                 new ChatPopup.Entry { Label = "No group", Checked = string.IsNullOrEmpty(s.Group), Run = () => Done(() => SessionMeta.SetGroup(s.Id, null)) },
             };
-            foreach (var g in SessionMeta.Groups())
+            // In your order; ↑/↓ move a group and keep the picker open on the new order (as VS Code got in 2.1.330)
+            void Move(string group, int step)
             {
-                string group = g;
+                ThreadHelper.ThrowIfNotOnUIThread();
+                SaveSessionMeta(() => SessionMeta.MoveGroup(group, step));
+                ShowGroupPicker(s);
+            }
+            var groups = SessionMeta.Groups();
+            for (int gi = 0; gi < groups.Count; gi++)
+            {
+                string group = groups[gi];
+                var actions = new List<ChatPopup.EntryAction>();
+                if (gi > 0) actions.Add(new ChatPopup.EntryAction { Glyph = ChatTheme.IconUp, Tooltip = "Move up", Run = () => Move(group, -1) });
+                if (gi < groups.Count - 1) actions.Add(new ChatPopup.EntryAction { Glyph = ChatTheme.IconDown, Tooltip = "Move down", Run = () => Move(group, 1) });
+                actions.Add(new ChatPopup.EntryAction { Glyph = ChatTheme.IconDelete, Tooltip = "Delete group (its sessions stay, ungrouped)", Run = () => Done(() => SessionMeta.RenameGroup(group, null)) });
                 entries.Add(new ChatPopup.Entry
                 {
                     Group = "Groups",
@@ -1777,10 +1794,7 @@ namespace ClaudeVS.ToolWindow
                     Checked = string.Equals(group, s.Group, StringComparison.OrdinalIgnoreCase),
                     Run = () => Done(() => SessionMeta.SetGroup(s.Id, group)),
                     Rename = name => Done(() => SessionMeta.RenameGroup(group, name)),
-                    Actions = new List<ChatPopup.EntryAction>
-                    {
-                        new ChatPopup.EntryAction { Glyph = ChatTheme.IconDelete, Tooltip = "Delete group (its sessions stay, ungrouped)", Run = () => Done(() => SessionMeta.RenameGroup(group, null)) },
-                    },
+                    Actions = actions,
                 });
             }
             _manage.Footer = "Type a name to create a new group";
