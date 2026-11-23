@@ -378,7 +378,17 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | **Tools → Install Token-Saving Settings and Hooks** | The dialog says the rules and hook apply at once and the output cap after *Restart Claude Code* |
 | On Bedrock (`CLAUDE_CODE_USE_BEDROCK=1`; skip without an account), hover the cost under an answer | The tooltip ends with *Served by …, which bills you itself: these costs are Claude Code's estimate at list prices, not your bill.* |
 
-## 30. Release (Phase 5)
+## 30. Claude Code 2.1.330 (Phases 82–83)
+
+| Do | Expect |
+|---|---|
+| Behind a gateway whose model takes fewer output tokens (as in section 28), with Claude Code 2.1.330 or newer, send a prompt (skip without one) | The answer comes: Claude Code retries at the model's limit by itself, no link |
+| The same with 2.1.329 (`claude install 2.1.329`; skip without the gateway) | The explanation ends *Or update Claude Code (`claude update`): 2.1.330 and newer retry at that limit by themselves*; the link is there as in section 28 |
+| Ask *Use Grep, not the shell, for the pattern `foo\nbar` in the solution, without multiline* | The Grep row is an error (red), not *No matches* |
+| Point the temp folder at a nearly full drive (`TEMP`/`TMP` to a small, full USB stick or VHD; skip without one), start VS, send a prompt | The empty box says *The disk is full: free some space, then send it again · Tab puts your prompt back*; the explanation says where to free it; Tab puts the prompt back |
+| Sign in to an organization whose Enterprise Admin Console picks a cloud provider or gateway (skip without one), ask for long answers until one is cut off | No tip to raise the output limit; the cost tooltip says who served it |
+
+## 31. Release (Phase 5)
 
 These need you rather than a check list:
 
