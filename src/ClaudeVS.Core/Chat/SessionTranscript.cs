@@ -25,6 +25,8 @@ namespace ClaudeVS.Core.Chat
         /// <summary>Tool: the result's text (cut like the live one), for the ⎿ summary line.</summary>
         public string ResultText { get; set; }
         public bool IsError { get; set; }
+        /// <summary>Tool: the structured result (<c>toolUseResult</c>), kept for AskUserQuestion only: your answers.</summary>
+        public JObject ResultData { get; set; }
         /// <summary>User: the message id in the CLI session (what rewind_files takes).</summary>
         public string Uuid { get; set; }
         /// <summary>Compacted: context size before compaction, and "auto" or "manual".</summary>
@@ -127,6 +129,9 @@ namespace ClaudeVS.Core.Chat
                             tool.ResultChars = c == null ? 0 : c.Type == JTokenType.String ? ((string)c).Length : c.ToString(Formatting.None).Length;
                             tool.IsError = b.Value<bool?>("is_error") ?? false;
                             tool.ResultText = Cli.ClaudeStreamParser.ResultText(c);
+                            // An answered question: what you picked (toolUseResult, captured with 2.1.330). Only for it:
+                            // other tools' rows on resume stay as they were drawn from the text.
+                            if (tool.ToolName == Cli.AskUserQuestionTool.Name && o["toolUseResult"] is JObject answered) tool.ResultData = answered;
                         }
                         break;
                 }

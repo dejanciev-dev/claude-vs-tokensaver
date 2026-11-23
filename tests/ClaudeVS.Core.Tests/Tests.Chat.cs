@@ -411,6 +411,23 @@ namespace ClaudeVS.Core.Tests
             finally { if (Directory.Exists(dir)) Directory.Delete(dir, true); }
         }
 
+        /// <summary>An answered question in a resumed conversation shows the answer (Phase 86; captured with 2.1.330).</summary>
+        private static void Test_SessionTranscript_AnsweredQuestion()
+        {
+            var t = SessionTranscript.Read(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.330-question-answered.jsonl"));
+            var q = t.Items.Single(i => i.Kind == TranscriptItemKind.Tool);
+            Eq("AskUserQuestion", q.ToolName);
+            True(q.ResultData?["answers"] != null, "the answers kept");
+            var row = ToolCallView.Summarize(q.ToolName, q.ResultText, q.IsError, data: q.ResultData);
+            Eq("Fruits: Apple, Banana", row.Lines.Single(), "the header and what was picked, not the result's sentence");
+            // The live row: the stream's tool_use_result has the same shape
+            var two = JObject.Parse("{\"questions\":[{\"question\":\"Which color?\",\"header\":\"Color\",\"options\":[]},{\"question\":\"Which size?\",\"options\":[]}],\"answers\":{\"Which color?\":\"Red\"}}");
+            Eq("Color: Red|Which size?: (no answer)", string.Join("|", ToolCallView.Summarize("AskUserQuestion", "", false, data: two).Lines), "no header: the question; left out: said so");
+            Eq("Q: A", ToolCallView.Summarize("AskUserQuestion", "", false, data: JObject.Parse("{\"answers\":{\"Q\":\"A\"}}")).Lines.Single(), "answers without questions");
+            True(ToolCallView.Summarize("AskUserQuestion", "User declined", true, data: two).IsError, "a declined one stays an error");
+            True(new[] { "Read", "Bash" }.All(n => t.Items.Where(i => i.ToolName == n).All(i => i.ResultData == null)), "only questions keep data");
+        }
+
         private static void Test_SessionTranscript_Read()
         {
             string f = TempFile(
