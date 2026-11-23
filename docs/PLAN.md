@@ -2179,8 +2179,10 @@ Mantle and VS Code entries are left out.
       where `~/.claude` or the temp folder is; the empty box says "The disk is full: free some space, then send it
       again", Tab puts the prompt back. Not probed (filling a disk): the words are Node's. Test in
       `Test_ErrorHints_NextStep`
-- [ ] **Verify with 2.1.330 and raise `CliVersion.Tested`.** All live tests with 2.1.330; README and the Marketplace
-      overview say so
+- [x] **Verify with 2.1.330 and raise `CliVersion.Tested`.** All live tests with 2.1.330; README and the Marketplace
+      overview say so. `--live-all`: 17 of 17 pass ($0.21, 6.1 min); 242 offline tests pass; the Release
+      `/warnaserror` build is clean. `CliVersion.Tested` is 2.1.330 (`Required` stays 2.1.318); README, the
+      Marketplace overview and the changelog's Unreleased section say so
 
 Checked, nothing to change:
 - `--continue`/`--resume` failing on a saved message with a bad timestamp: fixed in Claude Code; the extension
