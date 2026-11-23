@@ -1096,8 +1096,36 @@ namespace ClaudeVS.ToolWindow
                 ? $"A reference sends only its path, and Claude reads what it needs. The amber ones would cost {ReferenceSize.LargeTokens / 1000}k+ tokens if read whole: say which part you mean."
                 : null;
             _attachment.Visibility = Visibility.Visible;
-            if (focus) _prompt.Focus();
+            if (focus && ChatWindowActive()) _prompt.Focus();
             UpdateRouteHint();
+        }
+
+        /// <summary>This chat's window frame, set when Visual Studio creates the window.</summary>
+        internal Microsoft.VisualStudio.Shell.Interop.IVsWindowFrame WindowFrame { get; set; }
+
+        /// <summary>
+        /// Whether this chat's window is still Visual Studio's active window, so focusing the input box won't take the
+        /// keyboard from an editor you went back to (as VS Code's 2.1.330 fix for a slow-starting Claude tab). An
+        /// editor command (attach a selection or a file) opens the chat and focuses its box once the window is there;
+        /// by then you may be typing in the editor again. True when it can't tell.
+        /// </summary>
+        private bool ChatWindowActive()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (IsKeyboardFocusWithin || WindowFrame == null) return true;
+            if (!(Package.GetGlobalService(typeof(Microsoft.VisualStudio.Shell.Interop.SVsShellMonitorSelection)) is Microsoft.VisualStudio.Shell.Interop.IVsMonitorSelection selection)) return true;
+            if (selection.GetCurrentElementValue((uint)Microsoft.VisualStudio.VSConstants.VSSELELEMID.SEID_WindowFrame, out object active) != Microsoft.VisualStudio.VSConstants.S_OK || active == null) return true;
+            if (ReferenceEquals(active, WindowFrame)) return true;
+            // The same tool window seen through another wrapper: its kind and instance number
+            if (!(active is Microsoft.VisualStudio.Shell.Interop.IVsWindowFrame other)) return false;
+            int slot = (int)Microsoft.VisualStudio.Shell.Interop.__VSFPROPID.VSFPROPID_GuidPersistenceSlot;
+            int num = (int)Microsoft.VisualStudio.Shell.Interop.__VSFPROPID.VSFPROPID_MultiInstanceToolNum;
+            return other.GetGuidProperty(slot, out Guid otherSlot) == Microsoft.VisualStudio.VSConstants.S_OK
+                && WindowFrame.GetGuidProperty(slot, out Guid ourSlot) == Microsoft.VisualStudio.VSConstants.S_OK
+                && otherSlot == ourSlot
+                && other.GetProperty(num, out object otherNum) == Microsoft.VisualStudio.VSConstants.S_OK
+                && WindowFrame.GetProperty(num, out object ourNum) == Microsoft.VisualStudio.VSConstants.S_OK
+                && Equals(otherNum, ourNum);
         }
 
         // ---------------- Sending ----------------

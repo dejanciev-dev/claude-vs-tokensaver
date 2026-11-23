@@ -22,6 +22,7 @@ namespace ClaudeVS.ToolWindow
         {
             base.OnToolWindowCreated();
             ThreadHelper.ThrowIfNotOnUIThread();
+            if (Content is ClaudeChatControl owner) owner.WindowFrame = Frame as IVsWindowFrame; // to tell whether it is the active window
             if (Frame is IVsWindowFrame frame &&
                 frame.GetProperty((int)__VSFPROPID.VSFPROPID_MultiInstanceToolNum, out object value) == VSConstants.S_OK &&
                 value is int id && Content is ClaudeChatControl chat)
