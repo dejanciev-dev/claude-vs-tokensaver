@@ -234,6 +234,11 @@ namespace ClaudeVS.Core.Tests
                 Of(kind: "invalid_request", status: 400, text: refused).Display());
             True(ClaudeErrorHints.Explain(refused)?.Contains("CLAUDE_CODE_MAX_OUTPUT_TOKENS=64000") == true, "the error's explanation too");
             True(ClaudeErrorHints.Explain(refused)?.Contains("2.1.330 and newer retry at that limit") == true, "updating is a way out too (2.1.330 reverted 2.1.329)");
+            // 2.1.330: claude -p says so when the disk is full (Node's ENOSPC), instead of exiting 0 with nothing
+            const string full = "Error: ENOSPC: no space left on device, write";
+            Eq("The disk is full: free some space, then send it again · Tab puts your prompt back", Of(text: full).Display());
+            True(ClaudeErrorHints.Explain(full)?.StartsWith("The disk is full") == true, "explained");
+            True(ClaudeErrorHints.Explain("There is not enough space on the disk.")?.StartsWith("The disk is full") == true, "Windows' own words");
             // Managed settings rank above the project's files: no link, ask whoever manages Claude Code (Phase 75)
             var managedLimit = JObject.Parse(@"{""sources"":[{""source"":""localSettings"",""settings"":{""env"":{""CLAUDE_CODE_MAX_OUTPUT_TOKENS"":""64000""}}},{""source"":""policySettings"",""settings"":{""env"":{""CLAUDE_CODE_MAX_OUTPUT_TOKENS"":""128000""}}}]}");
             Eq("The model takes at most 64,000 output tokens, and managed settings set CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000: ask whoever manages Claude Code here to set it to 64000",
