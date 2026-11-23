@@ -217,7 +217,7 @@ namespace ClaudeVS.ToolWindow
             ThreadHelper.ThrowIfNotOnUIThread();
             string said;
             try { said = Core.Setup.TokenSaverSetup.AddDenyRule(root, rule) ? $"Added {rule} to .claude/settings.json. It applies at once: Claude Code reads its permission rules again while it runs." : $"{rule} is already in .claude/settings.json."; }
-            catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException || ex is Newtonsoft.Json.JsonException) { said = "Could not add the rule: " + ex.Message; }
+            catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException || ex is Newtonsoft.Json.JsonException) { said = "Could not add the rule: " + Core.SafeFile.Explain(ex, root); }
             Append("\n" + said + "\n");
         }
 

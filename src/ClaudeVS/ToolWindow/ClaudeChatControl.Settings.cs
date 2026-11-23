@@ -152,7 +152,7 @@ namespace ClaudeVS.ToolWindow
                 catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException || ex is Newtonsoft.Json.JsonException)
                 {
                     await Jtf.SwitchToMainThreadAsync();
-                    Append("\nCould not reinstall the token-saving setup: " + ex.Message + "\n");
+                    Append("\nCould not reinstall the token-saving setup: " + Core.SafeFile.Explain(ex, root) + "\n");
                     return;
                 }
                 await Jtf.SwitchToMainThreadAsync();

@@ -134,7 +134,7 @@ namespace ClaudeVS.ToolWindow
                 }
                 VsContext.OpenFile(e.Path);
             }
-            catch (Exception ex) { AppendError("[memory] ", ex.Message); }
+            catch (Exception ex) { AppendError("[memory] ", Core.SafeFile.Explain(ex, e.Path)); }
         }
 
         private void ShowOutputStyles() => ShowCliDialog("output styles", s => s.GetOutputStylesAsync(),
@@ -241,7 +241,7 @@ namespace ClaudeVS.ToolWindow
                 }
                 VsContext.OpenFile(path);
             }
-            catch (Exception ex) { AppendError("[settings] ", ex.Message); }
+            catch (Exception ex) { AppendError("[settings] ", Core.SafeFile.Explain(ex, path)); }
         };
 
         private void CopyText(string text, string what)

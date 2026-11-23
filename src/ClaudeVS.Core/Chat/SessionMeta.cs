@@ -143,11 +143,7 @@ namespace ClaudeVS.Core.Chat
 
         private void Write(Dictionary<string, SessionMeta> all)
         {
-            Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Path));
-            string tmp = Path + ".tmp";
-            File.WriteAllText(tmp, JsonConvert.SerializeObject(all, Formatting.Indented, new JsonSerializerSettings { DefaultValueHandling = DefaultValueHandling.Ignore }));
-            if (File.Exists(Path)) File.Replace(tmp, Path, null);
-            else File.Move(tmp, Path);
+            SafeFile.Replace(Path, JsonConvert.SerializeObject(all, Formatting.Indented, new JsonSerializerSettings { DefaultValueHandling = DefaultValueHandling.Ignore }));
         }
     }
 }

@@ -425,10 +425,10 @@ namespace ClaudeVS.ToolWindow
                     {
                         var transcript = SessionTranscript.Read(source, maxItems: int.MaxValue);
                         items = transcript.Items.Count;
-                        System.IO.File.WriteAllText(target, ConversationExport.ToMarkdown(transcript, title, DateTime.Now), new UTF8Encoding(false));
+                        Core.SafeFile.Replace(target, ConversationExport.ToMarkdown(transcript, title, DateTime.Now));
                     });
                 }
-                catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException) { error = ex.Message; }
+                catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException) { error = Core.SafeFile.Explain(ex, target); }
                 await Jtf.SwitchToMainThreadAsync();
                 if (error != null) { AppendError("[export] ", error); return; }
                 Append($"Exported {items} items to {target}");
@@ -698,14 +698,14 @@ namespace ClaudeVS.ToolWindow
         private static void SaveModelUsage(string sessionId, Dictionary<string, ModelUsageEntry> modelUsage)
         {
             try { ModelReadings.Save(sessionId, modelUsage); }
-            catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException) { ClaudeOutputPane.WriteLine("model-usage.json: " + ex.Message); }
+            catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException) { ClaudeOutputPane.WriteLine("model-usage.json: " + Core.SafeFile.Explain(ex, ModelReadings.Path)); }
         }
 
         private void SaveSessionMeta(Action save)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             try { save(); }
-            catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException) { AppendError("[sessions] ", ex.Message); }
+            catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException) { AppendError("[sessions] ", Core.SafeFile.Explain(ex, SessionMeta.Path)); }
         }
 
         // ---------------- Menus: + , / , model, mode, sessions ----------------
@@ -1600,7 +1600,7 @@ namespace ClaudeVS.ToolWindow
             var now = DateTime.UtcNow;
             List<SessionInfo> all;
             try { all = SessionMeta.Apply(SessionHistory.List(SessionHistory.DefaultProjectsRoot, dir, max: 80), Options?.AutoArchiveDays ?? 14, now); }
-            catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException) { AppendError("[sessions] ", ex.Message); return; }
+            catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException) { AppendError("[sessions] ", Core.SafeFile.Explain(ex, SessionMeta.Path)); return; }
             string currentId = _session?.SessionId ?? _resumeId;
             // Sessions open in another process right now (a terminal, VS Code, another chat window here…), from the CLI's registry.
             int? ownPid = _session?.ProcessId;
@@ -2369,7 +2369,7 @@ namespace ClaudeVS.ToolWindow
                             }
                             VsContext.OpenFile(docPath);
                         }
-                        catch (Exception ex) { AppendError("[plan] ", ex.Message); }
+                        catch (Exception ex) { AppendError("[plan] ", Core.SafeFile.Explain(ex, docPath)); }
                     });
                 return true;
             }
@@ -2836,7 +2836,7 @@ namespace ClaudeVS.ToolWindow
                 }
                 catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException)
                 {
-                    AppendError("[bookmarks] ", ex.Message);
+                    AppendError("[bookmarks] ", Core.SafeFile.Explain(ex, Bookmarks.Path));
                     return id != null;
                 }
             };
@@ -2876,7 +2876,7 @@ namespace ClaudeVS.ToolWindow
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             try { Bookmarks.Remove(id); }
-            catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException) { AppendError("[bookmarks] ", ex.Message); return; }
+            catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException) { AppendError("[bookmarks] ", Core.SafeFile.Explain(ex, Bookmarks.Path)); return; }
             _bookmarkAnchors.Remove(id);
             RefreshBookmarksPanel();
         }

@@ -121,15 +121,8 @@ namespace ClaudeVS.Core.Chat
             catch (JsonException) { return new List<Bookmark>(); } // a damaged file is not worth an error; the next save replaces it
         }
 
-        // Write to a temp file first so a crash mid-write can't leave half a file.
-        private void Write(List<Bookmark> all)
-        {
-            Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Path));
-            string tmp = Path + ".tmp";
-            File.WriteAllText(tmp, JsonConvert.SerializeObject(all, Formatting.Indented));
-            if (File.Exists(Path)) File.Replace(tmp, Path, null);
-            else File.Move(tmp, Path);
-        }
+        // Through a temp file, so a crash or a full disk mid-write can't leave half a file.
+        private void Write(List<Bookmark> all) => SafeFile.Replace(Path, JsonConvert.SerializeObject(all, Formatting.Indented));
 
         private static string Normalize(string dir) => (dir ?? "").TrimEnd('\\', '/');
     }

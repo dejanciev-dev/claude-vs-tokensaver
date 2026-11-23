@@ -78,7 +78,7 @@ namespace ClaudeVS.Core.Setup
             var deny = GetOrAdd<JArray>(GetOrAdd<JObject>(settings, "permissions"), "deny");
             if (deny.Any(t => string.Equals((string)t, rule, StringComparison.OrdinalIgnoreCase))) return false;
             deny.Add(rule);
-            File.WriteAllText(settingsPath, settings.ToString(Formatting.Indented) + Environment.NewLine, new UTF8Encoding(false));
+            SafeFile.Replace(settingsPath, settings.ToString(Formatting.Indented) + Environment.NewLine, new UTF8Encoding(false));
             return true;
         }
 
@@ -96,7 +96,7 @@ namespace ClaudeVS.Core.Setup
             var env = GetOrAdd<JObject>(settings, "env");
             if (env[name]?.Type == JTokenType.String && (string)env[name] == value) return false;
             env[name] = value;
-            File.WriteAllText(settingsPath, settings.ToString(Formatting.Indented) + Environment.NewLine, new UTF8Encoding(false));
+            SafeFile.Replace(settingsPath, settings.ToString(Formatting.Indented) + Environment.NewLine, new UTF8Encoding(false));
             return true;
         }
 
@@ -111,7 +111,7 @@ namespace ClaudeVS.Core.Setup
             string script = HookScript(autoApproveRewrites);
             if (!File.Exists(hookPath) || File.ReadAllText(hookPath) != script)
             {
-                File.WriteAllText(hookPath, script, new UTF8Encoding(true)); // BOM: Windows PowerShell 5.1 needs it for non-ASCII
+                SafeFile.Replace(hookPath, script, new UTF8Encoding(true)); // BOM: Windows PowerShell 5.1 needs it for non-ASCII
                 result.Written.Add(".claude/hooks/" + HookFileName);
             }
             else result.Skipped.Add(".claude/hooks/" + HookFileName + " (up to date)");
@@ -123,7 +123,7 @@ namespace ClaudeVS.Core.Setup
             string after = settings.ToString(Formatting.Indented);
             if (before != after)
             {
-                File.WriteAllText(settingsPath, after + Environment.NewLine, new UTF8Encoding(false));
+                SafeFile.Replace(settingsPath, after + Environment.NewLine, new UTF8Encoding(false));
                 result.Written.Add(".claude/settings.json");
             }
             else result.Skipped.Add(".claude/settings.json (up to date)");

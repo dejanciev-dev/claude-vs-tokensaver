@@ -2214,11 +2214,16 @@ fails quietly or as a raw exception. Grep's rejected pattern shows as an error, 
       the output-limit explanation's `claude update` line, Grep's rejected pattern as an error row, no cut-off tip for
       a turn served by another provider. Section 30, *Claude Code 2.1.330 (Phases 82–83)*, five rows (the full disk
       through `TEMP` on a small full drive); *Release* is now 31
-- [ ] **A full disk in the extension's own writes.** Where the extension writes a file the user asked for (an export,
+- [x] **A full disk in the extension's own writes.** Where the extension writes a file the user asked for (an export,
       the savings report, a plan, setup's settings and hook) and it fails with a full disk, say "The disk is full: free
       some space on <drive>, then try again" instead of the raw exception; its own background files (bookmarks, session
       titles, readings, estimates) skip the write and leave the old file whole. One test for the words, one that a
-      failed background write keeps the old file
+      failed background write keeps the old file. `SafeFile.Replace` writes through `path.tmp` (removed when the write
+      fails, giving the space back), now used by the four background stores, setup's settings and hook, the
+      conversation export, the savings report and the lean `CLAUDE.md` draft, which overwrote in place before.
+      `SafeFile.Explain` (Windows' `ERROR_DISK_FULL`/`ERROR_HANDLE_DISK_FULL` or the words, Node's too, so
+      `ClaudeErrorHints` shares it) at every place that showed the exception's message. `Test_SafeFile`. A row in
+      MANUAL-CHECKS 30. Builds clean; not yet run in VS
 - [ ] **Grep's rejected pattern: the next step.** The ⎿ line says why in one line and what fixes it: "ripgrep refused
       the pattern: a line break needs multiline: true", from the captured error, instead of three lines of ripgrep's
       text. Other rejections (a bad glob, an unknown file type) keep ripgrep's first line. Test from the capture

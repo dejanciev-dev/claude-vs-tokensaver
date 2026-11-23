@@ -626,6 +626,47 @@ namespace ClaudeVS.Core.Tests
             finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
         }
 
+        /// <summary>The extension's own writes on a full disk: plain words, and the old file kept whole (Phase 83).</summary>
+        private static void Test_SafeFile()
+        {
+            var full = new IOException("Something odd.", unchecked((int)0x80070070)); // ERROR_DISK_FULL, any wording
+            True(SafeFile.IsDiskFull(full), "Windows' error code");
+            True(SafeFile.IsDiskFull(new IOException("x", unchecked((int)0x80070027))), "ERROR_HANDLE_DISK_FULL");
+            True(SafeFile.IsDiskFull(new IOException("There is not enough space on the disk.")), "Windows' words");
+            True(SafeFile.IsDiskFull(new InvalidOperationException("save failed", new IOException("ENOSPC: no space left on device, write"))), "inside another error");
+            True(!SafeFile.IsDiskFull(new IOException("The process cannot access the file because it is being used by another process.", unchecked((int)0x80070020))), "a locked file isn't a full disk");
+            Eq("The disk is full: free some space on D:, then try again.", SafeFile.Explain(full, @"D:\work\report.md"));
+            Eq("The disk is full: free some space, then try again.", SafeFile.Explain(full, null), "no path: no drive");
+            Eq("Access denied.", SafeFile.Explain(new UnauthorizedAccessException("Access denied."), @"D:\x"), "anything else: its own message");
+
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-safe-" + Guid.NewGuid().ToString("N"));
+            string file = Path.Combine(dir, "sub", "a.json");
+            try
+            {
+                SafeFile.Replace(file, "one");
+                Eq("one", File.ReadAllText(file), "the folder made, the file written");
+                SafeFile.Replace(file, "two");
+                Eq("two", File.ReadAllText(file), "replaced");
+                True(!File.Exists(file + ".tmp"), "no temp file left");
+                // A write that fails (here the temp path is a folder) keeps the old file whole
+                Directory.CreateDirectory(file + ".tmp");
+                bool threw = false;
+                try { SafeFile.Replace(file, "three"); } catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { threw = true; }
+                True(threw, "the failure reaches the caller");
+                Eq("two", File.ReadAllText(file), "the old file as it was");
+                // The same for a background file: a session's name
+                string metaPath = Path.Combine(dir, "meta.json");
+                var meta = new SessionMetaStore(metaPath);
+                meta.SetName("s1", "Before");
+                Directory.CreateDirectory(metaPath + ".tmp");
+                threw = false;
+                try { meta.SetName("s1", "After"); } catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { threw = true; }
+                True(threw, "SetName fails");
+                Eq("Before", new SessionMetaStore(metaPath).Get("s1")?.Name, "the names kept");
+            }
+            finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
+        }
+
         /// <summary>The setup check's fixes: which settings files to open, and whether reinstalling helps.</summary>
         private static void Test_SetupCheck_Fixes()
         {
