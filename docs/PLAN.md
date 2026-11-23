@@ -2210,9 +2210,10 @@ Planned on 2026-11-23, after Phase 82, on the same branch (PR #95). Phase 82 say
 full disk; the extension writes files too (bookmarks, session titles, readings, exports, setup), and a full disk there
 fails quietly or as a raw exception. Grep's rejected pattern shows as an error, but not what fixes it.
 
-- [ ] **Manual checks for Phase 82.** A section in MANUAL-CHECKS for what only VS shows: the full-disk hint with Tab,
+- [x] **Manual checks for Phase 82.** A section in MANUAL-CHECKS for what only VS shows: the full-disk hint with Tab,
       the output-limit explanation's `claude update` line, Grep's rejected pattern as an error row, no cut-off tip for
-      a turn served by another provider
+      a turn served by another provider. Section 30, *Claude Code 2.1.330 (Phases 82–83)*, five rows (the full disk
+      through `TEMP` on a small full drive); *Release* is now 31
 - [ ] **A full disk in the extension's own writes.** Where the extension writes a file the user asked for (an export,
       the savings report, a plan, setup's settings and hook) and it fails with a full disk, say "The disk is full: free
       some space on <drive>, then try again" instead of the raw exception; its own background files (bookmarks, session
