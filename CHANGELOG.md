@@ -30,6 +30,12 @@ The full list follows.
 - **A Grep pattern ripgrep refuses** (2.1.330 reports it) shows as one error line that says what fixes it, such as
   "ripgrep refused the pattern: a line break needs multiline: true", instead of three lines of ripgrep's text.
 
+### Added
+
+- **Question cards by keyboard:** ↑ and ↓ move between a question's options (picking one, for a single choice), Enter
+  picks the focused option and goes to the next question, and after the last one sends the answers; Enter in the
+  *Other* box does the same with what you typed (as Claude Code 2.1.330 fixed in VS Code).
+
 ### Fixed
 
 - **A full disk** now says to free some space, instead of "The request failed" (2.1.330 reports it).

@@ -994,6 +994,15 @@ namespace ClaudeVS.ToolWindow
             panel.Children.Add(new TextBlock { Text = "❓ Claude has a question", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 4), Foreground = ChatTheme.Accents(Box).Brand });
             var readers = new List<Func<KeyValuePair<string, IReadOnlyList<string>>>>();
             string group = "q" + Guid.NewGuid().ToString("N");
+            // By keyboard (as VS Code's 2.1.330 fix): ↑/↓ move between a question's options (and pick one, for a
+            // single choice), Enter picks the focused one and goes to the next question, or answers after the last.
+            var firstChoices = new List<UIElement>();
+            Action answer = null;
+            void Next(int question)
+            {
+                if (question + 1 < firstChoices.Count) firstChoices[question + 1].Focus();
+                else answer?.Invoke();
+            }
 
             for (int qi = 0; qi < questions.Count; qi++)
             {
@@ -1042,6 +1051,41 @@ namespace ClaudeVS.ToolWindow
                 var otherText = new TextBox { MinWidth = 160, Margin = new Thickness(4, 0, 0, 0) };
                 var other = MakeChoice(q.MultiSelect, group + qi, new TextBlock { Text = "Other:", VerticalAlignment = VerticalAlignment.Center });
                 otherText.GotKeyboardFocus += (s, e) => other.IsChecked = true;
+                int qIndex = qi;
+                bool multi = q.MultiSelect;
+                // This question's stops for ↑/↓: its options, then the Other box (typing there picks Other)
+                var stops = choices.Select(c => (UIElement)c.Box).Concat(new UIElement[] { otherText }).ToList();
+                firstChoices.Add(stops[0]);
+                void Move(UIElement from, int step)
+                {
+                    int to = stops.IndexOf(from) + step;
+                    if (to < 0 || to >= stops.Count) return;
+                    stops[to].Focus();
+                    if (!multi && stops[to] is ToggleButton b) b.IsChecked = true;
+                }
+                foreach (var stop in stops)
+                    stop.PreviewKeyDown += (s, e) =>
+                    {
+                        var el = (UIElement)s;
+                        if (e.Key == System.Windows.Input.Key.Up || e.Key == System.Windows.Input.Key.Down)
+                        {
+                            e.Handled = true;
+                            Move(el, e.Key == System.Windows.Input.Key.Up ? -1 : 1);
+                        }
+                        else if (e.Key == System.Windows.Input.Key.Enter && !e.IsRepeat)
+                        {
+                            e.Handled = true;
+                            if (el is ToggleButton b) b.IsChecked = true; // picks, never un-picks (Space toggles)
+                            Next(qIndex);
+                        }
+                    };
+                other.PreviewKeyDown += (s, e) =>
+                {
+                    if (e.Key != System.Windows.Input.Key.Enter && e.Key != System.Windows.Input.Key.Up && e.Key != System.Windows.Input.Key.Down) return;
+                    e.Handled = true;
+                    if (e.Key == System.Windows.Input.Key.Up && stops.Count > 1) Move(otherText, -1);
+                    else otherText.Focus(); // the answer is what you type
+                };
                 var otherRow = new StackPanel { Orientation = Orientation.Horizontal };
                 otherRow.Children.Add(other);
                 otherRow.Children.Add(otherText);
@@ -1060,13 +1104,15 @@ namespace ClaudeVS.ToolWindow
             var submit = SmallButton("Answer", "Send your answer to Claude");
             submit.HorizontalAlignment = HorizontalAlignment.Left;
             submit.Margin = new Thickness(0, 8, 0, 0);
-            submit.Click += (s, e) =>
+            answer = () =>
             {
+                if (!panel.IsEnabled) return; // answered once
                 var answers = readers.Select(r => r()).ToDictionary(kv => kv.Key, kv => kv.Value);
                 panel.IsEnabled = false;
                 submit.Content = "Answered";
                 onSubmit(answers);
             };
+            submit.Click += (s, e) => answer();
             panel.Children.Add(submit);
             AddCard(panel);
         }
