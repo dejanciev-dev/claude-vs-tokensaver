@@ -6,7 +6,19 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
-Tested with Claude Code 2.1.330.
+## [0.16.0] - 2026-11-23
+
+Still a **preview**, for Claude Code 2.1.318 or newer (tested with 2.1.330). This release keeps up with Claude Code
+2.1.330 and says what to do when a disk fills up.
+
+### Highlights
+
+- **Claude Code 2.1.330:** the output-limit refusal says that updating Claude Code fixes it; a cloud provider or
+  gateway your organization picks counts as one; a Grep pattern ripgrep refuses says what fixes it.
+- **A full disk:** a failed turn, or a file the extension saves, says to free some space (and on which drive), instead
+  of a raw error. A file that was there is never left half written.
+
+The full list follows.
 
 ### Changed
 
