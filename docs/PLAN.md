@@ -2147,6 +2147,48 @@ request. Phase 77's notice watches only the `CLAUDE.md` files themselves, so an 
 - [x] **Manual check and 0.15.0 notes.** A row in section 29; the changelog's 0.15.0 entry for the notice names imports.
       Section 29 is now *Phases 76–81*
 
+## Phase 82 — Keep up with the CLI (from the Claude Code CHANGELOG 2.1.330)
+
+Checked on 2026-11-23 with 2.1.330 installed. The 2.1.330 section read for what the extension sends or reads; Code
+Mode, self-hosted runner, terminal, `/mcp`, `/plugin`, cloud, Remote Control, easel (macOS and Linux only), Bedrock
+Mantle and VS Code entries are left out.
+
+- [ ] **The output-limit retry is back.** 2.1.330 reverts 2.1.329's removal of the automatic retry when `max_tokens`
+      is over a model's or gateway's limit, so the refusal Phases 72 and 73 handle fails a turn only with 2.1.329.
+      Keep the hint and the link (2.1.329 is still in range) and say in them and the code which version fails
+- [ ] **Grep's rejected pattern.** 2.1.330 reports ripgrep's refusal of a pattern with a line break (no multiline)
+      instead of "No matches". Probed with 2.1.330 ($0.003): an `is_error` result, "Search failed — ripgrep rejected
+      the pattern, glob, or file type without searching: …", `tool_use_result` a string. The tool row should show it
+      as an error, not "No matches"; a test from the capture
+- [ ] **A provider the organization picks.** 2.1.330 signs in to organizations managed in the Enterprise Admin
+      Console: after `claude auth login` Claude Code uses the organization's cloud provider or gateway, which may set
+      no variable the extension reads. Count a turn whose `modelUsage.provider` isn't "firstParty" as behind a
+      gateway too, so the cut-off tip doesn't say to raise the output limit. Not probed (no such organization)
+- [ ] **A full disk.** 2.1.330's `claude -p` prints an error and exits 1 when its output can't be written to a full
+      disk, instead of exiting 0 with nothing. Say what to do when an error names `ENOSPC` or "no space left on device"
+- [ ] **Verify with 2.1.330 and raise `CliVersion.Tested`.** All live tests with 2.1.330; README and the Marketplace
+      overview say so
+
+Checked, nothing to change:
+- `--continue`/`--resume` failing on a saved message with a bad timestamp: fixed in Claude Code; the extension
+  resumes by session ID and reads `timestamp` as optional already
+- Text added when approving a permission prompt dropped when the tool then failed: the extension's approvals send no
+  text with them
+- The system prompt keeping the earlier model after `/context` and a model change before the first message: fixed in
+  Claude Code; the extension's `get_context_usage` and `set_model` send nothing that needs to change
+- User settings lost when several processes save them at once: the extension writes only the solution's
+  `.claude/settings.local.json`, not the user's settings
+- Unrecognized model names containing "sonnet" or "haiku" getting the shorter system prompt: a custom model ID behind
+  a gateway costs a little less per request; the meter reads the real counts, so nothing to estimate
+- A subagent's model fallback carrying over, and skills with a model leaving subagents on the session's model: the
+  Agents panel names each agent's model from what Claude Code reports
+- Link reference definitions dropped from a `CLAUDE.md` with an HTML comment: the edit notice counts the file's size,
+  not what Claude Code keeps of it
+- `CLAUDE_CODE_FULL_SIGN_IN_LINK`, the shorter sign-in link: *Sign in* opens a console running `claude auth login`,
+  which shows the link itself
+- `/loop` and scheduled tasks running up to 30 days, prompt hooks taking model aliases, `rm` at the root asking:
+  nothing the extension sends or shows
+
 ---
 
 ## Working in Visual Studio — daily loop
