@@ -73,7 +73,9 @@ namespace ClaudeVS.Core.Context
                 string rel = Relative(solutionDir, selection.FilePath);
                 string lines = selection.EndLine > selection.StartLine ? $"L{selection.StartLine}-{selection.EndLine}" : $"L{selection.StartLine}";
                 string text = selection.Text ?? "";
-                int lineCount = text.Length == 0 ? 0 : text.Split('\n').Length;
+                // A whole-line selection ends with a line break (lines 3-5 selected to column 1 of line 6): count
+                // without it, or Claude is told one line more than the range says (as VS Code's fix in 2.1.330).
+                int lineCount = text.Length == 0 ? 0 : text.TrimEnd('\r', '\n').Split('\n').Length;
 
                 if (lineCount > 0 && lineCount <= _s.InlineMaxLines && text.Length <= _s.InlineMaxChars)
                 {

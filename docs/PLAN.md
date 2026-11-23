@@ -2247,11 +2247,12 @@ Planned on 2026-11-23, after Phase 83, on the same branch (PR #95); in 0.16.0. T
       repeated Enter (`KeyEventArgs.IsRepeat`) neither sends nor picks. First in the box's
       `PreviewKeyDown`, so the `/` list, the file list and sending all see one Enter; Shift+Enter still repeats.
       Two rows in MANUAL-CHECKS 30. Builds clean; not yet run in VS
-- [ ] **A whole-line selection counts its lines right.** `VsContext.GetSelection` gives `L3-5` for lines 3–5 selected
+- [x] **A whole-line selection counts its lines right.** `VsContext.GetSelection` gives `L3-5` for lines 3–5 selected
       to column 1 of line 6, but `PromptContextBuilder` counts the text's line breaks, 4 with the final one: Claude is
       told "(4 lines, not inlined …)" and the inline limit is one line short. As VS Code's "whole-line selections
       counting one line too many … in what Claude is told". Count without the final line break. Test in
-      `Test_Context_*`
+      `Test_Context_*`. The text's final line breaks are left out of the count; the selection chip already counted
+      from the range. `Test_Context_WholeLineSelectionCount`
 
 Checked, nothing to change (added to Phase 82's list):
 - A subagent's own subagents and forks on the plan-mode model under `opusplan` or `haiku`: with Phase 67's Haiku in
