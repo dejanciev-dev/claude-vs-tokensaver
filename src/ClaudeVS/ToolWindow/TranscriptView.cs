@@ -1000,7 +1000,7 @@ namespace ClaudeVS.ToolWindow
             Action answer = null;
             void Next(int question)
             {
-                if (question + 1 < firstChoices.Count) firstChoices[question + 1].Focus();
+                if (Core.Cli.QuestionCardKeys.NextQuestion(question, questions.Count) is int next) firstChoices[next].Focus();
                 else answer?.Invoke();
             }
 
@@ -1056,35 +1056,34 @@ namespace ClaudeVS.ToolWindow
                 // This question's stops for ↑/↓: its options, then the Other box (typing there picks Other)
                 var stops = choices.Select(c => (UIElement)c.Box).Concat(new UIElement[] { otherText }).ToList();
                 firstChoices.Add(stops[0]);
-                void Move(UIElement from, int step)
+                // What each key does is QuestionCardKeys' (tested in Core); here it is only carried out
+                void Apply(Core.Cli.CardStep step, UIElement here)
                 {
-                    int to = stops.IndexOf(from) + step;
-                    if (to < 0 || to >= stops.Count) return;
-                    stops[to].Focus();
-                    if (!multi && stops[to] is ToggleButton b) b.IsChecked = true;
+                    if (step.PickHere && here is ToggleButton picked) picked.IsChecked = true;
+                    if (step.Focus is int to)
+                    {
+                        stops[to].Focus();
+                        if (step.PickFocused && stops[to] is ToggleButton b) b.IsChecked = true;
+                    }
+                    if (step.Next) Next(qIndex);
                 }
+                Core.Cli.CardKey? CardKeyOf(System.Windows.Input.KeyEventArgs e) =>
+                    e.Key == System.Windows.Input.Key.Up ? Core.Cli.CardKey.Up
+                    : e.Key == System.Windows.Input.Key.Down ? Core.Cli.CardKey.Down
+                    : e.Key == System.Windows.Input.Key.Enter && !e.IsRepeat ? Core.Cli.CardKey.Enter
+                    : (Core.Cli.CardKey?)null;
                 foreach (var stop in stops)
                     stop.PreviewKeyDown += (s, e) =>
                     {
-                        var el = (UIElement)s;
-                        if (e.Key == System.Windows.Input.Key.Up || e.Key == System.Windows.Input.Key.Down)
-                        {
-                            e.Handled = true;
-                            Move(el, e.Key == System.Windows.Input.Key.Up ? -1 : 1);
-                        }
-                        else if (e.Key == System.Windows.Input.Key.Enter && !e.IsRepeat)
-                        {
-                            e.Handled = true;
-                            if (el is ToggleButton b) b.IsChecked = true; // picks, never un-picks (Space toggles)
-                            Next(qIndex);
-                        }
+                        if (!(CardKeyOf(e) is Core.Cli.CardKey key)) return;
+                        e.Handled = true;
+                        Apply(Core.Cli.QuestionCardKeys.OnStop(key, stops.IndexOf((UIElement)s), stops.Count, multi), (UIElement)s);
                     };
                 other.PreviewKeyDown += (s, e) =>
                 {
-                    if (e.Key != System.Windows.Input.Key.Enter && e.Key != System.Windows.Input.Key.Up && e.Key != System.Windows.Input.Key.Down) return;
+                    if (!(CardKeyOf(e) is Core.Cli.CardKey key)) return;
                     e.Handled = true;
-                    if (e.Key == System.Windows.Input.Key.Up && stops.Count > 1) Move(otherText, -1);
-                    else otherText.Focus(); // the answer is what you type
+                    Apply(Core.Cli.QuestionCardKeys.OnOtherCheckBox(key, stops.Count, multi), other);
                 };
                 var otherRow = new StackPanel { Orientation = Orientation.Horizontal };
                 otherRow.Children.Add(other);

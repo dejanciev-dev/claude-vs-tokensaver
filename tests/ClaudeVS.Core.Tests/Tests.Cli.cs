@@ -795,6 +795,34 @@ namespace ClaudeVS.Core.Tests
             Eq(0, new ClaudeStreamParser().Parse("{\"type\":\"tool_progress\",\"tool_use_id\":\"t1\",\"tool_name\":\"Bash\",\"elapsed_time_seconds\":5}").Count, "other tool progress is ignored");
         }
 
+        /// <summary>The question card's keys (Phase 85's rules, in Core since Phase 86).</summary>
+        private static void Test_QuestionCardKeys()
+        {
+            // Three options and the Other box: stops 0, 1, 2 and 3 (the Other box)
+            var down = QuestionCardKeys.OnStop(CardKey.Down, 0, 4, multiSelect: false);
+            True(down.Focus == 1 && down.PickFocused && !down.Next, "↓ on a single choice: the next option, picked");
+            var multiDown = QuestionCardKeys.OnStop(CardKey.Down, 0, 4, multiSelect: true);
+            True(multiDown.Focus == 1 && !multiDown.PickFocused, "on a multiple choice only the focus moves");
+            var toOther = QuestionCardKeys.OnStop(CardKey.Down, 2, 4, false);
+            True(toOther.Focus == 3 && !toOther.PickFocused, "into the Other box: focusing it picks Other, nothing to toggle");
+            var fromOther = QuestionCardKeys.OnStop(CardKey.Up, 3, 4, false);
+            True(fromOther.Focus == 2 && fromOther.PickFocused, "↑ out of the Other box after typing: the last option");
+            True(QuestionCardKeys.OnStop(CardKey.Up, 0, 4, false).Focus == null, "the first: stays");
+            True(QuestionCardKeys.OnStop(CardKey.Down, 3, 4, false).Focus == null, "the last: stays, not into the next question");
+            var enter = QuestionCardKeys.OnStop(CardKey.Enter, 1, 4, true);
+            True(enter.PickHere && enter.Next && enter.Focus == null, "Enter picks the focused option and goes on");
+            var enterOther = QuestionCardKeys.OnStop(CardKey.Enter, 3, 4, false);
+            True(!enterOther.PickHere && enterOther.Next, "Enter in the Other box goes on with what was typed");
+            // The Other check box
+            var otherUp = QuestionCardKeys.OnOtherCheckBox(CardKey.Up, 4, false);
+            True(otherUp.Focus == 2 && otherUp.PickFocused, "↑: the last option");
+            True(QuestionCardKeys.OnOtherCheckBox(CardKey.Enter, 4, false).Focus == 3, "Enter: its text box");
+            True(QuestionCardKeys.OnOtherCheckBox(CardKey.Up, 1, false).Focus == 0, "no options: its text box");
+            // Questions
+            Eq(1, QuestionCardKeys.NextQuestion(0, 2));
+            Eq(null, QuestionCardKeys.NextQuestion(1, 2), "after the last: answer");
+        }
+
         private static void Test_ToolData_Shapes()
         {
             Eq("Read 4 lines", ToolCallView.FromData("Read", JObject.Parse("{\"file\":{\"numLines\":4,\"startLine\":1,\"totalLines\":4}}")), "whole file");

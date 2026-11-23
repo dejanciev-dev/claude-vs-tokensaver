@@ -2321,8 +2321,11 @@ Planned on 2026-11-23, after Phase 85, on the same branch (PR #95); in 0.16.0. M
       `toolUseResult` for AskUserQuestion only, so other resumed rows are drawn as before.
       `Fixtures/cli-2.1.330-question-answered.jsonl` (ids and paths blanked), `Test_SessionTranscript_AnsweredQuestion`;
       a row in MANUAL-CHECKS 30. Builds clean; not yet run in VS
-- [ ] **Question card keys under test.** Phase 85's ↑/↓ and Enter rules live in WPF code. Move what a key does
-      (which stop next, pick or not, next question or answer) into Core, tested; the card only wires it up
+- [x] **Question card keys under test.** Phase 85's ↑/↓ and Enter rules live in WPF code. Move what a key does
+      (which stop next, pick or not, next question or answer) into Core, tested; the card only wires it up.
+      `QuestionCardKeys.OnStop`, `OnOtherCheckBox` and `NextQuestion` return a `CardStep` (focus, pick the focused,
+      pick here, go on); the card turns keys into `CardKey` and carries the step out. Same behaviour as Phase 85.
+      `Test_QuestionCardKeys`. Builds clean; not yet run in VS
 - [ ] **Chat doesn't take the keyboard.** As VS Code's fix for "a slow-starting Claude tab taking the keyboard away
       from the file you had gone on typing in": find where the chat focuses its input box on its own (start, a
       session loaded, a restart) and do it only when the chat window is active, so typing in an editor isn't moved
