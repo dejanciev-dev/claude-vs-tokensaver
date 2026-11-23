@@ -240,6 +240,7 @@ namespace ClaudeVS.ToolWindow
             _activityLabel.Text = label;
             _activityDetail.Text = "(" + detail + ")";
             _activityDetail.ToolTip = tokens > 0 ? "↓ tokens: estimated output so far (thinking, text and tool input)" : null;
+            _activityHint.Text = EscapeStops ? "Esc to stop" : "Stop button to stop";
             _activityHint.Visibility = phase == Phase.Waiting ? Visibility.Collapsed : Visibility.Visible;
             _activityTip.Visibility = phase == Phase.Waiting ? Visibility.Collapsed : Visibility.Visible;
             System.Windows.Automation.AutomationProperties.SetName(_activity, label + " " + detail);
