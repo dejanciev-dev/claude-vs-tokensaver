@@ -2204,6 +2204,27 @@ Checked, nothing to change:
 - `/loop` and scheduled tasks running up to 30 days, prompt hooks taking model aliases, `rm` at the root asking:
   nothing the extension sends or shows
 
+## Phase 83 — Full disks, Grep's next step, and release 0.16.0
+
+Planned on 2026-11-23, after Phase 82, on the same branch (PR #95). Phase 82 says what to do when Claude Code reports a
+full disk; the extension writes files too (bookmarks, session titles, readings, exports, setup), and a full disk there
+fails quietly or as a raw exception. Grep's rejected pattern shows as an error, but not what fixes it.
+
+- [ ] **Manual checks for Phase 82.** A section in MANUAL-CHECKS for what only VS shows: the full-disk hint with Tab,
+      the output-limit explanation's `claude update` line, Grep's rejected pattern as an error row, no cut-off tip for
+      a turn served by another provider
+- [ ] **A full disk in the extension's own writes.** Where the extension writes a file the user asked for (an export,
+      the savings report, a plan, setup's settings and hook) and it fails with a full disk, say "The disk is full: free
+      some space on <drive>, then try again" instead of the raw exception; its own background files (bookmarks, session
+      titles, readings, estimates) skip the write and leave the old file whole. One test for the words, one that a
+      failed background write keeps the old file
+- [ ] **Grep's rejected pattern: the next step.** The ⎿ line says why in one line and what fixes it: "ripgrep refused
+      the pattern: a line break needs multiline: true", from the captured error, instead of three lines of ripgrep's
+      text. Other rejections (a bad glob, an unknown file type) keep ripgrep's first line. Test from the capture
+- [ ] **Release 0.16.0.** Manifest, assembly and package registration at 0.16.0, still a preview; the Unreleased
+      changelog becomes `## [0.16.0]` with highlights; the Marketplace overview adds what's new. Tagging after the
+      merge. The Release VSIX builds
+
 ---
 
 ## Working in Visual Studio — daily loop
