@@ -15,6 +15,8 @@ Tested with Claude Code 2.1.330.
   `CLAUDE_CODE_MAX_OUTPUT_TOKENS` stays for 2.1.329.
 - **A cloud provider or gateway your organization picks** (2.1.330 applies it at `claude auth login`, with no variable
   set) is seen from the turn's usage: the chat no longer advises raising the output limit there.
+- **A Grep pattern ripgrep refuses** (2.1.330 reports it) shows as one error line that says what fixes it, such as
+  "ripgrep refused the pattern: a line break needs multiline: true", instead of three lines of ripgrep's text.
 
 ### Fixed
 

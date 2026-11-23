@@ -384,7 +384,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 |---|---|
 | Behind a gateway whose model takes fewer output tokens (as in section 28), with Claude Code 2.1.330 or newer, send a prompt (skip without one) | The answer comes: Claude Code retries at the model's limit by itself, no link |
 | The same with 2.1.329 (`claude install 2.1.329`; skip without the gateway) | The explanation ends *Or update Claude Code (`claude update`): 2.1.330 and newer retry at that limit by themselves*; the link is there as in section 28 |
-| Ask *Use Grep, not the shell, for the pattern `foo\nbar` in the solution, without multiline* | The Grep row is an error (red), not *No matches* |
+| Ask *Use Grep, not the shell, for the pattern `foo\nbar` in the solution, without multiline* | The Grep row is an error (red), not *No matches*: one line, *ripgrep refused the pattern: a line break needs multiline: true* |
 | Point the temp folder at a nearly full drive (`TEMP`/`TMP` to a small, full USB stick or VHD; skip without one), start VS, send a prompt | The empty box says *The disk is full: free some space, then send it again · Tab puts your prompt back*; the explanation says where to free it; Tab puts the prompt back |
 | Sign in to an organization whose Enterprise Admin Console picks a cloud provider or gateway (skip without one), ask for long answers until one is cut off | No tip to raise the output limit; the cost tooltip says who served it |
 | With the user folder on a nearly full drive (or a full USB stick as the export target; skip without one), **Export** a conversation and bookmark an answer | *The disk is full: free some space on X:, then try again.*; a file that was already there is unchanged |

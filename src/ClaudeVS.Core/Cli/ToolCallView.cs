@@ -318,6 +318,8 @@ namespace ClaudeVS.Core.Cli
         {
             if (!isError && data != null && FromData(toolName, data, endsInNewline) is string exact) return One(exact);
             var output = SplitOutput(resultText);
+            if (isError && toolName == "Grep" && GrepRejected(output) is string why)
+                return new ToolResultSummary { IsError = true, Lines = new[] { why } };
             if (isError)
                 return new ToolResultSummary { IsError = true, Lines = output.Take(PreviewLines).Select(Cut).DefaultIfEmpty("Error").ToList(), MoreLines = Math.Max(0, output.Count - PreviewLines) };
 
@@ -352,6 +354,22 @@ namespace ClaudeVS.Core.Cli
             }
             if (output.Count == 0) return One("Done");
             return new ToolResultSummary { Lines = output.Take(PreviewLines).Select(Cut).ToList(), MoreLines = Math.Max(0, output.Count - PreviewLines) };
+        }
+
+        /// <summary>
+        /// Grep's error when ripgrep refuses the pattern, glob or file type (2.1.330, captured): "Search failed — ripgrep
+        /// rejected …:", then ripgrep's "rg: …" and its advice. One line instead: a line break in the pattern needs
+        /// Grep's <c>multiline: true</c>; any other refusal says ripgrep's own reason. Null for other errors.
+        /// </summary>
+        internal static string GrepRejected(IReadOnlyList<string> output)
+        {
+            if (output == null || output.Count == 0 || !output[0].StartsWith("Search failed — ripgrep rejected", StringComparison.Ordinal)) return null;
+            string rg = output.Skip(1).Select(l => l.Trim()).FirstOrDefault(l => l.Length > 0);
+            if (rg == null) return Cut(output[0]);
+            if (rg.IndexOf("\"\\n\" is not allowed", StringComparison.Ordinal) >= 0 || output.Any(l => l.IndexOf("multiline mode", StringComparison.OrdinalIgnoreCase) >= 0))
+                return "ripgrep refused the pattern: a line break needs multiline: true";
+            if (rg.StartsWith("rg: ", StringComparison.Ordinal)) rg = rg.Substring(4);
+            return Cut("ripgrep refused it: " + rg);
         }
 
         /// <summary>
