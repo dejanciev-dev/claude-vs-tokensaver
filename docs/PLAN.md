@@ -2224,9 +2224,12 @@ fails quietly or as a raw exception. Grep's rejected pattern shows as an error, 
       `SafeFile.Explain` (Windows' `ERROR_DISK_FULL`/`ERROR_HANDLE_DISK_FULL` or the words, Node's too, so
       `ClaudeErrorHints` shares it) at every place that showed the exception's message. `Test_SafeFile`. A row in
       MANUAL-CHECKS 30. Builds clean; not yet run in VS
-- [ ] **Grep's rejected pattern: the next step.** The ⎿ line says why in one line and what fixes it: "ripgrep refused
+- [x] **Grep's rejected pattern: the next step.** The ⎿ line says why in one line and what fixes it: "ripgrep refused
       the pattern: a line break needs multiline: true", from the captured error, instead of three lines of ripgrep's
-      text. Other rejections (a bad glob, an unknown file type) keep ripgrep's first line. Test from the capture
+      text. Other rejections (a bad glob, an unknown file type) keep ripgrep's first line. Test from the capture.
+      `ToolCallView.GrepRejected` (the line break from rg's `"\n" is not allowed` or its multiline advice; otherwise
+      "ripgrep refused it: " and rg's reason); other Grep errors as before. In `Test_ToolData_Shapes`; the row in
+      MANUAL-CHECKS 30 names the line. Builds clean; not yet run in VS
 - [ ] **Release 0.16.0.** Manifest, assembly and package registration at 0.16.0, still a preview; the Unreleased
       changelog becomes `## [0.16.0]` with highlights; the Marketplace overview adds what's new. Tagging after the
       merge. The Release VSIX builds

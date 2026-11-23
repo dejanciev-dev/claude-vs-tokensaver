@@ -805,7 +805,12 @@ namespace ClaudeVS.Core.Tests
             True(rejected.IsError && rejected.ResultData == null, "an error, its tool_use_result a string");
             var grepRow = ToolCallView.Summarize("Grep", rejected.ResultText, rejected.IsError, data: rejected.ResultData);
             True(grepRow.IsError, "the row is an error");
-            Eq("Search failed — ripgrep rejected the pattern, glob, or file type without searching:", grepRow.Lines[0], "says why, not No matches");
+            Eq("ripgrep refused the pattern: a line break needs multiline: true", grepRow.Lines.Single(), "says why and what fixes it, in one line (Phase 83)");
+            // Another refusal: ripgrep's own reason
+            var glob = ToolCallView.Summarize("Grep", "Search failed — ripgrep rejected the pattern, glob, or file type without searching:\nrg: unrecognized file type: csharpp", true);
+            True(glob.IsError, "an error");
+            Eq("ripgrep refused it: unrecognized file type: csharpp", glob.Lines.Single());
+            Eq("Permission denied", ToolCallView.Summarize("Grep", "Permission denied", true).Lines.Single(), "other Grep errors as before");
             // The real 2.1.329 reads: Claude Code counts the empty line after a final newline (and calls an empty file one line).
             var reads = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.329-read-lines.jsonl"))
                 .Select(l => ToolCallView.FromData("Read", (JObject)JObject.Parse(l)["tool_use_result"])).ToList();
