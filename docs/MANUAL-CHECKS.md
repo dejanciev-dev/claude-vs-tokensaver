@@ -415,6 +415,8 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Move the caret in that file to line 20, then ask for a link to the file with no line and click it | The file comes to the front with the caret still at line 20, not line 1 |
 | Ask for a Markdown link to a folder of the solution, and to a file without an extension (a `Dockerfile` or `LICENSE`) | The folder opens in File Explorer; the file opens in VS |
 | Ask for a link to a file that doesn't exist, and for `int count` and `Foo(bar)` in backticks | Plain text and plain code: no links |
+| In `~/.claude/settings.json` set `"spinnerVerbs": { "mode": "replace", "verbs": ["Baking"] }`, start a New chat, send a prompt | The activity row says *Baking…* while Claude works; with `"mode": "append"` the chat's words come too; removed, only the chat's |
+| Attach several large files (or ask Claude to read big files whole) until a turn ends in *Prompt is too long* (costly: skip unless you have a long conversation at hand) | Under the error, one notice naming what takes the most room and what shrinks it (tool results, attached files, the conversation…), not just `/compact` |
 
 ## 32. Release (Phase 5)
 
