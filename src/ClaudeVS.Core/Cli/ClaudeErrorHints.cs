@@ -135,6 +135,10 @@ namespace ClaudeVS.Core.Cli
         /// </summary>
         private static bool DiskFull(string lowered) => SafeFile.IsDiskFullText(lowered);
 
+        /// <summary>A turn that failed because the conversation no longer fits the context window ("Prompt is too long").</summary>
+        public static bool IsPromptTooLong(string error) =>
+            !string.IsNullOrEmpty(error) && Has(error.ToLowerInvariant(), "prompt is too long", "context window", "context_length");
+
         /// <summary>
         /// A proxy or gateway cut or damaged a compressed response: before 2.1.332 the turn ends in raw "ZlibError
         /// fetching" text (the runtime's decompression error); 2.1.332 says it in words that name the compressed

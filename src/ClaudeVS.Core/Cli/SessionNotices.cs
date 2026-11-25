@@ -481,6 +481,30 @@ namespace ClaudeVS.Core.Cli
         }
 
         /// <summary>
+        /// After "Prompt is too long", the largest part of the context and what shrinks it, from the breakdown
+        /// (<c>get_context_usage</c>), as VS Code's 2.1.331 advice "that names the large part and what to do next". The
+        /// parts you can change: tool results, attached files, the conversation itself, memory files, MCP tools,
+        /// skill listings (the system prompt and Claude Code's own tools aren't yours to cut). Null with nothing to name.
+        /// </summary>
+        public static string TooLong(Tokens.ContextUsage u)
+        {
+            if (u == null) return null;
+            long skills = u.Categories.Where(c => c.IsUsed && c.Name == "Skills").Sum(c => c.Tokens);
+            string Of(long t) => "~" + Tokens.TokenMeter.Format(t) + " tokens" + (u.MaxTokens > 0 ? " of " + Tokens.TokenMeter.Format(u.MaxTokens) : "");
+            var parts = new (long Tokens, string Text)[]
+            {
+                (u.ToolResultTokens, $"Tool results take the most room ({Of(u.ToolResultTokens)}): run /compact, then ask Claude to read files in parts or search them instead of reading them whole."),
+                (u.AttachmentTokens, $"Attached files and images take the most room ({Of(u.AttachmentTokens)}): start a New chat and attach fewer, or a selection instead of the whole file."),
+                (u.UserMessageTokens + u.AssistantMessageTokens + u.ToolCallTokens, $"The conversation itself takes the most room ({Of(u.UserMessageTokens + u.AssistantMessageTokens + u.ToolCallTokens)}): run /compact, or start a New chat."),
+                (u.MemoryFileTokens, $"Memory and instruction files (CLAUDE.md…) take the most room ({Of(u.MemoryFileTokens)}): / → Memory & instructions… shows what each costs; Tools → Claude Code → Generate Lean CLAUDE.md writes a short one."),
+                (u.McpToolTokens, $"MCP tools ({u.McpToolCount}) take the most room ({Of(u.McpToolTokens)}): turn off servers you don't need (/ → MCP servers…), then start a New chat."),
+                (skills, $"Skill listings take the most room ({Of(skills)}): turn off skills you don't use (/ → Skills…), then start a New chat."),
+            };
+            var most = parts.OrderByDescending(p => p.Tokens).First();
+            return most.Tokens > 0 ? most.Text : null;
+        }
+
+        /// <summary>
         /// Claude Code couldn't save part of the session (<c>session_writes_lost</c>, 2.1.332; the fields from its own
         /// schema): <c>error_code</c> ENOSPC (disk full) or EDQUOT (quota used up), <c>lost</c> "transcript" (the
         /// session file, so a resume may miss part of it) and/or "global_config" (<c>~/.claude.json</c>). As VS Code's

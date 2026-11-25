@@ -549,6 +549,9 @@ namespace ClaudeVS.ToolWindow
         /// Asks the running CLI what fills the context (get_context_usage: no model call, nothing billed) and keeps
         /// the answer for the breakdown popup; <paramref name="show"/> opens the popup when it arrives.
         /// </summary>
+        // The turn that just ended failed with "Prompt is too long": the next breakdown says what takes the room
+        private bool _tooLongAdvice;
+
         private void RefreshContextUsage(bool show)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -569,6 +572,7 @@ namespace ClaudeVS.ToolWindow
                     UpdateMeterTooltip();
                     _meterModel?.ApplyContextUsage(u.TotalTokens, u.MaxTokens); // the CLI's own number, also right after /compact
                     BaseContextTip(u);
+                    if (_tooLongAdvice) { _tooLongAdvice = false; Notice(SessionNotices.TooLong(u), important: true); }
                 }
                 if (show) ShowContextBreakdownNow();
             }).FileAndForget("ClaudeVS/ChatControl/ContextUsage");
@@ -2111,6 +2115,7 @@ namespace ClaudeVS.ToolWindow
                         HeavyThinkingTip(_turnModel);
                         UnsupportedEffortTip(_turnModel);
                         LongAnswerTip(_turnModel);
+                        _tooLongAdvice = ev.IsError && ClaudeErrorHints.IsPromptTooLong(ev.Text); // the breakdown below names the large part (as VS Code 2.1.331)
                         RefreshContextUsage(show: false); // control request, no model call
                         _turnModel = null;
                         var turn = _turnPrompts.Count > 0 ? _turnPrompts.Dequeue() : new TurnPrompt();

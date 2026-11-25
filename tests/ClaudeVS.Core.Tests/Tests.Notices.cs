@@ -375,6 +375,25 @@ namespace ClaudeVS.Core.Tests
             True(fork.All(e => !e.IsSubagent), "the Agent call's own result belongs to the main agent");
         }
 
+        private static void Test_SessionNotices_TooLong()
+        {
+            // As VS Code's 2.1.331 advice under "Prompt is too long": the largest part you can change, and what shrinks it
+            ContextUsage U(string breakdown, string extra = "") => ContextUsage.Parse(JObject.Parse(
+                "{\"totalTokens\":199000,\"maxTokens\":200000,\"categories\":[{\"name\":\"System prompt\",\"tokens\":90000},{\"name\":\"Skills\",\"tokens\":3000}" + extra + "],\"messageBreakdown\":{" + breakdown + "}}"));
+            string results = SessionNotices.TooLong(U("\"toolResultTokens\":150000,\"userMessageTokens\":5000,\"assistantMessageTokens\":4000,\"toolCallTokens\":1000"));
+            True(results.StartsWith("Tool results take the most room (~150") && results.Contains("of 200") && results.Contains("/compact"), results);
+            string attached = SessionNotices.TooLong(U("\"attachmentTokens\":120000,\"toolResultTokens\":20000"));
+            True(attached.StartsWith("Attached files and images") && attached.Contains("New chat"), attached);
+            string talk = SessionNotices.TooLong(U("\"userMessageTokens\":60000,\"assistantMessageTokens\":50000,\"toolCallTokens\":10000,\"toolResultTokens\":100000"));
+            True(talk.StartsWith("The conversation itself take") && talk.Contains("~120"), "user, assistant and tool calls together: " + talk);
+            string skills = SessionNotices.TooLong(U("\"toolResultTokens\":1000", ",{\"name\":\"Skills\",\"tokens\":40000}"));
+            True(skills.StartsWith("Skill listings"), "the system prompt (90k) isn't named: not yours to cut; " + skills);
+            Eq(null, SessionNotices.TooLong(ContextUsage.Parse(JObject.Parse("{\"categories\":[{\"name\":\"System prompt\",\"tokens\":3000}]}"))), "nothing of yours");
+            Eq(null, SessionNotices.TooLong(null), "no breakdown");
+            True(ClaudeErrorHints.IsPromptTooLong("Prompt is too long") && ClaudeErrorHints.IsPromptTooLong("API Error: 400 input length and `max_tokens` exceed context window limit")
+                && !ClaudeErrorHints.IsPromptTooLong("Overloaded") && !ClaudeErrorHints.IsPromptTooLong(null), "which failures");
+        }
+
         private static void Test_SessionNotices_BaseContext()
         {
             // The real 2.1.317 breakdown: no MCP tools, 57 tokens of memory, 4.5k of skills: nothing heavy.

@@ -17,6 +17,9 @@ All notable changes to this project are listed here. The format follows
   extension, `file://` links and percent-encoded paths too; a folder opens in File Explorer. As VS Code's 2.1.332 fixes.
   A file path in backticks, as Claude Code writes references (`src/Login.cs:42`), is the same link when the file is
   there; other code stays code.
+- **"Prompt is too long" says what takes the room** (as VS Code's 2.1.331 advice): the largest part you can change,
+  from Claude Code's context breakdown (no model call), with what shrinks it: tool results, attached files, the
+  conversation, memory files, MCP tools or skills.
 - **A warning when Claude Code couldn't save the session** (2.1.332 reports it when the disk is full or its quota is
   used up): resuming it later may miss messages, so free some space, then run `/compact` to save the conversation as
   a summary. Said once per conversation, also when only Claude Code's own settings (`~/.claude.json`) weren't saved.

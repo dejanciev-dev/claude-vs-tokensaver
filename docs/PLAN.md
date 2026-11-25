@@ -2484,12 +2484,17 @@ a background task that finishes while Claude is idle gets a notice; rewind is re
 pick applies with each send, so a process that ended can't drop it; selection attachments keep their text after the
 file is closed; compaction is started from menus that close on the first click.
 
-- [ ] **"Prompt is too long" names the large part.** As VS Code's 2.1.331 "advice under 'Prompt is too long' that
+- [x] **"Prompt is too long" names the large part.** As VS Code's 2.1.331 "advice under 'Prompt is too long' that
       names the large part and what to do next": the hint says only `/compact`. After such a failure, read the context
       breakdown (`get_context_usage`, no model call) and add one line naming the largest part and what shrinks it:
       tool results (ask for smaller reads, or `/compact`), attached files (send fewer), the conversation (`/compact` or
       New), memory files (*Generate Lean CLAUDE.md*), MCP tools (turn servers off), skills (turn them off). Words in
-      Core, tested on breakdowns built like the 2.1.322 capture
+      Core, tested on breakdowns built like the 2.1.322 capture.
+      `SessionNotices.TooLong` (the conversation is user and assistant messages and tool calls together; tool results
+      on their own), `ClaudeErrorHints.IsPromptTooLong`; the chat reads the breakdown it already reads at every turn's
+      end and says it once as an important notice. Not probed (filling a context window costs too much); the
+      categories and `messageBreakdown` are those of the 2.1.317 and 2.1.322 captures. `Test_SessionNotices_TooLong`.
+      Builds clean; not yet run in VS
 - [ ] **Your `spinnerVerbs`.** Claude Code's `spinnerVerbs` setting (`{ "mode": "append" | "replace", "verbs": [...] }`,
       from 2.1.332's schema) words its spinner; VS Code 2.1.332 fixed it being ignored from user and managed settings.
       The activity row picks from its own ten verbs. Take the setting from `get_settings` (the highest-precedence
