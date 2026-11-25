@@ -57,7 +57,7 @@ namespace ClaudeVS.Core.Setup
                 {
                     string path = Path.Combine(rootDir, ".claude", name);
                     if (!File.Exists(path)) continue;
-                    if ((JObject.Parse(File.ReadAllText(path)).SelectToken("permissions.deny") as JArray)?.Any(t => string.Equals((string)t, rule, StringComparison.OrdinalIgnoreCase)) == true)
+                    if ((ReadSettings(path).SelectToken("permissions.deny") as JArray)?.Any(t => string.Equals((string)t, rule, StringComparison.OrdinalIgnoreCase)) == true)
                         return true;
                 }
                 catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is JsonException) { }
@@ -74,7 +74,7 @@ namespace ClaudeVS.Core.Setup
             string claudeDir = Path.Combine(rootDir, ".claude");
             Directory.CreateDirectory(claudeDir);
             string settingsPath = Path.Combine(claudeDir, "settings.json");
-            JObject settings = File.Exists(settingsPath) ? JObject.Parse(File.ReadAllText(settingsPath)) : new JObject();
+            JObject settings = ReadSettings(settingsPath);
             var deny = GetOrAdd<JArray>(GetOrAdd<JObject>(settings, "permissions"), "deny");
             if (deny.Any(t => string.Equals((string)t, rule, StringComparison.OrdinalIgnoreCase))) return false;
             deny.Add(rule);
@@ -92,7 +92,7 @@ namespace ClaudeVS.Core.Setup
             string claudeDir = Path.Combine(rootDir, ".claude");
             Directory.CreateDirectory(claudeDir);
             string settingsPath = Path.Combine(claudeDir, "settings.local.json");
-            JObject settings = File.Exists(settingsPath) && File.ReadAllText(settingsPath) is string text && text.Trim().Length > 0 ? JObject.Parse(text) : new JObject();
+            JObject settings = ReadSettings(settingsPath);
             var env = GetOrAdd<JObject>(settings, "env");
             if (env[name]?.Type == JTokenType.String && (string)env[name] == value) return false;
             env[name] = value;
@@ -117,7 +117,7 @@ namespace ClaudeVS.Core.Setup
             else result.Skipped.Add(".claude/hooks/" + HookFileName + " (up to date)");
 
             string settingsPath = Path.Combine(claudeDir, "settings.json");
-            JObject settings = File.Exists(settingsPath) ? JObject.Parse(File.ReadAllText(settingsPath)) : new JObject();
+            JObject settings = ReadSettings(settingsPath);
             string before = settings.ToString(Formatting.Indented);
             MergeSettings(settings);
             string after = settings.ToString(Formatting.Indented);
@@ -166,6 +166,18 @@ namespace ClaudeVS.Core.Setup
                     }),
                 });
             }
+        }
+
+        /// <summary>
+        /// A Claude Code settings file as an object: none, empty or only blanks is <c>{}</c> (an editor can leave one so,
+        /// as VS Code's 2.1.332 fix for "Settings file is not valid JSON" says), and a byte order mark, even one read
+        /// as text, is skipped. Anything else that isn't JSON still throws, so a broken file isn't overwritten.
+        /// </summary>
+        public static JObject ReadSettings(string path)
+        {
+            if (!File.Exists(path)) return new JObject();
+            string text = File.ReadAllText(path).TrimStart('﻿');
+            return text.Trim().Length == 0 ? new JObject() : JObject.Parse(text);
         }
 
         private static T GetOrAdd<T>(JObject parent, string name) where T : JContainer, new()

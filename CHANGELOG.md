@@ -26,6 +26,8 @@ All notable changes to this project are listed here. The format follows
   they were.
 - **A tool call with no name** (a custom endpoint or gateway can send one; 2.1.331 fails it with an error) shows as
   "Tool" with its error, live and on resume, instead of a row with a blank name.
+- **An empty `.claude/settings.json`** (or one starting with a byte order mark) no longer stops setup or a new deny
+  rule with a JSON error, as VS Code fixed in 2.1.332; a broken file is still left alone.
 
 ## [0.16.0] - 2026-11-23
 
