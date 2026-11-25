@@ -12,6 +12,9 @@ All notable changes to this project are listed here. The format follows
 
 ### Added
 
+- **Links to files in Claude's answers open them** (only web links did before): at the line and column when the link
+  names one (`src/Login.cs:42`, `#L5-10`, `:42:7`), with the caret left where it was when it doesn't; files without an
+  extension, `file://` links and percent-encoded paths too; a folder opens in File Explorer. As VS Code's 2.1.332 fixes.
 - **A warning when Claude Code couldn't save the session** (2.1.332 reports it when the disk is full or its quota is
   used up): resuming it later may miss messages, so free some space, then run `/compact` to save the conversation as
   a summary. Said once per conversation, also when only Claude Code's own settings (`~/.claude.json`) weren't saved.
