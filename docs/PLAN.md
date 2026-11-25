@@ -2535,6 +2535,24 @@ the CLI's schema only; a live test each shows when Claude Code changes them. The
       note still arrives and names the change. The test now checks that Claude knows which line it left. The
       overview has no what's-new list; its chat paragraph got the file links in Phase 90
 
+## Phase 93 — When Claude Code ends with a question open, and a chat out of view that waits for you
+
+Planned on 2026-11-25, after Phase 92, on the same branch (PR #96); in 0.17.0. Two more of VS Code's fixes from
+2.1.331–2.1.332 that are gaps here too.
+
+- [ ] **Open requests when Claude Code's process ends.** As VS Code's 2.1.332 fix for "a question cut off when
+      Claude's process ended showing only a red dot": when the process exits, a permission request still shows its
+      bar, and a question, plan or edit-review card can still be answered, into a process that is gone. On exit, close
+      the bar and disable the open cards, and say once that Claude Code stopped before you answered and that sending
+      the prompt again starts it
+- [ ] **A chat out of view that waits for you.** As VS Code's 2.1.331 fix for "a missing notification when a
+      conversation running behind another one in the same panel needs a permission or an answer" and 2.1.332's "a
+      hidden panel's notice not naming the waiting session": a chat window that isn't in view (a tab behind another,
+      or auto-hidden) gives no sign when it asks for a permission, a question, a plan or an edit review. Show an info
+      bar in VS's main window naming the chat and what it waits for, with *Show*; it goes when the chat comes into
+      view or the request is answered. The words in Core, tested
+- [ ] **Manual checks and 0.17.0 notes.** Rows in MANUAL-CHECKS 31; both in the changelog's 0.17.0
+
 ---
 
 ## Working in Visual Studio — daily loop
