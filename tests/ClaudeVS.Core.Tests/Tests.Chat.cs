@@ -128,6 +128,20 @@ namespace ClaudeVS.Core.Tests
                 True(!SlashCommands.IsCommand(t), "not a command: " + (t == null ? "null" : Uri.EscapeDataString(t)));
         }
 
+        private static void Test_SlashCommands_WithCommandKeepsMessage()
+        {
+            // Phase 94 (as VS Code 2.1.332): picking a skill from the "/" button keeps what you typed, as its argument
+            Eq("/review ", SlashCommands.WithCommand("", "review"), "empty box");
+            Eq("/review ", SlashCommands.WithCommand(null, "review"), "null box");
+            Eq("/review ", SlashCommands.WithCommand("   ", "review"), "blank box");
+            Eq("/review check the parser", SlashCommands.WithCommand("  check the parser ", "review"), "message kept");
+            Eq("/review a\nb", SlashCommands.WithCommand("a\nb", "review"), "lines kept");
+            Eq("/review ", SlashCommands.WithCommand("/compact", "review"), "lone command replaced");
+            Eq("/review the parser", SlashCommands.WithCommand("/fix the parser", "review"), "command swapped, arguments kept");
+            Eq("/review the parser", SlashCommands.WithCommand("/fix\nthe parser", "review"), "argument on the next line");
+            Eq("/review a/b", SlashCommands.WithCommand("a/b", "review"), "a slash inside is not a command");
+        }
+
         private static void Test_SlashCommands_DiscoverAndMatch()
         {
             string root = Path.Combine(Path.GetTempPath(), "cvs-cmd-" + Guid.NewGuid().ToString("N"));

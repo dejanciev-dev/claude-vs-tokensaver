@@ -105,6 +105,25 @@ namespace ClaudeVS.Core.Chat
         /// </summary>
         public static bool IsCommand(string text) => Normalize(text).StartsWith("/", StringComparison.Ordinal);
 
+        /// <summary>
+        /// The box after picking <paramref name="name"/> from the "/" button's menu (Phase 94; as VS Code's 2.1.332 fix
+        /// for "a written message being wiped by Tab on a command in the '/' button's menu"): what you typed stays, as
+        /// the command's argument ("/review your text"). A box that holds a command already has that command swapped,
+        /// its arguments kept; an empty box gets "/name ".
+        /// </summary>
+        public static string WithCommand(string box, string name)
+        {
+            string head = "/" + name + " ";
+            string typed = (box ?? "").Trim();
+            if (typed.Length == 0) return head;
+            if (IsCommand(typed))
+            {
+                int space = typed.IndexOfAny(new[] { ' ', '\t', '\r', '\n' });
+                typed = space < 0 ? "" : typed.Substring(space).TrimStart();
+            }
+            return head + typed;
+        }
+
         private static string Normalize(string text) => Context.PromptSanitizer.RemoveInvisible(text ?? "", out _).TrimStart();
 
         private static IEnumerable<SlashCommand> FromFolder(string root, string source)
