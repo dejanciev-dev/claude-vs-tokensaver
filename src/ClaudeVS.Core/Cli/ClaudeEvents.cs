@@ -194,6 +194,12 @@ namespace ClaudeVS.Core.Cli
         /// <see cref="ClaudeEvent.ParentToolUseId"/> say whose; <see cref="ClaudeEvent.Text"/> is the message.
         /// </summary>
         OutputLimitRetry,
+        /// <summary>
+        /// Claude Code couldn't save part of the session (2.1.332, <c>system</c> / <c>session_writes_lost</c>): the
+        /// disk was full or its quota used up. The message is in <see cref="ClaudeEvent.Payload"/>; see
+        /// <see cref="SessionNotices.WritesLost"/>.
+        /// </summary>
+        WritesLost,
     }
 
     /// <summary>The phase of the main agent's current response (<see cref="ClaudeEventKind.Activity"/>).</summary>

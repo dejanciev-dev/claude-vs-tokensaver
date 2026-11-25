@@ -2367,12 +2367,14 @@ Planned on 2026-11-25 with 2.1.332 installed. Both sections read for what the ex
 entries too; Code Mode, self-hosted runner, terminal, `/mcp`, `/plugin`, cloud, Remote Control, computer use, voice,
 gateway, Bedrock, Agent Platform and Foundry entries are left out.
 
-- [ ] **Session writes lost.** 2.1.332 tells SDK clients when it couldn't save lines of the session transcript (VS
+- [x] **Session writes lost.** 2.1.332 tells SDK clients when it couldn't save lines of the session transcript (VS
       Code warns, "saying how to save it with `/compact`"): a `system` message, subtype `session_writes_lost`, with
       `error_code` (`ENOSPC` or `EDQUOT`), `lost` (`transcript`, `global_config`) and `transcript_session_ids`, from
       the CLI's own schema. Show a warning in the chat: the disk is full (or the quota used up), resuming this
       session may miss part of it; free space, then `/compact` saves it as a summary. Once per session. Not probed
-      (filling a disk); test from a line built on the schema
+      (filling a disk); test from a line built on the schema. `ClaudeEventKind.WritesLost`; `SessionNotices.WritesLost`
+      words it (only `~/.claude.json` lost: no `/compact`; an unknown code: "a write failed"); the chat says it as an
+      important notice, once per conversation. `Test_SessionNotices_WritesLost`. Builds clean; not yet run in VS
 - [ ] **A proxy that cuts compressed responses.** 2.1.331 adds `CLAUDE_CODE_DISABLE_RESPONSE_COMPRESSION` for a proxy
       that cuts compressed model responses off; before 2.1.332 the turn ends in raw "ZlibError fetching" text. When an
       error names `ZlibError`, a decompression error or a cut compressed response, the explanation says to set

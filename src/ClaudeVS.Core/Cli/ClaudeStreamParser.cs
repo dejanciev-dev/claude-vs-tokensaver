@@ -101,6 +101,8 @@ namespace ClaudeVS.Core.Cli
                         PreCompactTokens = json.SelectToken("compact_metadata.pre_tokens")?.Value<long?>() ?? 0,
                         Text = (string)json.SelectToken("compact_metadata.trigger"),
                     } };
+                case "session_writes_lost": // 2.1.332
+                    return new[] { new ClaudeEvent { Kind = ClaudeEventKind.WritesLost, Payload = json } };
                 default:
                     return None;
             }

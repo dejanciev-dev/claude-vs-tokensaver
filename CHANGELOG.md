@@ -6,6 +6,12 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **A warning when Claude Code couldn't save the session** (2.1.332 reports it when the disk is full or its quota is
+  used up): resuming it later may miss messages, so free some space, then run `/compact` to save the conversation as
+  a summary. Said once per conversation, also when only Claude Code's own settings (`~/.claude.json`) weren't saved.
+
 ## [0.16.0] - 2026-11-23
 
 Still a **preview**, for Claude Code 2.1.318 or newer (tested with 2.1.330). This release keeps up with Claude Code
