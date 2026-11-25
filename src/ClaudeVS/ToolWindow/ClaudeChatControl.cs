@@ -478,7 +478,7 @@ namespace ClaudeVS.ToolWindow
             ThreadHelper.ThrowIfNotOnUIThread();
             if (string.IsNullOrEmpty(sessionId)) { Append("Nothing to fork yet: send a prompt first."); return; }
             if (_busy) { Append($"Stop Claude first ({StopHow}), then fork."); return; }
-            DisposeSession();
+            DisposeSession(); ClearWaitingNotice();
             ResetMeter();
             if (!keepTranscript) ClearTranscript();
             _resumeId = sessionId;
@@ -1548,7 +1548,7 @@ namespace ClaudeVS.ToolWindow
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             if (_session != null && string.Equals(_sessionDir, dir, StringComparison.OrdinalIgnoreCase)) return;
-            if (_session != null) { Append("\n— Solution changed, starting a new conversation —\n"); DisposeSession(); }
+            if (_session != null) { Append("\n— Solution changed, starting a new conversation —\n"); DisposeSession(); ClearWaitingNotice(); }
 
             var o = Options;
             _session = new ClaudeSession(new ClaudeLaunchOptions
@@ -1853,7 +1853,7 @@ namespace ClaudeVS.ToolWindow
         private void ResumeSession(SessionInfo s, bool fork)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            DisposeSession();
+            DisposeSession(); ClearWaitingNotice();
             ResetNotices(); // another conversation (DisposeSession skips this when no process was running)
             ResetMeter();
             ClearTranscript();
@@ -1931,7 +1931,7 @@ namespace ClaudeVS.ToolWindow
         private void NewChat()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            DisposeSession();
+            DisposeSession(); ClearWaitingNotice();
             ResetMeter();
             ClearTranscript();
             _resumeId = null;
@@ -2063,8 +2063,8 @@ namespace ClaudeVS.ToolWindow
                         ClearSuggestion();
                         _waitingForUser = true; // Claude waits for you; not a stall
                         SetStalled(false);
-                        if (ShowInteractiveCard(ev)) break;
-                        ShowPermission(ev);
+                        if (!ShowInteractiveCard(ev)) ShowPermission(ev);
+                        NoticeIfOutOfView(ev); // a chat out of view says so in VS's main window (Phase 93)
                         break;
                     case ClaudeEventKind.Task:
                         OnTaskEvent(ev);
@@ -2379,6 +2379,7 @@ namespace ClaudeVS.ToolWindow
             {
                 ThreadHelper.ThrowIfNotOnUIThread();
                 if (session != _session || session == null) { Append("\n  (that conversation has ended; the answer was not sent)\n"); return; }
+                ClearWaitingNotice();
                 _waitingForUser = false;
                 RenderActivity();
                 System.Threading.Interlocked.Exchange(ref _lastOutputTicks, DateTime.UtcNow.Ticks);

@@ -481,6 +481,27 @@ namespace ClaudeVS.Core.Cli
         }
 
         /// <summary>
+        /// The info bar for a chat out of view that waits for you (Phase 93; as VS Code's 2.1.331–2.1.332 fixes, it names
+        /// the chat): "Claude Code is waiting in “Fix the login”: permission to use Bash." <paramref name="chat"/> is the
+        /// chat's title (cut to 60 characters), null for a new one.
+        /// </summary>
+        public static string WaitingOutOfView(string chat, string toolName)
+        {
+            string name = string.IsNullOrWhiteSpace(chat) ? "a Claude Code chat" : "“" + (chat.Trim().Length > 60 ? chat.Trim().Substring(0, 59) + "…" : chat.Trim()) + "”";
+            string what;
+            switch (toolName)
+            {
+                case AskUserQuestionTool.Name: what = "it has a question for you"; break;
+                case ExitPlanModeTool.Name: what = "its plan waits for your approval"; break;
+                case null: case "": what = "it waits for your answer"; break;
+                default:
+                    string tool = toolName.StartsWith("mcp__", System.StringComparison.Ordinal) ? ToolCallView.Title(toolName, null).Name : toolName;
+                    what = "it asks for permission to use " + tool; break;
+            }
+            return $"Claude Code is waiting in {name}: {what}.";
+        }
+
+        /// <summary>
         /// Claude Code's process ended while it waited for you (Phase 93): what was open and how to go on. Sending a
         /// prompt starts it again in the same conversation.
         /// </summary>

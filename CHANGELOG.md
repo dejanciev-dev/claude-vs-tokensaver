@@ -41,6 +41,10 @@ The full list follows.
   conversation, memory files, MCP tools or skills.
 - **Your `spinnerVerbs`:** the activity row's words ("Pondering…") follow Claude Code's `spinnerVerbs` setting, from
   your user, project or managed settings: `append` adds yours, `replace` uses only yours (as VS Code fixed in 2.1.332).
+- **A chat out of view that waits for you says so:** when a chat window behind another tab (or auto-hidden) asks for
+  a permission, a question, a plan or an edit review, an info bar in VS's main window names the chat and what it
+  waits for, with *Show*. It goes once the chat is in view or the request is answered (as VS Code fixed in
+  2.1.331–2.1.332).
 - **A warning when Claude Code couldn't save the session** (2.1.332 reports it when the disk is full or its quota is
   used up): resuming it later may miss messages, so free some space, then run `/compact` to save the conversation as
   a summary. Said once per conversation, also when only Claude Code's own settings (`~/.claude.json`) weren't saved.

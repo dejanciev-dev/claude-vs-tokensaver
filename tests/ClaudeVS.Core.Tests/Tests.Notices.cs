@@ -375,6 +375,16 @@ namespace ClaudeVS.Core.Tests
             True(fork.All(e => !e.IsSubagent), "the Agent call's own result belongs to the main agent");
         }
 
+        private static void Test_SessionNotices_WaitingOutOfView()
+        {
+            // Phase 93: the info bar for a chat out of view names it and what it waits for
+            Eq("Claude Code is waiting in “Fix the login”: it asks for permission to use Bash.", SessionNotices.WaitingOutOfView("Fix the login", "Bash"));
+            Eq("Claude Code is waiting in a Claude Code chat: it has a question for you.", SessionNotices.WaitingOutOfView(null, AskUserQuestionTool.Name), "a new chat has no title");
+            True(SessionNotices.WaitingOutOfView("x", ExitPlanModeTool.Name).EndsWith("its plan waits for your approval."), "a plan");
+            True(SessionNotices.WaitingOutOfView("x", "mcp__github__create_issue").Contains("permission to use github - create_issue (MCP)"), "an MCP tool by its name");
+            True(SessionNotices.WaitingOutOfView(new string('a', 100), "Edit").Contains(new string('a', 59) + "…”"), "a long title is cut");
+        }
+
         private static void Test_SessionNotices_EndedWhileWaiting()
         {
             // Phase 93: Claude Code's process ended with requests open
