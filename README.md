@@ -34,7 +34,7 @@ Preview (0.15).
 
 | Layer | State |
 |---|---|
-| Core library (CLI session, parser, router, meter, context, Markdown, usage log) | ✅ 251 automated tests, many replaying real CLI output (2.1.316–2.1.332) |
+| Core library (CLI session, parser, router, meter, context, Markdown, usage log) | ✅ 253 automated tests, many replaying real CLI output (2.1.316–2.1.332) |
 | Core against the real `claude` CLI | ✅ Verified with Claude Code 2.1.332 via the opt-in live tests: streaming, usage, cost, prompt cache, model switch, resume, `/compact`, dialogs, edit review, MCP, question and plan approval, restart in place. Needs 2.1.318 or newer |
 | Visual Studio extension (UI) | ⚠️ Builds with zero warnings in CI, but not yet run in the experimental instance |
 
@@ -324,6 +324,8 @@ Editor commands go to the chat window you used last.
 | Diagnostics | Savings report period | All | What the savings report covers: All, ThisMonth, LastMonth or Last30Days. The month and week lines always compare up to today. |
 | Diagnostics | Log prompt preview (for router tuning) | Off | Stores the first 200 characters of each prompt locally. |
 | Diagnostics | Log raw CLI traffic | Off | Every JSON line in Output → Claude Code. Large; for debugging. |
+
+Some of Claude Code's own settings shape the chat too: `promptSuggestionEnabled` (above), `maxEffortLevel` (caps the effort picker), and `spinnerVerbs` (`{ "mode": "append" | "replace", "verbs": [...] }`: the words in the activity row while Claude works).
 
 ## Privacy: what stays on your machine
 

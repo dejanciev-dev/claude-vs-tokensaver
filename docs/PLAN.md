@@ -2504,7 +2504,8 @@ file is closed; compaction is started from menus that close on the first click.
       other settings the chat reads at a process's first init; `ClaudeSettings.Verbs` (trimmed, no repeats, a mode or
       shape it doesn't know keeps the chat's); the verb is picked at each turn's start. Not probed live.
       `Test_ClaudeSettings_SpinnerVerbs`. Builds clean; not yet run in VS
-- [ ] **Manual checks and README.** Rows in MANUAL-CHECKS 31; README's settings section names `spinnerVerbs`
+- [x] **Manual checks and README.** Rows in MANUAL-CHECKS 31; README's settings section names `spinnerVerbs`. Two
+      rows; README lists the Claude Code settings that shape the chat under its settings table
 
 ---
 
