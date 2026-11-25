@@ -830,8 +830,9 @@ namespace ClaudeVS.ToolWindow
                 {
                     ThreadHelper.ThrowIfNotOnUIThread();
                     if (c.Source != "skill") { SendText("/" + c.Name, routed: false); return; }
-                    // Skills usually take arguments: put the command in the prompt box to finish and send.
-                    _prompt.Text = "/" + c.Name + " ";
+                    // Skills usually take arguments: put the command in the prompt box to finish and send; what you had
+                    // typed stays, as its argument (Phase 94)
+                    _prompt.Text = SlashCommands.WithCommand(_prompt.Text, c.Name);
                     _prompt.CaretIndex = _prompt.Text.Length;
                     _prompt.Focus();
                 },

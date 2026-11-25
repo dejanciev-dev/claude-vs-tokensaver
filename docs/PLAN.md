@@ -2566,7 +2566,7 @@ Planned on 2026-11-25, after Phase 92, on the same branch (PR #96); in 0.17.0. T
 
 Planned on 2026-11-25, after Phase 93, on the same branch (PR #96); in 0.17.0.
 
-- [ ] **The "/" menu keeps your message.** As VS Code's 2.1.332 fix for "a written message being wiped by Tab on a
+- [x] **The "/" menu keeps your message.** As VS Code's 2.1.332 fix for "a written message being wiped by Tab on a
       command in the '/' button's menu": picking a skill from the "/" button sets the box to `/skill `, and what you
       had typed is gone. Keep it as the skill's argument (`/skill your text`); a box that holds only a `/command`
       is replaced as now. Rule in Core (`SlashCommands`), tested
