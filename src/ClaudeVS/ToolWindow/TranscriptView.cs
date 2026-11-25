@@ -1586,6 +1586,7 @@ namespace ClaudeVS.ToolWindow
 
         private void AddInlines(InlineCollection target, IEnumerable<MdInline> inlines)
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
             var a = ChatTheme.Accents(Box);
             foreach (var i in inlines)
             {
@@ -1620,10 +1621,31 @@ namespace ClaudeVS.ToolWindow
             }
         }
 
-        private static Inline MakeLink(MdInline i, Brush color)
+        /// <summary>The solution's folder, for links to files in Claude's answers (relative paths are under it).</summary>
+        public Func<string> BaseDirectory { get; set; }
+
+        /// <summary>A link that opens a file or folder of <paramref name="link"/>, its tooltip saying which.</summary>
+        private Hyperlink FileLinkTo(Inline content, Core.Context.FileLink link, Brush color)
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var h = new Hyperlink(content) { ToolTip = link.Describe(BaseDirectory?.Invoke()), Foreground = color, Cursor = System.Windows.Input.Cursors.Hand };
+            h.Click += (s, e) =>
+            {
+                ThreadHelper.ThrowIfNotOnUIThread();
+                try { VsContext.OpenLink(link); }
+                catch (Exception ex) when (!(ex is OutOfMemoryException)) { Diagnostics.ClaudeOutputPane.WriteLine("Open link: " + ex.Message); }
+            };
+            return h;
+        }
+
+        private Inline MakeLink(MdInline i, Brush color)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            // A file or folder on disk (Phase 90): opens it, at the line when the link names one
+            if (Core.Context.FileLink.Parse(i.Url, BaseDirectory?.Invoke()) is Core.Context.FileLink file)
+                return FileLinkTo(new Run(i.Text), file, color);
             if (!Uri.TryCreate(i.Url, UriKind.Absolute, out Uri uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
-                return new Run(i.Text); // only open web links; anything else is shown as text
+                return new Run(i.Text); // only open web links and files; anything else is shown as text
             var link = new Hyperlink(new Run(i.Text)) { NavigateUri = uri, ToolTip = uri.ToString(), Foreground = color };
             link.RequestNavigate += (s, e) =>
             {

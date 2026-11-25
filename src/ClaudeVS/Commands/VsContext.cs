@@ -58,6 +58,35 @@ namespace ClaudeVS.Commands
             VsShellUtilities.OpenDocument(ServiceProvider.GlobalProvider, path);
         }
 
+        /// <summary>
+        /// A link from Claude's answer (Phase 90): a folder opens in File Explorer; a file opens, or is brought to the
+        /// front, and with a line its caret goes there (the column too, both kept within the file). Without a line the
+        /// caret stays where it was, as VS Code's 2.1.332 fix for "moving the cursor of an open file to line 1".
+        /// </summary>
+        public static void OpenLink(FileLink link)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (link.IsFolder)
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", "\"" + link.Path + "\"") { UseShellExecute = true });
+                return;
+            }
+            if (!(link.Line is int line))
+            {
+                VsShellUtilities.OpenDocument(ServiceProvider.GlobalProvider, link.Path);
+                return;
+            }
+            VsShellUtilities.OpenDocument(ServiceProvider.GlobalProvider, link.Path, Guid.Empty, out _, out _, out _, out Microsoft.VisualStudio.TextManager.Interop.IVsTextView view);
+            if (view == null || view.GetBuffer(out var buffer) != Microsoft.VisualStudio.VSConstants.S_OK || buffer == null) return;
+            buffer.GetLineCount(out int lines);
+            int at = Math.Max(0, Math.Min(line - 1, Math.Max(0, lines - 1)));
+            buffer.GetLengthOfLine(at, out int length);
+            int col = Math.Max(0, Math.Min((link.Column ?? 1) - 1, length));
+            view.SetCaretPos(at, col);
+            view.CenterLines(at, 1);
+            view.SendExplicitFocus();
+        }
+
         /// <summary>Saves the file if it is open with unsaved changes, so its content on disk is current.</summary>
         public static void SaveIfOpen(string path)
         {

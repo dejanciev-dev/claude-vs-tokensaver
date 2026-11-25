@@ -2454,12 +2454,16 @@ without an extension, to folders, and with a line and column doing nothing" and 
 moving the cursor of an open file to line 1". Here a link to a file does nothing at all: `MakeLink` makes only
 http(s) links clickable and shows `[Login.cs](src/Login.cs:42)` as plain text.
 
-- [ ] **File links open the file.** A Markdown link whose target is a file or folder of the solution opens it. Core:
+- [x] **File links open the file.** A Markdown link whose target is a file or folder of the solution opens it. Core:
       `FileLink.Parse(target, baseDir, exists)` for a relative or absolute path or a `file://` URI (percent-encoded too),
       with `:line`, `:line:col`, `#Lline`, `#Lline-end` or `#line-end`; files without an extension; null for web links
       and for nothing on disk. VS: a link with a line opens the file there (caret at line and column); without one it
       opens or activates the file and leaves its caret where it was; a folder opens in File Explorer. The tooltip names
-      the file and line. Test in Core
+      the file and line. Test in Core.
+      `Context/FileLink.cs` (a name before `:digits` is a file and its line, not a URI scheme: `Makefile:3`; a path
+      starting with `/` is under the solution first); `TranscriptView.MakeLink` tries it before web links, with
+      `BaseDirectory` from the chat (the session's folder, else the solution's); `VsContext.OpenLink` sets the caret
+      through the text view, kept within the file. `Test_FileLink_Targets`. Builds clean; not yet run in VS
 - [ ] **Paths in inline code are links.** Claude Code is told to write code references as `file_path:line_number`,
       usually in backticks. Inline code that is a path to an existing file (relative to the solution or absolute),
       with an optional line, gets the same link; anything that isn't a file on disk stays code (`int x`, `foo.bar`).

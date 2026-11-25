@@ -319,6 +319,7 @@ namespace ClaudeVS.ToolWindow
             root.Children.Add(top);
             root.Children.Add(bottom);
             _view.Box.Margin = new Thickness(10, 0, 6, 0);
+            _view.BaseDirectory = () => { ThreadHelper.ThrowIfNotOnUIThread(); return _sessionDir ?? VsContext.GetSolutionDirectory(); }; // file links in answers (Phase 90)
             var transcript = new Grid();
             transcript.Children.Add(_view.Box);
             transcript.Children.Add(_emptyState); // shown over the transcript until the first message

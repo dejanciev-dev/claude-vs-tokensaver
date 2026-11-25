@@ -299,6 +299,52 @@ namespace ClaudeVS.Core.Tests
         }
 
         /// <summary>Lines 3-5 selected to column 1 of line 6: three lines, as the range says (Phase 84).</summary>
+        private static void Test_FileLink_Targets()
+        {
+            // Phase 90: links in Claude's answers to files and folders (VS Code's 2.1.332 fixes), against real files
+            string root = Path.Combine(Path.GetTempPath(), "claudevs-test-" + Guid.NewGuid().ToString("N"));
+            void Write(string rel) { string f = Path.Combine(root, rel); Directory.CreateDirectory(Path.GetDirectoryName(f)); File.WriteAllText(f, "x"); }
+            Write(@"src\Login.cs");
+            Write(@"My App\Read me.md");
+            Write("Makefile");
+            Directory.CreateDirectory(Path.Combine(root, "docs"));
+            try
+            {
+                string login = Path.Combine(root, "src", "Login.cs");
+                FileLink L(string target) => FileLink.Parse(target, root);
+                string Show(FileLink f) => f == null ? "null" : $"{(f.IsFolder ? "dir " : "")}{f.Path.Substring(root.Length + 1)}|{f.Line}|{f.EndLine}|{f.Column}";
+
+                Eq(@"src\Login.cs|||", Show(L("src/Login.cs")), "relative, no line");
+                Eq(@"src\Login.cs|42||", Show(L("src/Login.cs:42")), ":line");
+                Eq(@"src\Login.cs|42||7", Show(L("src/Login.cs:42:7")), ":line:col");
+                Eq(@"src\Login.cs|5|10|", Show(L("src/Login.cs:5-10")), ":range");
+                Eq(@"src\Login.cs|5|10|", Show(L("src/Login.cs#L5-L10")), "#L range");
+                Eq(@"src\Login.cs|5|10|", Show(L("src/Login.cs#5-10")), "#range, as @app.ts#5-10");
+                Eq(@"src\Login.cs|12||3", Show(L("src/Login.cs#L12C3")), "#LxCy");
+                Eq(@"src\Login.cs|42||", Show(L(login + ":42")), "absolute with a drive");
+                Eq(@"src\Login.cs|42||", Show(L(login.Replace('\\', '/') + "#L42")), "absolute, forward slashes");
+                Eq(@"src\Login.cs|||", Show(L("/src/Login.cs")), "rooted without a drive: under the solution");
+                Eq(@"src\Login.cs|9||", Show(L("<src/Login.cs:9>")), "in angle brackets");
+                Eq(@"src\Login.cs|9||", Show(L(new Uri(login).AbsoluteUri + "#L9")), "file:// URI");
+                Eq(@"My App\Read me.md|||", Show(L("My%20App/Read%20me.md")), "percent-encoded");
+                Eq(@"My App\Read me.md|||", Show(L(new Uri(Path.Combine(root, "My App", "Read me.md")).AbsoluteUri)), "file:// with spaces");
+                Eq("Makefile|3||", Show(L("Makefile:3")), "no extension");
+                Eq("dir docs|||", Show(L("docs/")), "a folder");
+                Eq("dir docs|||", Show(L("docs:4")), "a folder ignores a line");
+                Eq(@"src\Login.cs|||", Show(L("src/Login.cs:0")), "line 0 is none");
+                Eq("null", Show(L("src/Missing.cs:3")), "nothing on disk");
+                Eq("null", Show(L("https://example.com/src/Login.cs")), "a web link");
+                Eq("null", Show(L("mailto:someone@example.com")), "another scheme");
+                Eq("null", Show(L("")), "empty");
+                Eq("null", Show(FileLink.Parse("src/Login.cs", null)), "relative without a solution");
+
+                Eq(@"src\Login.cs, line 42, column 7", L("src/Login.cs:42:7").Describe(root), "tooltip");
+                Eq(@"src\Login.cs, lines 5–10", L("src/Login.cs#L5-10").Describe(root));
+                Eq(@"Open folder docs", L("docs").Describe(root));
+            }
+            finally { Directory.Delete(root, true); }
+        }
+
         private static void Test_Context_WholeLineSelectionCount()
         {
             var whole = new EditorSelection { FilePath = @"C:\repo\A.cs", StartLine = 3, EndLine = 5, Text = "a\r\nb\r\nc\r\n" };
