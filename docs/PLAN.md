@@ -2574,7 +2574,9 @@ Planned on 2026-11-25, after Phase 93, on the same branch (PR #96); in 0.17.0.
       Phase 90 each link and each path-shaped code span looks at the disk again each time, on the UI thread. Remember
       what a target resolved to (or that it is nothing) while the answer streams, and forget it when the answer ends,
       so a file Claude writes afterwards links in the next answer. Count the lookups in a test
-- [ ] **Manual checks and 0.17.0 notes.** Rows in MANUAL-CHECKS 31; the changelog's 0.17.0
+- [x] **Manual checks and 0.17.0 notes.** Rows in MANUAL-CHECKS 31; the changelog's 0.17.0. Two rows (the /
+      menu with a message typed, links looked at once while an answer streams); both under Fixed, the menu in the
+      highlights
 
 ---
 

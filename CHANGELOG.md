@@ -21,7 +21,7 @@ Still a **preview**, for Claude Code 2.1.318 or newer (tested with 2.1.332). Thi
 - **Requests that don't get lost:** a chat out of view that waits for you says so in an info bar with *Show*; a
   request left open when Claude Code's process ends is closed with a note instead of taking an answer into nothing.
 - **Smaller fixes from VS Code 2.1.331–2.1.332:** changes to a recalled prompt are kept, an empty settings file doesn't
-  stop setup, your `spinnerVerbs` word the activity row.
+  stop setup, your `spinnerVerbs` word the activity row, the **/** menu keeps what you typed.
 
 The full list follows.
 
@@ -69,6 +69,10 @@ The full list follows.
 - **A Web Fetch the site refused** (404, 500…) is a failed row, *HTTP 404 Not Found*, instead of a green one: Claude
   Code doesn't flag it as an error. A redirect it didn't follow says *Not followed: 302 Found → …*. Live and on resume,
   as VS Code fixed in 2.1.332.
+- **Picking a skill from the / button keeps what you typed,** as its argument (`/review your text`), instead of
+  wiping it (as VS Code fixed in 2.1.332). A command already in the box is swapped, its arguments kept.
+- **Links in a long answer no longer slow it down:** the answer is drawn again for every piece that streams in, and
+  each file link looked at the disk each time; now once per piece of text, and a file Claude writes after it still links.
 
 ## [0.16.0] - 2026-11-23
 
