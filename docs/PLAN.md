@@ -2526,9 +2526,14 @@ the CLI's schema only; a live test each shows when Claude Code changes them. The
       `effective.spinnerVerbs` is `{ mode: "replace", verbs: [...] }` as the schema says; PASS. (Its first run failed
       only because `get_settings` doesn't start the process by itself: `GetSettingsAsync(start: true)`; the chat reads
       it after the first init, when the process runs.)
-- [ ] **Release 0.17.0.** Manifest, assembly and package registration at 0.17.0, still a preview; the Unreleased
+- [x] **Release 0.17.0.** Manifest, assembly and package registration at 0.17.0, still a preview; the Unreleased
       changelog becomes `## [0.17.0]` with highlights; the Marketplace overview adds what's new; CONTRIBUTING's
-      `--live-all` count and cost. Tagging after the merge
+      `--live-all` count and cost. Tagging after the merge.
+      The Release VSIX builds; three highlights. `--live-all` with 2.1.332: 18 of 18 after one fix ($0.21, 6.0 min).
+      edit-review failed first: 2.1.332's tool result itself now says "The user modified your proposed changes
+      before accepting them." (2.1.331's fix), and Claude answered in those words, not "rejected"; the extension's
+      note still arrives and names the change. The test now checks that Claude knows which line it left. The
+      overview has no what's-new list; its chat paragraph got the file links in Phase 90
 
 ---
 

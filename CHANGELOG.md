@@ -6,9 +6,28 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-11-25
+
+Still a **preview**, for Claude Code 2.1.318 or newer (tested with 2.1.332). This release keeps up with Claude Code
+2.1.331 and 2.1.332, and brings over the VS Code fixes from those versions that were bugs here too.
+
+### Highlights
+
+- **Links to files in Claude's answers open them,** at the line and column they name, also a file path in backticks
+  (`src/Login.cs:42`, as Claude Code writes references).
+- **Failures that say what to do:** "Prompt is too long" names what takes the room; a Web Fetch the site refused is a
+  failed row with its status; a proxy that cuts compressed responses names the setting that fixes it; a warning when
+  Claude Code couldn't save the session.
+- **Smaller fixes from VS Code 2.1.331–2.1.332:** changes to a recalled prompt are kept, an empty settings file doesn't
+  stop setup, your `spinnerVerbs` word the activity row.
+
+The full list follows.
+
 ### Changed
 
-- **Verified with Claude Code 2.1.332:** all 17 live tests pass. Still needs 2.1.318 or newer.
+- **Verified with Claude Code 2.1.332:** all 18 live tests pass. Still needs 2.1.318 or newer.
+- **Two more live tests** (`--live-all`): a Web Fetch the site refuses is a failed row, and `get_settings` gives your
+  `spinnerVerbs`, so a change in either shape shows up.
 
 ### Added
 
