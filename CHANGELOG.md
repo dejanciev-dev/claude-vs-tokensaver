@@ -6,6 +6,10 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **Verified with Claude Code 2.1.332:** all 17 live tests pass. Still needs 2.1.318 or newer.
+
 ### Added
 
 - **A warning when Claude Code couldn't save the session** (2.1.332 reports it when the disk is full or its quota is

@@ -2358,7 +2358,7 @@ Planned on 2026-11-23, after Phase 86, on the same branch (PR #95); in 0.16.0.
       mode), not `live (Accept Edits)`. The row is drawn by `ToolCallView.Summarize` from the tool result event, as the
       chat does, and compared with the header and the labels the test picked; a mismatch fails it. With 2.1.330:
       "Fruits: Apple, Banana", $0.0033
-- [ ] **Verify 0.16.0 with `--live-all`.** Every live test against 2.1.330 again, as Phases 83–86 changed tool rows and
+- [x] **Verify 0.16.0 with `--live-all`.** Every live test against 2.1.330 again, as Phases 83–86 changed tool rows and
       the transcript; CONTRIBUTING gets the measured cost and time. Done with 2.1.332 in Phase 88's last item
 
 ## Phase 88 — Keep up with the CLI (from the Claude Code CHANGELOG 2.1.331–2.1.332)
@@ -2397,9 +2397,10 @@ gateway, Bedrock, Agent Platform and Foundry entries are left out.
       `Test_ToolData_Shapes`. Nothing threw, but the row had a blank name. `ClaudeStreamParser.ToolNameOf` gives
       "Tool" (`UnnamedTool`) for a missing, null or empty name: the tool row, the activity row while it is written,
       and a resumed session's row. Not probed (needs a custom endpoint)
-- [ ] **Verify with 2.1.332 and raise `CliVersion.Tested`.** All live tests with 2.1.332 (also Phase 87's open item);
+- [x] **Verify with 2.1.332 and raise `CliVersion.Tested`.** All live tests with 2.1.332 (also Phase 87's open item);
       README, the Marketplace overview and the changelog's Unreleased section say so; CONTRIBUTING gets the measured
-      cost and time
+      cost and time. `--live-all`: 17 of 17 pass ($0.21, 7.0 min); 249 offline tests pass. `CliVersion.Tested` is
+      2.1.332 (`Required` stays 2.1.318); README, the overview, CONTRIBUTING and the changelog say so
 
 Checked, nothing to change:
 - `@file#10-12` attaching the whole file (2.1.331) and VS Code's Alt+K ranges: the extension inlines a selection or
