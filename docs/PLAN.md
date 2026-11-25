@@ -2513,10 +2513,12 @@ Planned on 2026-11-25, after Phase 91, on the same branch (PR #96). The rest of 
 were checked in Phases 88–91 and don't apply here. Two shapes the extension now reads came from one probe or from
 the CLI's schema only; a live test each shows when Claude Code changes them. Then a release for Phases 88–91.
 
-- [ ] **Live test: a refused Web Fetch.** A `webfetch` step in `--live-all`: Haiku with the Agent tool disallowed
+- [x] **Live test: a refused Web Fetch.** A `webfetch` step in `--live-all`: Haiku with the Agent tool disallowed
       fetches a URL that answers 404; the row drawn from the real stream (`ToolCallView.Summarize` on the tool result,
       as the chat does) must be a failure reading "HTTP 404 Not Found", and `FailedFetch` true. About a cent. It needs
-      the site to answer: a fetch that fails another way is a SKIP, not a FAIL
+      the site to answer: a fetch that fails another way is a SKIP, not a FAIL.
+      `LiveSmoke.RunWebFetch` (`--live-webfetch`, after `ask` in `--live-all`; `--disallowedTools Agent --allowedTools
+      WebFetch`). With 2.1.332: `is_error` false, `code` 404, the row "HTTP 404 Not Found" (failed); PASS, $0.006
 - [ ] **Live test: settings the chat reads.** A `settings` step in `--live-all`, no model call: a project with
       `spinnerVerbs` (replace) in `.claude/settings.local.json`; `get_settings` must give it in `effective`, and
       `ClaudeSettings.Verbs` the project's words. Phase 91 took the shape from the schema only

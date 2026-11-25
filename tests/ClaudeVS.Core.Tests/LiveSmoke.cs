@@ -74,6 +74,7 @@ namespace ClaudeVS.Core.Tests
                 ("live (Accept Edits)", () => Run(null, PermissionModeChoice.AcceptEdits)),
                 ("live (Plan)", () => Run(null, PermissionModeChoice.Plan)), // Haiku's full ID keeps plan mode on Haiku
                 ("ask", () => RunInteractive(null, PermissionModeChoice.Default, ask)),
+                ("webfetch", RunWebFetch), // a site's 404 is a failed row though Claude Code sends no error (Phase 89)
                 ("session", RunSession),
                 ("long-prompt", RunLongPrompt),
                 ("prompt-tokens", RunPromptTokens),
@@ -486,6 +487,53 @@ namespace ClaudeVS.Core.Tests
             }
             Console.WriteLine(failures.Count == 0 ? "PASS live dialogs" : "FAIL live dialogs");
             return failures.Count == 0 ? 0 : 1;
+        }
+
+        /// <summary>
+        /// `--live-webfetch` (in --live-all, about a cent): a Web Fetch the site refuses (Phase 89). Claude Code sends
+        /// no error for it, only <c>tool_use_result.code</c>/<c>codeText</c>; the row drawn from the real stream, as the
+        /// chat draws it, must be a failure reading "HTTP 404 Not Found". Haiku hands fetches to a web-fetch subagent
+        /// unless Agent is disallowed. A fetch that fails another way (no network, the site down) is a SKIP.
+        /// </summary>
+        public static int RunWebFetch()
+        {
+            string exe = ClaudeCliLocator.Resolve("");
+            if (exe == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-live-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            const string url = "https://httpbin.org/status/404";
+            var events = new BlockingCollection<ClaudeEvent>();
+            var session = NewSession(new ClaudeLaunchOptions
+            {
+                WorkingDirectory = dir, Model = ModelChoice.Haiku, Effort = EffortChoice.Low,
+                ExtraArguments = "--disallowedTools Agent --allowedTools WebFetch",
+            });
+            session.EventReceived += (s, e) => events.Add(e);
+            ClaudeEvent result = null;
+            try
+            {
+                session.SendPromptAsync($"Call WebFetch yourself once on {url} with the prompt 'say what the page is'. Do not fetch anything else. Then reply with one word: done.").GetAwaiter().GetResult();
+                string fetchId = null;
+                var deadline = DateTime.UtcNow.AddSeconds(120);
+                while (DateTime.UtcNow < deadline)
+                {
+                    if (!events.TryTake(out var e, TimeSpan.FromMilliseconds(200))) continue;
+                    if (e.Kind == ClaudeEventKind.ToolUse && e.ToolName == "WebFetch" && !e.IsSubagent) fetchId = e.ToolUseId;
+                    if (e.Kind == ClaudeEventKind.ToolResult && e.ToolUseId != null && e.ToolUseId == fetchId) result = e;
+                    if (e.Kind == ClaudeEventKind.TurnCompleted) { Console.WriteLine($"  turn completed: error={e.IsError}, cost=${e.TotalCostUsd:0.0000}"); break; }
+                }
+            }
+            finally { session.Dispose(); try { Directory.Delete(dir, true); } catch (IOException) { } }
+
+            if (result == null) { Console.WriteLine("FAIL live webfetch: no WebFetch result from the main agent"); return 1; }
+            int? code = result.ResultData?["code"]?.Type == Newtonsoft.Json.Linq.JTokenType.Integer ? (int?)result.ResultData["code"] : null;
+            Console.WriteLine($"  is_error={result.IsError}, code={code?.ToString() ?? "none"}, text: {(result.ResultText ?? "").Split('\n')[0]}");
+            if (code != 404) { Console.WriteLine("SKIP live webfetch: the site didn't answer 404 (network or site), nothing to check"); return 2; }
+            var row = ToolCallView.Summarize("WebFetch", result.ResultText, result.IsError, data: result.ResultData);
+            Console.WriteLine("  row: " + string.Join(" | ", row.Lines) + (row.IsError ? " (failed)" : ""));
+            bool ok = row.IsError && row.Lines.SingleOrDefault() == "HTTP 404 Not Found" && ToolCallView.FailedFetch("WebFetch", result.ResultData);
+            Console.WriteLine(ok ? "PASS live webfetch" : "FAIL live webfetch: the row should be a failure reading \"HTTP 404 Not Found\"");
+            return ok ? 0 : 1;
         }
 
         /// <summary>
