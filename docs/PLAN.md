@@ -2548,12 +2548,17 @@ Planned on 2026-11-25, after Phase 92, on the same branch (PR #96); in 0.17.0. T
       die with the old process); `TranscriptView.CloseOpenCards` disables the cards still enabled (answered ones
       disable themselves); `SessionNotices.EndedWhileWaiting` words it. `Test_SessionNotices_EndedWhileWaiting`.
       Builds clean; not yet run in VS
-- [ ] **A chat out of view that waits for you.** As VS Code's 2.1.331 fix for "a missing notification when a
+- [x] **A chat out of view that waits for you.** As VS Code's 2.1.331 fix for "a missing notification when a
       conversation running behind another one in the same panel needs a permission or an answer" and 2.1.332's "a
       hidden panel's notice not naming the waiting session": a chat window that isn't in view (a tab behind another,
       or auto-hidden) gives no sign when it asks for a permission, a question, a plan or an edit review. Show an info
       bar in VS's main window naming the chat and what it waits for, with *Show*; it goes when the chat comes into
-      view or the request is answered. The words in Core, tested
+      view or the request is answered. The words in Core, tested.
+      `ClaudeChatControl.Waiting.cs`: after any permission request, when the control isn't `IsVisible`, an info bar
+      in the main window (`VSSPROPID_MainWindowInfoBarHost`) with *Show* (`WindowFrame.Show`), one per chat; it goes
+      when the chat becomes visible, an answer is sent, the requests are dropped (Phase 93 item 1) or the session
+      is replaced (New, Resume, a solution change). A closed chat window keeps its bar: *Show* opens it again.
+      `SessionNotices.WaitingOutOfView`, `Test_SessionNotices_WaitingOutOfView`. Builds clean; not yet run in VS
 - [ ] **Manual checks and 0.17.0 notes.** Rows in MANUAL-CHECKS 31; both in the changelog's 0.17.0
 
 ---

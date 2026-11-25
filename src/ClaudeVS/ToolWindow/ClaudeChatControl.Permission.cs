@@ -237,6 +237,7 @@ namespace ClaudeVS.ToolWindow
             _permission.Visibility = Visibility.Collapsed;
             _waitingForUser = false;
             int cards = _view.CloseOpenCards();
+            ClearWaitingNotice();
             if (!permission && cards == 0) return;
             RenderActivity();
             Append("\n" + Core.Cli.SessionNotices.EndedWhileWaiting(permission, cards) + "\n");
@@ -252,6 +253,7 @@ namespace ClaudeVS.ToolWindow
             _permPrompt = null;
             _permission.Visibility = Visibility.Collapsed;
             _waitingForUser = false;
+            ClearWaitingNotice();
             RenderActivity();
             System.Threading.Interlocked.Exchange(ref _lastOutputTicks, DateTime.UtcNow.Ticks);
             if (req == null || _session == null) return;
