@@ -23,6 +23,8 @@ namespace ClaudeVS.ToolWindow
         private enum Phase { Starting, Thinking, Writing, Tool, Waiting }
 
         private static readonly string[] SpinnerFrames = { "·", "✢", "✳", "✶", "✻", "✽", "✻", "✶", "✳", "✢" };
+        // Claude Code's spinnerVerbs setting, as get_settings last gave it (null: none)
+        private Newtonsoft.Json.Linq.JToken _spinnerVerbs;
         private static readonly string[] Verbs = { "Thinking", "Pondering", "Imagining", "Reasoning", "Considering", "Mulling", "Working", "Brewing", "Crafting", "Figuring" };
         private static readonly string[] Tips =
         {
@@ -118,7 +120,8 @@ namespace ClaudeVS.ToolWindow
             _thinkingSinceUtc = null;
             _thoughtFromCli = false;
             _hookRunning = null;
-            _turnVerb = Verbs[Rng.Next(Verbs.Length)];
+            var verbs = ClaudeSettings.Verbs(_spinnerVerbs, Verbs); // your spinnerVerbs (Claude Code's settings) added or instead
+            _turnVerb = verbs[Rng.Next(verbs.Length)];
             _activityTip.Text = "⎿  Tip: " + Tips[Rng.Next(Tips.Length)];
         }
 
