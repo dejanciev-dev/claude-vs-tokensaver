@@ -1504,6 +1504,7 @@ namespace ClaudeVS.ToolWindow
         {
             _answer.Clear();
             _answerBlocks.Clear();
+            _linkDisk.Clear();
         }
 
         public void Clear()
@@ -1614,7 +1615,7 @@ namespace ClaudeVS.ToolWindow
                     case MdInlineKind.Code:
                         var code = new Run(i.Text) { FontFamily = Mono, Foreground = a.Code, Background = a.CodeBack };
                         // `src/Login.cs:42`, as Claude Code writes references: a link to the file (Phase 90)
-                        if (Core.Context.FileLink.FromCode(i.Text, BaseDirectory?.Invoke()) is Core.Context.FileLink file)
+                        if (Core.Context.FileLink.FromCode(i.Text, BaseDirectory?.Invoke(), _linkDisk.FileExists) is Core.Context.FileLink file)
                             target.Add(FileLinkTo(code, file, a.Link));
                         else target.Add(code);
                         break;
@@ -1647,6 +1648,10 @@ namespace ClaudeVS.ToolWindow
         /// <summary>The solution's folder, for links to files in Claude's answers (relative paths are under it).</summary>
         public Func<string> BaseDirectory { get; set; }
 
+        // What link targets resolved to while an answer streams: it is drawn again for every piece, and each drawing
+        // would look at the disk again (Phase 94). Forgotten when the answer ends, so a file written later links.
+        private readonly Core.Context.DiskLookups _linkDisk = new Core.Context.DiskLookups();
+
         /// <summary>A link that opens a file or folder of <paramref name="link"/>, its tooltip saying which.</summary>
         private Hyperlink FileLinkTo(Inline content, Core.Context.FileLink link, Brush color)
         {
@@ -1665,7 +1670,7 @@ namespace ClaudeVS.ToolWindow
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             // A file or folder on disk (Phase 90): opens it, at the line when the link names one
-            if (Core.Context.FileLink.Parse(i.Url, BaseDirectory?.Invoke()) is Core.Context.FileLink file)
+            if (Core.Context.FileLink.Parse(i.Url, BaseDirectory?.Invoke(), _linkDisk.FileExists, _linkDisk.DirExists) is Core.Context.FileLink file)
                 return FileLinkTo(new Run(i.Text), file, color);
             if (!Uri.TryCreate(i.Url, UriKind.Absolute, out Uri uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
                 return new Run(i.Text); // only open web links and files; anything else is shown as text
