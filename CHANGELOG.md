@@ -20,6 +20,8 @@ All notable changes to this project are listed here. The format follows
 - **Changes to a recalled prompt are kept** (as VS Code since 2.1.331): Ctrl+Up recalls a prompt, you change it, and
   Ctrl+Up or Ctrl+Down no longer drops the change; it comes back while you go on browsing. The prompts sent stay as
   they were.
+- **A tool call with no name** (a custom endpoint or gateway can send one; 2.1.331 fails it with an error) shows as
+  "Tool" with its error, live and on resume, instead of a row with a blank name.
 
 ## [0.16.0] - 2026-11-23
 

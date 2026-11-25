@@ -827,6 +827,25 @@ namespace ClaudeVS.Core.Tests
         {
             Eq("Read 4 lines", ToolCallView.FromData("Read", JObject.Parse("{\"file\":{\"numLines\":4,\"startLine\":1,\"totalLines\":4}}")), "whole file");
             Eq("Read 2 lines", ToolCallView.FromData("Read", JObject.Parse("{\"file\":{\"content\":\"a\\nb\",\"numLines\":2,\"startLine\":1,\"totalLines\":2}}")), "no newline at the end");
+            // 2.1.331: a gateway's tool call with no name fails with an error and the session goes on; its row still shows
+            var parser = new ClaudeStreamParser();
+            foreach (string nameField in new[] { "", "\"name\":\"\",", "\"name\":null," })
+            {
+                var call = parser.Parse("{\"type\":\"assistant\",\"message\":{\"id\":\"m" + nameField.Length + "\",\"content\":[{\"type\":\"tool_use\",\"id\":\"toolu_x\"," + nameField + "\"input\":{}}]}}").Single();
+                Eq(ClaudeStreamParser.UnnamedTool, call.ToolName, "no name: " + nameField);
+                Eq("Tool", ToolCallView.Title(call.ToolName, call.ToolInput).Name, "the row's name");
+            }
+            var activity = parser.Parse("{\"type\":\"stream_event\",\"event\":{\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"tool_use\",\"id\":\"toolu_y\",\"input\":{}}}}").Single();
+            Eq("Tool", activity.ToolName, "the activity row while it is written");
+            var unnamedError = ToolCallView.Summarize(ClaudeStreamParser.UnnamedTool, "Error: No such tool available: ", true);
+            True(unnamedError.IsError && unnamedError.Lines.Count == 1, "its error shows");
+            string unnamedFile = Path.GetTempFileName();
+            try
+            {
+                File.WriteAllText(unnamedFile, "{\"type\":\"assistant\",\"uuid\":\"a1\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"toolu_z\",\"input\":{}}]}}\n");
+                Eq("Tool", SessionTranscript.Read(unnamedFile).Items.Single(i => i.Kind == TranscriptItemKind.Tool).ToolName, "on resume too");
+            }
+            finally { File.Delete(unnamedFile); }
             // 2.1.330: a Grep pattern with a line break and no multiline is refused by ripgrep, not "No matches"
             var rejected = new ClaudeStreamParser().Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.330-grep-rejected.jsonl")).Trim())
                 .Single(e => e.Kind == ClaudeEventKind.ToolResult);

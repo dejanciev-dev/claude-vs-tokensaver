@@ -2391,10 +2391,12 @@ gateway, Bedrock, Agent Platform and Foundry entries are left out.
       left (a cleared box or an added line too); a recalled entry shows its edit; the edits go when browsing ends past
       the newest or a prompt is sent, and the entries stay as sent. `Test_PromptHistory_EditsKept`. Builds clean; not
       yet run in VS
-- [ ] **A tool call with no name.** 2.1.331 fixes a crash when a custom endpoint returns a tool call with no name (the
+- [x] **A tool call with no name.** 2.1.331 fixes a crash when a custom endpoint returns a tool call with no name (the
       call fails with an error, the session goes on); VS Code showed "Something went wrong". Check that a `tool_use`
       with no or an empty `name` draws a row ("Tool") and its error, and nothing keyed by the name throws. Test in
-      `Test_ToolData_Shapes`
+      `Test_ToolData_Shapes`. Nothing threw, but the row had a blank name. `ClaudeStreamParser.ToolNameOf` gives
+      "Tool" (`UnnamedTool`) for a missing, null or empty name: the tool row, the activity row while it is written,
+      and a resumed session's row. Not probed (needs a custom endpoint)
 - [ ] **Verify with 2.1.332 and raise `CliVersion.Tested`.** All live tests with 2.1.332 (also Phase 87's open item);
       README, the Marketplace overview and the changelog's Unreleased section say so; CONTRIBUTING gets the measured
       cost and time

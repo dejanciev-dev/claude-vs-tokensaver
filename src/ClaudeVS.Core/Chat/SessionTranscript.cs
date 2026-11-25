@@ -159,9 +159,9 @@ namespace ClaudeVS.Core.Chat
                         {
                             Kind = TranscriptItemKind.Tool,
                             ToolUseId = (string)b["id"],
-                            ToolName = (string)b["name"],
+                            ToolName = ClaudeStreamParser.ToolNameOf(b),
                             ToolInput = input,
-                            Text = ClaudeStreamParser.DescribeTool((string)b["name"], input),
+                            Text = ClaudeStreamParser.DescribeTool(ClaudeStreamParser.ToolNameOf(b), input),
                         };
                         items.Add(item);
                         if (item.ToolUseId != null) tools[item.ToolUseId] = item;
