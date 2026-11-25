@@ -934,6 +934,7 @@ namespace ClaudeVS.Core.Tests
                         else session.RespondToPermissionAsync(ev.RequestId, ev.ToolInput, ev.ToolName == "Read").Wait();
                     }
                     if (ev.Kind == ClaudeEventKind.TextDelta || ev.Kind == ClaudeEventKind.AssistantText) reply += ev.Text;
+                    if (ev.Kind == ClaudeEventKind.ToolResult) Console.WriteLine("  tool result: " + (ev.ResultText ?? "").Replace("\n", "\\n"));
                     if (ev.Kind == ClaudeEventKind.TurnCompleted) { Console.WriteLine($"  cost ${ev.TotalCostUsd:0.0000}"); done.Set(); }
                 };
                 session.SendPromptAsync("In notes.txt, change \"beta\" to \"BETA\" and \"delta\" to \"DELTA\" with one Edit call whose old_string spans lines 2-4. Then say in one sentence what the tool result told you.").Wait();
@@ -941,7 +942,11 @@ namespace ClaudeVS.Core.Tests
                 string content = File.ReadAllText(file);
                 Console.WriteLine("  file: " + content.Replace("\n", "\\n"));
                 Console.WriteLine("  reply: " + reply.Trim());
-                bool ok = finished && reviewed && content == "alpha\nBETA\ngamma\ndelta\n" && reply.IndexOf("reject", StringComparison.OrdinalIgnoreCase) >= 0;
+                // Claude knows the rejected change: it says "rejected", or names the line it left. Since 2.1.332 the tool
+                // result also says "The user modified your proposed changes before accepting them." and Claude may answer
+                // in those words; the extension's note (PostToolUse additionalContext) still names which change.
+                bool ok = finished && reviewed && content == "alpha\nBETA\ngamma\ndelta\n"
+                    && (reply.IndexOf("reject", StringComparison.OrdinalIgnoreCase) >= 0 || reply.IndexOf("delta", StringComparison.Ordinal) >= 0);
                 Console.WriteLine(ok ? "PASS live edit review" : "FAIL live edit review");
                 try { Directory.Delete(dir, true); } catch (IOException) { }
                 return ok ? 0 : 1;
