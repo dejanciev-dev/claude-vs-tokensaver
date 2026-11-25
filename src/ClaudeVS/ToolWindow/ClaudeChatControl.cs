@@ -1591,6 +1591,7 @@ namespace ClaudeVS.ToolWindow
                     SetBusy(false);
                     FlushText();
                     if (code != 0 && code != 1) Append($"\n[claude exited with code {code}]\n");
+                    DropOpenRequests(); // a permission or a card left open can't be answered any more (Phase 93)
                 });
             };
             ClaudeOutputPane.WriteLine($"Starting claude in {dir}");

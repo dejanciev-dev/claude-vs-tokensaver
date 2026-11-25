@@ -375,6 +375,16 @@ namespace ClaudeVS.Core.Tests
             True(fork.All(e => !e.IsSubagent), "the Agent call's own result belongs to the main agent");
         }
 
+        private static void Test_SessionNotices_EndedWhileWaiting()
+        {
+            // Phase 93: Claude Code's process ended with requests open
+            Eq(null, SessionNotices.EndedWhileWaiting(false, 0), "nothing open: nothing to say");
+            True(SessionNotices.EndedWhileWaiting(true, 0).StartsWith("Claude Code stopped before you answered its permission request,"), "a permission");
+            True(SessionNotices.EndedWhileWaiting(false, 1).Contains("answered its question,"), "a card");
+            True(SessionNotices.EndedWhileWaiting(true, 2).Contains("its 3 open requests"), "both");
+            True(SessionNotices.EndedWhileWaiting(false, 1).EndsWith("Send your prompt again to go on in this conversation."), "how to go on");
+        }
+
         private static void Test_ClaudeSettings_SpinnerVerbs()
         {
             // Claude Code's spinnerVerbs (2.1.332's schema), from get_settings' merged settings
