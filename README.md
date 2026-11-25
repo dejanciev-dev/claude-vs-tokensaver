@@ -34,7 +34,7 @@ Preview (0.15).
 
 | Layer | State |
 |---|---|
-| Core library (CLI session, parser, router, meter, context, Markdown, usage log) | ✅ 250 automated tests, many replaying real CLI output (2.1.316–2.1.332) |
+| Core library (CLI session, parser, router, meter, context, Markdown, usage log) | ✅ 251 automated tests, many replaying real CLI output (2.1.316–2.1.332) |
 | Core against the real `claude` CLI | ✅ Verified with Claude Code 2.1.332 via the opt-in live tests: streaming, usage, cost, prompt cache, model switch, resume, `/compact`, dialogs, edit review, MCP, question and plan approval, restart in place. Needs 2.1.318 or newer |
 | Visual Studio extension (UI) | ⚠️ Builds with zero warnings in CI, but not yet run in the experimental instance |
 
@@ -91,7 +91,7 @@ This extension attacks all three, and shows the numbers so you can see the effec
 
 | Feature | What it does |
 |---|---|
-| **Markdown answers** | Headings, lists, quotes, inline code and links, rendered while the answer streams. |
+| **Markdown answers** | Headings, lists, quotes, inline code and links, rendered while the answer streams. Links to files open them at the line and column they name (`src/Login.cs:42`, `#L5-10`), also a file path in backticks; a link to a folder opens it in File Explorer. |
 | **Code blocks** | **Copy** and **Insert** (at the cursor, one undo step). |
 | **Diff for Claude's edits** | Every file change shows up in the chat as numbered red and green lines under its row: Edit / MultiEdit, Write (against the file as it was), and shell commands that write a file (`cat > file <<'EOF'`). Above the lines, **Open diff** opens Visual Studio's diff window and **Open file** the file. |
 | **Files changed** | After each answer, a list of the files it added, changed or deleted, with `+added −removed`. Click a path to open the file, or **Diff** for the file before the answer against now. |
