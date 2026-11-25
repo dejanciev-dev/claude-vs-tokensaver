@@ -129,7 +129,7 @@ namespace ClaudeVS.Core.Cli
                         return new[] { new ClaudeEvent { Kind = ClaudeEventKind.Activity, Activity = ClaudeActivity.Writing } };
                     case "tool_use":
                     case "server_tool_use":
-                        return new[] { new ClaudeEvent { Kind = ClaudeEventKind.Activity, Activity = ClaudeActivity.Tool, ToolName = (string)ev.SelectToken("content_block.name") } };
+                        return new[] { new ClaudeEvent { Kind = ClaudeEventKind.Activity, Activity = ClaudeActivity.Tool, ToolName = ToolNameOf(ev["content_block"] as JObject) } };
                     default: return None;
                 }
             }
@@ -178,12 +178,12 @@ namespace ClaudeVS.Core.Cli
                             events.Add(new ClaudeEvent
                             {
                                 Kind = ClaudeEventKind.ToolUse,
-                                ToolName = (string)block["name"],
+                                ToolName = ToolNameOf(block),
                                 ToolUseId = (string)block["id"],
                                 ToolInput = block["input"] as JObject,
                                 IsSubagent = isSub,
                                 // A subagent's own tool calls are nested under its Agent call.
-                                Text = (isSub ? SubagentToolPrefix : "") + DescribeTool((string)block["name"], block["input"] as JObject),
+                                Text = (isSub ? SubagentToolPrefix : "") + DescribeTool(ToolNameOf(block), block["input"] as JObject),
                             });
                             break;
                     }
@@ -366,6 +366,16 @@ namespace ClaudeVS.Core.Cli
         }
 
         public const string SubagentToolPrefix = "↳ ";
+
+        /// <summary>What a tool call with no name is called: a custom endpoint or gateway can send one (2.1.331 fails the call with an error and goes on).</summary>
+        public const string UnnamedTool = "Tool";
+
+        /// <summary>A <c>tool_use</c> block's name, or <see cref="UnnamedTool"/> when it has none, so its row and its error still show.</summary>
+        public static string ToolNameOf(JObject block)
+        {
+            string name = block?["name"]?.Type == JTokenType.String ? ((string)block["name"]).Trim() : null;
+            return string.IsNullOrEmpty(name) ? UnnamedTool : name;
+        }
 
         /// <summary>How much of a tool result's text is kept for the chat (the CLI's own result can be much longer).</summary>
         public const int MaxResultText = 20_000;
