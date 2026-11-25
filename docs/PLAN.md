@@ -2428,10 +2428,13 @@ that are bugs here too.
       Ctrl+Up/Down, the session-not-saved warning, the proxy hint, a tool row with no name. Section 31, *Release*
       becomes 32. Six rows (three for the history, one each for the warning, the proxy and a nameless tool; those three
       skipped without a full drive, such a proxy or such an endpoint); rows for items 2 and 3 are added with them
-- [ ] **An empty settings file.** As VS Code's "switching models failing with 'Settings file is not valid JSON' when
+- [x] **An empty settings file.** As VS Code's "switching models failing with 'Settings file is not valid JSON' when
       settings.json is empty or starts with a byte order mark": setup (`TokenSaverSetup.Apply`, `AddDenyRule`) parses
       `.claude/settings.json` with `JObject.Parse`, which throws on an empty or blank file (`SetLocalEnv` already
-      takes one). Read all three the same way: empty or blank is `{}`, a byte order mark is skipped. Test in Core
+      takes one). Read all three the same way: empty or blank is `{}`, a byte order mark is skipped. Test in Core.
+      `TokenSaverSetup.ReadSettings` (also the check for an existing deny rule); a file that is there but isn't JSON still
+      throws and is left as it was. `Test_Setup_EmptySettingsFile`; a row in MANUAL-CHECKS 31. Builds clean; not yet run
+      in VS
 - [ ] **A failed Web Fetch says so.** As VS Code's "Web Fetch showing 'Fetched from' with a success dot when the site
       returned an error or a redirect that wasn't followed": the WebFetch row has no `FromData` case, so it shows the
       result text's first lines whatever the site answered. Probe 2.1.332 with a 404 and a cross-host redirect (Haiku,

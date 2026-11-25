@@ -409,6 +409,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | With the user folder on a nearly full drive (skip without one), chat until Claude Code 2.1.332 can't write its session file | One warning: *Claude Code couldn't save part of this session: the disk is full…*, naming `/compact`; not again in the same conversation |
 | Behind a proxy that cuts compressed responses (skip without one), send a prompt | The explanation names `CLAUDE_CODE_DISABLE_RESPONSE_COMPRESSION=1`; the empty box says *A proxy cut the compressed response…*; with the variable set and the chat restarted (New), answers come |
 | With a custom endpoint whose model sends a tool call with no name (skip without one) | A row named *Tool* with its error (red); the chat goes on |
+| Empty the solution's `.claude/settings.json` (0 bytes), then **Tools → Claude Code → Install Token-Saving Settings and Hooks** | Setup writes its settings into it; no "not valid JSON" error |
 
 ## 32. Release (Phase 5)
 

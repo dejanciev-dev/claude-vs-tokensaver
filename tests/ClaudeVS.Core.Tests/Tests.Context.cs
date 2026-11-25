@@ -376,6 +376,40 @@ namespace ClaudeVS.Core.Tests
             finally { Directory.Delete(root, true); }
         }
 
+        private static void Test_Setup_EmptySettingsFile()
+        {
+            // As VS Code's 2.1.332 fix: an empty settings.json, or one with a byte order mark, isn't "not valid JSON"
+            string root = Path.Combine(Path.GetTempPath(), "claudevs-test-" + Guid.NewGuid().ToString("N"));
+            string settings = Path.Combine(root, ".claude", "settings.json");
+            Directory.CreateDirectory(Path.GetDirectoryName(settings));
+            try
+            {
+                File.WriteAllText(settings, "");
+                True(TokenSaverSetup.Apply(root).Written.Contains(".claude/settings.json"), "setup on an empty file");
+                True(JObject.Parse(File.ReadAllText(settings))["hooks"] != null, "its settings written");
+
+                File.WriteAllText(settings, "  \r\n");
+                True(TokenSaverSetup.AddDenyRule(root, "Read(./bin/**)"), "a deny rule on a blank file");
+
+                File.WriteAllText(settings, "{\"permissions\":{\"deny\":[\"Read(./obj/**)\"]}}", new System.Text.UTF8Encoding(true));
+                True(TokenSaverSetup.AddDenyRule(root, "Read(./bin/**)"), "a file with a byte order mark");
+                Eq("Read(./obj/**)|Read(./bin/**)", string.Join("|", TokenSaverSetup.ReadSettings(settings).SelectToken("permissions.deny").Select(t => (string)t)), "kept what was there");
+                File.WriteAllText(settings, "﻿{\"a\":1}"); // a mark that survived as text
+                Eq(1, (int)TokenSaverSetup.ReadSettings(settings)["a"], "a mark read as text");
+
+                string local = Path.Combine(root, ".claude", "settings.local.json");
+                File.WriteAllText(local, "", new System.Text.UTF8Encoding(true));
+                True(TokenSaverSetup.SetLocalEnv(root, "X", "1"), "settings.local.json with only a mark");
+
+                File.WriteAllText(settings, "{ broken");
+                bool threw = false;
+                try { TokenSaverSetup.AddDenyRule(root, "Read(./x/**)"); } catch (Newtonsoft.Json.JsonException) { threw = true; }
+                True(threw && File.ReadAllText(settings) == "{ broken", "a broken file still refuses, and is left as it was");
+                Eq(TokenSaverSetup.ReadSettings(Path.Combine(root, "none.json")).Count, 0, "no file: {}");
+            }
+            finally { Directory.Delete(root, true); }
+        }
+
         // Gaps found by running the generator on real solutions (Phase 2.4).
         private static void Test_Scanner_LegacyFramework()
         {
