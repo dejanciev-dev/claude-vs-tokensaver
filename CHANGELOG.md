@@ -15,6 +15,12 @@ All notable changes to this project are listed here. The format follows
   2.1.332's words for it says to set `CLAUDE_CODE_DISABLE_RESPONSE_COMPRESSION=1` (Claude Code 2.1.331 and newer),
   instead of "The request failed on the way".
 
+### Fixed
+
+- **Changes to a recalled prompt are kept** (as VS Code since 2.1.331): Ctrl+Up recalls a prompt, you change it, and
+  Ctrl+Up or Ctrl+Down no longer drops the change; it comes back while you go on browsing. The prompts sent stay as
+  they were.
+
 ## [0.16.0] - 2026-11-23
 
 Still a **preview**, for Claude Code 2.1.318 or newer (tested with 2.1.330). This release keeps up with Claude Code

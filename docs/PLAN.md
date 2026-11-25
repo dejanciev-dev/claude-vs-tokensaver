@@ -2383,11 +2383,14 @@ gateway, Bedrock, Agent Platform and Foundry entries are left out.
       response" with a proxy, gateway, cut or damage (2.1.332's exact words weren't found in the binary, so they are
       matched loosely); the empty box's hint comes before "failed on the way", which "fetching" would otherwise get.
       Not probed (needs a proxy that cuts responses)
-- [ ] **Edits to a recalled prompt are kept.** As VS Code's 2.1.331–2.1.332 fixes ("dropping edits to a recalled
+- [x] **Edits to a recalled prompt are kept.** As VS Code's 2.1.331–2.1.332 fixes ("dropping edits to a recalled
       prompt", "Down not bringing the message back after the recalled prompt got a new line or was cleared"):
       Ctrl+Up recalls a prompt, you change it, Ctrl+Up/Down moves on and the change is lost. `PromptHistory` keeps
       each recalled entry's edit while browsing, as a shell does, and the draft comes back past the newest whatever
-      the box held. Test in Core
+      the box held. Test in Core. `Previous` and `Next` take the box's text and keep it as the edit of the entry being
+      left (a cleared box or an added line too); a recalled entry shows its edit; the edits go when browsing ends past
+      the newest or a prompt is sent, and the entries stay as sent. `Test_PromptHistory_EditsKept`. Builds clean; not
+      yet run in VS
 - [ ] **A tool call with no name.** 2.1.331 fixes a crash when a custom endpoint returns a tool call with no name (the
       call fails with an error, the session goes on); VS Code showed "Something went wrong". Check that a `tool_use`
       with no or an empty `name` draws a row ("Tool") and its error, and nothing keyed by the name throws. Test in
