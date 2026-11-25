@@ -2471,9 +2471,10 @@ http(s) links clickable and shows `[Login.cs](src/Login.cs:42)` as plain text.
       `FileLink.FromCode`: files only, and only text shaped like a path (no brackets, quotes or operators; a bare
       word like `Makefile` needs a `./`; blanks only with a slash, as in a user folder with a space), so other code
       never touches the disk. In `Test_FileLink_Targets`. Builds clean; not yet run in VS
-- [ ] **Manual checks and README.** Rows in MANUAL-CHECKS 31 (a link with a line and column, one without a line on an
+- [x] **Manual checks and README.** Rows in MANUAL-CHECKS 31 (a link with a line and column, one without a line on an
       open file, a folder, a path in backticks, a link to a file that isn't there); README's chat section says file
-      references are links
+      references are links. Four rows in MANUAL-CHECKS 31; README's *Markdown answers*
+      row and the Marketplace overview's chat paragraph say so
 
 ---
 

@@ -411,6 +411,10 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | With a custom endpoint whose model sends a tool call with no name (skip without one) | A row named *Tool* with its error (red); the chat goes on |
 | Empty the solution's `.claude/settings.json` (0 bytes), then **Tools → Claude Code → Install Token-Saving Settings and Hooks** | Setup writes its settings into it; no "not valid JSON" error |
 | Ask *Use WebFetch yourself on https://httpbin.org/status/404, then on https://httpbin.org/redirect-to?url=https%3A%2F%2Fexample.com* | The first Fetch row is red, *HTTP 404 Not Found*; the second says *Not followed: 302 Found → https://example.com/*. The same after resuming the session |
+| Ask *Reply with a Markdown link to line 3, column 5 of a .cs file in this solution, then the same file as `path:line` in backticks* | Both are links (tooltip: the file, line and column); clicking opens the file with the caret at line 3, column 5 (in backticks, at line 3) |
+| Move the caret in that file to line 20, then ask for a link to the file with no line and click it | The file comes to the front with the caret still at line 20, not line 1 |
+| Ask for a Markdown link to a folder of the solution, and to a file without an extension (a `Dockerfile` or `LICENSE`) | The folder opens in File Explorer; the file opens in VS |
+| Ask for a link to a file that doesn't exist, and for `int count` and `Foo(bar)` in backticks | Plain text and plain code: no links |
 
 ## 32. Release (Phase 5)
 
