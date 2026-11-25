@@ -2507,6 +2507,23 @@ file is closed; compaction is started from menus that close on the first click.
 - [x] **Manual checks and README.** Rows in MANUAL-CHECKS 31; README's settings section names `spinnerVerbs`. Two
       rows; README lists the Claude Code settings that shape the chat under its settings table
 
+## Phase 92 — Live tests for what Phases 88–91 found, and release 0.17.0
+
+Planned on 2026-11-25, after Phase 91, on the same branch (PR #96). The rest of 2.1.331–2.1.332's `[VSCode]` entries
+were checked in Phases 88–91 and don't apply here. Two shapes the extension now reads came from one probe or from
+the CLI's schema only; a live test each shows when Claude Code changes them. Then a release for Phases 88–91.
+
+- [ ] **Live test: a refused Web Fetch.** A `webfetch` step in `--live-all`: Haiku with the Agent tool disallowed
+      fetches a URL that answers 404; the row drawn from the real stream (`ToolCallView.Summarize` on the tool result,
+      as the chat does) must be a failure reading "HTTP 404 Not Found", and `FailedFetch` true. About a cent. It needs
+      the site to answer: a fetch that fails another way is a SKIP, not a FAIL
+- [ ] **Live test: settings the chat reads.** A `settings` step in `--live-all`, no model call: a project with
+      `spinnerVerbs` (replace) in `.claude/settings.local.json`; `get_settings` must give it in `effective`, and
+      `ClaudeSettings.Verbs` the project's words. Phase 91 took the shape from the schema only
+- [ ] **Release 0.17.0.** Manifest, assembly and package registration at 0.17.0, still a preview; the Unreleased
+      changelog becomes `## [0.17.0]` with highlights; the Marketplace overview adds what's new; CONTRIBUTING's
+      `--live-all` count and cost. Tagging after the merge
+
 ---
 
 ## Working in Visual Studio — daily loop
