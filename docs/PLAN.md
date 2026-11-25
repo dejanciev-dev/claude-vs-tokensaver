@@ -2540,11 +2540,14 @@ the CLI's schema only; a live test each shows when Claude Code changes them. The
 Planned on 2026-11-25, after Phase 92, on the same branch (PR #96); in 0.17.0. Two more of VS Code's fixes from
 2.1.331–2.1.332 that are gaps here too.
 
-- [ ] **Open requests when Claude Code's process ends.** As VS Code's 2.1.332 fix for "a question cut off when
+- [x] **Open requests when Claude Code's process ends.** As VS Code's 2.1.332 fix for "a question cut off when
       Claude's process ended showing only a red dot": when the process exits, a permission request still shows its
       bar, and a question, plan or edit-review card can still be answered, into a process that is gone. On exit, close
       the bar and disable the open cards, and say once that Claude Code stopped before you answered and that sending
-      the prompt again starts it
+      the prompt again starts it. `DropOpenRequests` on the process's exit (also a restart in place, whose requests
+      die with the old process); `TranscriptView.CloseOpenCards` disables the cards still enabled (answered ones
+      disable themselves); `SessionNotices.EndedWhileWaiting` words it. `Test_SessionNotices_EndedWhileWaiting`.
+      Builds clean; not yet run in VS
 - [ ] **A chat out of view that waits for you.** As VS Code's 2.1.331 fix for "a missing notification when a
       conversation running behind another one in the same panel needs a permission or an answer" and 2.1.332's "a
       hidden panel's notice not naming the waiting session": a chat window that isn't in view (a tab behind another,

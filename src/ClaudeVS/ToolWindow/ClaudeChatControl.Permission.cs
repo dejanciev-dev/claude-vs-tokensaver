@@ -223,6 +223,25 @@ namespace ClaudeVS.ToolWindow
             Append("  " + PermissionPrompt.NotSavedNote(missing, shown) + "\n");
         }
 
+        /// <summary>
+        /// Claude Code's process ended with a request open (as VS Code's 2.1.332 fix for "a question cut off when
+        /// Claude's process ended"): the permission bar goes and the open question, plan and edit-review cards are
+        /// disabled, since nothing would receive the answer; one line says so and how to go on.
+        /// </summary>
+        private void DropOpenRequests()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            bool permission = _pendingPermission != null;
+            _pendingPermission = null;
+            _permPrompt = null;
+            _permission.Visibility = Visibility.Collapsed;
+            _waitingForUser = false;
+            int cards = _view.CloseOpenCards();
+            if (!permission && cards == 0) return;
+            RenderActivity();
+            Append("\n" + Core.Cli.SessionNotices.EndedWhileWaiting(permission, cards) + "\n");
+        }
+
         /// <summary>Allow (once or always) or deny; a denial can carry what to do instead.</summary>
         private void AnswerPermission(bool allow, bool always = false, string feedback = null)
         {

@@ -481,6 +481,18 @@ namespace ClaudeVS.Core.Cli
         }
 
         /// <summary>
+        /// Claude Code's process ended while it waited for you (Phase 93): what was open and how to go on. Sending a
+        /// prompt starts it again in the same conversation.
+        /// </summary>
+        public static string EndedWhileWaiting(bool permission, int cards)
+        {
+            int open = (permission ? 1 : 0) + System.Math.Max(0, cards);
+            if (open == 0) return null;
+            string what = open == 1 ? (permission ? "its permission request" : "its question") : $"its {open} open requests";
+            return $"Claude Code stopped before you answered {what}, so no answer can be sent now. Send your prompt again to go on in this conversation.";
+        }
+
+        /// <summary>
         /// After "Prompt is too long", the largest part of the context and what shrinks it, from the breakdown
         /// (<c>get_context_usage</c>), as VS Code's 2.1.331 advice "that names the large part and what to do next". The
         /// parts you can change: tool results, attached files, the conversation itself, memory files, MCP tools,

@@ -1241,7 +1241,25 @@ namespace ClaudeVS.ToolWindow
         {
             var border = new Border { Background = CodeBackground, CornerRadius = new CornerRadius(3), Padding = new Thickness(8, 6, 8, 8), Child = content };
             _doc.Blocks.Add(new BlockUIContainer(border) { Margin = new Thickness(0, 4, 0, 4) });
+            _cards.Add(content);
             Box.ScrollToEnd(); // the user has to act on it, so always bring it into view
+        }
+
+        // Question, plan and edit-review cards: each waits on a request of the Claude Code process; answered ones are disabled
+        private readonly List<UIElement> _cards = new List<UIElement>();
+
+        /// <summary>
+        /// Claude Code's process ended (Phase 93): the cards still open can't be answered any more, so they are
+        /// disabled. How many were open.
+        /// </summary>
+        public int CloseOpenCards()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            int open = 0;
+            foreach (var c in _cards)
+                if (c.IsEnabled) { c.IsEnabled = false; c.Opacity = 0.6; open++; }
+            _cards.Clear();
+            return open;
         }
 
         // ---------------- Focus view ----------------
@@ -1494,6 +1512,7 @@ namespace ClaudeVS.ToolWindow
             EndAnswer();
             _plain = null;
             _doc.Blocks.Clear();
+            _cards.Clear();
             _tools.Clear();
             _agentRows.Clear();
             _toolGroupOf.Clear();

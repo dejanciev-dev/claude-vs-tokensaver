@@ -50,6 +50,9 @@ The full list follows.
 
 ### Fixed
 
+- **When Claude Code's process ends with a request open** (a permission, a question, a plan or an edit review), the
+  permission bar goes and the cards can no longer be answered into nothing; one line says so and that sending your
+  prompt again goes on (as VS Code fixed in 2.1.332).
 - **Changes to a recalled prompt are kept** (as VS Code since 2.1.331): Ctrl+Up recalls a prompt, you change it, and
   Ctrl+Up or Ctrl+Down no longer drops the change; it comes back while you go on browsing. The prompts sent stay as
   they were.
