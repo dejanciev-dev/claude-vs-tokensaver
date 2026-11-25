@@ -2562,6 +2562,20 @@ Planned on 2026-11-25, after Phase 92, on the same branch (PR #96); in 0.17.0. T
 - [x] **Manual checks and 0.17.0 notes.** Rows in MANUAL-CHECKS 31; both in the changelog's 0.17.0. Three rows
       (a permission and a question out of view, a process ended with a request open); a fourth highlight
 
+## Phase 94 — The "/" menu keeps your message, and file links checked once
+
+Planned on 2026-11-25, after Phase 93, on the same branch (PR #96); in 0.17.0.
+
+- [ ] **The "/" menu keeps your message.** As VS Code's 2.1.332 fix for "a written message being wiped by Tab on a
+      command in the '/' button's menu": picking a skill from the "/" button sets the box to `/skill `, and what you
+      had typed is gone. Keep it as the skill's argument (`/skill your text`); a box that holds only a `/command`
+      is replaced as now. Rule in Core (`SlashCommands`), tested
+- [ ] **File links checked once per answer.** The answer is parsed and drawn again for every streamed piece, so since
+      Phase 90 each link and each path-shaped code span looks at the disk again each time, on the UI thread. Remember
+      what a target resolved to (or that it is nothing) while the answer streams, and forget it when the answer ends,
+      so a file Claude writes afterwards links in the next answer. Count the lookups in a test
+- [ ] **Manual checks and 0.17.0 notes.** Rows in MANUAL-CHECKS 31; the changelog's 0.17.0
+
 ---
 
 ## Working in Visual Studio — daily loop
