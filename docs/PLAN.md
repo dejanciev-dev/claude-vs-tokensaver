@@ -2559,7 +2559,8 @@ Planned on 2026-11-25, after Phase 92, on the same branch (PR #96); in 0.17.0. T
       when the chat becomes visible, an answer is sent, the requests are dropped (Phase 93 item 1) or the session
       is replaced (New, Resume, a solution change). A closed chat window keeps its bar: *Show* opens it again.
       `SessionNotices.WaitingOutOfView`, `Test_SessionNotices_WaitingOutOfView`. Builds clean; not yet run in VS
-- [ ] **Manual checks and 0.17.0 notes.** Rows in MANUAL-CHECKS 31; both in the changelog's 0.17.0
+- [x] **Manual checks and 0.17.0 notes.** Rows in MANUAL-CHECKS 31; both in the changelog's 0.17.0. Three rows
+      (a permission and a question out of view, a process ended with a request open); a fourth highlight
 
 ---
 
