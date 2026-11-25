@@ -2570,7 +2570,7 @@ Planned on 2026-11-25, after Phase 93, on the same branch (PR #96); in 0.17.0.
       command in the '/' button's menu": picking a skill from the "/" button sets the box to `/skill `, and what you
       had typed is gone. Keep it as the skill's argument (`/skill your text`); a box that holds only a `/command`
       is replaced as now. Rule in Core (`SlashCommands`), tested
-- [ ] **File links checked once per answer.** The answer is parsed and drawn again for every streamed piece, so since
+- [x] **File links checked once per answer.** The answer is parsed and drawn again for every streamed piece, so since
       Phase 90 each link and each path-shaped code span looks at the disk again each time, on the UI thread. Remember
       what a target resolved to (or that it is nothing) while the answer streams, and forget it when the answer ends,
       so a file Claude writes afterwards links in the next answer. Count the lookups in a test

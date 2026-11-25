@@ -361,6 +361,36 @@ namespace ClaudeVS.Core.Tests
             finally { Directory.Delete(root, true); }
         }
 
+        private static void Test_FileLink_CheckedOncePerAnswer()
+        {
+            // Phase 94: a streamed answer is drawn again for every piece; its links look at the disk once
+            string root = Path.Combine(Path.GetTempPath(), "claudevs-test-" + Guid.NewGuid().ToString("N"));
+            var files = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { Path.Combine(root, "src", "Login.cs") };
+            int asked = 0;
+            var disk = new DiskLookups(f => { asked++; return files.Contains(f); }, d => { asked++; return false; });
+            void Draw()
+            {
+                FileLink.Parse("src/Login.cs:42", root, disk.FileExists, disk.DirExists);
+                FileLink.Parse("src/New.cs", root, disk.FileExists, disk.DirExists);
+                FileLink.FromCode("src/Login.cs:7", root, disk.FileExists);
+            }
+            Draw();
+            int first = asked;
+            True(first > 0, "the first drawing looks");
+            Eq(first, disk.Lookups, "counted");
+            for (int k = 0; k < 20; k++) Draw();
+            Eq(first, asked, "drawn again: no more looks");
+            Eq("null", FileLink.Parse("src/New.cs", root, disk.FileExists, disk.DirExists) == null ? "null" : "link", "nothing is remembered too");
+
+            // Claude writes the file; the next answer links it
+            files.Add(Path.Combine(root, "src", "New.cs"));
+            True(FileLink.Parse("src/New.cs", root, disk.FileExists, disk.DirExists) == null, "still the answer that saw nothing");
+            disk.Clear();
+            Eq(0, disk.Lookups, "cleared");
+            True(FileLink.Parse("src/New.cs", root, disk.FileExists, disk.DirExists) != null, "next answer: linked");
+            True(disk.Lookups > 0, "looked again");
+        }
+
         private static void Test_Context_WholeLineSelectionCount()
         {
             var whole = new EditorSelection { FilePath = @"C:\repo\A.cs", StartLine = 3, EndLine = 5, Text = "a\r\nb\r\nc\r\n" };
