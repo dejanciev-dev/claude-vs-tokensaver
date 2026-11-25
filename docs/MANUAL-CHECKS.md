@@ -420,6 +420,8 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Open a second chat (**Tools → Claude Code → New Chat Window**) docked as a tab behind the first; in it, in Default mode, ask for a Bash command, then switch to the first tab before the permission shows | An info bar in VS's main window: *Claude Code is waiting in “…”: it asks for permission to use Bash.* *Show* brings the second chat to the front and the bar goes; answering from that chat also removes it |
 | The same with a question (*Ask me one question with options*) and with the chat window closed instead of behind a tab | The bar says *it has a question for you*; *Show* opens the closed window with the card |
 | With a permission bar or a question card open, end Claude Code's process (Task Manager: the `claude.exe` under Visual Studio) | The permission bar goes, the card greys out and can't be answered; one line: *Claude Code stopped before you answered its … Send your prompt again to go on in this conversation.* |
+| Type *check the parser* in the box, then pick a skill from the **/** button (one with arguments, such as a skill of your own) | The box reads */skill check the parser*, caret at the end; with */compact* alone in the box, picking a skill replaces it; with an empty box, */skill * |
+| Ask *Write a long answer that names five .cs files of this solution as `path:line` in backticks and as Markdown links*, and watch Process Monitor (filter: Path contains the solution folder, Process devenv.exe) while it streams | Each file is looked at once or twice while the answer streams, not again for every piece; the links work as before. Then ask Claude to create a new file and link it in the same turn: after the Write row, the link to it works |
 
 ## 32. Release (Phase 5)
 
