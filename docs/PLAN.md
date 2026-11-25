@@ -2375,11 +2375,14 @@ gateway, Bedrock, Agent Platform and Foundry entries are left out.
       (filling a disk); test from a line built on the schema. `ClaudeEventKind.WritesLost`; `SessionNotices.WritesLost`
       words it (only `~/.claude.json` lost: no `/compact`; an unknown code: "a write failed"); the chat says it as an
       important notice, once per conversation. `Test_SessionNotices_WritesLost`. Builds clean; not yet run in VS
-- [ ] **A proxy that cuts compressed responses.** 2.1.331 adds `CLAUDE_CODE_DISABLE_RESPONSE_COMPRESSION` for a proxy
+- [x] **A proxy that cuts compressed responses.** 2.1.331 adds `CLAUDE_CODE_DISABLE_RESPONSE_COMPRESSION` for a proxy
       that cuts compressed model responses off; before 2.1.332 the turn ends in raw "ZlibError fetching" text. When an
       error names `ZlibError`, a decompression error or a cut compressed response, the explanation says to set
       `CLAUDE_CODE_DISABLE_RESPONSE_COMPRESSION=1` (2.1.331 and newer) and restart the chat. Test in
-      `Test_ErrorHints_NextStep`
+      `Test_ErrorHints_NextStep`. `ClaudeErrorHints.CompressionCut`: `ZlibError`, a decompression error, or "compressed
+      response" with a proxy, gateway, cut or damage (2.1.332's exact words weren't found in the binary, so they are
+      matched loosely); the empty box's hint comes before "failed on the way", which "fetching" would otherwise get.
+      Not probed (needs a proxy that cuts responses)
 - [ ] **Edits to a recalled prompt are kept.** As VS Code's 2.1.331–2.1.332 fixes ("dropping edits to a recalled
       prompt", "Down not bringing the message back after the recalled prompt got a new line or was cleared"):
       Ctrl+Up recalls a prompt, you change it, Ctrl+Up/Down moves on and the change is lost. `PromptHistory` keeps
