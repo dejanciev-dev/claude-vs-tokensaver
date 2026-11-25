@@ -2464,10 +2464,13 @@ http(s) links clickable and shows `[Login.cs](src/Login.cs:42)` as plain text.
       starting with `/` is under the solution first); `TranscriptView.MakeLink` tries it before web links, with
       `BaseDirectory` from the chat (the session's folder, else the solution's); `VsContext.OpenLink` sets the caret
       through the text view, kept within the file. `Test_FileLink_Targets`. Builds clean; not yet run in VS
-- [ ] **Paths in inline code are links.** Claude Code is told to write code references as `file_path:line_number`,
+- [x] **Paths in inline code are links.** Claude Code is told to write code references as `file_path:line_number`,
       usually in backticks. Inline code that is a path to an existing file (relative to the solution or absolute),
       with an optional line, gets the same link; anything that isn't a file on disk stays code (`int x`, `foo.bar`).
-      Test in Core
+      Test in Core.
+      `FileLink.FromCode`: files only, and only text shaped like a path (no brackets, quotes or operators; a bare
+      word like `Makefile` needs a `./`; blanks only with a slash, as in a user folder with a space), so other code
+      never touches the disk. In `Test_FileLink_Targets`. Builds clean; not yet run in VS
 - [ ] **Manual checks and README.** Rows in MANUAL-CHECKS 31 (a link with a line and column, one without a line on an
       open file, a folder, a path in backticks, a link to a file that isn't there); README's chat section says file
       references are links

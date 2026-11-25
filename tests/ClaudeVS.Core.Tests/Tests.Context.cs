@@ -341,6 +341,22 @@ namespace ClaudeVS.Core.Tests
                 Eq(@"src\Login.cs, line 42, column 7", L("src/Login.cs:42:7").Describe(root), "tooltip");
                 Eq(@"src\Login.cs, lines 5–10", L("src/Login.cs#L5-10").Describe(root));
                 Eq(@"Open folder docs", L("docs").Describe(root));
+
+                // Inline code: `file_path:line_number`, as Claude Code is told to write references
+                FileLink C(string code) => FileLink.FromCode(code, root);
+                Eq(@"src\Login.cs|42||", Show(C("src/Login.cs:42")), "code with a line");
+                Eq(@"src\Login.cs|||", Show(C(" src\\Login.cs ")), "code, backslashes, padded");
+                Eq(@"src\Login.cs|42||", Show(C(login + ":42")), "absolute");
+                Eq("null", Show(C("docs")), "a folder in code stays code");
+                Eq("null", Show(C("Makefile")), "a bare word stays code, though a file has that name");
+                Eq("Makefile|3||", Show(C("./Makefile:3")), "unless it is written as a path");
+                Eq("null", Show(C("src/Missing.cs:1")), "not on disk");
+                Eq("null", Show(C("Login.cs")), "not where it says (under src)");
+                bool looked = false;
+                Eq(@"My App\Read me.md|||", Show(C("My App/Read me.md")), "blanks inside a path");
+                foreach (string code in new[] { "int x", "a.b c", "Foo(bar)", "a = b", "x.y()", "https://a.b/c.cs", "\"src/Login.cs\"", "a", "" })
+                    if (FileLink.FromCode(code, root, f => { looked = true; return true; }) != null) True(false, "linked: " + code);
+                True(!looked, "code that isn't shaped like a path doesn't touch the disk");
             }
             finally { Directory.Delete(root, true); }
         }
