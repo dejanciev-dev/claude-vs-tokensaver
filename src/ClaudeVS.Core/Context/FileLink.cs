@@ -90,6 +90,26 @@ namespace ClaudeVS.Core.Context
             return null;
         }
 
+        /// <summary>
+        /// Inline code that is a file reference: Claude Code is told to write code references as
+        /// <c>file_path:line_number</c>, usually in backticks. Files only (a folder name in backticks is more often a
+        /// word than a place to go), and only text shaped like a path: no brackets, quotes or operators, and blanks only in a path with slashes, so
+        /// <c>int x</c>, <c>Foo(bar)</c> or <c>a = b</c> stay code without a look at the disk. Null otherwise.
+        /// </summary>
+        public static FileLink FromCode(string code, string baseDir, Func<string, bool> fileExists = null)
+        {
+            string c = (code ?? "").Trim();
+            if (c.Length < 2 || c.Length > 400 || c.IndexOfAny(NotInCodePath) >= 0) return null;
+            bool slashes = c.IndexOf('/') >= 0 || c.IndexOf('\\') >= 0;
+            if (c.IndexOf('.') < 0 && !slashes) return null; // `Makefile` alone: a word
+            if (c.IndexOf(' ') >= 0 && !slashes) return null; // a blank only inside a path (C:\Users\Jane Doe\…)
+            if (Scheme.Match(c) is var s && s.Success && s.Groups["s"].Length > 1 && !(c.Length > s.Length && char.IsDigit(c[s.Length]))) return null;
+            var link = Parse(c, baseDir, fileExists, _ => false);
+            return link != null && !link.IsFolder ? link : null;
+        }
+
+        private static readonly char[] NotInCodePath = { '\t', '(', ')', '[', ']', '{', '}', '<', '>', '=', ',', ';', '\'', '"', '`', '$', '&', '|', '*', '?', '!', '@', '+' };
+
         private static bool ReadFragment(string fragment, ref int? line, ref int? end, ref int? col)
         {
             var m = Fragment.Match(fragment);

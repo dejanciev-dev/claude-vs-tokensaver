@@ -1593,7 +1593,11 @@ namespace ClaudeVS.ToolWindow
                 switch (i.Kind)
                 {
                     case MdInlineKind.Code:
-                        target.Add(new Run(i.Text) { FontFamily = Mono, Foreground = a.Code, Background = a.CodeBack });
+                        var code = new Run(i.Text) { FontFamily = Mono, Foreground = a.Code, Background = a.CodeBack };
+                        // `src/Login.cs:42`, as Claude Code writes references: a link to the file (Phase 90)
+                        if (Core.Context.FileLink.FromCode(i.Text, BaseDirectory?.Invoke()) is Core.Context.FileLink file)
+                            target.Add(FileLinkTo(code, file, a.Link));
+                        else target.Add(code);
                         break;
                     case MdInlineKind.Bold:
                         target.Add(new Bold(new Run(i.Text)));
