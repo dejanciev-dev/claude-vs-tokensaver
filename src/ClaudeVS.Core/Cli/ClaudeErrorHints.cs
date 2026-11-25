@@ -49,6 +49,8 @@ namespace ClaudeVS.Core.Cli
                 return "The conversation no longer fits the context window. Run /compact or start a New chat.";
             if (Has(e, "is not recognized as an internal or external command", "enoent", "cannot find the path"))
                 return "Claude Code CLI could not be started. Install it or set its path under Tools > Options > Claude Code.";
+            if (CompressionCut(e))
+                return "A proxy or gateway cut off or damaged Claude's compressed response. Set CLAUDE_CODE_DISABLE_RESPONSE_COMPRESSION=1 in Claude Code's settings.json (env) or Visual Studio's environment (Claude Code 2.1.331 and newer), restart the chat (New), then send again.";
             if (DiskFull(e))
                 return "The disk is full: Claude Code couldn't write its output or its session file. Free some space (the drive with your user folder, where ~/.claude is, or the temp folder), then send again.";
             return null;
@@ -91,6 +93,8 @@ namespace ClaudeVS.Core.Cli
                 return Step("Rate or usage limit: send it again once it resets", again);
             if (kind == "model_not_found" || Has(e, "issue with the selected model"))
                 return Step("That model isn't available: pick another in the model menu, then send it again", again);
+            if (CompressionCut(e))
+                return Step("A proxy cut the compressed response: set CLAUDE_CODE_DISABLE_RESPONSE_COMPRESSION=1, restart (New), then send it again", again);
             if (kind == "server_error" || apiStatus >= 500 || Has(e, "overloaded", "timed out", "timeout", "connection error", "econnreset", "socket"))
                 return Step(Has(e, "overloaded") || apiStatus == 529 ? "The API is overloaded: try again" : "The request failed on the way: try again", again);
             if (DiskFull(e)) return Step("The disk is full: free some space, then send it again", again);
@@ -130,6 +134,15 @@ namespace ClaudeVS.Core.Cli
         /// output can't be written; before, it exited 0 with nothing. The wording isn't captured: Node's code and message.
         /// </summary>
         private static bool DiskFull(string lowered) => SafeFile.IsDiskFullText(lowered);
+
+        /// <summary>
+        /// A proxy or gateway cut or damaged a compressed response: before 2.1.332 the turn ends in raw "ZlibError
+        /// fetching" text (the runtime's decompression error); 2.1.332 says it in words that name the compressed
+        /// response. 2.1.331 added <c>CLAUDE_CODE_DISABLE_RESPONSE_COMPRESSION</c> for it.
+        /// </summary>
+        private static bool CompressionCut(string lowered) =>
+            Has(lowered, "zliberror", "decompression error", "z_data_error", "invalid compressed data")
+            || Has(lowered, "compressed response", "compressed reply") && Has(lowered, "proxy", "gateway", "cut", "damag");
 
         private static bool Has(string text, params string[] needles)
         {

@@ -11,6 +11,9 @@ All notable changes to this project are listed here. The format follows
 - **A warning when Claude Code couldn't save the session** (2.1.332 reports it when the disk is full or its quota is
   used up): resuming it later may miss messages, so free some space, then run `/compact` to save the conversation as
   a summary. Said once per conversation, also when only Claude Code's own settings (`~/.claude.json`) weren't saved.
+- **A proxy that cuts compressed responses:** a turn that ends in "ZlibError fetching" (before 2.1.332) or in
+  2.1.332's words for it says to set `CLAUDE_CODE_DISABLE_RESPONSE_COMPRESSION=1` (Claude Code 2.1.331 and newer),
+  instead of "The request failed on the way".
 
 ## [0.16.0] - 2026-11-23
 

@@ -239,6 +239,13 @@ namespace ClaudeVS.Core.Tests
             Eq("The disk is full: free some space, then send it again · Tab puts your prompt back", Of(text: full).Display());
             True(ClaudeErrorHints.Explain(full)?.StartsWith("The disk is full") == true, "explained");
             True(ClaudeErrorHints.Explain("There is not enough space on the disk.")?.StartsWith("The disk is full") == true, "Windows' own words");
+            // A proxy that cuts compressed responses: raw "ZlibError fetching" before 2.1.332; 2.1.331 added the variable
+            const string zlib = "API Error: ZlibError fetching \"https://api.anthropic.com/v1/messages\". For more information, pass `verbose: true` in the second argument to fetch()";
+            Eq("A proxy cut the compressed response: set CLAUDE_CODE_DISABLE_RESPONSE_COMPRESSION=1, restart (New), then send it again · Tab puts your prompt back",
+                Of(text: zlib).Display(), "not 'failed on the way' though it says fetching");
+            True(ClaudeErrorHints.Explain(zlib)?.Contains("CLAUDE_CODE_DISABLE_RESPONSE_COMPRESSION=1") == true, "explained");
+            True(ClaudeErrorHints.Explain("A proxy or gateway cut off the compressed response from the API.")?.Contains("CLAUDE_CODE_DISABLE_RESPONSE_COMPRESSION") == true, "2.1.332's words");
+            Eq(null, ClaudeErrorHints.Explain("Compressed the conversation"), "'compressed' alone isn't it");
             // Managed settings rank above the project's files: no link, ask whoever manages Claude Code (Phase 75)
             var managedLimit = JObject.Parse(@"{""sources"":[{""source"":""localSettings"",""settings"":{""env"":{""CLAUDE_CODE_MAX_OUTPUT_TOKENS"":""64000""}}},{""source"":""policySettings"",""settings"":{""env"":{""CLAUDE_CODE_MAX_OUTPUT_TOKENS"":""128000""}}}]}");
             Eq("The model takes at most 64,000 output tokens, and managed settings set CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000: ask whoever manages Claude Code here to set it to 64000",
