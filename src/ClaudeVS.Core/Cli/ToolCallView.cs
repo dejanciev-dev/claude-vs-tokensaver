@@ -316,6 +316,8 @@ namespace ClaudeVS.Core.Cli
         /// counts for Read, Glob and Grep instead of counting output lines.</param>
         public static ToolResultSummary Summarize(string toolName, string resultText, bool isError, InlineDiff diff = null, JObject data = null, Func<string, bool?> endsInNewline = null)
         {
+            // Before the error branch: the chat marks a refused fetch failed itself (FailedFetch), and its line is the status
+            if (toolName == "WebFetch" && WebFetchStatus(data, resultText) is ToolResultSummary fetched) return fetched;
             if (!isError && data != null && FromData(toolName, data, endsInNewline) is string exact) return One(exact);
             var output = SplitOutput(resultText);
             if (!isError && toolName == AskUserQuestionTool.Name && QuestionAnswers(data) is List<string> answered)
@@ -451,6 +453,32 @@ namespace ClaudeVS.Core.Cli
         /// The ⎿ line from the structured result: "Read 20 of 301 lines (from line 10)" for part of a file,
         /// "Found 2 files" for Glob and Grep's file lists, "Found 4 lines" for Grep's content mode. Null otherwise.
         /// </summary>
+        private static readonly System.Text.RegularExpressions.Regex RedirectTarget =
+            new System.Text.RegularExpressions.Regex(@"^\s*Redirect URL[^:]*:\s*(\S+)", System.Text.RegularExpressions.RegexOptions.Multiline);
+
+        /// <summary>
+        /// A Web Fetch the site didn't answer with its page (as VS Code's 2.1.332 fix for "Fetched from" with a success
+        /// dot): Claude Code gives no error then, only <c>tool_use_result.code</c> and <c>codeText</c> (captured with
+        /// 2.1.332). 4xx/5xx is an error row, "HTTP 404 Not Found"; a redirect Claude Code didn't follow says so and
+        /// where to ("Not followed: 302 Found → https://example.com/"). Null for a page that came (2xx) or no status.
+        /// </summary>
+        public static ToolResultSummary WebFetchStatus(JObject data, string resultText = null)
+        {
+            if (!(data?["code"] is JToken c) || c.Type != JTokenType.Integer) return null;
+            int code = (int)c;
+            string status = (code + " " + ((string)data["codeText"] ?? "")).Trim();
+            if (code >= 400) return new ToolResultSummary { IsError = true, Lines = new[] { "HTTP " + status } };
+            if (code >= 300 && code < 400)
+            {
+                string to = RedirectTarget.Match((string)data["result"] ?? resultText ?? "") is var m && m.Success ? m.Groups[1].Value : null;
+                return new ToolResultSummary { Lines = new[] { Cut("Not followed: " + status + (to != null ? " → " + to : "")) } };
+            }
+            return null;
+        }
+
+        /// <summary>A Web Fetch the site answered with 4xx or 5xx: its row is a failure though Claude Code sends no error.</summary>
+        public static bool FailedFetch(string toolName, JObject data) => toolName == "WebFetch" && WebFetchStatus(data)?.IsError == true;
+
         public static string FromData(string toolName, JObject data, Func<string, bool?> endsInNewline = null)
         {
             long? N(JToken t) => t != null && (t.Type == JTokenType.Integer) ? (long?)t : null;

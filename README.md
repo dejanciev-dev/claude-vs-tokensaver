@@ -34,7 +34,7 @@ Preview (0.15).
 
 | Layer | State |
 |---|---|
-| Core library (CLI session, parser, router, meter, context, Markdown, usage log) | ✅ 249 automated tests, many replaying real CLI output (2.1.316–2.1.330) |
+| Core library (CLI session, parser, router, meter, context, Markdown, usage log) | ✅ 250 automated tests, many replaying real CLI output (2.1.316–2.1.332) |
 | Core against the real `claude` CLI | ✅ Verified with Claude Code 2.1.332 via the opt-in live tests: streaming, usage, cost, prompt cache, model switch, resume, `/compact`, dialogs, edit review, MCP, question and plan approval, restart in place. Needs 2.1.318 or newer |
 | Visual Studio extension (UI) | ⚠️ Builds with zero warnings in CI, but not yet run in the experimental instance |
 

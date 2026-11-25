@@ -28,6 +28,9 @@ All notable changes to this project are listed here. The format follows
   "Tool" with its error, live and on resume, instead of a row with a blank name.
 - **An empty `.claude/settings.json`** (or one starting with a byte order mark) no longer stops setup or a new deny
   rule with a JSON error, as VS Code fixed in 2.1.332; a broken file is still left alone.
+- **A Web Fetch the site refused** (404, 500…) is a failed row, *HTTP 404 Not Found*, instead of a green one: Claude
+  Code doesn't flag it as an error. A redirect it didn't follow says *Not followed: 302 Found → …*. Live and on resume,
+  as VS Code fixed in 2.1.332.
 
 ## [0.16.0] - 2026-11-23
 
