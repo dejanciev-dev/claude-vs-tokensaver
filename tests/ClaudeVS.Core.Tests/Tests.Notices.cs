@@ -375,6 +375,20 @@ namespace ClaudeVS.Core.Tests
             True(fork.All(e => !e.IsSubagent), "the Agent call's own result belongs to the main agent");
         }
 
+        private static void Test_ClaudeSettings_SpinnerVerbs()
+        {
+            // Claude Code's spinnerVerbs (2.1.332's schema), from get_settings' merged settings
+            var defaults = new[] { "Thinking", "Working" };
+            string[] Of(string effective) => ClaudeSettings.Verbs(ClaudeSettings.Parse(JObject.Parse("{\"effective\":" + effective + "}")).SpinnerVerbs, defaults);
+            Eq("Thinking|Working", string.Join("|", Of("{}")), "none set");
+            Eq("Thinking|Working|Baking|Sketching", string.Join("|", Of("{\"spinnerVerbs\":{\"mode\":\"append\",\"verbs\":[\"Baking\",\" Sketching \",\"Working\"]}}")), "append, trimmed, no repeats");
+            Eq("Baking", string.Join("|", Of("{\"spinnerVerbs\":{\"mode\":\"replace\",\"verbs\":[\"Baking\",\"\",42]}}")), "replace");
+            Eq("Thinking|Working", string.Join("|", Of("{\"spinnerVerbs\":{\"mode\":\"replace\",\"verbs\":[]}}")), "replace with nothing keeps the chat's");
+            Eq("Thinking|Working", string.Join("|", Of("{\"spinnerVerbs\":{\"mode\":\"shuffle\",\"verbs\":[\"Baking\"]}}")), "a mode it doesn't know");
+            Eq("Thinking|Working", string.Join("|", Of("{\"spinnerVerbs\":[\"Baking\"]}")), "another shape");
+            Eq("Thinking|Working", string.Join("|", ClaudeSettings.Verbs(null, defaults)), "settings not read yet");
+        }
+
         private static void Test_SessionNotices_TooLong()
         {
             // As VS Code's 2.1.331 advice under "Prompt is too long": the largest part you can change, and what shrinks it

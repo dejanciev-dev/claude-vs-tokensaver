@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Newtonsoft.Json.Linq;
 
 namespace ClaudeVS.Core.Cli
@@ -39,7 +40,28 @@ namespace ClaudeVS.Core.Cli
                 PromptSuggestionEnabled = effective?["promptSuggestionEnabled"]?.Type == JTokenType.Boolean ? (bool?)(bool)effective["promptSuggestionEnabled"] : null,
                 AppliedEffort = response?.SelectToken("applied.effort")?.Type == JTokenType.String ? (string)response.SelectToken("applied.effort") : null,
                 Costly = SettingsCheck.Find(response),
+                SpinnerVerbs = effective?["spinnerVerbs"],
             };
+        }
+
+        /// <summary>Claude Code's <c>spinnerVerbs</c> as set (the merged settings), or null; see <see cref="Verbs"/>.</summary>
+        public JToken SpinnerVerbs { get; set; }
+
+        /// <summary>
+        /// The words the activity row picks from ("Pondering…"), with Claude Code's <c>spinnerVerbs</c>
+        /// (<c>{ "mode": "append" | "replace", "verbs": [...] }</c>, from 2.1.332's schema; VS Code 2.1.332 fixed it
+        /// being ignored from user and managed settings): <c>append</c> adds yours to <paramref name="defaults"/>,
+        /// <c>replace</c> uses only yours. No setting, no verbs, or a shape it doesn't know: the defaults.
+        /// </summary>
+        public static string[] Verbs(JToken setting, string[] defaults)
+        {
+            if (!(setting is JObject s) || !(s["verbs"] is JArray list)) return defaults;
+            var mine = list.Where(t => t.Type == JTokenType.String).Select(t => ((string)t).Trim()).Where(v => v.Length > 0 && v.Length <= 60).Distinct().ToArray();
+            if (mine.Length == 0) return defaults;
+            string mode = (string)s["mode"];
+            if (mode == "replace") return mine;
+            if (mode == "append" || mode == null) return defaults.Concat(mine.Where(v => !defaults.Contains(v))).ToArray();
+            return defaults;
         }
 
         /// <summary>An effort level's CLI name ("low" … "max") as a choice; null when unknown.</summary>

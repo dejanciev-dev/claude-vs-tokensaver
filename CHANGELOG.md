@@ -20,6 +20,8 @@ All notable changes to this project are listed here. The format follows
 - **"Prompt is too long" says what takes the room** (as VS Code's 2.1.331 advice): the largest part you can change,
   from Claude Code's context breakdown (no model call), with what shrinks it: tool results, attached files, the
   conversation, memory files, MCP tools or skills.
+- **Your `spinnerVerbs`:** the activity row's words ("Pondering…") follow Claude Code's `spinnerVerbs` setting, from
+  your user, project or managed settings: `append` adds yours, `replace` uses only yours (as VS Code fixed in 2.1.332).
 - **A warning when Claude Code couldn't save the session** (2.1.332 reports it when the disk is full or its quota is
   used up): resuming it later may miss messages, so free some space, then run `/compact` to save the conversation as
   a summary. Said once per conversation, also when only Claude Code's own settings (`~/.claude.json`) weren't saved.

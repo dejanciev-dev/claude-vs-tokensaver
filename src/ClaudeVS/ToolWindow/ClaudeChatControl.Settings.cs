@@ -42,6 +42,7 @@ namespace ClaudeVS.ToolWindow
                 _costlySettings = settings.Costly;
                 _behindGateway = settings.BehindGateway;
                 _settingsResponse = settings.Response;
+                _spinnerVerbs = settings.SpinnerVerbs;
                 Append("\n" + SettingsCheck.Text(settings.Costly) + "\n");
             }).FileAndForget("ClaudeVS/ChatControl/SettingsCheck");
         }
@@ -183,6 +184,7 @@ namespace ClaudeVS.ToolWindow
                 _costlySettings = settings.Costly;
                 _behindGateway = settings.BehindGateway;
                 _settingsResponse = settings.Response;
+                _spinnerVerbs = settings.SpinnerVerbs;
                 _setupProblems = SetupCheck.Find(settings.Response, WorkFolder);
                 if (_setupProblems != null && _setupProblems.Count > 0)
                     ClaudeOutputPane.WriteLine(SetupCheck.Text(_setupProblems));

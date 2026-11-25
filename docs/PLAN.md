@@ -2495,11 +2495,15 @@ file is closed; compaction is started from menus that close on the first click.
       end and says it once as an important notice. Not probed (filling a context window costs too much); the
       categories and `messageBreakdown` are those of the 2.1.317 and 2.1.322 captures. `Test_SessionNotices_TooLong`.
       Builds clean; not yet run in VS
-- [ ] **Your `spinnerVerbs`.** Claude Code's `spinnerVerbs` setting (`{ "mode": "append" | "replace", "verbs": [...] }`,
+- [x] **Your `spinnerVerbs`.** Claude Code's `spinnerVerbs` setting (`{ "mode": "append" | "replace", "verbs": [...] }`,
       from 2.1.332's schema) words its spinner; VS Code 2.1.332 fixed it being ignored from user and managed settings.
       The activity row picks from its own ten verbs. Take the setting from `get_settings` (the highest-precedence
       source, as `SettingsCheck` does): `append` adds to the chat's verbs, `replace` uses only yours (an empty list
-      keeps the chat's). Test in Core
+      keeps the chat's). Test in Core.
+      Read from `get_settings`' `effective` (the merged settings, so precedence is Claude Code's own), kept with the
+      other settings the chat reads at a process's first init; `ClaudeSettings.Verbs` (trimmed, no repeats, a mode or
+      shape it doesn't know keeps the chat's); the verb is picked at each turn's start. Not probed live.
+      `Test_ClaudeSettings_SpinnerVerbs`. Builds clean; not yet run in VS
 - [ ] **Manual checks and README.** Rows in MANUAL-CHECKS 31; README's settings section names `spinnerVerbs`
 
 ---
