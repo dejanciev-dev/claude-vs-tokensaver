@@ -2519,9 +2519,13 @@ the CLI's schema only; a live test each shows when Claude Code changes them. The
       the site to answer: a fetch that fails another way is a SKIP, not a FAIL.
       `LiveSmoke.RunWebFetch` (`--live-webfetch`, after `ask` in `--live-all`; `--disallowedTools Agent --allowedTools
       WebFetch`). With 2.1.332: `is_error` false, `code` 404, the row "HTTP 404 Not Found" (failed); PASS, $0.006
-- [ ] **Live test: settings the chat reads.** A `settings` step in `--live-all`, no model call: a project with
+- [x] **Live test: settings the chat reads.** A `settings` step in `--live-all`, no model call: a project with
       `spinnerVerbs` (replace) in `.claude/settings.local.json`; `get_settings` must give it in `effective`, and
-      `ClaudeSettings.Verbs` the project's words. Phase 91 took the shape from the schema only
+      `ClaudeSettings.Verbs` the project's words. Phase 91 took the shape from the schema only.
+      In the `dialogs` step instead (it already starts a process with project settings, free). With 2.1.332:
+      `effective.spinnerVerbs` is `{ mode: "replace", verbs: [...] }` as the schema says; PASS. (Its first run failed
+      only because `get_settings` doesn't start the process by itself: `GetSettingsAsync(start: true)`; the chat reads
+      it after the first init, when the process runs.)
 - [ ] **Release 0.17.0.** Manifest, assembly and package registration at 0.17.0, still a preview; the Unreleased
       changelog becomes `## [0.17.0]` with highlights; the Marketplace overview adds what's new; CONTRIBUTING's
       `--live-all` count and cost. Tagging after the merge
