@@ -2424,9 +2424,10 @@ Checked, nothing to change:
 Planned on 2026-11-25, after Phase 88, on the same branch (PR #96). Two more `[VSCode]` fixes from 2.1.331–2.1.332
 that are bugs here too.
 
-- [ ] **Manual checks for Phase 88.** A section in MANUAL-CHECKS for what only VS shows: the history edits with
+- [x] **Manual checks for Phase 88.** A section in MANUAL-CHECKS for what only VS shows: the history edits with
       Ctrl+Up/Down, the session-not-saved warning, the proxy hint, a tool row with no name. Section 31, *Release*
-      becomes 32
+      becomes 32. Six rows (three for the history, one each for the warning, the proxy and a nameless tool; those three
+      skipped without a full drive, such a proxy or such an endpoint); rows for items 2 and 3 are added with them
 - [ ] **An empty settings file.** As VS Code's "switching models failing with 'Settings file is not valid JSON' when
       settings.json is empty or starts with a byte order mark": setup (`TokenSaverSetup.Apply`, `AddDenyRule`) parses
       `.claude/settings.json` with `JObject.Parse`, which throws on an empty or blank file (`SetLocalEnv` already
