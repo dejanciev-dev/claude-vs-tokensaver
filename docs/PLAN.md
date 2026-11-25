@@ -2359,7 +2359,54 @@ Planned on 2026-11-23, after Phase 86, on the same branch (PR #95); in 0.16.0.
       chat does, and compared with the header and the labels the test picked; a mismatch fails it. With 2.1.330:
       "Fruits: Apple, Banana", $0.0033
 - [ ] **Verify 0.16.0 with `--live-all`.** Every live test against 2.1.330 again, as Phases 83–86 changed tool rows and
-      the transcript; CONTRIBUTING gets the measured cost and time
+      the transcript; CONTRIBUTING gets the measured cost and time. Done with 2.1.332 in Phase 88's last item
+
+## Phase 88 — Keep up with the CLI (from the Claude Code CHANGELOG 2.1.331–2.1.332)
+
+Planned on 2026-11-25 with 2.1.332 installed. Both sections read for what the extension sends or reads, the `[VSCode]`
+entries too; Code Mode, self-hosted runner, terminal, `/mcp`, `/plugin`, cloud, Remote Control, computer use, voice,
+gateway, Bedrock, Agent Platform and Foundry entries are left out.
+
+- [ ] **Session writes lost.** 2.1.332 tells SDK clients when it couldn't save lines of the session transcript (VS
+      Code warns, "saying how to save it with `/compact`"): a `system` message, subtype `session_writes_lost`, with
+      `error_code` (`ENOSPC` or `EDQUOT`), `lost` (`transcript`, `global_config`) and `transcript_session_ids`, from
+      the CLI's own schema. Show a warning in the chat: the disk is full (or the quota used up), resuming this
+      session may miss part of it; free space, then `/compact` saves it as a summary. Once per session. Not probed
+      (filling a disk); test from a line built on the schema
+- [ ] **A proxy that cuts compressed responses.** 2.1.331 adds `CLAUDE_CODE_DISABLE_RESPONSE_COMPRESSION` for a proxy
+      that cuts compressed model responses off; before 2.1.332 the turn ends in raw "ZlibError fetching" text. When an
+      error names `ZlibError`, a decompression error or a cut compressed response, the explanation says to set
+      `CLAUDE_CODE_DISABLE_RESPONSE_COMPRESSION=1` (2.1.331 and newer) and restart the chat. Test in
+      `Test_ErrorHints_NextStep`
+- [ ] **Edits to a recalled prompt are kept.** As VS Code's 2.1.331–2.1.332 fixes ("dropping edits to a recalled
+      prompt", "Down not bringing the message back after the recalled prompt got a new line or was cleared"):
+      Ctrl+Up recalls a prompt, you change it, Ctrl+Up/Down moves on and the change is lost. `PromptHistory` keeps
+      each recalled entry's edit while browsing, as a shell does, and the draft comes back past the newest whatever
+      the box held. Test in Core
+- [ ] **A tool call with no name.** 2.1.331 fixes a crash when a custom endpoint returns a tool call with no name (the
+      call fails with an error, the session goes on); VS Code showed "Something went wrong". Check that a `tool_use`
+      with no or an empty `name` draws a row ("Tool") and its error, and nothing keyed by the name throws. Test in
+      `Test_ToolData_Shapes`
+- [ ] **Verify with 2.1.332 and raise `CliVersion.Tested`.** All live tests with 2.1.332 (also Phase 87's open item);
+      README, the Marketplace overview and the changelog's Unreleased section say so; CONTRIBUTING gets the measured
+      cost and time
+
+Checked, nothing to change:
+- `@file#10-12` attaching the whole file (2.1.331) and VS Code's Alt+K ranges: the extension inlines a selection or
+  sends a path with its line range in words, never an `@file#` reference
+- Replies starting "You've used" or "You've hit your" shown as a usage-limit error: the extension reads only error
+  results for its hints, never Claude's text
+- Skills from MCP servers as `server:skill` in the `/` menu: the `/` list takes `skills` and `slash_commands` from
+  `init` as they are; plugin skills already have a colon
+- The compaction summary shown as your prompt after a resume (VS Code): `SessionTranscript` draws `isCompactSummary`
+  as the compaction row
+- Redacted thinking as "Unsupported content type" (VS Code): the parser takes `redacted_thinking` as thinking
+- The question card sending "Other" with nothing typed (VS Code): an empty Other box adds nothing to the answer
+- "Earlier messages in this session weren't loaded" on resume: a warning in Claude Code's own view of the session;
+  the extension draws a resumed chat from the session file itself
+- `claude auth login` exiting 1 when the login couldn't be saved: *Sign in* runs it in a console, which shows that
+- Named pipes, hooks flooding output, compaction retries, model step-downs and aliases on clouds, `--effort` with
+  `--environment`: fixed in Claude Code; the extension sends nothing different
 
 ---
 
