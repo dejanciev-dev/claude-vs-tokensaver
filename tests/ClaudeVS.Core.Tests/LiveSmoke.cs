@@ -460,12 +460,17 @@ namespace ClaudeVS.Core.Tests
             string dir = Path.Combine(Path.GetTempPath(), "cvs-live-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(Path.Combine(dir, ".claude"));
             File.WriteAllText(Path.Combine(dir, ".claude", "settings.json"), "{\"permissions\":{\"deny\":[\"Read(./secrets/**)\"]},\"hooks\":{\"PreToolUse\":[{\"matcher\":\"Bash\",\"hooks\":[{\"type\":\"command\",\"command\":\"echo hi\"}]}]}}");
+            // Phase 91 took spinnerVerbs' shape from the schema: get_settings must give it in "effective" (Phase 92)
+            File.WriteAllText(Path.Combine(dir, ".claude", "settings.local.json"), "{\"spinnerVerbs\":{\"mode\":\"replace\",\"verbs\":[\"Baking\",\"Sketching\"]}}");
             var failures = new List<string>();
             void Check(bool ok, string what) { Console.WriteLine((ok ? "  ok   " : "  FAIL ") + what); if (!ok) failures.Add(what); }
             using (var session = NewSession(new ClaudeLaunchOptions { WorkingDirectory = dir, PermissionMode = PermissionModeChoice.Plan, EditNotesHook = true }))
             {
                 try
                 {
+                    var settings = session.GetSettingsAsync(start: true).Result;
+                    string verbs = string.Join(", ", ClaudeSettings.Verbs(settings?.SpinnerVerbs, new[] { "Thinking" }));
+                    Check(verbs == "Baking, Sketching", "spinnerVerbs from settings.local.json: " + verbs);
                     var status = session.GetStatusAsync().Result;
                     Check(status?.Any(r => r.Label == "Version") == true, "status: " + status?.FirstOrDefault(r => r.Label == "Version")?.Value);
                     var rules = session.GetPermissionRulesAsync().Result;
