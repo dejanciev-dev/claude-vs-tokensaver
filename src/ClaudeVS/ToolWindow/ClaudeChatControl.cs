@@ -1166,7 +1166,7 @@ namespace ClaudeVS.ToolWindow
             else if ((e.Key == Key.Up || e.Key == Key.Down) && (Keyboard.Modifiers & ModifierKeys.Control) != 0)
             {
                 e.Handled = true;
-                string text = e.Key == Key.Up ? _promptHistory.Previous(_prompt.Text) : _promptHistory.Next();
+                string text = e.Key == Key.Up ? _promptHistory.Previous(_prompt.Text) : _promptHistory.Next(_prompt.Text);
                 if (text != null) { _prompt.Text = text; _prompt.CaretIndex = text.Length; }
             }
             else if (e.Key == Key.Escape && HasAttachments)

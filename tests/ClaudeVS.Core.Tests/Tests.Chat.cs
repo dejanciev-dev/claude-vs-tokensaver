@@ -81,13 +81,36 @@ namespace ClaudeVS.Core.Tests
             h.Add("a"); h.Add("b"); h.Add("b"); h.Add("c"); h.Add("d"); // dup skipped, "a" evicted
             Eq(3, h.Count, "max + dedupe");
             Eq("d", h.Previous("draft"), "newest first");
-            Eq("c", h.Previous("ignored"), "older");
+            Eq("c", h.Previous("d"), "older (the box shows what was recalled)");
             Eq("b", h.Previous(null), "oldest");
             Eq(null, h.Previous(null), "nothing older");
             Eq("c", h.Next(), "newer");
             Eq("d", h.Next(), "newest");
             Eq("draft", h.Next(), "draft restored");
             Eq(null, h.Next(), "not browsing");
+        }
+
+        private static void Test_PromptHistory_EditsKept()
+        {
+            // As VS Code's 2.1.331-2.1.332 fixes: changing a recalled prompt, then moving on, doesn't lose the change
+            var h = new ClaudeVS.Core.Chat.PromptHistory();
+            h.Add("one"); h.Add("two");
+            Eq("two", h.Previous("my draft"), "recall");
+            Eq("one", h.Previous("two, changed"), "on to an older one");
+            Eq("two, changed", h.Next("one"), "the change is back");
+            Eq("one", h.Previous("two, changed"), "unchanged entries as sent");
+            Eq("two, changed", h.Next(""), "clearing the box is an edit too");
+            Eq("", h.Previous("two, changed"), "and comes back cleared");
+            Eq("two, changed", h.Next(""), "");
+            Eq("my draft", h.Next("two, changed"), "past the newest: the draft, whatever the box held");
+            Eq("two", h.Previous("my draft"), "browsing again: the edits are gone, the entries as sent");
+            Eq("one", h.Previous("two"), "");
+            Eq("two", h.Next("one\nmore"), "a new line is an edit");
+            Eq("one\nmore", h.Previous("two"), "");
+            h.Add("sent");
+            Eq("sent", h.Previous(""), "sending ends browsing");
+            Eq("two", h.Previous("sent"), "");
+            Eq("one", h.Previous("two"), "edits from before the send are dropped");
         }
 
         private static void Test_SlashCommands_LeadingSpaceAndInvisible()
