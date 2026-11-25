@@ -399,7 +399,18 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Sign in to an organization whose Enterprise Admin Console picks a cloud provider or gateway (skip without one), ask for long answers until one is cut off | No tip to raise the output limit; the cost tooltip says who served it |
 | With the user folder on a nearly full drive (or a full USB stick as the export target; skip without one), **Export** a conversation and bookmark an answer | *The disk is full: free some space on X:, then try again.*; a file that was already there is unchanged |
 
-## 31. Release (Phase 5)
+## 31. Claude Code 2.1.332 (Phases 88–89)
+
+| Do | Expect |
+|---|---|
+| Send *one* and *two*. Ctrl+Up twice (*one*), change it to *one, changed*, Ctrl+Up does nothing more, Ctrl+Down, Ctrl+Up | *two*, then *one, changed* again: the change is kept |
+| Clear the box on a recalled prompt, Ctrl+Down, Ctrl+Up; then Ctrl+Down past the newest | The cleared prompt comes back empty; past the newest, what you were typing before you started |
+| Send a recalled, changed prompt, then Ctrl+Up through the history | The changed text was sent; the earlier prompts are as they were sent |
+| With the user folder on a nearly full drive (skip without one), chat until Claude Code 2.1.332 can't write its session file | One warning: *Claude Code couldn't save part of this session: the disk is full…*, naming `/compact`; not again in the same conversation |
+| Behind a proxy that cuts compressed responses (skip without one), send a prompt | The explanation names `CLAUDE_CODE_DISABLE_RESPONSE_COMPRESSION=1`; the empty box says *A proxy cut the compressed response…*; with the variable set and the chat restarted (New), answers come |
+| With a custom endpoint whose model sends a tool call with no name (skip without one) | A row named *Tool* with its error (red); the chat goes on |
+
+## 32. Release (Phase 5)
 
 These need you rather than a check list:
 
