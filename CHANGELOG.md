@@ -18,6 +18,8 @@ Still a **preview**, for Claude Code 2.1.318 or newer (tested with 2.1.332). Thi
 - **Failures that say what to do:** "Prompt is too long" names what takes the room; a Web Fetch the site refused is a
   failed row with its status; a proxy that cuts compressed responses names the setting that fixes it; a warning when
   Claude Code couldn't save the session.
+- **Requests that don't get lost:** a chat out of view that waits for you says so in an info bar with *Show*; a
+  request left open when Claude Code's process ends is closed with a note instead of taking an answer into nothing.
 - **Smaller fixes from VS Code 2.1.331–2.1.332:** changes to a recalled prompt are kept, an empty settings file doesn't
   stop setup, your `spinnerVerbs` word the activity row.
 
