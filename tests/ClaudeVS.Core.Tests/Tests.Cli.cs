@@ -846,6 +846,35 @@ namespace ClaudeVS.Core.Tests
                 Eq("Tool", SessionTranscript.Read(unnamedFile).Items.Single(i => i.Kind == TranscriptItemKind.Tool).ToolName, "on resume too");
             }
             finally { File.Delete(unnamedFile); }
+            // 2.1.332: a Web Fetch the site refused, or a redirect not followed, comes without is_error; the status says it
+            var fetchParser = new ClaudeStreamParser();
+            var fetches = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.332-webfetch-status.jsonl"))
+                .SelectMany(l => fetchParser.Parse(l)).Where(e => e.Kind == ClaudeEventKind.ToolResult).ToList();
+            Eq(2, fetches.Count, "two fetches");
+            True(fetches.All(f => !f.IsError), "Claude Code flags neither as an error");
+            var notFound = ToolCallView.Summarize("WebFetch", fetches[0].ResultText, fetches[0].IsError, data: fetches[0].ResultData);
+            True(notFound.IsError, "a 404 is a failed row");
+            Eq("HTTP 404 Not Found", notFound.Lines.Single());
+            True(ToolCallView.FailedFetch("WebFetch", fetches[0].ResultData), "the chat marks it failed");
+            var redirect = ToolCallView.Summarize("WebFetch", fetches[1].ResultText, fetches[1].IsError, data: fetches[1].ResultData);
+            True(!redirect.IsError && !ToolCallView.FailedFetch("WebFetch", fetches[1].ResultData), "a redirect isn't a failure");
+            Eq("Not followed: 302 Found → https://example.com/", redirect.Lines.Single());
+            Eq(null, ToolCallView.WebFetchStatus(JObject.Parse("{\"code\":200,\"codeText\":\"OK\",\"bytes\":172}")), "a page that came: as before");
+            Eq(null, ToolCallView.WebFetchStatus(null), "no data (older rows)");
+            // On resume, from the session file's toolUseResult (the same fields)
+            string fetchFile = Path.GetTempFileName();
+            try
+            {
+                File.WriteAllLines(fetchFile, new[]
+                {
+                    "{\"type\":\"assistant\",\"uuid\":\"a1\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"toolu_f\",\"name\":\"WebFetch\",\"input\":{\"url\":\"https://httpbin.org/status/404\"}}]}}",
+                    "{\"type\":\"user\",\"uuid\":\"u1\",\"message\":{\"role\":\"user\",\"content\":[{\"tool_use_id\":\"toolu_f\",\"type\":\"tool_result\",\"content\":\"The server returned HTTP 404 Not Found.\"}]},\"toolUseResult\":{\"bytes\":0,\"code\":404,\"codeText\":\"Not Found\",\"result\":\"The server returned HTTP 404 Not Found.\",\"durationMs\":790,\"url\":\"https://httpbin.org/status/404\"}}",
+                });
+                var row = SessionTranscript.Read(fetchFile).Items.Single(i => i.Kind == TranscriptItemKind.Tool);
+                True(ToolCallView.FailedFetch(row.ToolName, row.ResultData), "resumed: still a failure");
+                Eq("HTTP 404 Not Found", ToolCallView.Summarize(row.ToolName, row.ResultText, row.IsError, data: row.ResultData).Lines.Single(), "resumed");
+            }
+            finally { File.Delete(fetchFile); }
             // 2.1.330: a Grep pattern with a line break and no multiline is refused by ripgrep, not "No matches"
             var rejected = new ClaudeStreamParser().Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "cli-2.1.330-grep-rejected.jsonl")).Trim())
                 .Single(e => e.Kind == ClaudeEventKind.ToolResult);

@@ -1431,6 +1431,9 @@ namespace ClaudeVS.ToolWindow
                 && _tools.TryGetValue(toolUseId, out var changed) && changed.ToolName != null && changed.Expander != null)
                 ReplaceDiff(changed, confirmedDiff);
             ThreadHelper.ThrowIfNotOnUIThread();
+            // A Web Fetch the site refused (404, 500…) comes without an error flag: a failure all the same (2.1.332 capture)
+            if (!isError && !string.IsNullOrEmpty(toolUseId) && _tools.TryGetValue(toolUseId, out var fetch)
+                && Core.Cli.ToolCallView.FailedFetch(fetch.ToolName, resultData)) isError = true;
             if (!string.IsNullOrEmpty(toolUseId) && _toolGroupOf.TryGetValue(toolUseId, out var group))
             {
                 _toolGroupOf.Remove(toolUseId);

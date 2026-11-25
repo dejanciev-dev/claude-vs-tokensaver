@@ -25,7 +25,7 @@ namespace ClaudeVS.Core.Chat
         /// <summary>Tool: the result's text (cut like the live one), for the ⎿ summary line.</summary>
         public string ResultText { get; set; }
         public bool IsError { get; set; }
-        /// <summary>Tool: the structured result (<c>toolUseResult</c>), kept for AskUserQuestion only: your answers.</summary>
+        /// <summary>Tool: the structured result (<c>toolUseResult</c>), kept for AskUserQuestion (your answers) and WebFetch (its status) only.</summary>
         public JObject ResultData { get; set; }
         /// <summary>User: the message id in the CLI session (what rewind_files takes).</summary>
         public string Uuid { get; set; }
@@ -132,6 +132,9 @@ namespace ClaudeVS.Core.Chat
                             // An answered question: what you picked (toolUseResult, captured with 2.1.330). Only for it:
                             // other tools' rows on resume stay as they were drawn from the text.
                             if (tool.ToolName == Cli.AskUserQuestionTool.Name && o["toolUseResult"] is JObject answered) tool.ResultData = answered;
+                            // A Web Fetch's status (2.1.332 capture): a refused or redirected fetch reads so on resume too
+                            if (tool.ToolName == "WebFetch" && o["toolUseResult"] is JObject fetched && fetched["code"] != null)
+                                tool.ResultData = new JObject { ["code"] = fetched["code"], ["codeText"] = fetched["codeText"], ["result"] = fetched["result"] };
                         }
                         break;
                 }

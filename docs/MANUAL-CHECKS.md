@@ -410,6 +410,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Behind a proxy that cuts compressed responses (skip without one), send a prompt | The explanation names `CLAUDE_CODE_DISABLE_RESPONSE_COMPRESSION=1`; the empty box says *A proxy cut the compressed response…*; with the variable set and the chat restarted (New), answers come |
 | With a custom endpoint whose model sends a tool call with no name (skip without one) | A row named *Tool* with its error (red); the chat goes on |
 | Empty the solution's `.claude/settings.json` (0 bytes), then **Tools → Claude Code → Install Token-Saving Settings and Hooks** | Setup writes its settings into it; no "not valid JSON" error |
+| Ask *Use WebFetch yourself on https://httpbin.org/status/404, then on https://httpbin.org/redirect-to?url=https%3A%2F%2Fexample.com* | The first Fetch row is red, *HTTP 404 Not Found*; the second says *Not followed: 302 Found → https://example.com/*. The same after resuming the session |
 
 ## 32. Release (Phase 5)
 

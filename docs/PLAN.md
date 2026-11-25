@@ -2435,11 +2435,17 @@ that are bugs here too.
       `TokenSaverSetup.ReadSettings` (also the check for an existing deny rule); a file that is there but isn't JSON still
       throws and is left as it was. `Test_Setup_EmptySettingsFile`; a row in MANUAL-CHECKS 31. Builds clean; not yet run
       in VS
-- [ ] **A failed Web Fetch says so.** As VS Code's "Web Fetch showing 'Fetched from' with a success dot when the site
+- [x] **A failed Web Fetch says so.** As VS Code's "Web Fetch showing 'Fetched from' with a success dot when the site
       returned an error or a redirect that wasn't followed": the WebFetch row has no `FromData` case, so it shows the
       result text's first lines whatever the site answered. Probe 2.1.332 with a 404 and a cross-host redirect (Haiku,
       about a cent) for the `tool_use_result` shape; show the status ("404 Not Found") on the row, as an error when the
-      site refused it, and say a redirect wasn't followed. A fixture from the capture, test in `Test_ToolData_Shapes`
+      site refused it, and say a redirect wasn't followed. A fixture from the capture, test in `Test_ToolData_Shapes`.
+      Probed with 2.1.332 ($0.012; Haiku hands fetches to a web-fetch subagent unless Agent is disallowed): no
+      `is_error`; `tool_use_result` is `{ bytes, code, codeText, result, durationMs, url }`, 404 "Not Found", 302 "Found"
+      with the target in `result` ("Redirect URL (…): https://example.com/"). `ToolCallView.WebFetchStatus`: 4xx/5xx a
+      failed row ("HTTP 404 Not Found", `FailedFetch` turns the dot red), 3xx "Not followed: 302 Found → url", 2xx as
+      before. `SessionTranscript` keeps WebFetch's status for resume. `Fixtures/cli-2.1.332-webfetch-status.jsonl` (ids
+      blanked); a row in MANUAL-CHECKS 31. Builds clean; not yet run in VS
 
 ---
 
