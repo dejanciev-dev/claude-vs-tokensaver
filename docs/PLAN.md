@@ -2476,6 +2476,27 @@ http(s) links clickable and shows `[Login.cs](src/Login.cs:42)` as plain text.
       references are links. Four rows in MANUAL-CHECKS 31; README's *Markdown answers*
       row and the Marketplace overview's chat paragraph say so
 
+## Phase 91 — What makes the prompt too long, and your spinner verbs
+
+Planned on 2026-11-25, after Phase 90, on the same branch (PR #96). Two more of VS Code's 2.1.331–2.1.332 changes.
+Checked and fine here already: partial edit rejects tell Claude which changes were refused (Phase 7's review card);
+a background task that finishes while Claude is idle gets a notice; rewind is refused while Claude works; a model
+pick applies with each send, so a process that ended can't drop it; selection attachments keep their text after the
+file is closed; compaction is started from menus that close on the first click.
+
+- [ ] **"Prompt is too long" names the large part.** As VS Code's 2.1.331 "advice under 'Prompt is too long' that
+      names the large part and what to do next": the hint says only `/compact`. After such a failure, read the context
+      breakdown (`get_context_usage`, no model call) and add one line naming the largest part and what shrinks it:
+      tool results (ask for smaller reads, or `/compact`), attached files (send fewer), the conversation (`/compact` or
+      New), memory files (*Generate Lean CLAUDE.md*), MCP tools (turn servers off), skills (turn them off). Words in
+      Core, tested on breakdowns built like the 2.1.322 capture
+- [ ] **Your `spinnerVerbs`.** Claude Code's `spinnerVerbs` setting (`{ "mode": "append" | "replace", "verbs": [...] }`,
+      from 2.1.332's schema) words its spinner; VS Code 2.1.332 fixed it being ignored from user and managed settings.
+      The activity row picks from its own ten verbs. Take the setting from `get_settings` (the highest-precedence
+      source, as `SettingsCheck` does): `append` adds to the chat's verbs, `replace` uses only yours (an empty list
+      keeps the chat's). Test in Core
+- [ ] **Manual checks and README.** Rows in MANUAL-CHECKS 31; README's settings section names `spinnerVerbs`
+
 ---
 
 ## Working in Visual Studio — daily loop
