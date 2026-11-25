@@ -2447,6 +2447,27 @@ that are bugs here too.
       before. `SessionTranscript` keeps WebFetch's status for resume. `Fixtures/cli-2.1.332-webfetch-status.jsonl` (ids
       blanked); a row in MANUAL-CHECKS 31. Builds clean; not yet run in VS
 
+## Phase 90 — File links in Claude's answers
+
+Planned on 2026-11-25, after Phase 89, on the same branch (PR #96). VS Code's 2.1.332 fixed "most links to files
+without an extension, to folders, and with a line and column doing nothing" and "file links without a line number
+moving the cursor of an open file to line 1". Here a link to a file does nothing at all: `MakeLink` makes only
+http(s) links clickable and shows `[Login.cs](src/Login.cs:42)` as plain text.
+
+- [ ] **File links open the file.** A Markdown link whose target is a file or folder of the solution opens it. Core:
+      `FileLink.Parse(target, baseDir, exists)` for a relative or absolute path or a `file://` URI (percent-encoded too),
+      with `:line`, `:line:col`, `#Lline`, `#Lline-end` or `#line-end`; files without an extension; null for web links
+      and for nothing on disk. VS: a link with a line opens the file there (caret at line and column); without one it
+      opens or activates the file and leaves its caret where it was; a folder opens in File Explorer. The tooltip names
+      the file and line. Test in Core
+- [ ] **Paths in inline code are links.** Claude Code is told to write code references as `file_path:line_number`,
+      usually in backticks. Inline code that is a path to an existing file (relative to the solution or absolute),
+      with an optional line, gets the same link; anything that isn't a file on disk stays code (`int x`, `foo.bar`).
+      Test in Core
+- [ ] **Manual checks and README.** Rows in MANUAL-CHECKS 31 (a link with a line and column, one without a line on an
+      open file, a folder, a path in backticks, a link to a file that isn't there); README's chat section says file
+      references are links
+
 ---
 
 ## Working in Visual Studio — daily loop
