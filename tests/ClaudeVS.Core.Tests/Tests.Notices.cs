@@ -284,6 +284,25 @@ namespace ClaudeVS.Core.Tests
             True(console != null && console.Contains("Claude Console organization (Acme)") && console.Contains("claude auth login"), console);
         }
 
+        private static void Test_SessionNotices_WritesLost()
+        {
+            // Built on 2.1.332's schema for system/session_writes_lost (not captured: it needs a full disk)
+            JObject Lost(string fields)
+            {
+                var evs = new ClaudeStreamParser().Parse("{\"type\":\"system\",\"subtype\":\"session_writes_lost\"," + fields + ",\"uuid\":\"u\",\"session_id\":\"s\"}");
+                Eq(ClaudeEventKind.WritesLost, evs.Single().Kind, "parsed");
+                return (JObject)evs.Single().Payload;
+            }
+            string full = SessionNotices.WritesLost(Lost("\"error_code\":\"ENOSPC\",\"lost\":[\"transcript\"],\"transcript_session_ids\":[\"s\"]"));
+            True(full.Contains("part of this session: the disk is full") && full.Contains("/compact") && !full.Contains("~/.claude.json"), full);
+            string quota = SessionNotices.WritesLost(Lost("\"error_code\":\"EDQUOT\",\"lost\":[\"transcript\",\"global_config\"],\"transcript_session_ids\":[\"s\"]"));
+            True(quota.Contains("the disk quota is used up") && quota.Contains("~/.claude.json") && quota.Contains("weren't saved either"), quota);
+            string config = SessionNotices.WritesLost(Lost("\"error_code\":\"ENOSPC\",\"lost\":[\"global_config\"]"));
+            True(config.StartsWith("Claude Code couldn't save its own settings") && !config.Contains("/compact"), config);
+            True(SessionNotices.WritesLost(Lost("\"error_code\":\"EIO\",\"lost\":[\"transcript\"]")).Contains("a write failed"), "a code added later");
+            Eq(null, SessionNotices.WritesLost(Lost("\"error_code\":\"ENOSPC\",\"lost\":[\"something_new\"]")), "nothing it knows");
+        }
+
         private static void Test_SessionNotices_McpServers()
         {
             // The real 2.1.319 list: one connector still connecting, one not signed in.

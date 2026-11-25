@@ -2067,6 +2067,10 @@ namespace ClaudeVS.ToolWindow
                         _rateLimits = RateLimitInfo.Parse(ev.Payload);
                         UpdateLimitBanner();
                         break;
+                    case ClaudeEventKind.WritesLost: // 2.1.332: part of the session couldn't be saved (said once per conversation)
+                        FlushText();
+                        Notice(SessionNotices.WritesLost(ev.Payload), important: true);
+                        break;
                     case ClaudeEventKind.Compacted:
                         FlushText();
                         LoadCompactSummary(_view.AppendCompaction(ev.PreCompactTokens, null, null));

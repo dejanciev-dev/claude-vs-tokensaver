@@ -480,6 +480,25 @@ namespace ClaudeVS.Core.Cli
             return worst.Text;
         }
 
+        /// <summary>
+        /// Claude Code couldn't save part of the session (<c>session_writes_lost</c>, 2.1.332; the fields from its own
+        /// schema): <c>error_code</c> ENOSPC (disk full) or EDQUOT (quota used up), <c>lost</c> "transcript" (the
+        /// session file, so a resume may miss part of it) and/or "global_config" (<c>~/.claude.json</c>). As VS Code's
+        /// warning, it says to save the conversation with /compact once there is space. Null when nothing is listed.
+        /// </summary>
+        public static string WritesLost(JObject message)
+        {
+            var lost = (message?["lost"] as JArray)?.Select(t => (string)t).ToList() ?? new System.Collections.Generic.List<string>();
+            bool transcript = lost.Contains("transcript"), config = lost.Contains("global_config");
+            if (!transcript && !config) return null;
+            string code = (string)message["error_code"];
+            string why = code == "EDQUOT" ? "the disk quota is used up" : code == "ENOSPC" ? "the disk is full" : "a write failed";
+            if (!transcript)
+                return $"Claude Code couldn't save its own settings (~/.claude.json): {why}. Free some space; changes made in this chat may not be kept.";
+            return $"Claude Code couldn't save part of this session: {why}. Resuming it later may miss messages. Free some space (the drive with your user folder, where ~/.claude is), then run /compact to save the conversation as a summary."
+                + (config ? " Its own settings (~/.claude.json) weren't saved either." : "");
+        }
+
         private static string Names(System.Collections.Generic.List<string> names) => string.Join(", ", names.Select(n => "“" + n + "”"));
     }
 }
