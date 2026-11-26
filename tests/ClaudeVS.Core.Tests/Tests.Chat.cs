@@ -270,6 +270,24 @@ namespace ClaudeVS.Core.Tests
             Eq("Text:![not closed", string.Join(",", ClaudeVS.Core.Markdown.MarkdownParser.ParseInlines("![not closed")), "unfinished");
         }
 
+        private static void Test_Markdown_Quotes()
+        {
+            // Phase 98: alerts, lists in quotes, nested quotes
+            var b = ClaudeVS.Core.Markdown.MarkdownParser.Parse(
+                "> [!WARNING]\n> Back up first.\n> - one\n> 2. two\n>> deeper\n> > also deeper\n\n> [!tip] Inline title\n\n> plain\n> ---");
+            Eq("1,1,1,1,2,2,1,1,1", string.Join(",", b.Select(x => x.Level)), "depths");
+            Eq("Warning,Warning,Warning,Warning,,,Tip,,", string.Join(",", b.Select(x => x.Alert)), "the alert carries to its depth, not deeper or past a blank");
+            Eq("True,False,False,False,False,False,True,False,False", string.Join(",", b.Select(x => x.AlertTitle)), "titles");
+            Eq(0, b[0].Inlines.Count, "a title alone");
+            Eq("Text:• ,Text:one", string.Join(",", b[2].Inlines), "a bullet");
+            Eq("Text:2. ,Text:two", string.Join(",", b[3].Inlines), "a number");
+            Eq("Text:deeper", string.Join(",", b[4].Inlines), "no second >");
+            Eq("Text:Inline title", string.Join(",", b[6].Inlines), "text after the title");
+            Eq("Text:---", string.Join(",", b[8].Inlines), "a rule in a quote is not a bullet");
+            Eq("Text:[!NOTES] x", string.Join(",", ClaudeVS.Core.Markdown.MarkdownParser.Parse("> [!NOTES] x")[0].Inlines), "only the five alerts");
+            True(!b[1].SameAs(ClaudeVS.Core.Markdown.MarkdownParser.Parse("> Back up first.")[0]), "an alert's line differs from a plain quote");
+        }
+
         private static void Test_Markdown_NestedInlines()
         {
             // Phase 96: bold, italic and struck text hold code, links and each other

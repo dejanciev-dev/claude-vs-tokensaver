@@ -24,6 +24,9 @@ All notable changes to this project are listed here. The format follows
   bracket that ends the sentence around them.
 - **Diffs in color:** a `diff` or `patch` code block shows added lines green, removed lines red and its `@@` and file
   lines as headers.
+- **Notes and warnings:** GitHub's `> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]` and `[!CAUTION]` quotes show
+  their title in bold and their bar in a color of their own. A list in a quote has its bullets, and `>>` is a deeper
+  quote.
 - **Long code blocks folded:** a finished block of more than 40 lines shows its first 20 and *Show all N lines*, so a
   whole file Claude prints doesn't push the rest of the answer away; Copy and Insert still take all of it.
 - **More languages colored** in code blocks: Ruby, PHP, Swift, Dart, Lua, R, Dockerfile, Makefile, INI, TOML, GraphQL
