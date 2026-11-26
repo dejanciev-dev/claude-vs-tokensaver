@@ -18,6 +18,7 @@ namespace ClaudeVS.Core.Markdown
             foreach (var i in inlines ?? Enumerable.Empty<MdInline>())
             {
                 if (i.Children != null) sb.Append(Inline(i.Children));
+                else if (i.Kind == MdInlineKind.FootnoteRef) sb.Append('[').Append(i.Text).Append(']');
                 else if (i.Kind == MdInlineKind.Image) sb.Append(string.IsNullOrWhiteSpace(i.Text) ? i.ImageLabel.Substring(3) : i.Text);
                 else sb.Append(i.Text);
             }
@@ -59,6 +60,7 @@ namespace ClaudeVS.Core.Markdown
                         if (b.AlertTitle) sb.Append(b.Alert).Append(':').Append(b.Inlines.Count > 0 ? " " : "");
                         sb.Append(Lines(b.Inlines));
                         break;
+                    case MdBlockKind.Footnote: sb.Append(b.Number).Append(". ").Append(Lines(b.Inlines)); break; // Phase 107
                     case MdBlockKind.Details: sb.Append(Lines(b.Inlines)).Append("\r\n\r\n").Append(PlainOf(b.Blocks)); break; // Phase 107
                     default: sb.Append(Lines(b.Inlines)); break;
                 }

@@ -1864,6 +1864,14 @@ namespace ClaudeVS.ToolWindow
                     return RenderTable(b);
                 case MdBlockKind.Details:
                     return RenderDetails(b);
+                case MdBlockKind.Footnote:
+                {
+                    // A note at the answer's end (Phase 107), where its reference's link goes
+                    var p = new Paragraph { Margin = new Thickness(0, 1, 0, 1), FontSize = 11.5, Tag = FootnoteTag + b.Anchor?.ToLowerInvariant() };
+                    p.Inlines.Add(new Run(b.Number + ". ") { Foreground = ChatTheme.Accents(Box).Brand });
+                    AddInlines(p.Inlines, b.Inlines);
+                    return p;
+                }
                 default:
                 {
                     var p = new Paragraph { Margin = new Thickness(0, 3, 0, 3) };
@@ -2024,6 +2032,13 @@ namespace ClaudeVS.ToolWindow
                     case MdInlineKind.Link:
                         target.Add(MakeLink(i, a.Link));
                         break;
+                    case MdInlineKind.FootnoteRef:
+                    {
+                        // text[^1] (Phase 107): a raised number that goes to its note
+                        var number = new Run(i.Text) { BaselineAlignment = BaselineAlignment.Superscript, FontSize = 10 };
+                        target.Add(TagLink(number, FootnoteTag + (i.Url ?? "").ToLowerInvariant(), "Note " + i.Text, "No note " + i.Text + " in this answer", a.Link));
+                        break;
+                    }
                     case MdInlineKind.Kbd:
                     {
                         // <kbd>Ctrl</kbd> (Phase 107): a key, in a small frame
@@ -2105,8 +2120,18 @@ namespace ClaudeVS.ToolWindow
         private Hyperlink AnchorLink(MdInline i, Brush color)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            string tag = AnchorTag + i.Url.Substring(1).ToLowerInvariant();
-            var link = new Hyperlink(new Run(i.Text)) { ToolTip = "Go to " + i.Url, Foreground = color, Cursor = System.Windows.Input.Cursors.Hand };
+            return TagLink(new Run(i.Text), AnchorTag + i.Url.Substring(1).ToLowerInvariant(), "Go to " + i.Url, "No heading " + i.Url + " in this chat", color);
+        }
+
+        private const string FootnoteTag = "footnote:";
+
+        /// <summary>
+        /// A link to the paragraph tagged <paramref name="tag"/> nearest it (Phases 102 and 107): a heading, a footnote.
+        /// </summary>
+        private Hyperlink TagLink(Inline content, string tag, string tip, string missing, Brush color)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var link = new Hyperlink(content) { ToolTip = tip, Foreground = color, Cursor = System.Windows.Input.Cursors.Hand };
             link.Click += (s, e) =>
             {
                 ThreadHelper.ThrowIfNotOnUIThread();
@@ -2121,7 +2146,7 @@ namespace ClaudeVS.ToolWindow
                         target = p;
                     }
                 }
-                if (target == null) { link.ToolTip = "No heading " + i.Url + " in this chat"; return; }
+                if (target == null) { link.ToolTip = missing; return; }
                 _followEnd = false;
                 target.BringIntoView();
             };

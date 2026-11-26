@@ -540,6 +540,21 @@ namespace ClaudeVS.Core.Tests
             Eq("Press Ctrl + K", ScreenReaderText.Plain("Press <kbd>Ctrl</kbd> + <kbd>K</kbd>"), "read without the tags");
         }
 
+        private static void Test_Markdown_Footnotes()
+        {
+            // Phase 107: footnote references and notes
+            var b = ClaudeVS.Core.Markdown.MarkdownParser.Parse("[^b]: Second, defined first.\n\nUses a cache[^a] and **retries**[^b].\n\n[^a]: The cache is per user.\n[^c]: Never referred to.\n\nThe end.");
+            Eq("Paragraph,Paragraph,Footnote,Footnote,Footnote", string.Join(",", b.Select(x => x.Kind)), "notes at the end");
+            var refs = b[0].Inlines.Where(x => x.Kind == ClaudeVS.Core.Markdown.MdInlineKind.FootnoteRef).ToList();
+            Eq("1:a,2:b", string.Join(",", refs.Select(x => x.Text + ":" + x.Url)), "numbered as they first appear");
+            Eq("1:a,2:b,3:c", string.Join(",", b.Skip(2).Select(x => x.Number + ":" + x.Anchor)), "notes in that order, an unreferred one last");
+            Eq("Text:The cache is per user.", string.Join(",", b[2].Inlines), "the note's text");
+            Eq("Text:see ,Link:x", string.Join(",", ClaudeVS.Core.Markdown.MarkdownParser.ParseInlines("see [x](y)")), "links are not footnotes");
+            Eq("Text:a[^ b]", string.Join(",", ClaudeVS.Core.Markdown.MarkdownParser.ParseInlines("a[^ b]")), "not a label");
+            Eq("Uses a cache[1].\r\n\r\n1. Per user.", ClaudeVS.Core.Markdown.AnswerText.Plain("Uses a cache[^a].\n\n[^a]: Per user."), "copied as plain text with its number");
+            Eq("Uses a cache. Per user.", ScreenReaderText.Plain("Uses a cache[^a].\n\n[^a]: Per user."), "read without the labels");
+        }
+
         private static void Test_Markdown_NestedInlines()
         {
             // Phase 96: bold, italic and struck text hold code, links and each other

@@ -2968,8 +2968,13 @@ Planned on 2026-11-26, after Phase 106, on the same branch; the second of four.
       `InlineUIContainer`, `Sup`/`Sub` a `Span` with `BaselineAlignment`. `ScreenReaderText` drops the tags. Phase 98's
       test used `<b>` for a tag that stays; it uses `<span>` now. `Test_Markdown_InlineTags`. Builds clean; not yet
       run in VS
-- [ ] **Footnotes.** `text[^1]` and `[^1]: the note` show their brackets. The reference as a raised number that
-      goes to its note, the notes together at the answer's end. In Core, tested
+- [x] **Footnotes.** `text[^1]` and `[^1]: the note` show their brackets. The reference as a raised number that
+      goes to its note, the notes together at the answer's end. In Core, tested.
+      `MdInlineKind.FootnoteRef` (number in `Text`, label in `Url`), `MdBlockKind.Footnote` (label in `Anchor`,
+      number in `Number`); `MarkdownParser.NumberFootnotes` numbers references as they first appear (also in bold and
+      in tables) and moves the notes to the end. `TranscriptView.TagLink`, now shared with heading links, goes to the
+      nearest note. Copy as plain text writes `[1]` and "1. note"; screen readers skip the labels. One-line notes only.
+      `Test_Markdown_Footnotes`. Builds clean; not yet run in VS
 - [ ] **Emoji shortcodes.** `:white_check_mark:`, `:x:`, `:warning:`, `:rocket:` and the other GitHub shortcodes
       Claude uses show as words between colons. The common ones (about 40) are their emoji; others stay. In Core,
       tested
