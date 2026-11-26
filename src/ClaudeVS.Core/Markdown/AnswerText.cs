@@ -34,11 +34,13 @@ namespace ClaudeVS.Core.Markdown
         /// links as their text. Blocks are apart by a blank line, a list's items and a quote's lines by a line break.
         /// Line breaks are CRLF.
         /// </summary>
-        public static string Plain(string markdown)
+        public static string Plain(string markdown) => PlainOf(MarkdownParser.Parse(markdown));
+
+        private static string PlainOf(IEnumerable<MdBlock> blocks)
         {
             var sb = new StringBuilder();
             MdBlock prev = null;
-            foreach (var b in MarkdownParser.Parse(markdown))
+            foreach (var b in blocks)
             {
                 if (prev != null)
                 {
@@ -57,6 +59,7 @@ namespace ClaudeVS.Core.Markdown
                         if (b.AlertTitle) sb.Append(b.Alert).Append(':').Append(b.Inlines.Count > 0 ? " " : "");
                         sb.Append(Lines(b.Inlines));
                         break;
+                    case MdBlockKind.Details: sb.Append(Lines(b.Inlines)).Append("\r\n\r\n").Append(PlainOf(b.Blocks)); break; // Phase 107
                     default: sb.Append(Lines(b.Inlines)); break;
                 }
                 prev = b;

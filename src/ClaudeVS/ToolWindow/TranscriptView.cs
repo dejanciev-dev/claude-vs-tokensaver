@@ -1862,6 +1862,8 @@ namespace ClaudeVS.ToolWindow
                     return RenderCode(b);
                 case MdBlockKind.Table:
                     return RenderTable(b);
+                case MdBlockKind.Details:
+                    return RenderDetails(b);
                 default:
                 {
                     var p = new Paragraph { Margin = new Thickness(0, 3, 0, 3) };
@@ -1869,6 +1871,32 @@ namespace ClaudeVS.ToolWindow
                     return p;
                 }
             }
+        }
+
+        /// <summary>
+        /// A collapsed section (Phase 107): "▸ summary" opens it, "▾ summary" closes it; its blocks are drawn when it
+        /// opens and taken out when it closes (a flow document's blocks can't be hidden).
+        /// </summary>
+        private Block RenderDetails(MdBlock b)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var section = new Section { Margin = new Thickness(0, 3, 0, 3) };
+            var header = new Paragraph { Margin = new Thickness(0, 2, 0, 2) };
+            var arrow = new Run("▸ ");
+            var toggle = new Hyperlink(arrow) { Cursor = System.Windows.Input.Cursors.Hand, Foreground = ChatTheme.Accents(Box).Link, TextDecorations = null };
+            AddInlines(toggle.Inlines, b.Inlines);
+            header.Inlines.Add(toggle);
+            section.Blocks.Add(header);
+            var body = new Section { Margin = new Thickness(14, 0, 0, 0), BorderBrush = QuoteBar, BorderThickness = new Thickness(1, 0, 0, 0), Padding = new Thickness(8, 0, 0, 0) };
+            toggle.Click += (s, e) =>
+            {
+                ThreadHelper.ThrowIfNotOnUIThread();
+                if (section.Blocks.Contains(body)) { section.Blocks.Remove(body); body.Blocks.Clear(); arrow.Text = "▸ "; return; }
+                foreach (var child in b.Blocks) body.Blocks.Add(Render(child));
+                section.Blocks.Add(body);
+                arrow.Text = "▾ ";
+            };
+            return section;
         }
 
         // A GitHub alert's color (Phase 98): Note as links, Tip as success, Important as the brand, Warning as running,

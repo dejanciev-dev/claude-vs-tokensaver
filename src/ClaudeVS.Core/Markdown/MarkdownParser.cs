@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 
 namespace ClaudeVS.Core.Markdown
 {
-    public enum MdBlockKind { Paragraph, Heading, Code, ListItem, Quote, Rule, Table }
+    public enum MdBlockKind { Paragraph, Heading, Code, ListItem, Quote, Rule, Table, Details }
 
     public enum MdAlign { None, Left, Center, Right }
 
@@ -89,6 +89,8 @@ namespace ClaudeVS.Core.Markdown
         public List<List<List<MdInline>>> Rows { get; } = new List<List<List<MdInline>>>();
         /// <summary>Each column's alignment, from the separator row (Kind == Table).</summary>
         public List<MdAlign> Align { get; } = new List<MdAlign>();
+        /// <summary>A collapsed section's own blocks (Kind == Details, Phase 107); its summary is <see cref="Inlines"/>.</summary>
+        public List<MdBlock> Blocks { get; } = new List<MdBlock>();
         public override string ToString() =>
             Kind == MdBlockKind.Code ? $"Code({Language}):{Code}"
             : Kind == MdBlockKind.Table ? "Table:" + string.Join("/", Rows.Select(r => string.Join("|", r.Select(c => string.Join("", c)))))
@@ -107,6 +109,9 @@ namespace ClaudeVS.Core.Markdown
                 for (int c = 0; c < Rows[r].Count; c++)
                     if (!SameInlines(Rows[r][c], other.Rows[r][c])) return false;
             }
+            if (Blocks.Count != other.Blocks.Count) return false;
+            for (int k = 0; k < Blocks.Count; k++)
+                if (!Blocks[k].SameAs(other.Blocks[k])) return false;
             return SameInlines(Inlines, other.Inlines);
         }
 
@@ -166,6 +171,14 @@ namespace ClaudeVS.Core.Markdown
             {
                 string line = lines[i];
                 Match m;
+
+                // <details><summary>…</summary> … </details> (Phase 107): a collapsed section of Markdown
+                if (DetailsOpen.IsMatch(line))
+                {
+                    FlushPara();
+                    blocks.Add(ReadDetails(lines, ref i, streaming));
+                    continue;
+                }
 
                 if (TableStarts(lines, i, streaming, out var header, out var align))
                 {
@@ -365,6 +378,49 @@ namespace ClaudeVS.Core.Markdown
                 if (next.TryGetValue(b.Indent, out int n)) b.Number = n;
                 next[b.Indent] = b.Number.Value + 1;
             }
+        }
+
+        private static readonly Regex DetailsOpen = new Regex(@"^\s*<details(?:\s[^>]*)?>", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex DetailsClose = new Regex(@"</details\s*>", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex SummaryTag = new Regex(@"^\s*<summary>(?<s>.*?)</summary>", RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Singleline);
+
+        /// <summary>
+        /// A collapsed section from the <c>&lt;details&gt;</c> line at <paramref name="i"/> to its <c>&lt;/details&gt;</c>
+        /// (sections inside it counted), leaving <paramref name="i"/> on that line. Its summary is the block's inlines
+        /// ("Details" without one), what is between the tags its own blocks; unclosed while an answer streams.
+        /// </summary>
+        private static MdBlock ReadDetails(string[] lines, ref int i, bool streaming)
+        {
+            var body = new StringBuilder();
+            int depth = 0;
+            bool closed = false;
+            for (; i < lines.Length; i++)
+            {
+                string line = lines[i];
+                if (body.Length == 0 && depth == 0) line = DetailsOpen.Replace(line, "", 1);
+                depth += DetailsOpen.Matches(line).Count;
+                var close = DetailsClose.Match(line);
+                if (close.Success && depth == 0)
+                {
+                    body.Append(line.Substring(0, close.Index));
+                    closed = true;
+                    break;
+                }
+                if (close.Success) depth--;
+                body.Append(line).Append('\n');
+                if (i == lines.Length - 1) break;
+            }
+            string text = body.ToString();
+            var block = new MdBlock { Kind = MdBlockKind.Details, Closed = closed };
+            var summary = SummaryTag.Match(text);
+            if (summary.Success)
+            {
+                block.Inlines.AddRange(ParseInlines(summary.Groups["s"].Value.Trim()));
+                text = text.Substring(summary.Index + summary.Length);
+            }
+            else block.Inlines.Add(new MdInline { Kind = MdInlineKind.Text, Text = "Details" });
+            block.Blocks.AddRange(Parse(text.Trim('\n'), streaming && !closed));
+            return block;
         }
 
         /// <summary>
