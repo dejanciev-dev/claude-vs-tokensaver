@@ -441,7 +441,7 @@ namespace ClaudeVS.Core.Tests
             Eq("Text:List<T> & co → ©", P("List&lt;T&gt; &amp; co&nbsp;&#8594; &copy;"), "entities");
             Eq("Text:&unknown; and & alone and A", P("&unknown; and & alone and &#x41;"), "unknown names stay; hex decodes");
             Eq("Code:a<br>b &lt;", P("`a<br>b &lt;`"), "code keeps them");
-            Eq("Text:<b>bold</b> stays", P("<b>bold</b> stays"), "other tags stay as written");
+            Eq("Text:<span>x</span> stays", P("<span>x</span> stays"), "other tags stay as written");
             var t = ClaudeVS.Core.Markdown.MarkdownParser.Parse("| a |\n|---|\n| x<br>y |")[0];
             Eq("Text:x\ny", string.Join(",", t.Rows[1][0]), "a break in a table cell");
             Eq("Bold[Text:a\nb]", string.Join(",", ClaudeVS.Core.Markdown.MarkdownParser.ParseInlines("**a<br>b**").Select(x => $"{x.Kind}[{string.Join(",", x.Children)}]")), "in bold");
@@ -524,6 +524,20 @@ namespace ClaudeVS.Core.Tests
             Eq("Text:Details", string.Join(",", ClaudeVS.Core.Markdown.MarkdownParser.Parse("<details>\nx\n</details>")[0].Inlines), "no summary");
             True(!d.SameAs(ClaudeVS.Core.Markdown.MarkdownParser.Parse("<details>\n<summary>Full **log**</summary>\n\n- one\n</details>")[0]), "its blocks are part of SameAs");
             Eq("S\r\n\r\ninside", ClaudeVS.Core.Markdown.AnswerText.Plain("<details><summary>S</summary>inside</details>"), "copied as plain text: the summary, then the inside");
+        }
+
+        private static void Test_Markdown_InlineTags()
+        {
+            // Phase 107: <kbd>, <sup>, <sub>, <b>, <i>, <code>, <u>
+            string T(string s) => string.Join(",", ClaudeVS.Core.Markdown.MarkdownParser.ParseInlines(s).Select(x => x.Children == null ? x.ToString() : $"{x.Kind}[{string.Join(",", x.Children)}]"));
+            Eq("Text:Press ,Kbd:Ctrl,Text:+,Kbd:K", T("Press <kbd>Ctrl</kbd>+<kbd>K</kbd>"), "keys");
+            Eq("Text:x,Sup[Text:2],Text: and H,Sub[Text:2],Text:O", T("x<sup>2</sup> and H<sub>2</sub>O"), "raised and lowered");
+            Eq("Bold[Text:a],Italic[Text:b],Bold[Text:c],Italic[Text:d],Underline[Text:e]", T("<b>a</b><i>b</i><strong>c</strong><em>d</em><u>e</u>"), "the rest as their Markdown");
+            Eq("Code:List<T>", T("<code>List&lt;T&gt;</code>"), "code, its entities read");
+            Eq("Bold[Code:x]", T("<B>`x`</B>"), "any case; Markdown inside");
+            Eq("Text:<span>a</span> <b>open", T("<span>a</span> <b>open"), "other tags and an unclosed one stay");
+            Eq("Code:<kbd>x</kbd>", T("`<kbd>x</kbd>`"), "in code they stay");
+            Eq("Press Ctrl + K", ScreenReaderText.Plain("Press <kbd>Ctrl</kbd> + <kbd>K</kbd>"), "read without the tags");
         }
 
         private static void Test_Markdown_NestedInlines()

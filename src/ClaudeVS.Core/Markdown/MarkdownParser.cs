@@ -10,7 +10,8 @@ namespace ClaudeVS.Core.Markdown
 
     public enum MdAlign { None, Left, Center, Right }
 
-    public enum MdInlineKind { Text, Code, Bold, Italic, Link, Strike, Image }
+    /// <summary>Kbd, Sup, Sub and Underline come from HTML tags in answers (Phase 107).</summary>
+    public enum MdInlineKind { Text, Code, Bold, Italic, Link, Strike, Image, Kbd, Sup, Sub, Underline }
 
     public sealed class MdInline
     {
@@ -534,7 +535,8 @@ namespace ClaudeVS.Core.Markdown
                 if (plain.Length > 0) { result.Add(new MdInline { Kind = MdInlineKind.Text, Text = plain.ToString() }); plain.Clear(); }
                 var inline = new MdInline { Kind = kind, Text = value, Url = url };
                 // Bold, italic and struck text hold inlines of their own (Phase 96): **`Validate`**, *see [docs](u)*
-                if (kind == MdInlineKind.Bold || kind == MdInlineKind.Italic || kind == MdInlineKind.Strike)
+                if (kind == MdInlineKind.Bold || kind == MdInlineKind.Italic || kind == MdInlineKind.Strike
+                    || kind == MdInlineKind.Sup || kind == MdInlineKind.Sub || kind == MdInlineKind.Underline)
                     inline.Children = ParseInlines(value, open);
                 result.Add(inline);
             }
@@ -601,6 +603,17 @@ namespace ClaudeVS.Core.Markdown
                     if (close > i && paren > close) { Emit(MdInlineKind.Link, s.Substring(i + 1, close - i - 1), s.Substring(close + 2, paren - close - 2)); i = paren + 1; continue; }
                 }
 
+                // <kbd>Ctrl</kbd>, <sup>2</sup>, <b>…</b> and the like (Phase 107); other tags stay as written
+                if (c == '<' && InlineTag.Match(s, i) is Match tag && tag.Success)
+                {
+                    string name = tag.Groups["t"].Value.ToLowerInvariant(), inner = tag.Groups["in"].Value;
+                    var tagKind = name == "kbd" ? MdInlineKind.Kbd : name == "sup" ? MdInlineKind.Sup : name == "sub" ? MdInlineKind.Sub
+                        : name == "u" ? MdInlineKind.Underline : name == "code" ? MdInlineKind.Code
+                        : name == "b" || name == "strong" ? MdInlineKind.Bold : MdInlineKind.Italic;
+                    Emit(tagKind, tagKind == MdInlineKind.Code ? System.Net.WebUtility.HtmlDecode(inner) : inner);
+                    i += tag.Length;
+                    continue;
+                }
                 // <br> is a line break, and &lt; &amp; &nbsp; &#8594; their characters (Phase 98); code keeps them
                 if (c == '<' && BreakTag.Match(s, i) is Match br && br.Success && br.Index == i) { plain.Append('\n'); i += br.Length; continue; }
                 if (c == '&' && Entity.Match(s, i) is Match ent && ent.Success && ent.Index == i)
@@ -629,6 +642,7 @@ namespace ClaudeVS.Core.Markdown
             return result;
         }
 
+        private static readonly Regex InlineTag = new Regex(@"\G<(?<t>kbd|sup|sub|b|strong|i|em|code|u)>(?<in>.*?)</\k<t>>", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         private static readonly Regex BreakTag = new Regex(@"\G<br\s*/?>", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         private static readonly Regex Entity = new Regex(@"\G&(#[0-9]{1,7}|#[xX][0-9a-fA-F]{1,6}|[a-zA-Z][a-zA-Z0-9]{1,31});", RegexOptions.Compiled);
 

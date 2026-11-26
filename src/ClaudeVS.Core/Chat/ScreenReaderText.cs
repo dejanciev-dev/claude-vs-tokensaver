@@ -25,6 +25,8 @@ namespace ClaudeVS.Core.Chat
         private static readonly Regex Task = new Regex(@"^[ \t]*\[([ xX])\][ \t]+", RegexOptions.Multiline);
         private static readonly Regex Alert = new Regex(@"^[ \t]*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\][ \t]*", RegexOptions.Multiline | RegexOptions.IgnoreCase);
         private static readonly Regex Break = new Regex(@"<br\s*/?>", RegexOptions.IgnoreCase);
+        // Phase 107: the inline tags answers draw, and <details>/<summary>
+        private static readonly Regex Tags = new Regex(@"</?(?:kbd|sup|sub|b|strong|i|em|code|u|details|summary)(?:\s[^>]*)?>", RegexOptions.IgnoreCase);
 
         /// <summary>
         /// Markdown as plain text: code blocks become "(code block)", links keep their text, marks are dropped; a task
@@ -45,6 +47,7 @@ namespace ClaudeVS.Core.Chat
             s = Quote.Replace(s, "");
             s = Alert.Replace(s, m => char.ToUpperInvariant(m.Groups[1].Value[0]) + m.Groups[1].Value.Substring(1).ToLowerInvariant() + ": ");
             s = Break.Replace(s, " ");
+            s = Tags.Replace(s, " ");
             s = Emphasis.Replace(s, "");
             s = s.Replace("|", " ");
             s = System.Net.WebUtility.HtmlDecode(s);
