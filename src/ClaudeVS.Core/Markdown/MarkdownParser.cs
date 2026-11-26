@@ -489,6 +489,8 @@ namespace ClaudeVS.Core.Markdown
                 char c = s[i];
 
                 if (c == '\\' && i + 1 < s.Length && "\\`*_[]()#+-.!~".IndexOf(s[i + 1]) >= 0) { plain.Append(s[i + 1]); i += 2; continue; }
+                // A backslash that ends a line is Markdown's hard break (Phase 102): the break stays, the backslash goes
+                if (c == '\\' && i + 1 < s.Length && s[i + 1] == '\n') { i++; continue; }
 
                 if (c == '`')
                 {

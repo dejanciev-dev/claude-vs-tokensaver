@@ -2815,8 +2815,10 @@ as ten commits.
       arriving folds once it passes 25 rows and its link's count grows. `TableFold` beside `CodeFold`;
       `RenderTable` draws rows through `TableRowOf` and the link adds the rest to the same row group.
       `Test_TableFold_LongTables`. Builds clean; not yet run in VS
-- [ ] **Line ends.** A line ending in a backslash (Markdown's hard break) shows the backslash; two spaces at a line's
-      end are a break already (lines are kept). The backslash goes, the break stays. Test in Core
+- [x] **Line ends.** A line ending in a backslash (Markdown's hard break) shows the backslash; two spaces at a line's
+      end are a break already (lines are kept). The backslash goes, the break stays. Test in Core.
+      In `ParseInlines`: a backslash before a line break is dropped; one inside a line, at the very end, or in code
+      stays. Under *Fixed*. `Test_Markdown_LineEnds`. Builds clean; not yet run in VS
 
 ---
 

@@ -278,6 +278,17 @@ namespace ClaudeVS.Core.Tests
             Eq(61, T(60).Rows.Count, "the block keeps every row (Copy table takes them)");
         }
 
+        private static void Test_Markdown_LineEnds()
+        {
+            // Phase 102: a backslash at a line's end is a hard break, not shown
+            string P(string md) => string.Join(",", ClaudeVS.Core.Markdown.MarkdownParser.Parse(md)[0].Inlines);
+            Eq("Text:one\ntwo", P("one\\\ntwo"), "the backslash goes");
+            Eq("Text:one\ntwo", P("one  \ntwo"), "two spaces: a break already");
+            Eq("Text:path C:\\dir\\ ok", P("path C:\\dir\\ ok"), "a backslash inside a line stays");
+            Eq("Text:end\\", P("end\\"), "at the very end it stays (nothing to break)");
+            Eq("Code:a\\", P("`a\\`"), "in code it stays");
+        }
+
         private static void Test_Markdown_HalfWritten()
         {
             // Phase 95: while an answer streams, its last line may be cut off
