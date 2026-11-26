@@ -454,6 +454,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Right-click the copy button under an answer with a list, code and a table; pick *Copy as plain text* and paste into Notepad, then click the button and paste again | The menu has *Copy as Markdown* and *Copy as plain text*; plain text has no `**`, backticks or pipes, the code as written, bullets and the table's columns tab-separated; the click still copies Markdown |
 | Click *Save…* on the Dockerfile block above, then on a C# block | The dialog opens in the solution's folder suggesting `Dockerfile`, then `snippet.cs` with a C# filter; after saving, the button says *Saved* and the file opens in VS with the code |
 | In a long chat press `Ctrl+Alt+K, Ctrl+F` (then try `Ctrl+F` in the chat), type a word that is in several answers, press `Enter` a few times, `Shift+Enter`, toggle *Aa*, then `Esc` | The bar opens over the chat with the focus in it; each `Enter` selects the next match and scrolls it into view, *2 of 5* follows; `Shift+Enter` goes back; *Aa* changes the count when the case differs; `Esc` closes the bar, clears the selection and returns to the prompt. Note whether `Ctrl+F` reaches the chat or opens VS's own Find |
+| Look at the headers of the code blocks above (C#, the Dockerfile, a one-line command) | "C# · N lines", "Dockerfile · N lines", and the one-line block only its language (e.g. "Shell script"), no line count |
 
 ## 34. Release (Phase 5)
 

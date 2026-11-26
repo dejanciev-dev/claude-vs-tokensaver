@@ -228,6 +228,18 @@ namespace ClaudeVS.Core.Tests
             Eq("", TextSearch.Status(-1, 0, ""), "nothing asked");
         }
 
+        private static void Test_CodeFileName_Header()
+        {
+            // Phase 101: a code block's header names its language and length
+            string H(string lang, string code) => ClaudeVS.Core.Markdown.CodeFileName.Header(lang, code);
+            Eq("C# · 3 lines", H("cs", "a\nb\nc"), "known");
+            Eq("PowerShell", H("ps1", "Get-Item ."), "one line: no length");
+            Eq("Dockerfile · 2 lines", H("docker", "FROM x\nRUN y\n"), "a whole name; a last line break isn't a line");
+            Eq("code · 2 lines", H("", "a\nb"), "no language");
+            Eq("Klingon · 2 lines", H(" Klingon ", "a\nb"), "unknown: as written");
+            Eq("code", H(null, ""), "empty");
+        }
+
         private static void Test_Markdown_HalfWritten()
         {
             // Phase 95: while an answer streams, its last line may be cut off

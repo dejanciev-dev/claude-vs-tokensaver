@@ -2784,9 +2784,11 @@ scrolled; a code block says only the fence's short name.
       that grew meanwhile is searched too. `Core/Chat/TextSearch.cs`, `ClaudeChatControl.Find.cs`; command
       `cmdidFindInChat` (0x010D). README's commands table. `Test_TextSearch_FindInChat`. Builds clean; not yet run in
       VS
-- [ ] **Code blocks say what they hold.** A block's header shows the fence's name (`cs`, `ps1`) or "code". Show the
+- [x] **Code blocks say what they hold.** A block's header shows the fence's name (`cs`, `ps1`) or "code". Show the
       language's name and its length: "C# · 48 lines", "PowerShell", "code · 3 lines" (one line says nothing). The
-      words in Core, tested
+      words in Core, tested. `CodeFileName.Header`, from the names Phase 100's save dialog uses (an unknown fence
+      name as written); `CodeFold.Lines` for the count, so it grows while the block streams. `Test_CodeFileName_Header`.
+      Builds clean; not yet run in VS
 
 ---
 
