@@ -474,6 +474,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | In a solution with tests, ask *Run dotnet test*; then make one test fail and ask again | The row's ⎿ line reads "✓ N passed", then "✗ 1 failed · N passed" in red, with "… +N lines" under it; a click shows the whole output |
 | Ask *Run dotnet build* on a clean solution, then with a compile error | The ⎿ line reads "Build succeeded" (with its warnings, if any), then "Build failed · 1 error" in red |
 | Ask *Run `git status` in a folder that isn't a repository* and *Run a C# program that throws* | Each failed row's ⎿ lines show the `fatal:` line and the exception's line, not the lines before them |
+| Ask *Answer with a short summary and put a long list of steps and a code block inside an HTML `<details>` section with a `<summary>`* | "▸ summary" as a link, no tags; clicking it shows the list and the code block indented under it ("▾"), clicking again hides them |
 
 ## 34. Release (Phase 5)
 

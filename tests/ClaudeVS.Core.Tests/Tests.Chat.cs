@@ -504,6 +504,28 @@ namespace ClaudeVS.Core.Tests
             Eq(0, ClaudeVS.Core.Markdown.MarkdownParser.WebAddresses(null).Count, "null");
         }
 
+        private static void Test_Markdown_Details()
+        {
+            // Phase 107: <details><summary>…</summary> … </details> is a collapsed section
+            var b = ClaudeVS.Core.Markdown.MarkdownParser.Parse("Before\n\n<details>\n<summary>Full **log**</summary>\n\n- one\n- two\n\n```\nx\n```\n</details>\n\nAfter");
+            Eq("Paragraph,Details,Paragraph", string.Join(",", b.Select(x => x.Kind)), "kinds");
+            var d = b[1];
+            Eq("Text:Full ,Bold:log", string.Join(",", d.Inlines), "the summary");
+            Eq("ListItem,ListItem,Code", string.Join(",", d.Blocks.Select(x => x.Kind)), "its blocks");
+            True(d.Closed, "closed");
+            var one = ClaudeVS.Core.Markdown.MarkdownParser.Parse("<details><summary>S</summary>inside</details>")[0];
+            Eq("Text:inside", string.Join(",", one.Blocks.Single().Inlines), "on one line");
+            var nested = ClaudeVS.Core.Markdown.MarkdownParser.Parse("<details>\n<summary>A</summary>\n<details>\n<summary>B</summary>\nb\n</details>\na\n</details>\nend");
+            Eq("Details,Paragraph", string.Join(",", nested.Select(x => x.Kind)), "a nested one ends with its own tag");
+            Eq("Details,Paragraph", string.Join(",", nested[0].Blocks.Select(x => x.Kind)), "inside: the nested section, then a");
+            var open = ClaudeVS.Core.Markdown.MarkdownParser.Parse("<details>\n<summary>S</summary>\nstill **writ", streaming: true)[0];
+            True(!open.Closed, "unclosed while streaming");
+            Eq("Text:still ,Bold:writ", string.Join(",", open.Blocks.Single().Inlines), "its last line open too");
+            Eq("Text:Details", string.Join(",", ClaudeVS.Core.Markdown.MarkdownParser.Parse("<details>\nx\n</details>")[0].Inlines), "no summary");
+            True(!d.SameAs(ClaudeVS.Core.Markdown.MarkdownParser.Parse("<details>\n<summary>Full **log**</summary>\n\n- one\n</details>")[0]), "its blocks are part of SameAs");
+            Eq("S\r\n\r\ninside", ClaudeVS.Core.Markdown.AnswerText.Plain("<details><summary>S</summary>inside</details>"), "copied as plain text: the summary, then the inside");
+        }
+
         private static void Test_Markdown_NestedInlines()
         {
             // Phase 96: bold, italic and struck text hold code, links and each other

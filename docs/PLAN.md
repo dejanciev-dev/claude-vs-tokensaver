@@ -2953,9 +2953,13 @@ twenty commits. A tool row's ⎿ line says what happened: for a search, a test r
 
 Planned on 2026-11-26, after Phase 106, on the same branch; the second of four.
 
-- [ ] **Collapsed sections.** Claude puts long detail in `<details><summary>Full log</summary> … </details>`; the
+- [x] **Collapsed sections.** Claude puts long detail in `<details><summary>Full log</summary> … </details>`; the
       tags show as text. A collapsed section with its summary as the link that opens it, the Markdown inside drawn as
-      usual. In Core, tested
+      usual. In Core, tested.
+      `MdBlockKind.Details` with `Blocks` (part of `SameAs`), read by `MarkdownParser.ReadDetails` (nested sections
+      counted, one line too, unclosed while streaming, "Details" without a summary). `TranscriptView.RenderDetails`
+      adds the blocks when it opens and takes them out when it closes. Copy as plain text gives the summary and the
+      inside. `Test_Markdown_Details`. Builds clean; not yet run in VS
 - [ ] **Inline tags.** `<kbd>Ctrl</kbd>`, `<sup>2</sup>`, `<sub>2</sub>`, `<b>`/`<strong>`, `<i>`/`<em>`, `<code>`
       and `<u>` show as tags. Keys drawn as keys, superscript and subscript raised and lowered, the rest as their
       Markdown equal; other tags stay as written. In Core, tested
