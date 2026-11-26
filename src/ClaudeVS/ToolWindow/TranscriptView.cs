@@ -411,7 +411,7 @@ namespace ClaudeVS.ToolWindow
             if (string.IsNullOrEmpty(delta)) return;
             _plain = null;
             _answer.Append(delta);
-            DrawAnswer(MarkdownParser.Parse(_answer.ToString()));
+            DrawAnswer(MarkdownParser.Parse(_answer.ToString(), streaming: true));
             ScrollToEndIfNear();
         }
 
@@ -1518,6 +1518,15 @@ namespace ClaudeVS.ToolWindow
 
         public void EndAnswer()
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            // Drawn as finished text (Phase 95): a marker the stream left open, or a "table" that never got its
+            // separator row, shows as written. Usually nothing changes, and nothing is drawn again.
+            if (_answer.Length > 0) DrawAnswer(MarkdownParser.Parse(_answer.ToString()));
+            ResetAnswer();
+        }
+
+        private void ResetAnswer()
+        {
             _answer.Clear();
             _answerBlocks.Clear();
             _answerMd = new List<MdBlock>();
@@ -1527,7 +1536,7 @@ namespace ClaudeVS.ToolWindow
         public void Clear()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            EndAnswer();
+            ResetAnswer();
             _plain = null;
             _doc.Blocks.Clear();
             _cards.Clear();
@@ -1612,6 +1621,8 @@ namespace ClaudeVS.ToolWindow
                     return new BlockUIContainer(new Separator { Margin = new Thickness(0, 6, 0, 6) });
                 case MdBlockKind.Code:
                     return RenderCode(b);
+                case MdBlockKind.Table:
+                    return RenderTable(b);
                 default:
                 {
                     var p = new Paragraph { Margin = new Thickness(0, 3, 0, 3) };
@@ -1619,6 +1630,39 @@ namespace ClaudeVS.ToolWindow
                     return p;
                 }
             }
+        }
+
+        // A Markdown table (Phase 95): the header bold over a line, thin lines between cells, each column aligned as
+        // its separator row says.
+        private Block RenderTable(MdBlock b)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var table = new Table { CellSpacing = 0, Margin = new Thickness(0, 4, 0, 4), BorderBrush = QuoteBar, BorderThickness = new Thickness(0, 0, 0, 1) };
+            int columns = b.Rows.Count > 0 ? b.Rows[0].Count : 0;
+            for (int c = 0; c < columns; c++) table.Columns.Add(new TableColumn { Width = GridLength.Auto });
+            var group = new TableRowGroup();
+            for (int r = 0; r < b.Rows.Count; r++)
+            {
+                var row = new TableRow();
+                if (r == 0) row.FontWeight = FontWeights.SemiBold;
+                for (int c = 0; c < b.Rows[r].Count; c++)
+                {
+                    var p = new Paragraph { Margin = new Thickness(0) };
+                    AddInlines(p.Inlines, b.Rows[r][c]);
+                    var align = c < b.Align.Count ? b.Align[c] : MdAlign.None;
+                    p.TextAlignment = align == MdAlign.Center ? TextAlignment.Center : align == MdAlign.Right ? TextAlignment.Right : TextAlignment.Left;
+                    row.Cells.Add(new TableCell(p)
+                    {
+                        Padding = new Thickness(6, 2, 6, 2),
+                        BorderBrush = QuoteBar,
+                        BorderThickness = new Thickness(c == 0 ? 0 : 1, 0, 0, r == 0 ? 1 : 0),
+                        Background = r == 0 ? CodeBackground : null,
+                    });
+                }
+                group.Rows.Add(row);
+            }
+            table.RowGroups.Add(group);
+            return table;
         }
 
         private void AddInlines(InlineCollection target, IEnumerable<MdInline> inlines)
