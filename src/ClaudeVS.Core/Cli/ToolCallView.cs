@@ -322,6 +322,9 @@ namespace ClaudeVS.Core.Cli
             var output = SplitOutput(resultText);
             if (!isError && toolName == AskUserQuestionTool.Name && QuestionAnswers(data) is List<string> answered)
                 return new ToolResultSummary { Lines = answered.Take(PreviewLines).Select(Cut).ToList(), MoreLines = Math.Max(0, answered.Count - PreviewLines) };
+            // A test run says how it went (Phase 106), the rest a click away; a failing run exits non-zero (an error)
+            if ((toolName == "Bash" || toolName == "PowerShell") && RunResults.Tests(resultText) is RunSummary run)
+                return new ToolResultSummary { Lines = new[] { run.Line }, IsError = run.Failed, MoreLines = output.Count };
             if (isError && toolName == "Grep" && GrepRejected(output) is string why)
                 return new ToolResultSummary { IsError = true, Lines = new[] { why } };
             if (isError)
