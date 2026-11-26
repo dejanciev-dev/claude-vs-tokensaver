@@ -839,6 +839,23 @@ namespace ClaudeVS.Core.Tests
             Eq("a\nb", ClaudeVS.Core.Markdown.CodeFold.Head("a\nb"), "short code whole");
         }
 
+        private static void Test_Syntax_MoreLanguages()
+        {
+            // Phase 97: languages that were plain text
+            Eq("K:def S:\"x\" C:# c K:end", Colored("def f = \"x\" # c\nend", "ruby"));
+            Eq("K:function S:'a' C:// c C:# d", Colored("function f() { $x = 'a'; } // c\n# d", "php"));
+            Eq("K:guard K:let K:else K:return C:// c", Colored("guard let x = y else { return } // c", "swift"));
+            Eq("K:final S:'s' N:2", Colored("final s = 's' * 2;", "dart"));
+            Eq("K:local N:1 C:-- c", Colored("local x = 1 -- c", "lua"));
+            Eq("K:function K:TRUE C:# c", Colored("f <- function(x) TRUE # c", "r"));
+            Eq("K:FROM K:AS K:RUN C:# c", Colored("FROM sdk AS build\nRUN dotnet publish\n# c", "dockerfile"));
+            Eq("K:ifeq N:1 K:endif C:# c", Colored("ifeq ($(X),1)\nendif\n# c", "makefile"));
+            Eq("C:; c C:# d N:1", Colored("; c\n# d\n[s]\nk = 1;2", "ini").Replace(" N:2", ""), "a ; at a line's start is a comment, in a value it isn't");
+            Eq("S:\"x\" K:true C:# c", Colored("a = \"x\"\nb = true # c", "toml"));
+            Eq("K:query C:# c", Colored("query Q { a } # c", "graphql"));
+            Eq("K:resource S:\"aws_s3\" C:# c C:// d", Colored("resource \"aws_s3\" {} # c\n// d", "tf"));
+        }
+
         private static void Test_Syntax_Diff()
         {
             // Phase 97: a diff's lines in color

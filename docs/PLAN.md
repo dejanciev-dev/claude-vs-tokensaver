@@ -2672,7 +2672,10 @@ chat; four things about them that are wrong or missing.
       anyway (Phase 95), so it folds when it ends. `Test_CodeFold_LongBlocks`. Builds clean; not yet run in VS
 - [ ] **More languages colored.** Ruby, PHP, Swift, Dart, Lua, R, Dockerfile, Makefile, TOML/INI, GraphQL and HCL
       fall back to plain text. Keywords and comments for each (`#`, `--`, `;` line comments as each language has
-      them); the fence's name and the usual short names. Test in Core
+      them); the fence's name and the usual short names. Test in Core.
+      Twelve `Lang`s in `SyntaxHighlighter` (`rb`, `tf`, `gql`, `mk`, `cfg`, `docker`… as names too); INI's `;` is a
+      comment only at a line's start (`SemicolonComments`), Lua's `--`, PHP's `#` and `//`. `Test_Syntax_MoreLanguages`.
+      Builds clean; not yet run in VS
 
 ---
 
