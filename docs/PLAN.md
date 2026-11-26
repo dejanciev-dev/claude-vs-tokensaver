@@ -2726,10 +2726,14 @@ Planned on 2026-11-26, after Phase 98, on the same branch; the last of the four.
       Four patterns in `ScreenReaderText.Plain` (a task after the list marker is gone, an alert after the quote marks,
       all of `>>`), `WebUtility.HtmlDecode` last. Under *Fixed*. `Test_ScreenReaderText_NewMarkdown`. Builds clean;
       not yet run in VS
-- [ ] **Live test: Markdown in a real answer.** A `markdown` step in `--live-all`, about a cent: Haiku writes a
+- [x] **Live test: Markdown in a real answer.** A `markdown` step in `--live-all`, about a cent: Haiku writes a
       task list, a struck word, a table with a `<br>` in a cell, a `diff` block and a `[!NOTE]`; the answer parsed as
       the chat does must have each (task boxes, a `Strike`, a cell with a line break, a diff with added and removed
-      lines, an alert). Phases 96–98 were built on Markdown's rules, not on what Claude writes
+      lines, an alert). Phases 96–98 were built on Markdown's rules, not on what Claude writes.
+      `LiveSmoke.RunMarkdown` (`--live-markdown`, after `links`). With 2.1.332 the first run failed one check on
+      Haiku's own table: it wrote `|<br>` after the row's last pipe, an extra cell that GitHub drops too. The prompt
+      now names the cell's text; then PASS, $0.0025: `- [x]`/`- [ ]`, `~~one~~`, `line one<br>line two` in a cell,
+      `- old`/`+ new` in a diff block, `> [!NOTE]`. CONTRIBUTING: 20 tests
 - [ ] **README and the overview.** README's chat section and the Marketplace overview name what answers now draw
       (tasks, struck text, notes, diffs, folded code, more languages); CONTRIBUTING the live test count and cost
 
