@@ -1686,6 +1686,9 @@ namespace ClaudeVS.ToolWindow
                     case MdInlineKind.Italic:
                         target.Add(new Italic(new Run(i.Text)));
                         break;
+                    case MdInlineKind.Strike:
+                        target.Add(new Span(new Run(i.Text)) { TextDecorations = TextDecorations.Strikethrough });
+                        break;
                     case MdInlineKind.Link:
                         target.Add(MakeLink(i, a.Link));
                         break;

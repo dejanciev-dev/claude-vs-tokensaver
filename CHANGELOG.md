@@ -17,6 +17,8 @@ All notable changes to this project are listed here. The format follows
   each column aligned as the separator row says, also while the rows arrive.
 - **Bold and inline code while they stream:** a `**bold` or `` `code `` that hasn't closed yet shows as bold or code,
   not its markers; when the answer ends it is read as written.
+- **Strikethrough:** `~~old~~` in an answer is struck through, not shown with its tildes (also in tables and while
+  it streams).
 
 ## [0.17.0] - 2026-11-25
 

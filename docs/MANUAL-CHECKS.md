@@ -432,7 +432,13 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Ask *Write a sentence with **bold words** and `inline code` in it* and watch it stream (Haiku streams in large pieces: try Sonnet) | The bold and the code show as bold and code while they are written, never their `**` or backticks |
 | Ask *Write `2 ** 10`, a lone `\|`, and the line \| not \| a table* | After the answer ends, all three read as written: no bold, no table |
 
-## 33. Release (Phase 5)
+## 33. Markdown and code blocks (Phases 96–99)
+
+| Do | Expect |
+|---|---|
+| Ask *Write a sentence with ~~a struck word~~ in it, and a table with one struck cell* | The word and the cell are struck through, no tildes; while it streams too |
+
+## 34. Release (Phase 5)
 
 These need you rather than a check list:
 

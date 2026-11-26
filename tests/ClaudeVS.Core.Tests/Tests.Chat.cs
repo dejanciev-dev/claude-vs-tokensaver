@@ -177,6 +177,22 @@ namespace ClaudeVS.Core.Tests
             Eq("Text:*not italic*", Render("\\*not italic\\*"), "escapes");
         }
 
+        private static void Test_Markdown_Strike()
+        {
+            // Phase 96: ~~struck~~ is struck, not tildes
+            string Render(string s, bool open = false) => string.Join(",", ClaudeVS.Core.Markdown.MarkdownParser.ParseInlines(s, open));
+            Eq("Text:use ,Strike:old,Text: new", Render("use ~~old~~ new"), "struck");
+            Eq("Text:~one~ and a~~b", Render("~one~ and a~~b"), "one tilde, or no closing pair, stays");
+            Eq("Text:~~kept~~", Render("\\~~kept\\~~"), "escaped");
+            Eq("Code:~~x~~", Render("`~~x~~`"), "never inside code");
+            Eq("Text:was ,Strike:rem", Render("was ~~rem", open: true), "open while streaming");
+            Eq("Text:was ~~rem", Render("was ~~rem"), "finished: literal");
+            Eq("Text:x ~~ y", Render("x ~~ y", open: true), "a marker that doesn't start a word");
+            var t = ClaudeVS.Core.Markdown.MarkdownParser.Parse("| a |\n|---|\n| ~~gone~~ |")[0];
+            Eq("Strike:gone", string.Join(",", t.Rows[1][0]), "in a table cell");
+            Eq("Code", ClaudeVS.Core.Markdown.MarkdownParser.Parse("~~~\ncode\n~~~")[0].Kind.ToString(), "a ~~~ fence is still a fence");
+        }
+
         private static void Test_PromptHistory_BrowseAndDraft()
         {
             var h = new ClaudeVS.Core.Chat.PromptHistory(max: 3);
