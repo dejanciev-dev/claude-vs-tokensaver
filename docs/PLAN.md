@@ -2858,8 +2858,12 @@ Planned on 2026-11-26, after Phase 103, on the same branch (PR #98 still open). 
 `tool_use_result.stdout` (`\u001b[32mgreen\u001b[0m plain`). The row's ⎿ lines and its *Output* show them as
 `[32m` noise; test runners, `git`, `npm` and `dotnet` print them.
 
-- [ ] **Escape codes out of tool output.** The ⎿ lines and *Output* drop the codes: colors and styles (`ESC[…m`),
-      cursor and erase codes, window titles and links (`ESC]…BEL`). The text in Core, tested on the probe's output
+- [x] **Escape codes out of tool output.** The ⎿ lines and *Output* drop the codes: colors and styles (`ESC[…m`),
+      cursor and erase codes, window titles and links (`ESC]…BEL`). The text in Core, tested on the probe's output.
+      `Cli/TerminalText.Strip` (CSI in both forms, OSC to BEL or `ESC \`, two-character codes, a code cut off at the
+      end; text without ESC comes back as it is). `TranscriptView.ShowResult` strips before the summary and *Output*;
+      the token count is still of what Claude read. Under *Fixed*. `Test_TerminalText_Strip`. Builds clean; not yet
+      run in VS
 - [ ] **Colors in the output.** *Output* draws what the codes said: the 16 terminal colors (and 256-color ones
       near them) in a palette readable on the theme's background, bold. A failing test's red shows red. The spans in
       Core, tested

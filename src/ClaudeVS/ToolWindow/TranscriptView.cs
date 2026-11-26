@@ -798,6 +798,8 @@ namespace ClaudeVS.ToolWindow
         /// <summary>The ⎿ lines under a finished tool call, and its whole output in the row's body.</summary>
         private void ShowResult(ToolRow row, string resultText, bool isError, ChatTheme.AccentSet a, Newtonsoft.Json.Linq.JObject resultData = null)
         {
+            // A command's terminal escape codes (Phase 104): text, not "[32m"
+            resultText = Core.Cli.TerminalText.Strip(resultText);
             // A Read that stops before the end asks the file whether it ends in a newline (Phase 74). Not on the UI thread:
             // from the cache, else Claude Code's count now and the file's once a background check answers (Phase 76).
             string missing = null, key = null;
