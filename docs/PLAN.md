@@ -2949,6 +2949,22 @@ twenty commits. A tool row's ⎿ line says what happened: for a search, a test r
       first lines otherwise. Run summaries (items 2 and 3) come first. `Test_ToolCallView_ErrorsFirst`. Builds clean;
       not yet run in VS
 
+## Phase 107 — HTML, footnotes and emoji in answers
+
+Planned on 2026-11-26, after Phase 106, on the same branch; the second of four.
+
+- [ ] **Collapsed sections.** Claude puts long detail in `<details><summary>Full log</summary> … </details>`; the
+      tags show as text. A collapsed section with its summary as the link that opens it, the Markdown inside drawn as
+      usual. In Core, tested
+- [ ] **Inline tags.** `<kbd>Ctrl</kbd>`, `<sup>2</sup>`, `<sub>2</sub>`, `<b>`/`<strong>`, `<i>`/`<em>`, `<code>`
+      and `<u>` show as tags. Keys drawn as keys, superscript and subscript raised and lowered, the rest as their
+      Markdown equal; other tags stay as written. In Core, tested
+- [ ] **Footnotes.** `text[^1]` and `[^1]: the note` show their brackets. The reference as a raised number that
+      goes to its note, the notes together at the answer's end. In Core, tested
+- [ ] **Emoji shortcodes.** `:white_check_mark:`, `:x:`, `:warning:`, `:rocket:` and the other GitHub shortcodes
+      Claude uses show as words between colons. The common ones (about 40) are their emoji; others stay. In Core,
+      tested
+
 ---
 
 ## Working in Visual Studio — daily loop
