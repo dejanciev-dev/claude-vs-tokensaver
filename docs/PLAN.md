@@ -2851,6 +2851,25 @@ Planned on 2026-11-26, after Phase 102, on the same branch; the second of the tw
       block numbers its first 20 lines, and *Show all* all of them. README's code blocks row and its test count (287).
       `Test_CodeText_Gutter`. Builds clean; not yet run in VS
 
+## Phase 104 — Terminal output in tool rows
+
+Planned on 2026-11-26, after Phase 103, on the same branch (PR #98 still open). A probe with 2.1.332 (Haiku running
+`printf '\033[32mgreen\033[0m plain'`, $0.003): the Bash result keeps the terminal's escape codes, in `content` and in
+`tool_use_result.stdout` (`\u001b[32mgreen\u001b[0m plain`). The row's ⎿ lines and its *Output* show them as
+`[32m` noise; test runners, `git`, `npm` and `dotnet` print them.
+
+- [ ] **Escape codes out of tool output.** The ⎿ lines and *Output* drop the codes: colors and styles (`ESC[…m`),
+      cursor and erase codes, window titles and links (`ESC]…BEL`). The text in Core, tested on the probe's output
+- [ ] **Colors in the output.** *Output* draws what the codes said: the 16 terminal colors (and 256-color ones
+      near them) in a palette readable on the theme's background, bold. A failing test's red shows red. The spans in
+      Core, tested
+- [ ] **Progress lines.** A progress bar redraws its line with `\r` (`Downloading 10%\r… 100%`), and the row shows
+      every state run together. Keep each line's last state, as a terminal would (`\r\n` is still a line break). In
+      Core, tested
+- [ ] **Live test: a colored Bash result.** An `ansi` step in `--live-all`, about a cent: Haiku runs the probe's
+      `printf`; the result, as the chat cleans it, must read `green plain` with `green` in green, and the summary
+      line no `ESC`
+
 ---
 
 ## Working in Visual Studio — daily loop
