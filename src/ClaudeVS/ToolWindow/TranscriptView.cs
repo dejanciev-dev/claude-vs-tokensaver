@@ -799,8 +799,9 @@ namespace ClaudeVS.ToolWindow
         private void ShowResult(ToolRow row, string resultText, bool isError, ChatTheme.AccentSet a, Newtonsoft.Json.Linq.JObject resultData = null)
         {
             // A command's terminal escape codes (Phase 104): text, not "[32m"; Output draws their colors
-            string raw = resultText;
-            resultText = Core.Cli.TerminalText.Strip(resultText);
+            // A progress bar's \r redraws as their last state
+            string raw = Core.Cli.TerminalText.Collapse(resultText);
+            resultText = Core.Cli.TerminalText.Strip(raw);
             // A Read that stops before the end asks the file whether it ends in a newline (Phase 74). Not on the UI thread:
             // from the cache, else Claude Code's count now and the file's once a background check answers (Phase 76).
             string missing = null, key = null;

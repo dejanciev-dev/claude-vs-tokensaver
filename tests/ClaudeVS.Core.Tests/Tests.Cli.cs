@@ -853,6 +853,17 @@ namespace ClaudeVS.Core.Tests
             Eq(8, TerminalText.From256(240), "a dark gray");
         }
 
+        private static void Test_TerminalText_Collapse()
+        {
+            // Phase 104: a progress bar's redraws keep their last state
+            Eq("start\nDownloading 100%\ndone", TerminalText.Collapse("start\nDownloading 10%\rDownloading 55%\rDownloading 100%\ndone"), "the last state");
+            Eq("a\nb", TerminalText.Collapse("a\r\nb"), "CRLF is a line break");
+            Eq("Built", TerminalText.Collapse("Building...\rBuilt\r"), "a trailing \\r");
+            Eq("\u001b[32m100%\u001b[0m", TerminalText.Collapse("10%\r\u001b[32m100%\u001b[0m\r\u001b[K"), "a redraw that only erases doesn't count");
+            string plain = "no carriage returns";
+            True(ReferenceEquals(plain, TerminalText.Collapse(plain)), "as it is");
+        }
+
         private static void Test_ToolData_Shapes()
         {
             Eq("Read 4 lines", ToolCallView.FromData("Read", JObject.Parse("{\"file\":{\"numLines\":4,\"startLine\":1,\"totalLines\":4}}")), "whole file");

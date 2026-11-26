@@ -2871,9 +2871,13 @@ Planned on 2026-11-26, after Phase 103, on the same branch (PR #98 still open). 
       of the 16, backgrounds left out. `TranscriptView.ColoredOutput`: a read-only `RichTextBox` with VS Code's
       terminal colors for dark and light backgrounds, black and white as the theme's gray and text. Output without
       codes keeps its plain text box. `Test_TerminalText_Spans`. Builds clean; not yet run in VS
-- [ ] **Progress lines.** A progress bar redraws its line with `\r` (`Downloading 10%\r… 100%`), and the row shows
+- [x] **Progress lines.** A progress bar redraws its line with `\r` (`Downloading 10%\r… 100%`), and the row shows
       every state run together. Keep each line's last state, as a terminal would (`\r\n` is still a line break). In
-      Core, tested
+      Core, tested.
+      `TerminalText.Collapse`: what follows a line's last `\r` that has text after it (a redraw that only erases
+      doesn't count); a shorter redraw isn't merged with the older text it covers, as progress bars redraw whole.
+      Applied before the codes are stripped, so the colors of the last state stay. Under *Fixed*.
+      `Test_TerminalText_Collapse`. Builds clean; not yet run in VS
 - [ ] **Live test: a colored Bash result.** An `ansi` step in `--live-all`, about a cent: Haiku runs the probe's
       `printf`; the result, as the chat cleans it, must read `green plain` with `green` in green, and the summary
       line no `ESC`
