@@ -48,6 +48,8 @@ All notable changes to this project are listed here. The format follows
 
 - **Code and links inside bold or italic text:** `` **`Validate`** `` showed its backticks inside bold text, and
   `**see [docs](url)**` its brackets; they are drawn as code and links, in bold.
+- **Numbered lists count:** a list written `1.` `1.` `1.` showed 1, 1, 1; it counts from its first number, also
+  around nested lists and code blocks in its items.
 - **`<br>` and `&lt;`-style entities in answers** showed as written (Claude breaks lines in table cells with `<br>`):
   outside code they are a line break and their characters.
 - **Images in answers** (`![diagram](docs/arch.png)`) showed a `!` and a link: they are one link, "🖼 diagram", that
