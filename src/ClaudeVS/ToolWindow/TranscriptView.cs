@@ -1843,10 +1843,40 @@ namespace ClaudeVS.ToolWindow
                 };
                 var copy = SmallButton("Copy", "Copy to clipboard");
                 copy.Click += (s, e) => { try { Clipboard.SetText(code); copy.Content = "Copied"; } catch (Exception) { copy.Content = "Clipboard busy"; } };
+                // Save… (Phase 100): a file named for the block's language, in the solution's folder, then opened
+                var save = SmallButton("Save…", "Save the code as a file and open it");
+                save.Click += (s, e) =>
+                {
+                    ThreadHelper.ThrowIfNotOnUIThread();
+                    var name = CodeFileName.For(b.Language);
+                    string dir = BaseDirectory?.Invoke();
+                    var dlg = new Microsoft.Win32.SaveFileDialog
+                    {
+                        Title = "Save code as a file",
+                        FileName = name.FileName,
+                        DefaultExt = name.Extension,
+                        Filter = name.Filter,
+                        InitialDirectory = !string.IsNullOrEmpty(dir) && System.IO.Directory.Exists(dir) ? dir : null,
+                    };
+                    if (dlg.ShowDialog() != true) return;
+                    try
+                    {
+                        Core.SafeFile.Replace(dlg.FileName, code);
+                        save.Content = "Saved";
+                        VsContext.OpenFile(dlg.FileName);
+                    }
+                    catch (Exception ex) when (!(ex is OutOfMemoryException))
+                    {
+                        save.Content = "Not saved";
+                        save.ToolTip = ex.Message;
+                    }
+                };
                 DockPanel.SetDock(insert, Dock.Right);
                 DockPanel.SetDock(copy, Dock.Right);
+                DockPanel.SetDock(save, Dock.Right);
                 header.Children.Add(insert);
                 header.Children.Add(copy);
+                header.Children.Add(save);
             }
             header.Children.Add(new TextBlock { Text = string.IsNullOrEmpty(b.Language) ? "code" : b.Language, Opacity = 0.7, FontSize = 11, VerticalAlignment = VerticalAlignment.Center });
 

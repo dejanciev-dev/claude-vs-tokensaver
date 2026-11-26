@@ -452,6 +452,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | With Narrator on, ask for the task list and the `[!WARNING]` alert above | When the answer ends Narrator reads "done: …", "to do: …" and "Warning: …", no brackets |
 | Under the table of five files above, click *Copy table*, paste into Excel, then into Word | It says *Copied*; Excel fills a cell per table cell (no pipes or backticks), Word pastes a table with a header row |
 | Right-click the copy button under an answer with a list, code and a table; pick *Copy as plain text* and paste into Notepad, then click the button and paste again | The menu has *Copy as Markdown* and *Copy as plain text*; plain text has no `**`, backticks or pipes, the code as written, bullets and the table's columns tab-separated; the click still copies Markdown |
+| Click *Save…* on the Dockerfile block above, then on a C# block | The dialog opens in the solution's folder suggesting `Dockerfile`, then `snippet.cs` with a C# filter; after saving, the button says *Saved* and the file opens in VS with the code |
 
 ## 34. Release (Phase 5)
 

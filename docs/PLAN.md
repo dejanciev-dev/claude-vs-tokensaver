@@ -2760,9 +2760,13 @@ Markdown; a code block only to the clipboard or the cursor.
       `AnswerText.Plain` from the parsed blocks (`MdBlock.Marker` for items, nested ones indented; a note's title and
       a colon; a rule as "———"; CRLF). The button's `ContextMenu`; a click still copies Markdown, its tooltip says
       right-click. `Test_AnswerText_Plain`. Builds clean; not yet run in VS
-- [ ] **Save a code block as a file.** A finished code block gets *Save…*: a save dialog in the solution's folder,
+- [x] **Save a code block as a file.** A finished code block gets *Save…*: a save dialog in the solution's folder,
       its file type from the block's language (`.cs`, `.ps1`, `.json`, `Dockerfile`…), the code written as it is,
-      then the file opened in VS. The names in Core, tested
+      then the file opened in VS. The names in Core, tested.
+      `Markdown/CodeFileName.cs` (`snippet` plus the extension, or a whole name for Dockerfile, Makefile, Gemfile;
+      `.txt` for none or an unknown one; the dialog's filter). `RenderCode`'s *Save…* writes with `SafeFile.Replace`
+      and opens the file with `VsContext.OpenFile`; a failure says *Not saved* with the reason as its tooltip.
+      `Test_CodeFileName_ForLanguage`. Builds clean; not yet run in VS
 
 ---
 
