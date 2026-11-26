@@ -2790,6 +2790,24 @@ scrolled; a code block says only the fence's short name.
       name as written); `CodeFold.Lines` for the count, so it grows while the block streams. `Test_CodeFileName_Header`.
       Builds clean; not yet run in VS
 
+## Phase 102 — Lists, links to headings, long tables, line ends
+
+Planned on 2026-11-26, after Phase 101, on the same branch (PR #98 still open); the first of two phases asked for
+as ten commits.
+
+- [ ] **Numbered lists count.** Markdown numbers a list from its first item, whatever the others say; Claude often
+      writes `1.` for every step, and the chat shows 1, 1, 1. Number each list from its first number: a nested list
+      counts on its own, and the outer one goes on after it, after an item's code block or continuation lines; a
+      blank line between items doesn't end the list, a paragraph does. Test in Core
+- [ ] **Links to headings.** `[see Setup](#setup)` in an answer is plain text (it isn't a web address or a file).
+      It goes to that heading of the answer, as GitHub's anchors do: lower case, blanks as `-`, punctuation dropped,
+      a repeated heading `-1`, `-2`. The slugs in Core, tested
+- [ ] **Long tables folded.** A table of 60 rows pushes the answer away as long code did. A finished table of more
+      than 25 rows shows its header and first 10 rows and *Show all N rows*; *Copy table* still takes all of it. The
+      rule in Core, tested
+- [ ] **Line ends.** A line ending in a backslash (Markdown's hard break) shows the backslash; two spaces at a line's
+      end are a break already (lines are kept). The backslash goes, the break stays. Test in Core
+
 ---
 
 ## Working in Visual Studio — daily loop
