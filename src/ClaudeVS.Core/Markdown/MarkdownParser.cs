@@ -576,6 +576,26 @@ namespace ClaudeVS.Core.Markdown
         private static readonly Regex BreakTag = new Regex(@"\G<br\s*/?>", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         private static readonly Regex Entity = new Regex(@"\G&(#[0-9]{1,7}|#[xX][0-9a-fA-F]{1,6}|[a-zA-Z][a-zA-Z0-9]{1,31});", RegexOptions.Compiled);
 
+        /// <summary>
+        /// The web addresses in plain text (Phase 105, for tool output), by the rule answers use (Phase 96): http and
+        /// https, at a word's start, without the punctuation that ends a sentence around them.
+        /// </summary>
+        public static List<(int Start, int Length)> WebAddresses(string text)
+        {
+            var found = new List<(int, int)>();
+            if (string.IsNullOrEmpty(text)) return found;
+            for (int i = 0; i < text.Length; i++)
+            {
+                char c = text[i];
+                if ((c != 'h' && c != 'H') || (i > 0 && char.IsLetterOrDigit(text[i - 1])) || !IsWebAddressAt(text, i)) continue;
+                int end = WebAddressEnd(text, i);
+                if (end <= i) continue;
+                found.Add((i, end - i));
+                i = end - 1;
+            }
+            return found;
+        }
+
         private static bool IsWebAddressAt(string s, int i)
         {
             foreach (string scheme in new[] { "https://", "http://" })

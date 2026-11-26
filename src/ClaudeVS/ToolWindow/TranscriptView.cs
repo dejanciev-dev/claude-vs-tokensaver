@@ -854,6 +854,14 @@ namespace ClaudeVS.ToolWindow
                 var link = m.Link;
                 links.Add((m.Start, m.Length, run => FileLinkTo(run, link, color)));
             }
+            // Web addresses, as in answers
+            foreach (var (start, length) in MarkdownParser.WebAddresses(clean))
+            {
+                if (links.Any(l => start < l.Item1 + l.Item2 && l.Item1 < start + length)) continue;
+                if (!Uri.TryCreate(clean.Substring(start, length), UriKind.Absolute, out Uri uri)) continue;
+                links.Add((start, length, run => WebLinkTo(run, uri, color)));
+            }
+            links.Sort((x, y) => x.Item1.CompareTo(y.Item1));
             return links;
         }
 
@@ -2079,7 +2087,13 @@ namespace ClaudeVS.ToolWindow
                 return FileLinkTo(new Run(i.Text), file, color);
             if (!Uri.TryCreate(i.Url, UriKind.Absolute, out Uri uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
                 return new Run(i.Text); // only open web links and files; anything else is shown as text
-            var link = new Hyperlink(new Run(i.Text)) { NavigateUri = uri, ToolTip = uri.ToString(), Foreground = color };
+            return WebLinkTo(new Run(i.Text), uri, color);
+        }
+
+        /// <summary>A link that opens <paramref name="uri"/> in the browser.</summary>
+        private static Hyperlink WebLinkTo(Inline content, Uri uri, Brush color)
+        {
+            var link = new Hyperlink(content) { NavigateUri = uri, ToolTip = uri.ToString(), Foreground = color };
             link.RequestNavigate += (s, e) =>
             {
                 try { Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true }); } catch { }

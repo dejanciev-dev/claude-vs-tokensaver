@@ -494,6 +494,16 @@ namespace ClaudeVS.Core.Tests
             Eq("Paragraph", K("a = b\n===x"), "not only the marks");
         }
 
+        private static void Test_Markdown_WebAddressesInOutput()
+        {
+            // Phase 105: web addresses in a tool's output, by the answers' rule
+            string text = "npm notice New version: https://github.com/npm/cli/releases/tag/v11.0.0.\nSee (https://aka.ms/dotnet/info) or http://x.y/a_b, and xhttps://no";
+            string Found() => string.Join(" | ", ClaudeVS.Core.Markdown.MarkdownParser.WebAddresses(text).Select(w => text.Substring(w.Start, w.Length)));
+            Eq("https://github.com/npm/cli/releases/tag/v11.0.0 | https://aka.ms/dotnet/info | http://x.y/a_b", Found(), "three, without the sentence's marks");
+            Eq(0, ClaudeVS.Core.Markdown.MarkdownParser.WebAddresses("no addresses here").Count, "none");
+            Eq(0, ClaudeVS.Core.Markdown.MarkdownParser.WebAddresses(null).Count, "null");
+        }
+
         private static void Test_Markdown_NestedInlines()
         {
             // Phase 96: bold, italic and struck text hold code, links and each other
