@@ -78,6 +78,17 @@
     <Compile Include="ToolWindow\ClaudeChatControl.SlashPicker.cs" />
     <Compile Include="ToolWindow\ClaudeChatControl.Settings.cs" />
     <Compile Include="ToolWindow\ClaudeChatControl.Waiting.cs" />
+    <Compile Include="ToolWindow\ClaudeChatControl.Rewind.cs" />
+    <Compile Include="ToolWindow\ClaudeChatControl.ContextUsage.cs" />
+    <Compile Include="ToolWindow\ClaudeChatControl.Menus.cs" />
+    <Compile Include="ToolWindow\ClaudeChatControl.Images.cs" />
+    <Compile Include="ToolWindow\ClaudeChatControl.FilePicker.cs" />
+    <Compile Include="ToolWindow\ClaudeChatControl.Routing.cs" />
+    <Compile Include="ToolWindow\ClaudeChatControl.Sessions.cs" />
+    <Compile Include="ToolWindow\ClaudeChatControl.Events.cs" />
+    <Compile Include="ToolWindow\ClaudeChatControl.Skills.cs" />
+    <Compile Include="ToolWindow\ClaudeChatControl.Limits.cs" />
+    <Compile Include="ToolWindow\ClaudeChatControl.Bookmarks.cs" />
     <Compile Include="ToolWindow\TranscriptView.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

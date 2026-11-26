@@ -2603,8 +2603,12 @@ proposed.
       `EndAnswer` parses the answer as finished and draws again from the first changed block (usually none). Four
       rows in a new MANUAL-CHECKS 32 (with item 1's), *Release* becomes 33. `Test_Markdown_Tables`,
       `Test_Markdown_HalfWritten`. Builds clean; not yet run in VS
-- [ ] **Split `ClaudeChatControl`.** `ClaudeChatControl.cs` is 3,040 lines. Move whole concerns into partial files, as
-      `.Notices.cs` and `.Waiting.cs` already are. No change in behavior; the build and all offline tests stay green
+- [x] **Split `ClaudeChatControl`.** `ClaudeChatControl.cs` is 3,040 lines. Move whole concerns into partial files, as
+      `.Notices.cs` and `.Waiting.cs` already are. No change in behavior; the build and all offline tests stay green.
+      Eleven new partial files, each a whole section moved unchanged: `Rewind`, `ContextUsage`, `Menus`, `Images`,
+      `FilePicker`, `Routing`, `Sessions`, `Events` (576 lines), `Skills`, `Limits`, `Bookmarks`; the main file keeps
+      the layout, attachments and sending (1,187 lines). A sorted line comparison shows only the section comments
+      (now each file's summary) and the file headers differ. Release build clean; 260 of 260 offline tests pass
 - [ ] **Live test: file links.** A `links` step in `--live-all`, about a cent: Haiku, in a small project, names a file
       and line; `FileLink.FromCode` or `FileLink.Parse` must resolve the reference taken from the real answer. Phase 90
       was built on the system prompt's `file_path:line_number` only
