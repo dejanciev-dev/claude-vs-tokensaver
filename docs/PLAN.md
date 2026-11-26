@@ -2878,9 +2878,12 @@ Planned on 2026-11-26, after Phase 103, on the same branch (PR #98 still open). 
       doesn't count); a shorter redraw isn't merged with the older text it covers, as progress bars redraw whole.
       Applied before the codes are stripped, so the colors of the last state stay. Under *Fixed*.
       `Test_TerminalText_Collapse`. Builds clean; not yet run in VS
-- [ ] **Live test: a colored Bash result.** An `ansi` step in `--live-all`, about a cent: Haiku runs the probe's
+- [x] **Live test: a colored Bash result.** An `ansi` step in `--live-all`, about a cent: Haiku runs the probe's
       `printf`; the result, as the chat cleans it, must read `green plain` with `green` in green, and the summary
-      line no `ESC`
+      line no `ESC`.
+      `LiveSmoke.RunAnsi` (`--live-ansi`, after `markdown`); a result without codes is a SKIP that says Claude Code
+      may have started stripping them. With 2.1.332: `ESC[32mgreenESC[0m plain`, all three checks pass; PASS,
+      $0.0033. CONTRIBUTING: 21 tests
 
 ---
 

@@ -25,7 +25,7 @@ dotnet run --project tests/ClaudeVS.Core.Tests -- --live-all
 ```
 
 It runs them one after another, each in an empty temp folder and asking for Haiku, then prints a summary with each
-test's cost and the total (20 tests, about $0.21 and 6 minutes with Claude Code 2.1.332; a single `--live-…` test
+test's cost and the total (21 tests, about $0.22 and 6 minutes with Claude Code 2.1.332; a single `--live-…` test
 prints its cost too). The exit code is 0 only when all pass. `live (Plan)` checks that plan mode still answers with
 Haiku: Claude Code turns the alias `haiku` into Sonnet there, so the session asks for Haiku by its full ID. It does so
 for four turns: two in one process, one after the process was killed (restarted with `--resume`), one in a new session
@@ -55,6 +55,8 @@ prompt, and checks Claude Code doesn't ask again: in the same process, and after
 how; a reference in the answer must link, as the chat parses it, to that file and line.
 `--live-markdown` (about $0.003, in `--live-all`) has Haiku write a task list, a struck word, a table with a `<br>`
 in a cell, a diff block and a `[!NOTE]`; the chat's parser must find each.
+`--live-ansi` (about $0.003, in `--live-all`) has Haiku run a `printf` that prints a green word; Claude Code passes
+the escape codes through, and the chat must clean them to "green plain" with "green" in green.
 
 Each test also runs on its own. `--live [path-for-raw-output.txt] [mode]` runs two short turns, in Accept Edits
 unless a mode is named (`Plan` checks that plan mode keeps Haiku, also after a restart and a resume). To capture and answer permission

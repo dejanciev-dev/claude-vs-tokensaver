@@ -79,6 +79,7 @@ namespace ClaudeVS.Core.Tests
                 ("webfetch", RunWebFetch), // a site's 404 is a failed row though Claude Code sends no error (Phase 89)
                 ("links", RunLinks), // a file reference in a real answer links to the file and line (Phase 95)
                 ("markdown", RunMarkdown), // tasks, struck text, a <br> in a table, a diff and a note in a real answer (Phase 99)
+                ("ansi", RunAnsi), // a Bash result's color codes cleaned and colored (Phase 104)
                 ("session", RunSession),
                 ("long-prompt", RunLongPrompt),
                 ("prompt-tokens", RunPromptTokens),
@@ -605,6 +606,59 @@ namespace ClaudeVS.Core.Tests
                 return 1;
             }
             finally { session.Dispose(); try { Directory.Delete(dir, true); } catch (IOException) { } }
+        }
+
+        /// <summary>
+        /// `--live-ansi` (in --live-all, about a cent): a colored Bash result (Phase 104). Claude Code 2.1.332 passes a
+        /// command's escape codes through; Haiku runs <c>printf</c> with a green word, and the result, cleaned as the chat
+        /// cleans it, must read "green plain" with "green" in green, and the row's summary no ESC.
+        /// </summary>
+        public static int RunAnsi()
+        {
+            string exe = ClaudeCliLocator.Resolve("");
+            if (exe == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-live-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            var events = new BlockingCollection<ClaudeEvent>();
+            var session = NewSession(new ClaudeLaunchOptions
+            {
+                WorkingDirectory = dir, Model = ModelChoice.Haiku, Effort = EffortChoice.Low,
+                ExtraArguments = "--allowedTools Bash",
+            });
+            session.EventReceived += (s, e) => events.Add(e);
+            ClaudeEvent result = null;
+            try
+            {
+                session.SendPromptAsync("Run this exact bash command once and then reply only 'ok': printf '\\033[32mgreen\\033[0m plain\\n'").GetAwaiter().GetResult();
+                string bashId = null;
+                var deadline = DateTime.UtcNow.AddSeconds(120);
+                while (DateTime.UtcNow < deadline)
+                {
+                    if (!events.TryTake(out var e, TimeSpan.FromMilliseconds(200))) continue;
+                    if (e.Kind == ClaudeEventKind.ToolUse && e.ToolName == "Bash" && !e.IsSubagent) bashId = e.ToolUseId;
+                    if (e.Kind == ClaudeEventKind.ToolResult && e.ToolUseId != null && e.ToolUseId == bashId) result = e;
+                    if (e.Kind == ClaudeEventKind.TurnCompleted) { Console.WriteLine($"  turn completed: error={e.IsError}, cost=${e.TotalCostUsd:0.0000}"); break; }
+                }
+            }
+            finally { session.Dispose(); try { Directory.Delete(dir, true); } catch (IOException) { } }
+
+            if (result == null) { Console.WriteLine("FAIL live ansi: no Bash result"); return 1; }
+            string raw = result.ResultText ?? "";
+            Console.WriteLine("  raw: " + raw.Replace("\u001b", "ESC").Split('\n')[0]);
+            var failures = new List<string>();
+            void Check(bool ok, string what) { Console.WriteLine((ok ? "  ok   " : "  FAIL ") + what); if (!ok) failures.Add(what); }
+            if (!TerminalText.HasCodes(raw))
+            {
+                Console.WriteLine("SKIP live ansi: Claude Code sent no escape codes this time (did it start stripping them?)");
+                return 2;
+            }
+            string clean = TerminalText.Strip(TerminalText.Collapse(raw));
+            Check(clean.StartsWith("green plain", StringComparison.Ordinal), "cleaned: \"green plain\"");
+            Check(TerminalText.Spans(raw).Any(s => s.Text == "green" && s.Color == 2), "\"green\" in green");
+            var row = ToolCallView.Summarize("Bash", clean, result.IsError, data: result.ResultData);
+            Check(row.Lines.All(l => !TerminalText.HasCodes(l)), "the row's summary has no ESC: " + string.Join(" | ", row.Lines));
+            Console.WriteLine(failures.Count == 0 ? "PASS live ansi" : "FAIL live ansi: " + string.Join("; ", failures));
+            return failures.Count == 0 ? 0 : 1;
         }
 
         /// <summary>
