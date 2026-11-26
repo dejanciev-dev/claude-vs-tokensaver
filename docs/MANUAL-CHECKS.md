@@ -432,7 +432,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Ask *Write a sentence with **bold words** and `inline code` in it* and watch it stream (Haiku streams in large pieces: try Sonnet) | The bold and the code show as bold and code while they are written, never their `**` or backticks |
 | Ask *Write `2 ** 10`, a lone `\|`, and the line \| not \| a table* | After the answer ends, all three read as written: no bold, no table |
 
-## 33. Markdown and code blocks (Phases 96–99)
+## 33. Markdown and code blocks (Phases 96–100)
 
 | Do | Expect |
 |---|---|
@@ -450,6 +450,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Ask *Write two headings underlined with `===` and `---` instead of `#`, then a paragraph, a blank line and `---`* | Two headings, the first larger; the last `---` a rule under the paragraph |
 | Ask *Name the file and line where the chat window is created, as a plain path, no backticks, at the end of a sentence* | The path is a link (tooltip the file and line) that opens the file at that line; the full stop isn't part of it. `ASP.NET` or `e.g.` in an answer are never links |
 | With Narrator on, ask for the task list and the `[!WARNING]` alert above | When the answer ends Narrator reads "done: …", "to do: …" and "Warning: …", no brackets |
+| Under the table of five files above, click *Copy table*, paste into Excel, then into Word | It says *Copied*; Excel fills a cell per table cell (no pipes or backticks), Word pastes a table with a header row |
 
 ## 34. Release (Phase 5)
 

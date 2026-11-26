@@ -17,6 +17,7 @@ All notable changes to this project are listed here. The format follows
   each column aligned as the separator row says, also while the rows arrive.
 - **Bold and inline code while they stream:** a `**bold` or `` `code `` that hasn't closed yet shows as bold or code,
   not its markers; when the answer ends it is read as written.
+- **Copy table** under each table in an answer: it pastes into Excel as cells and into Word or Outlook as a table.
 - **Strikethrough:** `~~old~~` in an answer is struck through, not shown with its tildes (also in tables and while
   it streams).
 - **Task lists:** `- [ ] add tests` and `- [x] build` show a box (☐, ☑ when done) instead of the bullet and brackets.
