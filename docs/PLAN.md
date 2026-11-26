@@ -2768,6 +2768,19 @@ Markdown; a code block only to the clipboard or the cursor.
       and opens the file with `VsContext.OpenFile`; a failure says *Not saved* with the reason as its tooltip.
       `Test_CodeFileName_ForLanguage`. Builds clean; not yet run in VS
 
+## Phase 101 — Finding things in a long chat
+
+Planned on 2026-11-26, after Phase 100, on the same branch (PR #98 still open). A long conversation can only be
+scrolled; a code block says only the fence's short name.
+
+- [ ] **Find in the chat.** A find bar over the conversation: the matches highlighted, *3 of 12*, Enter and F3 for
+      the next, Shift+Enter and Shift+F3 for the one before (scrolled into view), *Aa* for match case, Esc closes it
+      and clears the highlights. Opened by *Find in Chat* (Tools → Claude Code, Ctrl+Alt+K, Ctrl+F, and the **/**
+      menu) and by Ctrl+F in the chat when VS lets it through. The matching and the count's words in Core, tested
+- [ ] **Code blocks say what they hold.** A block's header shows the fence's name (`cs`, `ps1`) or "code". Show the
+      language's name and its length: "C# · 48 lines", "PowerShell", "code · 3 lines" (one line says nothing). The
+      words in Core, tested
+
 ---
 
 ## Working in Visual Studio — daily loop
