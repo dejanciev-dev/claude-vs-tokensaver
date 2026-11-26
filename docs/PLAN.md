@@ -2658,8 +2658,12 @@ chat; four things about them that are wrong or missing.
       under one), as CommonMark's indented code is not read here anyway. A code block's `Indent` is its item's depth
       plus one (0 at the margin); `RenderCode` indents it as the item's text. `Test_Markdown_CodeInListItems`.
       Builds clean; not yet run in VS
-- [ ] **Diffs in color.** A ` ```diff ` block (or a `patch`) is drawn in one color. Added lines green, removed lines
-      red, `@@` hunk headers and `---`/`+++` file lines as such, in both palettes. The tokens in Core, tested
+- [x] **Diffs in color.** A ` ```diff ` block (or a `patch`) is drawn in one color. Added lines green, removed lines
+      red, `@@` hunk headers and `---`/`+++` file lines as such, in both palettes. The tokens in Core, tested.
+      `SyntaxKind.Inserted`, `Deleted`, `Hunk`; `SyntaxHighlighter.TokenizeDiff` line by line (`diff`, `patch`,
+      `udiff`; `diff --git` and `index` lines are headers too, a line's `\r` is left out). Both palettes in
+      `TranscriptView` get the three colors (the edit view's colors for a `.diff` file too). `Test_Syntax_Diff`.
+      Builds clean; not yet run in VS
 - [ ] **Long code blocks folded.** A 300-line file Claude prints fills screens and pushes the rest of the answer
       away. A finished block of more than 40 lines shows its first 20 and *Show all N lines*; Copy and Insert take the
       whole code. While it streams it isn't folded (the end is what is new). The rule in Core, tested

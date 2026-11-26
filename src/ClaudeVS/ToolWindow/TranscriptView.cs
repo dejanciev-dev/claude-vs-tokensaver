@@ -1785,16 +1785,19 @@ namespace ClaudeVS.ToolWindow
 
         // ---------------- Syntax coloring ----------------
 
-        private static readonly Dictionary<SyntaxKind, Brush> DarkPalette = Palette("#569CD6", "#CE9178", "#6A9955", "#B5CEA8", "#4EC9B0", "#9CDCFE");
-        private static readonly Dictionary<SyntaxKind, Brush> LightPalette = Palette("#0000FF", "#A31515", "#008000", "#098658", "#800000", "#E50000");
+        // The last three: a diff's added and removed lines and its headers (Phase 97)
+        private static readonly Dictionary<SyntaxKind, Brush> DarkPalette = Palette("#569CD6", "#CE9178", "#6A9955", "#B5CEA8", "#4EC9B0", "#9CDCFE", "#81B88B", "#F48771", "#C586C0");
+        private static readonly Dictionary<SyntaxKind, Brush> LightPalette = Palette("#0000FF", "#A31515", "#008000", "#098658", "#800000", "#E50000", "#22863A", "#B31D28", "#6F42C1");
 
-        private static Dictionary<SyntaxKind, Brush> Palette(string keyword, string str, string comment, string number, string tag, string attribute)
+        private static Dictionary<SyntaxKind, Brush> Palette(string keyword, string str, string comment, string number, string tag, string attribute,
+            string inserted, string deleted, string hunk)
         {
             Brush B(string hex) => Freeze(new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex)));
             return new Dictionary<SyntaxKind, Brush>
             {
                 [SyntaxKind.Keyword] = B(keyword), [SyntaxKind.String] = B(str), [SyntaxKind.Comment] = B(comment),
                 [SyntaxKind.Number] = B(number), [SyntaxKind.Tag] = B(tag), [SyntaxKind.Attribute] = B(attribute),
+                [SyntaxKind.Inserted] = B(inserted), [SyntaxKind.Deleted] = B(deleted), [SyntaxKind.Hunk] = B(hunk),
             };
         }
 

@@ -823,6 +823,16 @@ namespace ClaudeVS.Core.Tests
             True(Colored("a.b(1)", "cs").Contains("N:1") && !Colored("x1 = 2", "cs").Contains("N:1"), "digits inside names are not numbers");
         }
 
+        private static void Test_Syntax_Diff()
+        {
+            // Phase 97: a diff's lines in color
+            string d = "diff --git a/x.cs b/x.cs\r\nindex 1..2\n--- a/x.cs\n+++ b/x.cs\n@@ -1,3 +1,3 @@ class X\n keep\n-old();\n+new();\n\n-- not a header\n+";
+            Eq("H:diff --git a/x.cs b/x.cs H:index 1..2 H:--- a/x.cs H:+++ b/x.cs H:@@ -1,3 +1,3 @@ class X D:-old(); I:+new(); D:-- not a header I:+",
+               Colored(d, "diff"), "headers, removed and added; context and blank lines plain; no \\r in a span");
+            Eq(Colored(d, "diff"), Colored(d, "patch"), "patch is a diff");
+            Eq("I:+a", Colored("+a", "DIFF"), "any case");
+        }
+
         private static void Test_SessionMeta_GroupsAndAutoArchive()
         {
             string dir = Path.Combine(Path.GetTempPath(), "claudevs-meta2-" + Guid.NewGuid().ToString("N"));

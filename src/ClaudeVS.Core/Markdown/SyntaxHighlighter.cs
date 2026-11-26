@@ -3,7 +3,8 @@ using System.Collections.Generic;
 
 namespace ClaudeVS.Core.Markdown
 {
-    public enum SyntaxKind { Keyword, String, Comment, Number, Tag, Attribute }
+    /// <summary>What a span is. Inserted, Deleted and Hunk are a diff's lines (Phase 97).</summary>
+    public enum SyntaxKind { Keyword, String, Comment, Number, Tag, Attribute, Inserted, Deleted, Hunk }
 
     public struct SyntaxSpan
     {
@@ -67,6 +68,7 @@ namespace ClaudeVS.Core.Markdown
         private static readonly Lang Css = L("important media import from to", l => { l.LineComment = null; });
         private static readonly Lang Markup = L("", l => { l.Markup = true; });
         private static readonly Lang Generic = L("");
+        private static readonly Lang Diff = L("");
 
         private static Lang For(string language)
         {
@@ -86,7 +88,8 @@ namespace ClaudeVS.Core.Markdown
                 case "yaml": case "yml": return Yaml;
                 case "css": case "scss": case "less": return Css;
                 case "xml": case "html": case "htm": case "xaml": case "csproj": case "props": case "targets": case "svg": case "vue": return Markup;
-                case "": case "text": case "txt": case "plaintext": case "md": case "markdown": case "diff": case "output": return null;
+                case "diff": case "patch": case "udiff": return Diff;
+                case "": case "text": case "txt": case "plaintext": case "md": case "markdown": case "output": return null;
                 default: return Generic;
             }
         }
@@ -97,6 +100,7 @@ namespace ClaudeVS.Core.Markdown
             var lang = For(language);
             if (lang == null || string.IsNullOrEmpty(code)) return spans;
             if (lang.Markup) { TokenizeMarkup(code, spans); return spans; }
+            if (lang == Diff) { TokenizeDiff(code, spans); return spans; }
 
             int i = 0, n = code.Length;
             while (i < n)
@@ -132,6 +136,29 @@ namespace ClaudeVS.Core.Markdown
                 i++;
             }
             return spans;
+        }
+
+        /// <summary>
+        /// A unified diff, line by line (Phase 97): <c>+</c> added, <c>-</c> removed, <c>@@</c> hunk headers and the
+        /// file lines (<c>---</c>, <c>+++</c>, <c>diff --git</c>, <c>index</c>) as headers; context lines plain.
+        /// </summary>
+        private static void TokenizeDiff(string code, List<SyntaxSpan> spans)
+        {
+            int i = 0, n = code.Length;
+            while (i < n)
+            {
+                int end = code.IndexOf('\n', i);
+                if (end < 0) end = n;
+                int len = end - i;
+                if (len > 0 && code[end - 1] == '\r') len--;
+                SyntaxKind? kind =
+                    At(code, i, "@@") || At(code, i, "+++ ") || At(code, i, "--- ") || At(code, i, "diff ") || At(code, i, "index ") ? SyntaxKind.Hunk
+                    : len > 0 && code[i] == '+' ? SyntaxKind.Inserted
+                    : len > 0 && code[i] == '-' ? SyntaxKind.Deleted
+                    : (SyntaxKind?)null;
+                if (kind.HasValue && len > 0) spans.Add(new SyntaxSpan { Start = i, Length = len, Kind = kind.Value });
+                i = end + 1;
+            }
         }
 
         private static void TokenizeMarkup(string code, List<SyntaxSpan> spans)
