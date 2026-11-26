@@ -1770,12 +1770,31 @@ namespace ClaudeVS.ToolWindow
             }
             header.Children.Add(new TextBlock { Text = string.IsNullOrEmpty(b.Language) ? "code" : b.Language, Opacity = 0.7, FontSize = 11, VerticalAlignment = VerticalAlignment.Center });
 
-            var body = CodeView(code, b.Language);
+            // A long finished block shows its start and a button for the rest (Phase 97); Copy and Insert take it all
+            bool folded = CodeFold.Folds(code, b.Closed);
+            var body = CodeView(folded ? CodeFold.Head(code) : code, b.Language);
             ForwardMouseWheel(body);
 
             var panel = new DockPanel();
             DockPanel.SetDock(header, Dock.Top);
             panel.Children.Add(header);
+            if (folded)
+            {
+                var more = SmallButton(CodeFold.ShowAll(code), "Show the whole code block");
+                more.HorizontalAlignment = HorizontalAlignment.Left;
+                more.Margin = new Thickness(0, 4, 0, 0);
+                DockPanel.SetDock(more, Dock.Bottom);
+                more.Click += (s, e) =>
+                {
+                    ThreadHelper.ThrowIfNotOnUIThread();
+                    panel.Children.Remove(more);
+                    panel.Children.Remove(body);
+                    var all = CodeView(code, b.Language);
+                    ForwardMouseWheel(all);
+                    panel.Children.Add(all);
+                };
+                panel.Children.Add(more);
+            }
             panel.Children.Add(body);
             var border = new Border { Background = CodeBackground, CornerRadius = new CornerRadius(3), Padding = new Thickness(6, 4, 6, 6), Child = panel };
             // Under a list item (Phase 97): indented with the item's text

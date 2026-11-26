@@ -2666,7 +2666,10 @@ chat; four things about them that are wrong or missing.
       Builds clean; not yet run in VS
 - [ ] **Long code blocks folded.** A 300-line file Claude prints fills screens and pushes the rest of the answer
       away. A finished block of more than 40 lines shows its first 20 and *Show all N lines*; Copy and Insert take the
-      whole code. While it streams it isn't folded (the end is what is new). The rule in Core, tested
+      whole code. While it streams it isn't folded (the end is what is new). The rule in Core, tested.
+      `Markdown/CodeFold.cs` (`Folds`, `Head`, `ShowAll`; a last line break isn't a line). `RenderCode` draws the head
+      and a button docked under it that puts the whole code view in its place. A block that closes is drawn again
+      anyway (Phase 95), so it folds when it ends. `Test_CodeFold_LongBlocks`. Builds clean; not yet run in VS
 - [ ] **More languages colored.** Ruby, PHP, Swift, Dart, Lua, R, Dockerfile, Makefile, TOML/INI, GraphQL and HCL
       fall back to plain text. Keywords and comments for each (`#`, `--`, `;` line comments as each language has
       them); the fence's name and the usual short names. Test in Core
