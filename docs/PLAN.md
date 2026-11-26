@@ -2734,8 +2734,11 @@ Planned on 2026-11-26, after Phase 98, on the same branch; the last of the four.
       Haiku's own table: it wrote `|<br>` after the row's last pipe, an extra cell that GitHub drops too. The prompt
       now names the cell's text; then PASS, $0.0025: `- [x]`/`- [ ]`, `~~one~~`, `line one<br>line two` in a cell,
       `- old`/`+ new` in a diff block, `> [!NOTE]`. CONTRIBUTING: 20 tests
-- [ ] **README and the overview.** README's chat section and the Marketplace overview name what answers now draw
-      (tasks, struck text, notes, diffs, folded code, more languages); CONTRIBUTING the live test count and cost
+- [x] **README and the overview.** README's chat section and the Marketplace overview name what answers now draw
+      (tasks, struck text, notes, diffs, folded code, more languages); CONTRIBUTING the live test count and cost.
+      README's *Markdown answers* and *Code blocks* rows list what Phases 96–99 added, and its test count is 274; the
+      overview's chat paragraph names tables, task lists, notes, colored diffs and folded blocks. CONTRIBUTING got the
+      count and cost with item 3. The changelog's Unreleased section has an entry for each item of Phases 96–99
 
 ---
 
