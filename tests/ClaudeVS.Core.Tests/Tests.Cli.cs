@@ -881,6 +881,15 @@ namespace ClaudeVS.Core.Tests
             Eq(0, ClaudeVS.Core.Markdown.OutputFold.Lines(" \n"), "blank");
         }
 
+        private static void Test_TerminalText_ForCopy()
+        {
+            // Phase 105: Copy output gives all of it, cleaned
+            Eq("green plain\r\nProgress 100%\r\nend", TerminalText.ForCopy("\u001b[32mgreen\u001b[0m plain\nProgress 10%\rProgress 100%\r\nend\n\n"), "codes, progress, line breaks, blank end");
+            string many = string.Join("\n", Enumerable.Range(1, 500).Select(k => "l" + k));
+            Eq(500, TerminalText.ForCopy(many).Split(new[] { "\r\n" }, StringSplitOptions.None).Length, "all of a folded output");
+            Eq("", TerminalText.ForCopy(null), "nothing");
+        }
+
         private static void Test_ToolData_Shapes()
         {
             Eq("Read 4 lines", ToolCallView.FromData("Read", JObject.Parse("{\"file\":{\"numLines\":4,\"startLine\":1,\"totalLines\":4}}")), "whole file");

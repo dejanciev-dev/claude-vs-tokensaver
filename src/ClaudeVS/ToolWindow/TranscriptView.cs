@@ -955,8 +955,18 @@ namespace ClaudeVS.ToolWindow
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             if (string.IsNullOrWhiteSpace(resultText)) return;
-            var label = new TextBlock { Text = "Output", FontSize = 11, FontWeight = FontWeights.SemiBold, Margin = new Thickness(16, 4, 0, 0) };
+            var label = new TextBlock { FontSize = 11, Margin = new Thickness(16, 4, 0, 0) };
             ChatTheme.Muted(label);
+            label.Inlines.Add(new Run("Output") { FontWeight = FontWeights.SemiBold });
+            label.Inlines.Add(new Run("   "));
+            // Copy (Phase 105): all of it, also when folded, without terminal codes
+            var copy = new Hyperlink(new Run("Copy")) { ToolTip = "Copy the whole output", Cursor = System.Windows.Input.Cursors.Hand, Foreground = ChatTheme.Accents(Box).Link };
+            copy.Click += (s, e) =>
+            {
+                try { Clipboard.SetText(Core.Cli.TerminalText.ForCopy(resultText)); ((Run)copy.Inlines.FirstInline).Text = "Copied"; }
+                catch (Exception) { ((Run)copy.Inlines.FirstInline).Text = "Clipboard busy, try again"; }
+            };
+            label.Inlines.Add(copy);
             row.Body.Children.Add(label);
             row.Body.Children.Add(FoldedOutput(resultText));
         }

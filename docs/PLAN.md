@@ -2909,8 +2909,11 @@ addresses that are text.
       `MarkdownParser.WebAddresses` (Phase 96's rule over plain text); `OutputLinks` adds them where no file link is,
       through `WebLinkTo`, now shared with answers' links. `Test_Markdown_WebAddressesInOutput`. Builds clean; not yet
       run in VS
-- [ ] **Copy output.** A *Copy* link beside the *Output* label copies all of it, without the escape codes, also when
-      it is folded; README's test count, which Phase 104 left at 287
+- [x] **Copy output.** A *Copy* link beside the *Output* label copies all of it, without the escape codes, also when
+      it is folded; README's test count, which Phase 104 left at 287.
+      `TerminalText.ForCopy` (progress bars' last state, no codes, CRLF, no blank end). README's tool rows entry names
+      what Phases 104–105 did to *Output*; its test count is 294. `Test_TerminalText_ForCopy`. Builds clean; not yet
+      run in VS
 
 ---
 
