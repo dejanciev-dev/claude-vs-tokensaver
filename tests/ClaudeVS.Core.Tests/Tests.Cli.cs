@@ -932,6 +932,20 @@ namespace ClaudeVS.Core.Tests
             Eq("✓ 4 passed", ToolCallView.Summarize("Bash", "Build succeeded.\n    0 Warning(s)\nPassed!  - Failed: 0, Passed: 4, Skipped: 0, Total: 4", false).Lines.Single(), "a test run builds first: tests win");
         }
 
+        private static void Test_ToolCallView_ErrorsFirst()
+        {
+            // Phase 106: a failed command's preview shows its error lines
+            string output = "Determining projects to restore...\nAll projects are up-to-date for restore.\nsrc\\a.cs(3,1): error CS1002: ; expected [C:\\r\\Demo.csproj]\nsrc\\a.cs(3,1): error CS1002: ; expected [C:\\r\\Demo.csproj]\nsrc\\b.cs(9,2): error CS0103: The name 'x' does not exist";
+            var row = ToolCallView.Summarize("Bash", output, isError: true);
+            Eq("src\\a.cs(3,1): error CS1002: ; expected [C:\\r\\Demo.csproj]|src\\b.cs(9,2): error CS0103: The name 'x' does not exist", string.Join("|", row.Lines), "the errors, each once");
+            Eq(3, row.MoreLines, "the rest behind a click");
+            Eq("fatal: not a git repository", ToolCallView.Summarize("Bash", "fatal: not a git repository", true).Lines.Single(), "git");
+            Eq("npm ERR! code ENOENT", ToolCallView.Summarize("Bash", "> build\nnpm ERR! code ENOENT", true).Lines.Single(), "npm");
+            Eq("System.IO.FileNotFoundException: x", ToolCallView.Summarize("Bash", "Unhandled exception.\nSystem.IO.FileNotFoundException: x\n   at Main()", true).Lines.Single(), "an exception");
+            Eq("one|two", string.Join("|", ToolCallView.Summarize("Bash", "one\ntwo", true).Lines), "no error lines: the first lines as before");
+            Eq(0, ToolCallView.ErrorLines(new[] { "terror: nothing", "no errors found" }).Count, "words that only contain error");
+        }
+
         private static void Test_ToolData_Shapes()
         {
             Eq("Read 4 lines", ToolCallView.FromData("Read", JObject.Parse("{\"file\":{\"numLines\":4,\"startLine\":1,\"totalLines\":4}}")), "whole file");

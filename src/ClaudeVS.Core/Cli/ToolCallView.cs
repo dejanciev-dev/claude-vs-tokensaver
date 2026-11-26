@@ -329,7 +329,12 @@ namespace ClaudeVS.Core.Cli
             if (isError && toolName == "Grep" && GrepRejected(output) is string why)
                 return new ToolResultSummary { IsError = true, Lines = new[] { why } };
             if (isError)
-                return new ToolResultSummary { IsError = true, Lines = output.Take(PreviewLines).Select(Cut).DefaultIfEmpty("Error").ToList(), MoreLines = Math.Max(0, output.Count - PreviewLines) };
+            {
+                // The error lines first (Phase 106), not "Determining projects to restore…"
+                var shown = ErrorLines(output);
+                if (shown.Count == 0) shown = output;
+                return new ToolResultSummary { IsError = true, Lines = shown.Take(PreviewLines).Select(Cut).DefaultIfEmpty("Error").ToList(), MoreLines = Math.Max(0, output.Count - Math.Min(PreviewLines, shown.Count)) };
+            }
 
             switch (toolName)
             {
@@ -529,6 +534,18 @@ namespace ClaudeVS.Core.Cli
         private static string Lines(int n) => n == 1 ? "1 line" : $"{n} lines";
         private static string FileName(string path) => string.IsNullOrEmpty(path) ? "the file" : System.IO.Path.GetFileName(path.TrimEnd('/', '\\'));
         private static string Cut(string s) => s.Length > MaxLineChars ? s.Substring(0, MaxLineChars - 1) + "…" : s;
+
+        // A compiler's ": error CS0103", "error:", "error[E0425]", "Error:", "FAIL", "fatal:", "npm ERR!", an exception
+        private static readonly System.Text.RegularExpressions.Regex ErrorLine = new System.Text.RegularExpressions.Regex(
+            @"(?::\s*error\b|^\s*error(?:\[|:)|^\s*(?:Error|ERROR|FATAL|fatal):|^\s*FAIL\b|\bnpm ERR!|^\s*\w[\w.]*Exception\b)",
+            System.Text.RegularExpressions.RegexOptions.Compiled);
+
+        /// <summary>
+        /// The lines of a failed command's output that say what went wrong (Phase 106): compilers', test runners',
+        /// git's, npm's errors and exceptions. Empty when none look like one; each line once.
+        /// </summary>
+        public static List<string> ErrorLines(IEnumerable<string> output) =>
+            (output ?? Enumerable.Empty<string>()).Where(l => ErrorLine.IsMatch(l)).Distinct().ToList();
 
         private const string CwdResetNote = "Shell cwd was reset to ";
 
