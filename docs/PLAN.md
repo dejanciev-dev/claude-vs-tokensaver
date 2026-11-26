@@ -2864,9 +2864,13 @@ Planned on 2026-11-26, after Phase 103, on the same branch (PR #98 still open). 
       end; text without ESC comes back as it is). `TranscriptView.ShowResult` strips before the summary and *Output*;
       the token count is still of what Claude read. Under *Fixed*. `Test_TerminalText_Strip`. Builds clean; not yet
       run in VS
-- [ ] **Colors in the output.** *Output* draws what the codes said: the 16 terminal colors (and 256-color ones
+- [x] **Colors in the output.** *Output* draws what the codes said: the 16 terminal colors (and 256-color ones
       near them) in a palette readable on the theme's background, bold. A failing test's red shows red. The spans in
-      Core, tested
+      Core, tested.
+      `TerminalText.Spans` (`TerminalSpan`: text, a color 0–15 or none, bold); 256-color and RGB codes as the nearest
+      of the 16, backgrounds left out. `TranscriptView.ColoredOutput`: a read-only `RichTextBox` with VS Code's
+      terminal colors for dark and light backgrounds, black and white as the theme's gray and text. Output without
+      codes keeps its plain text box. `Test_TerminalText_Spans`. Builds clean; not yet run in VS
 - [ ] **Progress lines.** A progress bar redraws its line with `\r` (`Downloading 10%\r… 100%`), and the row shows
       every state run together. Keep each line's last state, as a terminal would (`\r\n` is still a line break). In
       Core, tested

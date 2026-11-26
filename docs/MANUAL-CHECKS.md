@@ -464,6 +464,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | On the diff block above, hover **Insert**, click it in an empty file, then click **Copy** | The tooltip says it inserts the new side; the file gets the context and added lines without `+`, no removed lines or `@@`; **Copy** still gives the whole diff |
 | Look at the long C# block above (also folded, then after *Show all*), select a few lines with the mouse and copy them; also a five-line block | Numbers 1 to N in a dimmed gutter, each beside its line (also after scrolling sideways and with Windows scaled to 150%); the copied text has no numbers; the short block has no gutter |
 | Ask *Run `git -c color.ui=always status` and `dotnet test` in this solution* and open the rows | The ⎿ lines and *Output* show the text with no `[32m`, `[0m` or other codes |
+| Open the *Output* of the colored `git status` row above, in the Dark and the Light theme | Its colors as git printed them (green and red), readable on both backgrounds; the text can be selected and copied without codes. A command without colors shows its output as before |
 
 ## 34. Release (Phase 5)
 

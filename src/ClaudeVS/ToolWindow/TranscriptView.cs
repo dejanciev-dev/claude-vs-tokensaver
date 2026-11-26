@@ -798,7 +798,8 @@ namespace ClaudeVS.ToolWindow
         /// <summary>The ⎿ lines under a finished tool call, and its whole output in the row's body.</summary>
         private void ShowResult(ToolRow row, string resultText, bool isError, ChatTheme.AccentSet a, Newtonsoft.Json.Linq.JObject resultData = null)
         {
-            // A command's terminal escape codes (Phase 104): text, not "[32m"
+            // A command's terminal escape codes (Phase 104): text, not "[32m"; Output draws their colors
+            string raw = resultText;
             resultText = Core.Cli.TerminalText.Strip(resultText);
             // A Read that stops before the end asks the file whether it ends in a newline (Phase 74). Not on the UI thread:
             // from the cache, else Claude Code's count now and the file's once a background check answers (Phase 76).
@@ -825,7 +826,48 @@ namespace ClaudeVS.ToolWindow
             }
             // A failed change didn't happen: hide its diff.
             if (isError && row.DiffElement != null) row.DiffElement.Visibility = Visibility.Collapsed;
-            ShowOutput(row, resultText);
+            ShowOutput(row, raw);
+        }
+
+        // The 16 terminal colors (Phase 104), readable on dark and light backgrounds (as VS Code's terminal); black and
+        // white are the theme's own gray and text, so they never vanish into the background.
+        private static readonly Brush[] DarkTerminal = TerminalPalette("#808080", "#F14C4C", "#23D18B", "#E5E510", "#3B8EEA", "#D670D6", "#29B8DB", null,
+                                                                       "#808080", "#F14C4C", "#23D18B", "#F5F543", "#3B8EEA", "#D670D6", "#29B8DB", null);
+        private static readonly Brush[] LightTerminal = TerminalPalette("#808080", "#CD3131", "#00841C", "#949800", "#0451A5", "#BC05BC", "#0598BC", null,
+                                                                        "#808080", "#CD3131", "#14A30F", "#B5BA00", "#0451A5", "#BC05BC", "#0598BC", null);
+
+        private static Brush[] TerminalPalette(params string[] hex) =>
+            hex.Select(h => h == null ? null : Freeze(new SolidColorBrush((Color)ColorConverter.ConvertFromString(h)))).ToArray();
+
+        /// <summary>Output with its terminal colors: a read-only rich text box, selectable as the plain one is.</summary>
+        private FrameworkElement ColoredOutput(string raw)
+        {
+            var palette = CurrentPalette() == DarkPalette ? DarkTerminal : LightTerminal;
+            var para = new Paragraph { Margin = new Thickness(0) };
+            foreach (var span in Core.Cli.TerminalText.Spans(raw.TrimEnd()))
+            {
+                var parts = span.Text.Replace("\r\n", "\n").Split('\n');
+                for (int k = 0; k < parts.Length; k++)
+                {
+                    if (k > 0) para.Inlines.Add(new LineBreak());
+                    if (parts[k].Length == 0) continue;
+                    var run = new Run(parts[k]);
+                    if (span.Color is int c && palette[c] != null) run.Foreground = palette[c];
+                    if (span.Bold) run.FontWeight = FontWeights.Bold;
+                    para.Inlines.Add(run);
+                }
+            }
+            var view = new RichTextBox
+            {
+                Document = new FlowDocument(para) { FontFamily = Mono, FontSize = 11, PagePadding = new Thickness(0) },
+                IsReadOnly = true,
+                BorderThickness = new Thickness(0),
+                Background = Brushes.Transparent,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                Margin = new Thickness(16, 2, 0, 4),
+            };
+            view.SetResourceReference(Control.ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
+            return view;
         }
 
         /// <summary>The package's task factory (as the chat control uses), so VS waits for these on close.</summary>
@@ -868,6 +910,14 @@ namespace ClaudeVS.ToolWindow
             {
                 var label = new TextBlock { Text = "Output", FontSize = 11, FontWeight = FontWeights.SemiBold, Margin = new Thickness(16, 4, 0, 0) };
                 ChatTheme.Muted(label);
+                if (Core.Cli.TerminalText.HasCodes(resultText))
+                {
+                    var colored = ColoredOutput(resultText);
+                    ForwardMouseWheel(colored);
+                    row.Body.Children.Add(label);
+                    row.Body.Children.Add(colored);
+                    return;
+                }
                 var output = new TextBox
                 {
                     Text = resultText.TrimEnd(),
