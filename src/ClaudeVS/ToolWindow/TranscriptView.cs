@@ -1729,10 +1729,25 @@ namespace ClaudeVS.ToolWindow
                         target.Add(MakeLink(new MdInline { Kind = MdInlineKind.Link, Text = i.ImageLabel, Url = i.Url }, a.Link));
                         break;
                     default:
-                        AddTextWithBreaks(target, i.Text);
+                        AddTextWithFileLinks(target, i.Text, a.Link);
                         break;
                 }
             }
+        }
+
+        // "see src/Login.cs:42" without backticks (Phase 99): the path a link, the rest text
+        private void AddTextWithFileLinks(InlineCollection target, string text, Brush color)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var found = Core.Context.FileLink.FindInText(text, BaseDirectory?.Invoke(), _linkDisk.FileExists);
+            int pos = 0;
+            foreach (var f in found)
+            {
+                if (f.Start > pos) AddTextWithBreaks(target, text.Substring(pos, f.Start - pos));
+                target.Add(FileLinkTo(new Run(text.Substring(f.Start, f.Length)), f.Link, color));
+                pos = f.Start + f.Length;
+            }
+            if (pos < (text ?? "").Length) AddTextWithBreaks(target, text.Substring(pos));
         }
 
         private static void AddTextWithBreaks(InlineCollection target, string text)
