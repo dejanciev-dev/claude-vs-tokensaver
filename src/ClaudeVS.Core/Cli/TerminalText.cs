@@ -47,6 +47,26 @@ namespace ClaudeVS.Core.Cli
         }
 
         /// <summary>
+        /// Lines a progress bar redrew with <c>\r</c> (<c>Downloading 10%\r… 100%</c>) as their last state (Phase 104):
+        /// what follows the last <c>\r</c> of a line that has text after it. <c>\r\n</c> is a line break as before.
+        /// A redraw shorter than what it covers isn't merged with the rest of the older text; progress bars redraw whole.
+        /// </summary>
+        public static string Collapse(string text)
+        {
+            if (string.IsNullOrEmpty(text) || text.IndexOf('\r') < 0) return text;
+            var lines = text.Replace("\r\n", "\n").Split('\n');
+            for (int k = 0; k < lines.Length; k++)
+            {
+                string line = lines[k];
+                if (line.IndexOf('\r') < 0) continue;
+                var states = line.Split('\r');
+                string last = states.LastOrDefault(s => Strip(s).Trim().Length > 0);
+                lines[k] = last ?? "";
+            }
+            return string.Join("\n", lines);
+        }
+
+        /// <summary>
         /// The text in pieces of one style, as the color codes (<c>ESC[…m</c>) say (Phase 104): the 16 colors (30–37,
         /// 90–97), 256-color and RGB ones (38;5;n, 38;2;r;g;b) as the nearest of the 16, bold (1, 22), resets (0, 39).
         /// Background colors and every other code are left out. Neighbouring pieces of the same style are joined.

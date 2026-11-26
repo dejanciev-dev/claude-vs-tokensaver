@@ -58,6 +58,7 @@ All notable changes to this project are listed here. The format follows
 
 - **Code and links inside bold or italic text:** `` **`Validate`** `` showed its backticks inside bold text, and
   `**see [docs](url)**` its brackets; they are drawn as code and links, in bold.
+- **Progress bars in tool output** showed every state they redrew run together; each line shows its last state.
 - **Terminal codes in tool output:** a command's colors showed as `[32m` and the like in its row and *Output*
   (Claude Code passes them through); they are left out.
 - **Insert fits the caret's indent:** a code block inserted inside a method had every line after the first at the
