@@ -187,6 +187,22 @@ namespace ClaudeVS.Core.Tests
             Eq("one\r\ntwo", ClaudeVS.Core.Markdown.AnswerText.Plain("one\ntwo"), "a paragraph's line breaks");
         }
 
+        private static void Test_CodeFileName_ForLanguage()
+        {
+            // Phase 100: a code block saved as a file is named for its language
+            string N(string lang) { var f = ClaudeVS.Core.Markdown.CodeFileName.For(lang); return f.FileName + "|" + f.Extension + "|" + f.Filter; }
+            Eq("snippet.cs|.cs|C# (*.cs)|*.cs|All files (*.*)|*.*", N("csharp"), "C#");
+            Eq("snippet.ps1|.ps1|PowerShell (*.ps1)|*.ps1|All files (*.*)|*.*", N(" PowerShell "), "any case, trimmed");
+            Eq("Dockerfile||Dockerfile|Dockerfile|All files (*.*)|*.*", N("dockerfile"), "a whole name");
+            Eq("Makefile||Makefile|Makefile|All files (*.*)|*.*", N("make"), "make");
+            Eq("snippet.txt|.txt|Text (*.txt)|*.txt|All files (*.*)|*.*", N(""), "no language");
+            Eq("snippet.txt", ClaudeVS.Core.Markdown.CodeFileName.For("klingon").FileName, "unknown");
+            Eq("snippet.yml", ClaudeVS.Core.Markdown.CodeFileName.For("yaml").FileName, "yaml");
+            Eq("snippet.tf", ClaudeVS.Core.Markdown.CodeFileName.For("tf").FileName, "terraform");
+            Eq("snippet.txt", ClaudeVS.Core.Markdown.CodeFileName.For(null).FileName, "null is text");
+            Eq("snippet.diff", ClaudeVS.Core.Markdown.CodeFileName.For("diff").FileName, "a diff");
+        }
+
         private static void Test_Markdown_HalfWritten()
         {
             // Phase 95: while an answer streams, its last line may be cut off

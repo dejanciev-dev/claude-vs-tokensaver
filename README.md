@@ -34,7 +34,7 @@ Preview (0.15).
 
 | Layer | State |
 |---|---|
-| Core library (CLI session, parser, router, meter, context, Markdown, usage log) | ✅ 274 automated tests, many replaying real CLI output (2.1.316–2.1.332) |
+| Core library (CLI session, parser, router, meter, context, Markdown, usage log) | ✅ 277 automated tests, many replaying real CLI output (2.1.316–2.1.332) |
 | Core against the real `claude` CLI | ✅ Verified with Claude Code 2.1.332 via the opt-in live tests: streaming, usage, cost, prompt cache, model switch, resume, `/compact`, dialogs, edit review, MCP, question and plan approval, restart in place. Needs 2.1.318 or newer |
 | Visual Studio extension (UI) | ⚠️ Builds with zero warnings in CI, but not yet run in the experimental instance |
 
@@ -91,8 +91,8 @@ This extension attacks all three, and shows the numbers so you can see the effec
 
 | Feature | What it does |
 |---|---|
-| **Markdown answers** | Headings (also underlined ones), lists and task lists (☐ ☑), quotes and GitHub notes (`[!NOTE]`, `[!WARNING]`…), tables, bold, italic and ~~struck~~ text, inline code, links and web addresses, `<br>` and entities, rendered while the answer streams. Links to files open them at the line and column they name (`src/Login.cs:42`, `#L5-10`), also a file path in backticks or in plain text; a link to a folder opens it in File Explorer. Images are links to their file or address. |
-| **Code blocks** | **Copy** and **Insert** (at the cursor, one undo step). Colored for about 30 languages and diffs; a block of more than 40 lines shows its first 20 and *Show all*; a block under a list item is indented with it. |
+| **Markdown answers** | Headings (also underlined ones), lists and task lists (☐ ☑), quotes and GitHub notes (`[!NOTE]`, `[!WARNING]`…), tables, bold, italic and ~~struck~~ text, inline code, links and web addresses, `<br>` and entities, rendered while the answer streams. Links to files open them at the line and column they name (`src/Login.cs:42`, `#L5-10`), also a file path in backticks or in plain text; a link to a folder opens it in File Explorer. Images are links to their file or address. Tables have *Copy table* (cells for Excel, a table for Word); right-click an answer's copy button for plain text. |
+| **Code blocks** | **Copy**, **Insert** (at the cursor, one undo step) and **Save…** (as a file named for its language, then opened). Colored for about 30 languages and diffs; a block of more than 40 lines shows its first 20 and *Show all*; a block under a list item is indented with it. |
 | **Diff for Claude's edits** | Every file change shows up in the chat as numbered red and green lines under its row: Edit / MultiEdit, Write (against the file as it was), and shell commands that write a file (`cat > file <<'EOF'`). Above the lines, **Open diff** opens Visual Studio's diff window and **Open file** the file. |
 | **Files changed** | After each answer, a list of the files it added, changed or deleted, with `+added −removed`. Click a path to open the file, or **Diff** for the file before the answer against now. |
 | **Review each change** | In Manual mode, an edit or write with several changes asks with a card listing each one (− and + lines) with a check box. **Apply** only the checked ones, **Reject all**, or **Open diff** for the whole file. Claude is told which changes you rejected, so it neither assumes they are in the file nor applies them again. |
