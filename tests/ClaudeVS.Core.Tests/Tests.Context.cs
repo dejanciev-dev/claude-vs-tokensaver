@@ -387,6 +387,30 @@ namespace ClaudeVS.Core.Tests
             finally { Directory.Delete(root, true); }
         }
 
+        private static void Test_FileLink_InOutput()
+        {
+            // Phase 105: how tools name a file and line in their output
+            string root = Path.Combine(Path.GetTempPath(), "claudevs-test-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(Path.Combine(root, "src"));
+            string login = Path.Combine(root, "src", "Login.cs");
+            File.WriteAllText(login, "x");
+            File.WriteAllText(Path.Combine(root, "app.py"), "x");
+            try
+            {
+                string Found(string text) => string.Join(" | ", FileLink.FindInOutput(text, root).Select(m =>
+                    text.Substring(m.Start, m.Length) + "→" + m.Link.Path.Substring(root.Length + 1) + ":" + m.Link.Line + (m.Link.Column is int c ? ":" + c : "")));
+                Eq(@"src\Login.cs(42,7)→src\Login.cs:42:7", Found(@"src\Login.cs(42,7): error CS0103: The name 'x' does not exist [C:\r\Demo.csproj]"), "the C# compiler");
+                Eq(login + "(3)→src\\Login.cs:3", Found(login + "(3): warning CS0168"), "an absolute path, a line only");
+                Eq("app.py\", line 12→app.py:12", Found("  File \"app.py\", line 12, in main"), "Python");
+                Eq(login + ":line 42→src\\Login.cs:42", Found("   at Demo.Login.Validate() in " + login + ":line 42"), ".NET stack trace");
+                Eq("src/Login.cs:9:2→src\\Login.cs:9:2", Found("src/Login.cs:9:2 - error TS2304"), "path:line:col");
+                Eq("src/Login.cs(1,1)→src\\Login.cs:1:1 | src/Login.cs:2→src\\Login.cs:2", Found("src/Login.cs(1,1) and src/Login.cs:2"), "two, in order");
+                Eq("", Found(@"src\Missing.cs(4,2): error"), "nothing on disk");
+                Eq("", Found("Build succeeded. 0 Warning(s)"), "nothing");
+            }
+            finally { Directory.Delete(root, true); }
+        }
+
         private static void Test_FileLink_CheckedOncePerAnswer()
         {
             // Phase 94: a streamed answer is drawn again for every piece; its links look at the disk once

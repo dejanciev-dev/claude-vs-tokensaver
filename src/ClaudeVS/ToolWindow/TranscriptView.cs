@@ -840,28 +840,66 @@ namespace ClaudeVS.ToolWindow
         private static Brush[] TerminalPalette(params string[] hex) =>
             hex.Select(h => h == null ? null : Freeze(new SolidColorBrush((Color)ColorConverter.ConvertFromString(h)))).ToArray();
 
-        /// <summary>Output with its terminal colors: a read-only rich text box, selectable as the plain one is.</summary>
-        private FrameworkElement ColoredOutput(string raw)
+        /// <summary>
+        /// The links in a tool's output (Phase 105): file references (compiler errors, stack traces, path:line) open
+        /// the file at the line. Offsets are in the output without terminal codes.
+        /// </summary>
+        private List<(int Start, int Length, Func<Inline, Inline> Wrap)> OutputLinks(string clean)
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var color = ChatTheme.Accents(Box).Link;
+            var links = new List<(int, int, Func<Inline, Inline>)>();
+            foreach (var m in Core.Context.FileLink.FindInOutput(clean, BaseDirectory?.Invoke(), _linkDisk.FileExists))
+            {
+                var link = m.Link;
+                links.Add((m.Start, m.Length, run => FileLinkTo(run, link, color)));
+            }
+            return links;
+        }
+
+        /// <summary>
+        /// Output as rich text (Phases 104–105): the colors its terminal codes say, and the parts that name a file or a
+        /// web address as links. <paramref name="links"/> are offsets in the text without codes.
+        /// </summary>
+        private FrameworkElement RichOutput(List<Core.Cli.TerminalSpan> spans, List<(int Start, int Length, Func<Inline, Inline> Wrap)> links)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
             var palette = CurrentPalette() == DarkPalette ? DarkTerminal : LightTerminal;
             var para = new Paragraph { Margin = new Thickness(0) };
-            foreach (var span in Core.Cli.TerminalText.Spans(raw.TrimEnd()))
+            int at = 0; // offset of the span's start in the text without codes
+            foreach (var span in spans)
             {
-                var parts = span.Text.Replace("\r\n", "\n").Split('\n');
-                for (int k = 0; k < parts.Length; k++)
+                // The span cut where a link starts or ends
+                int pos = 0;
+                while (pos < span.Text.Length)
                 {
-                    if (k > 0) para.Inlines.Add(new LineBreak());
-                    if (parts[k].Length == 0) continue;
-                    var run = new Run(parts[k]);
-                    if (span.Color is int c && palette[c] != null) run.Foreground = palette[c];
-                    if (span.Bold) run.FontWeight = FontWeights.Bold;
-                    para.Inlines.Add(run);
+                    int abs = at + pos;
+                    var inLink = links.FirstOrDefault(l => abs >= l.Start && abs < l.Start + l.Length);
+                    int cut = inLink.Wrap != null
+                        ? Math.Min(span.Text.Length, inLink.Start + inLink.Length - at)
+                        : Math.Min(span.Text.Length, links.Where(l => l.Start > abs).Select(l => l.Start - at).DefaultIfEmpty(span.Text.Length).Min());
+                    string piece = span.Text.Substring(pos, cut - pos);
+                    var target = new List<Inline>();
+                    var parts = piece.Replace("\r\n", "\n").Split('\n');
+                    for (int k = 0; k < parts.Length; k++)
+                    {
+                        if (k > 0) target.Add(new LineBreak());
+                        if (parts[k].Length == 0) continue;
+                        var run = new Run(parts[k]);
+                        if (span.Color is int c && palette[c] != null) run.Foreground = palette[c];
+                        if (span.Bold) run.FontWeight = FontWeights.Bold;
+                        target.Add(inLink.Wrap != null ? inLink.Wrap(run) : run);
+                    }
+                    para.Inlines.AddRange(target);
+                    pos = cut;
                 }
+                at += span.Text.Length;
             }
             var view = new RichTextBox
             {
                 Document = new FlowDocument(para) { FontFamily = Mono, FontSize = 11, PagePadding = new Thickness(0) },
                 IsReadOnly = true,
+                IsDocumentEnabled = true, // links can be clicked
                 BorderThickness = new Thickness(0),
                 Background = Brushes.Transparent,
                 VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
@@ -942,15 +980,21 @@ namespace ClaudeVS.ToolWindow
             return panel;
         }
 
-        /// <summary>A piece of output: colored when it has terminal codes (Phase 104), plain text otherwise.</summary>
+        /// <summary>
+        /// A piece of output: rich text when it has terminal codes (Phase 104) or names files (Phase 105), a plain
+        /// text box otherwise.
+        /// </summary>
         private FrameworkElement OutputBox(string raw)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            if (Core.Cli.TerminalText.HasCodes(raw))
+            var spans = Core.Cli.TerminalText.Spans(raw.TrimEnd());
+            string clean = string.Concat(spans.Select(s => s.Text));
+            var links = OutputLinks(clean);
+            if (links.Count > 0 || Core.Cli.TerminalText.HasCodes(raw))
             {
-                var colored = ColoredOutput(raw);
-                ForwardMouseWheel(colored);
-                return colored;
+                var rich = RichOutput(spans, links);
+                ForwardMouseWheel(rich);
+                return rich;
             }
             var output = new TextBox
             {

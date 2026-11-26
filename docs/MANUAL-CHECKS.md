@@ -467,6 +467,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Open the *Output* of the colored `git status` row above, in the Dark and the Light theme | Its colors as git printed them (green and red), readable on both backgrounds; the text can be selected and copied without codes. A command without colors shows its output as before |
 | Ask *Run `for i in 10 50 100; do printf "\rProgress %s%%" $i; sleep 0.2; done; echo` in Bash* and open the row | The ⎿ line and *Output* read `Progress 100%` once, not the three states run together |
 | Ask *Run `for i in $(seq 1 500); do echo line $i; done` in Bash* and open the row | *Output* shows lines 1–20, "… 400 lines not shown · Show all 500 lines", then lines 421–500; the link shows all 500 |
+| Break a line in a .cs file of the solution, ask *Build the solution with dotnet build* and open the Bash row | Each `File.cs(line,col): error …` in *Output* is a link (tooltip the file and line) that opens the file at that line and column, also with colored output; a solution under a folder with a space in its name links too |
 
 ## 34. Release (Phase 5)
 

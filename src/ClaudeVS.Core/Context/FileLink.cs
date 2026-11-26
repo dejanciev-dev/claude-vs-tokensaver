@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace ClaudeVS.Core.Context
@@ -145,6 +146,49 @@ namespace ClaudeVS.Core.Context
                 if (FromCode(word, baseDir, fileExists) is FileLink link)
                     found.Add(new TextMatch { Start = start, Length = end - start, Link = link });
             }
+            return found;
+        }
+
+        // Phase 105: how tools name a file and line in their output
+        private static readonly Regex[] OutputForms =
+        {
+            // MSBuild and the C# compiler at a line's start, where a path may hold blanks (C:\Users\Jane Doe\…)
+            new Regex(@"^[ \t]*(?<path>(?:[A-Za-z]:)?[^\r\n:*?""<>|()]*[\w\-]\.[A-Za-z][A-Za-z0-9]{0,9})\((?<line>\d+)(?:,(?<col>\d+))?(?:,\d+,\d+)?\)", RegexOptions.Compiled | RegexOptions.Multiline),
+            // …and anywhere else: src\Login.cs(42,7): error CS0103 (also (42) and (42,7,42,12))
+            new Regex(@"(?<path>(?:[A-Za-z]:)?[\w.\-/\\]*[\w\-]\.[A-Za-z][A-Za-z0-9]{0,9})\((?<line>\d+)(?:,(?<col>\d+))?(?:,\d+,\d+)?\)", RegexOptions.Compiled),
+            // Python: File "app/main.py", line 12
+            new Regex(@"File ""(?<path>[^""]+)"", line (?<line>\d+)", RegexOptions.Compiled),
+            // .NET stack traces: at Demo.Login.Validate() in C:\repo\Login.cs:line 42
+            new Regex(@" in (?<path>(?:[A-Za-z]:)?[^:*?""<>|\r\n]+?):line (?<line>\d+)", RegexOptions.Compiled),
+        };
+
+        /// <summary>
+        /// File references in a tool's output (Phase 105): the compiler's <c>path(line,col)</c>, Python's
+        /// <c>File "path", line n</c>, .NET's <c>in path:line n</c>, and what <see cref="FindInText"/> finds
+        /// (<c>path:line:col</c>, most tools). Each names a file that exists; the match covers the path and the line.
+        /// </summary>
+        public static System.Collections.Generic.List<TextMatch> FindInOutput(string text, string baseDir, Func<string, bool> fileExists = null)
+        {
+            var found = new System.Collections.Generic.List<TextMatch>();
+            if (string.IsNullOrEmpty(text)) return found;
+            foreach (var form in OutputForms)
+            {
+                foreach (Match m in form.Matches(text))
+                {
+                    if (found.Any(f => m.Index < f.Start + f.Length && f.Start < m.Index + m.Length)) continue;
+                    string target = m.Groups["path"].Value + ":" + m.Groups["line"].Value + (m.Groups["col"].Success ? ":" + m.Groups["col"].Value : "");
+                    var link = Parse(target, baseDir, fileExists, _ => false);
+                    if (link == null || link.IsFolder) continue;
+                    // The link covers the path and the line, not the words around them (File ", " in ")
+                    var path = m.Groups["path"];
+                    int start = path.Index, end = m.Index + m.Length;
+                    if (form != OutputForms[0] && form != OutputForms[1]) end = m.Groups["line"].Index + m.Groups["line"].Length;
+                    found.Add(new TextMatch { Start = start, Length = end - start, Link = link });
+                }
+            }
+            foreach (var t in FindInText(text, baseDir, fileExists))
+                if (!found.Any(f => t.Start < f.Start + f.Length && f.Start < t.Start + t.Length)) found.Add(t);
+            found.Sort((a, b) => a.Start.CompareTo(b.Start));
             return found;
         }
 
