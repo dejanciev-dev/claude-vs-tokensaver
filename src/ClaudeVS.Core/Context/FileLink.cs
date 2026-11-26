@@ -160,6 +160,10 @@ namespace ClaudeVS.Core.Context
             new Regex(@"File ""(?<path>[^""]+)"", line (?<line>\d+)", RegexOptions.Compiled),
             // .NET stack traces: at Demo.Login.Validate() in C:\repo\Login.cs:line 42
             new Regex(@" in (?<path>(?:[A-Za-z]:)?[^:*?""<>|\r\n]+?):line (?<line>\d+)", RegexOptions.Compiled),
+            // Grep's lines (Phase 106): C:\repo\src\Login.cs:42:    var x (":" a match, "-" around it), at a line's start
+            new Regex(@"^(?<path>(?:[A-Za-z]:)?[^\r\n:*?""<>|]*[\w\-]\.[A-Za-z][A-Za-z0-9]{0,9})[:\-](?<line>\d+)(?::(?<col>\d+))?(?=[:\-\s]|$)", RegexOptions.Compiled | RegexOptions.Multiline),
+            // Grep's and Glob's file lists: a line that is a path, blanks and all
+            new Regex(@"^[ \t]*(?<path>(?:[A-Za-z]:)?[^\r\n:*?""<>|]*[\w\-]\.[A-Za-z][A-Za-z0-9]{0,9})[ \t]*\r?$", RegexOptions.Compiled | RegexOptions.Multiline),
         };
 
         /// <summary>
@@ -176,13 +180,17 @@ namespace ClaudeVS.Core.Context
                 foreach (Match m in form.Matches(text))
                 {
                     if (found.Any(f => m.Index < f.Start + f.Length && f.Start < m.Index + m.Length)) continue;
-                    string target = m.Groups["path"].Value + ":" + m.Groups["line"].Value + (m.Groups["col"].Success ? ":" + m.Groups["col"].Value : "");
+                    var line = m.Groups["line"];
+                    string target = m.Groups["path"].Value + (line.Success ? ":" + line.Value : "") + (m.Groups["col"].Success ? ":" + m.Groups["col"].Value : "");
                     var link = Parse(target, baseDir, fileExists, _ => false);
                     if (link == null || link.IsFolder) continue;
                     // The link covers the path and the line, not the words around them (File ", " in ")
                     var path = m.Groups["path"];
-                    int start = path.Index, end = m.Index + m.Length;
-                    if (form != OutputForms[0] && form != OutputForms[1]) end = m.Groups["line"].Index + m.Groups["line"].Length;
+                    int start = path.Index;
+                    int end = !line.Success ? path.Index + path.Length
+                        : form == OutputForms[0] || form == OutputForms[1] ? m.Index + m.Length
+                        : m.Groups["col"].Success ? m.Groups["col"].Index + m.Groups["col"].Length
+                        : line.Index + line.Length;
                     found.Add(new TextMatch { Start = start, Length = end - start, Link = link });
                 }
             }

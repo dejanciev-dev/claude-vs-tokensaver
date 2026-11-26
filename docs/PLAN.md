@@ -2920,9 +2920,13 @@ addresses that are text.
 Planned on 2026-11-26, after Phase 105, on the same branch (PR #98 still open); the first of four phases asked for as
 twenty commits. A tool row's ⎿ line says what happened: for a search, a test run or a build it says too little.
 
-- [ ] **Search results link to files.** Grep's lines (`src/Login.cs:42:    var x`, or a path per line) and Glob's
+- [x] **Search results link to files.** Grep's lines (`src/Login.cs:42:    var x`, or a path per line) and Glob's
       paths are text. In *Output* each names its file, at the line Grep found; the link covers the path and the
-      line. In Core, tested
+      line. In Core, tested.
+      Two more forms in `FileLink.FindInOutput`, at a line's start: `path:line:` / `path-line-` (Grep's matches and
+      context, with an optional column, so `path:9:2` keeps its column) and a line that is only a path; both may hold
+      blanks, as Grep gives absolute paths. Any tool's output gets them, only for files that exist.
+      `Test_FileLink_SearchResults` (in a temp folder with a blank). Builds clean; not yet run in VS
 - [ ] **Test results summarized.** `● Bash(dotnet test)` shows its output's first lines, mostly the build. The ⎿
       line says how the run went, from the runner's summary: dotnet test, xUnit/NUnit/MSTest through it, Jest,
       Vitest, pytest, Go: "✓ 12 passed", "✗ 2 failed · 10 passed · 1 skipped", red when anything failed. In Core,
