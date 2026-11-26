@@ -2704,7 +2704,10 @@ Planned on 2026-11-26, after Phase 97, on the same branch. More of what Claude w
       Builds clean; not yet run in VS
 - [ ] **Underlined headings.** `Summary` over a line of `===` or `---` is a heading in Markdown (levels 1 and 2);
       here it is a paragraph and a rule. Read it as a heading when the line before is a paragraph's only line; a
-      `---` after a blank line stays a rule. Test in Core
+      `---` after a blank line stays a rule. Test in Core.
+      Three or more marks (so a `-` that starts a list item while it streams isn't one), only the marks on the line;
+      a paragraph of more lines, a list item or a blank line before it keeps the rule. Under *Fixed*.
+      `Test_Markdown_UnderlinedHeadings`. Builds clean; not yet run in VS
 
 ---
 

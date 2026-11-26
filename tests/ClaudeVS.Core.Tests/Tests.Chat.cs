@@ -288,6 +288,22 @@ namespace ClaudeVS.Core.Tests
             True(!b[1].SameAs(ClaudeVS.Core.Markdown.MarkdownParser.Parse("> Back up first.")[0]), "an alert's line differs from a plain quote");
         }
 
+        private static void Test_Markdown_UnderlinedHeadings()
+        {
+            // Phase 98: "Title" over === or --- is a heading
+            List<ClaudeVS.Core.Markdown.MdBlock> P(string s) => ClaudeVS.Core.Markdown.MarkdownParser.Parse(s);
+            string K(string s) => string.Join(",", P(s).Select(x => x.Kind + (x.Kind == ClaudeVS.Core.Markdown.MdBlockKind.Heading ? x.Level.ToString() : "")));
+            Eq("Heading1,Paragraph", K("Summary\n=======\ntext"), "===");
+            Eq("Heading2", K("The **plan**\n---"), "---");
+            Eq("Text:The ,Bold:plan", string.Join(",", P("The **plan**\n---")[0].Inlines), "its inlines");
+            Eq("Paragraph,Rule", K("Some text\n\n---"), "after a blank line: a rule");
+            Eq("Paragraph,Rule", K("line one\nline two\n---"), "after a paragraph of two lines: a rule");
+            Eq("Paragraph", K("Text\n=="), "fewer than three: text");
+            Eq("Paragraph,ListItem", K("Text\n- item"), "a list item");
+            Eq("ListItem,Rule", K("- item\n---"), "after a list item: a rule");
+            Eq("Paragraph", K("a = b\n===x"), "not only the marks");
+        }
+
         private static void Test_Markdown_NestedInlines()
         {
             // Phase 96: bold, italic and struck text hold code, links and each other

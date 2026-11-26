@@ -132,6 +132,8 @@ namespace ClaudeVS.Core.Markdown
         private static readonly Regex Ordered = new Regex(@"^(\s*)(\d{1,9})[.)]\s+(.*)$", RegexOptions.Compiled);
         private static readonly Regex RuleRx = new Regex(@"^ {0,3}([-*_])(\s*\1){2,}\s*$", RegexOptions.Compiled);
         private static readonly Regex QuoteRx = new Regex(@"^ {0,3}>\s?(.*)$", RegexOptions.Compiled);
+        // Three or more, so a "-" that starts a list item while it streams isn't one
+        private static readonly Regex Underline = new Regex(@"^ {0,3}(={3,}|-{3,})\s*$", RegexOptions.Compiled);
         private static readonly Regex AlertRx = new Regex(@"^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*(.*)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         private static readonly Regex TaskBox = new Regex(@"^\[([ xX])\](?:\s+|$)", RegexOptions.Compiled);
 
@@ -216,6 +218,16 @@ namespace ClaudeVS.Core.Markdown
                 }
 
                 if (line.Trim().Length == 0) { FlushPara(); continue; }
+
+                // "Summary" over "=======" or "-------" (Phase 98): a heading, when it is the paragraph's only line
+                if (para.Length > 0 && para.ToString().IndexOf('\n') < 0 && (m = Underline.Match(line)).Success)
+                {
+                    var h = new MdBlock { Kind = MdBlockKind.Heading, Level = m.Groups[1].Value[0] == '=' ? 1 : 2 };
+                    h.Inlines.AddRange(ParseInlines(para.ToString()));
+                    para.Clear();
+                    blocks.Add(h);
+                    continue;
+                }
 
                 if ((m = HeadingRx.Match(line)).Success)
                 {
