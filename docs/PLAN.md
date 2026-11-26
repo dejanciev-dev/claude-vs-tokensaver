@@ -2915,6 +2915,24 @@ addresses that are text.
       what Phases 104–105 did to *Output*; its test count is 294. `Test_TerminalText_ForCopy`. Builds clean; not yet
       run in VS
 
+## Phase 106 — Search, test and build results in tool rows
+
+Planned on 2026-11-26, after Phase 105, on the same branch (PR #98 still open); the first of four phases asked for as
+twenty commits. A tool row's ⎿ line says what happened: for a search, a test run or a build it says too little.
+
+- [ ] **Search results link to files.** Grep's lines (`src/Login.cs:42:    var x`, or a path per line) and Glob's
+      paths are text. In *Output* each names its file, at the line Grep found; the link covers the path and the
+      line. In Core, tested
+- [ ] **Test results summarized.** `● Bash(dotnet test)` shows its output's first lines, mostly the build. The ⎿
+      line says how the run went, from the runner's summary: dotnet test, xUnit/NUnit/MSTest through it, Jest,
+      Vitest, pytest, Go: "✓ 12 passed", "✗ 2 failed · 10 passed · 1 skipped", red when anything failed. In Core,
+      tested on each runner's summary
+- [ ] **Build results summarized.** The same for builds: MSBuild and `dotnet build` ("Build succeeded · 3
+      warnings", "Build failed · 2 errors"), `tsc` ("Found 3 errors"), Cargo. In Core, tested
+- [ ] **Errors first.** A failed command's preview lines are its first lines (`Determining projects to restore…`).
+      When its output has error lines (`: error `, `error:`, `FAIL`, `Error:`), the preview shows those. In Core,
+      tested
+
 ---
 
 ## Working in Visual Studio — daily loop
