@@ -1681,14 +1681,16 @@ namespace ClaudeVS.ToolWindow
                         else target.Add(code);
                         break;
                     case MdInlineKind.Bold:
-                        target.Add(new Bold(new Run(i.Text)));
-                        break;
                     case MdInlineKind.Italic:
-                        target.Add(new Italic(new Run(i.Text)));
-                        break;
                     case MdInlineKind.Strike:
-                        target.Add(new Span(new Run(i.Text)) { TextDecorations = TextDecorations.Strikethrough });
+                    {
+                        // What they hold drawn inside them (Phase 96): **`Validate`**, *see [docs](url)*
+                        Span span = i.Kind == MdInlineKind.Bold ? new Bold() : i.Kind == MdInlineKind.Italic ? (Span)new Italic() : new Span { TextDecorations = TextDecorations.Strikethrough };
+                        if (i.Children != null) AddInlines(span.Inlines, i.Children);
+                        else span.Inlines.Add(new Run(i.Text));
+                        target.Add(span);
                         break;
+                    }
                     case MdInlineKind.Link:
                         target.Add(MakeLink(i, a.Link));
                         break;

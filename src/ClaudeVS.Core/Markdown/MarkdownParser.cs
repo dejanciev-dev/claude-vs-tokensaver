@@ -18,10 +18,16 @@ namespace ClaudeVS.Core.Markdown
         public string Text { get; set; }
         /// <summary>Link target (Kind == Link).</summary>
         public string Url { get; set; }
+        /// <summary>
+        /// What bold, italic or struck text holds (Phase 96): code, links, the other emphasis. <see cref="Text"/> is
+        /// what was written between the markers. Null for the other kinds.
+        /// </summary>
+        public List<MdInline> Children { get; set; }
         public override string ToString() => $"{Kind}:{Text}";
 
         public bool SameAs(MdInline other) =>
-            other != null && Kind == other.Kind && Text == other.Text && Url == other.Url;
+            other != null && Kind == other.Kind && Text == other.Text && Url == other.Url
+            && (Children == null ? other.Children == null : other.Children != null && MdBlock.SameInlines(Children, other.Children));
     }
 
     public sealed class MdBlock
@@ -84,7 +90,8 @@ namespace ClaudeVS.Core.Markdown
 
     /// <summary>
     /// Small Markdown subset parser for chat answers: headings, fenced code, bullet/numbered lists,
-    /// block quotes, rules, tables, paragraphs; inline code, bold, italic and links. Tolerates partial input
+    /// task lists, block quotes, rules, tables, paragraphs; inline code, bold, italic and struck text (which hold
+    /// inlines of their own), links and web addresses. Tolerates partial input
     /// (streaming): an unclosed fence becomes an open code block.
     /// </summary>
     public static class MarkdownParser
@@ -319,10 +326,14 @@ namespace ClaudeVS.Core.Markdown
             // Only a marker on the last line may still be waiting for its end
             int openFrom = openEnd ? s.LastIndexOf('\n') + 1 : int.MaxValue;
 
-            void Emit(MdInlineKind kind, string value, string url = null)
+            void Emit(MdInlineKind kind, string value, string url = null, bool open = false)
             {
                 if (plain.Length > 0) { result.Add(new MdInline { Kind = MdInlineKind.Text, Text = plain.ToString() }); plain.Clear(); }
-                result.Add(new MdInline { Kind = kind, Text = value, Url = url });
+                var inline = new MdInline { Kind = kind, Text = value, Url = url };
+                // Bold, italic and struck text hold inlines of their own (Phase 96): **`Validate`**, *see [docs](u)*
+                if (kind == MdInlineKind.Bold || kind == MdInlineKind.Italic || kind == MdInlineKind.Strike)
+                    inline.Children = ParseInlines(value, open);
+                result.Add(inline);
             }
 
             int i = 0;
@@ -357,7 +368,7 @@ namespace ClaudeVS.Core.Markdown
                     // Still arriving: "**bol" (not "2 ** 3", whose marker doesn't start a word)
                     if (i >= openFrom && end < 0 && (i + 2 == s.Length || !char.IsWhiteSpace(s[i + 2])) && (i == 0 || !char.IsLetterOrDigit(s[i - 1])))
                     {
-                        if (i + 2 < s.Length) Emit(kind, s.Substring(i + 2));
+                        if (i + 2 < s.Length) Emit(kind, s.Substring(i + 2), open: true);
                         break;
                     }
                 }

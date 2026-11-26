@@ -2637,9 +2637,12 @@ phases on one branch. Claude writes some Markdown the chat's parser doesn't know
       blank, quote, backtick or angle bracket, then without `.,;:!?'*_~` and an unopened `)`; any case of the scheme;
       `<…>` with a blank inside is bare up to the blank. `TranscriptView.MakeLink` opens it as any web link.
       `Test_Markdown_BareLinks`. Builds clean; not yet run in VS
-- [ ] **Bold and italic that hold code or links.** `**`Validate`** is called` shows its backticks inside bold text,
+- [x] **Bold and italic that hold code or links.** `**`Validate`** is called` shows its backticks inside bold text,
       and `**see [docs](url)**` its brackets. Bold, italic and struck text hold inlines of their own (code, links,
-      the other emphasis), drawn nested; a streamed open bold holds them too. Test in Core
+      the other emphasis), drawn nested; a streamed open bold holds them too. Test in Core.
+      `MdInline.Children` (`Text` stays what was written between the markers; children are part of `SameAs`);
+      `TranscriptView.AddInlines` draws them inside a `Bold`, `Italic` or struck `Span`, so code in bold that names a
+      file links too. Under *Fixed* in the changelog. `Test_Markdown_NestedInlines`. Builds clean; not yet run in VS
 
 ---
 
