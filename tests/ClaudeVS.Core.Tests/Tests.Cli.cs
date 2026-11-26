@@ -864,6 +864,23 @@ namespace ClaudeVS.Core.Tests
             True(ReferenceEquals(plain, TerminalText.Collapse(plain)), "as it is");
         }
 
+        private static void Test_OutputFold_LongOutput()
+        {
+            // Phase 105: long output shows its start and its end
+            string Out(int n) => string.Join("\n", Enumerable.Range(1, n).Select(k => "line " + k)) + "\n";
+            True(!ClaudeVS.Core.Markdown.OutputFold.Folds(Out(200)), "200 lines aren't folded");
+            True(ClaudeVS.Core.Markdown.OutputFold.Folds(Out(201)), "201 are");
+            string o = Out(1000);
+            Eq(1000, ClaudeVS.Core.Markdown.OutputFold.Lines(o), "a last line break isn't a line");
+            Eq("line 1", ClaudeVS.Core.Markdown.OutputFold.Head(o).Split('\n')[0], "the head starts at the start");
+            Eq(20, ClaudeVS.Core.Markdown.OutputFold.Head(o).Split('\n').Length, "20 lines");
+            Eq("line 921", ClaudeVS.Core.Markdown.OutputFold.Tail(o).Split('\n')[0], "the tail is the last 80");
+            Eq("line 1000", ClaudeVS.Core.Markdown.OutputFold.Tail(o).Split('\n').Last(), "to the end");
+            Eq(900, ClaudeVS.Core.Markdown.OutputFold.Hidden(o), "between");
+            Eq("Show all 1000 lines", ClaudeVS.Core.Markdown.OutputFold.ShowAll(o), "the link");
+            Eq(0, ClaudeVS.Core.Markdown.OutputFold.Lines(" \n"), "blank");
+        }
+
         private static void Test_ToolData_Shapes()
         {
             Eq("Read 4 lines", ToolCallView.FromData("Read", JObject.Parse("{\"file\":{\"numLines\":4,\"startLine\":1,\"totalLines\":4}}")), "whole file");

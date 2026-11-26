@@ -24,6 +24,8 @@ All notable changes to this project are listed here. The format follows
   fence's short name.
 - **Save a code block as a file:** *Save…* beside Copy and Insert suggests a name for the block's language
   (`snippet.cs`, `Dockerfile`…) in the solution's folder, then opens the file.
+- **Long tool output folded:** more than 200 lines show the first 20 and the last 80, with *Show all N lines*
+  between them.
 - **Colors in tool output:** a command's *Output* shows the colors it printed (a failing test's red, git's green),
   in shades readable in the Dark and Light themes.
 - **Line numbers** beside code blocks of more than 10 lines, in a gutter that isn't selected or copied with the code.

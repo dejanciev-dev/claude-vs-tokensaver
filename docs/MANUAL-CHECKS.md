@@ -466,6 +466,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Ask *Run `git -c color.ui=always status` and `dotnet test` in this solution* and open the rows | The ⎿ lines and *Output* show the text with no `[32m`, `[0m` or other codes |
 | Open the *Output* of the colored `git status` row above, in the Dark and the Light theme | Its colors as git printed them (green and red), readable on both backgrounds; the text can be selected and copied without codes. A command without colors shows its output as before |
 | Ask *Run `for i in 10 50 100; do printf "\rProgress %s%%" $i; sleep 0.2; done; echo` in Bash* and open the row | The ⎿ line and *Output* read `Progress 100%` once, not the three states run together |
+| Ask *Run `for i in $(seq 1 500); do echo line $i; done` in Bash* and open the row | *Output* shows lines 1–20, "… 400 lines not shown · Show all 500 lines", then lines 421–500; the link shows all 500 |
 
 ## 34. Release (Phase 5)
 

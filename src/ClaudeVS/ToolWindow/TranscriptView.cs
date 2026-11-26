@@ -907,35 +907,66 @@ namespace ClaudeVS.ToolWindow
         /// <summary>The tool's whole output in the row's body.</summary>
         private void ShowOutput(ToolRow row, string resultText)
         {
-            if (!string.IsNullOrWhiteSpace(resultText))
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (string.IsNullOrWhiteSpace(resultText)) return;
+            var label = new TextBlock { Text = "Output", FontSize = 11, FontWeight = FontWeights.SemiBold, Margin = new Thickness(16, 4, 0, 0) };
+            ChatTheme.Muted(label);
+            row.Body.Children.Add(label);
+            row.Body.Children.Add(FoldedOutput(resultText));
+        }
+
+        /// <summary>
+        /// Output that is long shows its start and its end with a link for the rest between them (Phase 105): a build's
+        /// or a test run's end is what matters.
+        /// </summary>
+        private FrameworkElement FoldedOutput(string raw)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (!Core.Markdown.OutputFold.Folds(raw)) return OutputBox(raw);
+            var panel = new StackPanel();
+            var more = new TextBlock { Margin = new Thickness(16, 0, 0, 0), FontSize = 11 };
+            var link = new Hyperlink(new Run(Core.Markdown.OutputFold.ShowAll(raw))) { Cursor = System.Windows.Input.Cursors.Hand, Foreground = ChatTheme.Accents(Box).Link };
+            link.Click += (s, e) =>
             {
-                var label = new TextBlock { Text = "Output", FontSize = 11, FontWeight = FontWeights.SemiBold, Margin = new Thickness(16, 4, 0, 0) };
-                ChatTheme.Muted(label);
-                if (Core.Cli.TerminalText.HasCodes(resultText))
-                {
-                    var colored = ColoredOutput(resultText);
-                    ForwardMouseWheel(colored);
-                    row.Body.Children.Add(label);
-                    row.Body.Children.Add(colored);
-                    return;
-                }
-                var output = new TextBox
-                {
-                    Text = resultText.TrimEnd(),
-                    IsReadOnly = true,
-                    FontFamily = Mono,
-                    FontSize = 11,
-                    BorderThickness = new Thickness(0),
-                    Background = Brushes.Transparent,
-                    TextWrapping = TextWrapping.Wrap,
-                    VerticalScrollBarVisibility = ScrollBarVisibility.Disabled, // the whole output; the chat scrolls, not this box
-                    Margin = new Thickness(16, 2, 0, 4),
-                };
-                output.SetResourceReference(Control.ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
-                ForwardMouseWheel(output);
-                row.Body.Children.Add(label);
-                row.Body.Children.Add(output);
+                ThreadHelper.ThrowIfNotOnUIThread();
+                panel.Children.Clear();
+                panel.Children.Add(OutputBox(raw));
+            };
+            var hidden = new Run($"… {Core.Markdown.OutputFold.Hidden(raw)} lines not shown · ");
+            hidden.SetResourceReference(TextElement.ForegroundProperty, EnvironmentColors.SystemGrayTextBrushKey);
+            more.Inlines.Add(hidden);
+            more.Inlines.Add(link);
+            panel.Children.Add(OutputBox(Core.Markdown.OutputFold.Head(raw)));
+            panel.Children.Add(more);
+            panel.Children.Add(OutputBox(Core.Markdown.OutputFold.Tail(raw)));
+            return panel;
+        }
+
+        /// <summary>A piece of output: colored when it has terminal codes (Phase 104), plain text otherwise.</summary>
+        private FrameworkElement OutputBox(string raw)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (Core.Cli.TerminalText.HasCodes(raw))
+            {
+                var colored = ColoredOutput(raw);
+                ForwardMouseWheel(colored);
+                return colored;
             }
+            var output = new TextBox
+            {
+                Text = raw.TrimEnd(),
+                IsReadOnly = true,
+                FontFamily = Mono,
+                FontSize = 11,
+                BorderThickness = new Thickness(0),
+                Background = Brushes.Transparent,
+                TextWrapping = TextWrapping.Wrap,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Disabled, // the whole output; the chat scrolls, not this box
+                Margin = new Thickness(16, 2, 0, 4),
+            };
+            output.SetResourceReference(Control.ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
+            ForwardMouseWheel(output);
+            return output;
         }
 
         /// <summary>
