@@ -451,6 +451,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Ask *Name the file and line where the chat window is created, as a plain path, no backticks, at the end of a sentence* | The path is a link (tooltip the file and line) that opens the file at that line; the full stop isn't part of it. `ASP.NET` or `e.g.` in an answer are never links |
 | With Narrator on, ask for the task list and the `[!WARNING]` alert above | When the answer ends Narrator reads "done: …", "to do: …" and "Warning: …", no brackets |
 | Under the table of five files above, click *Copy table*, paste into Excel, then into Word | It says *Copied*; Excel fills a cell per table cell (no pipes or backticks), Word pastes a table with a header row |
+| Right-click the copy button under an answer with a list, code and a table; pick *Copy as plain text* and paste into Notepad, then click the button and paste again | The menu has *Copy as Markdown* and *Copy as plain text*; plain text has no `**`, backticks or pipes, the code as written, bullets and the table's columns tab-separated; the click still copies Markdown |
 
 ## 34. Release (Phase 5)
 

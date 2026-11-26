@@ -289,11 +289,22 @@ namespace ClaudeVS.ToolWindow
                 copy.Margin = new Thickness(0, 0, 4, 0);
                 ChatTheme.Muted(copy);
                 string answer = answerToCopy.Trim();
-                copy.Click += (s, e) =>
+                void CopyAs(string text)
                 {
-                    try { Clipboard.SetText(answer); copy.Content = ChatTheme.IconCheck; copy.ToolTip = "Copied"; }
+                    try { Clipboard.SetText(text); copy.Content = ChatTheme.IconCheck; copy.ToolTip = "Copied"; }
                     catch (Exception) { copy.ToolTip = "Clipboard busy, try again"; }
-                };
+                }
+                copy.Click += (s, e) => CopyAs(answer);
+                // Right-click: Markdown or plain text (Phase 100)
+                var menu = new ContextMenu();
+                var asMarkdown = new MenuItem { Header = "Copy as Markdown" };
+                asMarkdown.Click += (s, e) => CopyAs(answer);
+                var asPlain = new MenuItem { Header = "Copy as plain text" };
+                asPlain.Click += (s, e) => CopyAs(AnswerText.Plain(answer));
+                menu.Items.Add(asMarkdown);
+                menu.Items.Add(asPlain);
+                copy.ContextMenu = menu;
+                copy.ToolTip = "Copy response (Markdown); right-click for plain text";
                 DockPanel.SetDock(copy, Dock.Left);
                 row.Children.Add(copy);
             }
