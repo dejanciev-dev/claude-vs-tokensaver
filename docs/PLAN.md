@@ -2795,10 +2795,13 @@ scrolled; a code block says only the fence's short name.
 Planned on 2026-11-26, after Phase 101, on the same branch (PR #98 still open); the first of two phases asked for
 as ten commits.
 
-- [ ] **Numbered lists count.** Markdown numbers a list from its first item, whatever the others say; Claude often
+- [x] **Numbered lists count.** Markdown numbers a list from its first item, whatever the others say; Claude often
       writes `1.` for every step, and the chat shows 1, 1, 1. Number each list from its first number: a nested list
       counts on its own, and the outer one goes on after it, after an item's code block or continuation lines; a
-      blank line between items doesn't end the list, a paragraph does. Test in Core
+      blank line between items doesn't end the list, a paragraph does. Test in Core.
+      `MarkdownParser.Renumber` after parsing: the next number per depth; a deeper item keeps the outer count, a
+      bullet at the same depth or a block outside a list clears it. Numbers are part of `SameAs`, so a renumbered
+      item is drawn again. Under *Fixed*. `Test_Markdown_ListNumbers`. Builds clean; not yet run in VS
 - [ ] **Links to headings.** `[see Setup](#setup)` in an answer is plain text (it isn't a web address or a file).
       It goes to that heading of the answer, as GitHub's anchors do: lower case, blanks as `-`, punctuation dropped,
       a repeated heading `-1`, `-2`. The slugs in Core, tested

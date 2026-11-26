@@ -240,6 +240,20 @@ namespace ClaudeVS.Core.Tests
             Eq("code", H(null, ""), "empty");
         }
 
+        private static void Test_Markdown_ListNumbers()
+        {
+            // Phase 102: numbered lists count from their first item
+            string N(string md) => string.Join(",", ClaudeVS.Core.Markdown.MarkdownParser.Parse(md).Select(b => b.Kind == ClaudeVS.Core.Markdown.MdBlockKind.ListItem ? (b.Number?.ToString() ?? "•") : b.Kind.ToString()[0].ToString()));
+            Eq("1,2,3", N("1. a\n1. b\n1. c"), "all ones");
+            Eq("3,4", N("3. a\n7. b"), "from the first number");
+            Eq("1,1,2,2,3", N("1. a\n   1. x\n   1. y\n1. b\n1. c"), "nested counts on its own, the outer goes on");
+            Eq("1,C,2", N("1. Build:\n   ```\n   x\n   ```\n1. Test"), "after an item's code block");
+            Eq("1,2", N("1. a\n\n1. b"), "a blank line doesn't end it");
+            Eq("1,P,1", N("1. a\n\nNote.\n\n1. b"), "a paragraph does");
+            Eq("1,•,1", N("1. a\n- b\n1. c"), "a bullet at the same depth does");
+            Eq("1,•,2", N("1. a\n  - b\n1. c"), "a bullet nested doesn't");
+        }
+
         private static void Test_Markdown_HalfWritten()
         {
             // Phase 95: while an answer streams, its last line may be cut off

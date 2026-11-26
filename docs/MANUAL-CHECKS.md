@@ -455,6 +455,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Click *Save…* on the Dockerfile block above, then on a C# block | The dialog opens in the solution's folder suggesting `Dockerfile`, then `snippet.cs` with a C# filter; after saving, the button says *Saved* and the file opens in VS with the code |
 | In a long chat press `Ctrl+Alt+K, Ctrl+F` (then try `Ctrl+F` in the chat), type a word that is in several answers, press `Enter` a few times, `Shift+Enter`, toggle *Aa*, then `Esc` | The bar opens over the chat with the focus in it; each `Enter` selects the next match and scrolls it into view, *2 of 5* follows; `Shift+Enter` goes back; *Aa* changes the count when the case differs; `Esc` closes the bar, clears the selection and returns to the prompt. Note whether `Ctrl+F` reaches the chat or opens VS's own Find |
 | Look at the headers of the code blocks above (C#, the Dockerfile, a one-line command) | "C# · N lines", "Dockerfile · N lines", and the one-line block only its language (e.g. "Shell script"), no line count |
+| Ask *Write five numbered steps, numbering every step `1.`, one with two numbered sub-steps and one with a code block* | The steps read 1 to 5, the sub-steps 1 and 2, the step after the code block goes on with its number |
 
 ## 34. Release (Phase 5)
 

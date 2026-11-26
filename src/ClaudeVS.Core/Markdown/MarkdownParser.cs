@@ -313,7 +313,27 @@ namespace ClaudeVS.Core.Markdown
                 para.Append(line.TrimEnd());
             }
             FlushPara(streaming && lines[lines.Length - 1].Trim().Length > 0);
+            Renumber(blocks);
             return blocks;
+        }
+
+        /// <summary>
+        /// Numbered lists count from their first item (Phase 102), as Markdown does: Claude's "1. 1. 1." is 1, 2, 3. A
+        /// nested list counts on its own and the outer one goes on after it, also after an item's code block; a bullet
+        /// at the same depth, or anything outside a list (a paragraph, a heading), ends the lists.
+        /// </summary>
+        private static void Renumber(List<MdBlock> blocks)
+        {
+            var next = new Dictionary<int, int>(); // depth → the number the list there gives its next item
+            foreach (var b in blocks)
+            {
+                if (b.Kind == MdBlockKind.Code && b.Indent > 0) continue; // inside an item
+                if (b.Kind != MdBlockKind.ListItem) { next.Clear(); continue; }
+                foreach (int deeper in next.Keys.Where(k => k > b.Indent || (k == b.Indent && !b.Number.HasValue)).ToList()) next.Remove(deeper);
+                if (!b.Number.HasValue) continue;
+                if (next.TryGetValue(b.Indent, out int n)) b.Number = n;
+                next[b.Indent] = b.Number.Value + 1;
+            }
         }
 
         /// <summary>
