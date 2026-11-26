@@ -2824,9 +2824,13 @@ as ten commits.
 
 Planned on 2026-11-26, after Phase 102, on the same branch; the second of the two phases.
 
-- [ ] **Insert fits the caret's indent.** *Insert* puts a block in as written: inside a method, every line after the
+- [x] **Insert fits the caret's indent.** *Insert* puts a block in as written: inside a method, every line after the
       first starts at the margin (or at Claude's own indent). Take off the block's common indent and start each line
-      after the first at the indent of the caret's line; line breaks as the document's. The text in Core, tested
+      after the first at the indent of the caret's line; line breaks as the document's. The text in Core, tested.
+      `Markdown/CodeText.FitToCaret` (the caret line's leading blanks or tabs, also when text precedes the caret; blank
+      lines stay empty). `VsContext.InsertAtCursor(code, fitIndent: true)` reads the line up to the selection's top.
+      Line breaks are CRLF rather than read from the document: the parser gives LF, which went in as bare LFs.
+      `Test_CodeText_FitToCaret`. Builds clean; not yet run in VS
 - [ ] **Copy a console block's commands.** A `console` or `shell-session` block (or one whose lines start with
       `$ ` or `PS> `) holds commands and their output; Copy gives all of it, prompts too. Copy gives the commands
       without their prompts; *Copy all* (right-click) the block as it is. The text in Core, tested

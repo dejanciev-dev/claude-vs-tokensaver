@@ -189,12 +189,20 @@ namespace ClaudeVS.Commands
         /// Inserts text at the caret of the active text document, replacing any selection, as one undo step.
         /// Returns false when no text editor is active.
         /// </summary>
-        public static bool InsertAtCursor(string text)
+        public static bool InsertAtCursor(string text, bool fitIndent = false)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             try
             {
                 if (!(Dte?.ActiveDocument?.Selection is TextSelection sel)) return false;
+                if (fitIndent)
+                {
+                    // A code block's lines start at the caret line's indent (Phase 103)
+                    var start = sel.TopPoint.CreateEditPoint();
+                    var lineStart = sel.TopPoint.CreateEditPoint();
+                    lineStart.StartOfLine();
+                    text = Core.Markdown.CodeText.FitToCaret(text, lineStart.GetText(start));
+                }
                 var undo = Dte.UndoContext;
                 bool ownUndo = !undo.IsOpen;
                 if (ownUndo) undo.Open("Insert from Claude Code");

@@ -1970,7 +1970,7 @@ namespace ClaudeVS.ToolWindow
                 insert.Click += (s, e) =>
                 {
                     ThreadHelper.ThrowIfNotOnUIThread();
-                    insert.Content = VsContext.InsertAtCursor(code) ? "Inserted" : "No editor open";
+                    insert.Content = VsContext.InsertAtCursor(code, fitIndent: true) ? "Inserted" : "No editor open";
                 };
                 var copy = SmallButton("Copy", "Copy to clipboard");
                 copy.Click += (s, e) => { try { Clipboard.SetText(code); copy.Content = "Copied"; } catch (Exception) { copy.Content = "Clipboard busy"; } };
