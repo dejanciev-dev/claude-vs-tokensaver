@@ -24,6 +24,8 @@ All notable changes to this project are listed here. The format follows
   fence's short name.
 - **Save a code block as a file:** *Save…* beside Copy and Insert suggests a name for the block's language
   (`snippet.cs`, `Dockerfile`…) in the solution's folder, then opens the file.
+- **Copy a terminal session's commands:** a code block with `$ ` or `PS> ` prompts copies just the commands, without
+  prompts or output; right-click for *Copy all*.
 - **Copy as plain text:** right-click an answer's copy button for *Copy as Markdown* or *Copy as plain text* (no
   marks; code, bullets and boxes kept; tables tab-separated).
 - **Long tables folded:** more than 25 rows show the header, the first 10 and *Show all N rows*; *Copy table* still
