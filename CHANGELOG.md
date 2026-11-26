@@ -23,6 +23,11 @@ All notable changes to this project are listed here. The format follows
 - **Web addresses are links** when Claude writes them out (`https://…` or `<https://…>`), without the full stop or
   bracket that ends the sentence around them.
 
+### Fixed
+
+- **Code and links inside bold or italic text:** `` **`Validate`** `` showed its backticks inside bold text, and
+  `**see [docs](url)**` its brackets; they are drawn as code and links, in bold.
+
 ## [0.17.0] - 2026-11-25
 
 Still a **preview**, for Claude Code 2.1.318 or newer (tested with 2.1.332). This release keeps up with Claude Code

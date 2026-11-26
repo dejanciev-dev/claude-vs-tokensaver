@@ -439,6 +439,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Ask *Write a sentence with ~~a struck word~~ in it, and a table with one struck cell* | The word and the cell are struck through, no tildes; while it streams too |
 | Ask *Write a Markdown task list of three steps, the first one done, one with a nested sub-task* | ☑ before the done step, ☐ before the others in place of the bullet, no brackets; the sub-task indented |
 | Ask *Write the address of the .NET docs at the end of a sentence, and once in parentheses* | Both are links (hand cursor, tooltip the address) that open in the browser; the full stop and the closing bracket are not part of them |
+| Ask *Write a bold sentence that holds a method name in backticks and a link* | The whole sentence bold; the method name as code (and a link when it names a file), the link clickable; no backticks or brackets |
 
 ## 34. Release (Phase 5)
 

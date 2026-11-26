@@ -225,6 +225,28 @@ namespace ClaudeVS.Core.Tests
             Eq("HTTPS://X.Y/a", L("HTTPS://X.Y/a!"), "any case; a ! ends the sentence");
         }
 
+        private static void Test_Markdown_NestedInlines()
+        {
+            // Phase 96: bold, italic and struck text hold code, links and each other
+            string Tree(IEnumerable<ClaudeVS.Core.Markdown.MdInline> list) =>
+                string.Join(",", list.Select(x => x.Children == null ? x.ToString() : $"{x.Kind}[{Tree(x.Children)}]"));
+            string P(string s, bool open = false) => Tree(ClaudeVS.Core.Markdown.MarkdownParser.ParseInlines(s, open));
+            Eq("Bold[Code:Validate],Text: is called", P("**`Validate`** is called"), "code in bold");
+            Eq("Bold[Text:see ,Link:docs]", P("**see [docs](https://x.y)**"), "a link in bold");
+            Eq("Italic[Text:a ,Bold[Text:b]]", P("_a **b**_"), "bold in italic");
+            Eq("Strike[Code:old()]", P("~~`old()`~~"), "code struck");
+            Eq("Bold[Text:plain]", P("**plain**"), "plain bold holds one text");
+            Eq("Text:x ,Bold[Text:see ,Code:Lo]", P("x **see `Lo", open: true), "a streamed open bold holds open code");
+            Eq("Bold[Link:https://x.y]", P("**https://x.y**"), "an address in bold");
+            // ToString is unchanged: the text between the markers
+            Eq("Bold:`Validate`", ClaudeVS.Core.Markdown.MarkdownParser.ParseInlines("**`Validate`**")[0].ToString(), "text as written");
+            // Children are part of SameAs: the same text read open (while streaming) or finished is drawn again
+            var open = ClaudeVS.Core.Markdown.MarkdownParser.ParseInlines("**see `Lo", true)[0];
+            var closed = new ClaudeVS.Core.Markdown.MdInline { Kind = open.Kind, Text = open.Text, Children = ClaudeVS.Core.Markdown.MarkdownParser.ParseInlines(open.Text) };
+            True(!open.SameAs(closed), "children differ");
+            True(open.SameAs(ClaudeVS.Core.Markdown.MarkdownParser.ParseInlines("**see `Lo", true)[0]), "same children");
+        }
+
         private static void Test_PromptHistory_BrowseAndDraft()
         {
             var h = new ClaudeVS.Core.Chat.PromptHistory(max: 3);
