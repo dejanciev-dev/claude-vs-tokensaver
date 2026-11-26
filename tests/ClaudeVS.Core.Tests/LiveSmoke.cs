@@ -6,6 +6,8 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using ClaudeVS.Core.Cli;
+using ClaudeVS.Core.Context;
+using ClaudeVS.Core.Markdown;
 
 namespace ClaudeVS.Core.Tests
 {
@@ -75,6 +77,7 @@ namespace ClaudeVS.Core.Tests
                 ("live (Plan)", () => Run(null, PermissionModeChoice.Plan)), // Haiku's full ID keeps plan mode on Haiku
                 ("ask", () => RunInteractive(null, PermissionModeChoice.Default, ask)),
                 ("webfetch", RunWebFetch), // a site's 404 is a failed row though Claude Code sends no error (Phase 89)
+                ("links", RunLinks), // a file reference in a real answer links to the file and line (Phase 95)
                 ("session", RunSession),
                 ("long-prompt", RunLongPrompt),
                 ("prompt-tokens", RunPromptTokens),
@@ -539,6 +542,68 @@ namespace ClaudeVS.Core.Tests
             bool ok = row.IsError && row.Lines.SingleOrDefault() == "HTTP 404 Not Found" && ToolCallView.FailedFetch("WebFetch", result.ResultData);
             Console.WriteLine(ok ? "PASS live webfetch" : "FAIL live webfetch: the row should be a failure reading \"HTTP 404 Not Found\"");
             return ok ? 0 : 1;
+        }
+
+        /// <summary>
+        /// `--live-links` (in --live-all, about a cent): file links from a real answer (Phase 95). Phase 90 links what
+        /// Claude Code's system prompt asks for, `file_path:line_number`, from that prompt alone. Haiku finds a method
+        /// in a small project and says where it is, without being told how; some reference in the answer (inline code
+        /// or a Markdown link, as the chat parses it) must resolve through <see cref="FileLink"/> to the file and line.
+        /// </summary>
+        public static int RunLinks()
+        {
+            string exe = ClaudeCliLocator.Resolve("");
+            if (exe == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-live-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(Path.Combine(dir, "src"));
+            string file = Path.Combine(dir, "src", "Login.cs");
+            const int line = 12;
+            var lines = new List<string> { "using System;", "", "namespace Demo", "{", "    public sealed class Login", "    {", "        public string User { get; set; }", "", "        public string Password { get; set; }", "", "        // Checks the user and password" };
+            lines.Add("        public bool Validate(int minLength) => User?.Length > 0 && Password?.Length >= minLength;");
+            lines.AddRange(new[] { "    }", "}" });
+            File.WriteAllLines(file, lines);
+            var events = new BlockingCollection<ClaudeEvent>();
+            var session = NewSession(new ClaudeLaunchOptions
+            {
+                WorkingDirectory = dir, Model = ModelChoice.Haiku, Effort = EffortChoice.Low,
+                ExtraArguments = "--allowedTools Grep Read Glob",
+            });
+            session.EventReceived += (s, e) => events.Add(e);
+            var deltas = new StringBuilder();
+            var texts = new StringBuilder();
+            try
+            {
+                session.SendPromptAsync("Where is the Validate method defined in this project? Answer in one sentence.").GetAwaiter().GetResult();
+                var deadline = DateTime.UtcNow.AddSeconds(120);
+                while (DateTime.UtcNow < deadline)
+                {
+                    if (!events.TryTake(out var e, TimeSpan.FromMilliseconds(200))) continue;
+                    if (e.IsSubagent) continue;
+                    if (e.Kind == ClaudeEventKind.TextDelta) deltas.Append(e.Text);
+                    if (e.Kind == ClaudeEventKind.AssistantText) texts.Append(e.Text).Append("\n\n");
+                    if (e.Kind == ClaudeEventKind.TurnCompleted) { Console.WriteLine($"  turn completed: error={e.IsError}, cost=${e.TotalCostUsd:0.0000}"); break; }
+                }
+
+                string answer = deltas.Length > 0 ? deltas.ToString() : texts.ToString();
+                Console.WriteLine("  answer: " + answer.Trim().Replace("\n", " ⏎ "));
+                var found = new List<FileLink>();
+                foreach (var block in MarkdownParser.Parse(answer))
+                    foreach (var i in block.Inlines.Concat(block.Rows.SelectMany(r => r.SelectMany(c => c))))
+                    {
+                        var link = i.Kind == MdInlineKind.Code ? FileLink.FromCode(i.Text, dir)
+                            : i.Kind == MdInlineKind.Link ? FileLink.Parse(i.Url, dir) : null;
+                        if (link == null) continue;
+                        found.Add(link);
+                        Console.WriteLine($"  link: {(i.Kind == MdInlineKind.Code ? "`" + i.Text + "`" : i.Url)} → {link.Describe(dir)}");
+                    }
+                bool ok = found.Any(l => string.Equals(Path.GetFullPath(l.Path), file, StringComparison.OrdinalIgnoreCase) && l.Line == line);
+                if (ok) { Console.WriteLine("PASS live links"); return 0; }
+                Console.WriteLine(found.Count == 0
+                    ? "FAIL live links: nothing in the answer links to a file (did Claude Code change how it writes references?)"
+                    : $"FAIL live links: no link to src/Login.cs at line {line}");
+                return 1;
+            }
+            finally { session.Dispose(); try { Directory.Delete(dir, true); } catch (IOException) { } }
         }
 
         /// <summary>
