@@ -418,6 +418,14 @@ namespace ClaudeVS.Core.Markdown
                     if (close > i && paren > close) { Emit(MdInlineKind.Link, s.Substring(i + 1, close - i - 1), s.Substring(close + 2, paren - close - 2)); i = paren + 1; continue; }
                 }
 
+                // <br> is a line break, and &lt; &amp; &nbsp; &#8594; their characters (Phase 98); code keeps them
+                if (c == '<' && BreakTag.Match(s, i) is Match br && br.Success && br.Index == i) { plain.Append('\n'); i += br.Length; continue; }
+                if (c == '&' && Entity.Match(s, i) is Match ent && ent.Success && ent.Index == i)
+                {
+                    string decoded = System.Net.WebUtility.HtmlDecode(ent.Value);
+                    if (decoded != ent.Value) { plain.Append(decoded); i += ent.Length; continue; }
+                }
+
                 // <https://…> and a bare https://… (Phase 96) are links to themselves
                 if (c == '<' && IsWebAddressAt(s, i + 1))
                 {
@@ -437,6 +445,9 @@ namespace ClaudeVS.Core.Markdown
             if (plain.Length > 0) result.Add(new MdInline { Kind = MdInlineKind.Text, Text = plain.ToString() });
             return result;
         }
+
+        private static readonly Regex BreakTag = new Regex(@"\G<br\s*/?>", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex Entity = new Regex(@"\G&(#[0-9]{1,7}|#[xX][0-9a-fA-F]{1,6}|[a-zA-Z][a-zA-Z0-9]{1,31});", RegexOptions.Compiled);
 
         private static bool IsWebAddressAt(string s, int i)
         {
