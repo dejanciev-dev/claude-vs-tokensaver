@@ -2904,8 +2904,11 @@ addresses that are text.
       `TranscriptView.OutputBox` turns output with links (or codes) into `RichOutput`, which cuts colored runs where
       a link starts and ends; the answer's `DiskLookups` are reused. `Test_FileLink_InOutput`. Builds clean; not yet
       run in VS
-- [ ] **Web addresses in output are links.** As in answers (Phase 96): `https://…` in output opens in the browser.
-      The same rule, tested on output
+- [x] **Web addresses in output are links.** As in answers (Phase 96): `https://…` in output opens in the browser.
+      The same rule, tested on output.
+      `MarkdownParser.WebAddresses` (Phase 96's rule over plain text); `OutputLinks` adds them where no file link is,
+      through `WebLinkTo`, now shared with answers' links. `Test_Markdown_WebAddressesInOutput`. Builds clean; not yet
+      run in VS
 - [ ] **Copy output.** A *Copy* link beside the *Output* label copies all of it, without the escape codes, also when
       it is folded; README's test count, which Phase 104 left at 287
 

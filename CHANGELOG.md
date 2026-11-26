@@ -26,6 +26,7 @@ All notable changes to this project are listed here. The format follows
   (`snippet.cs`, `Dockerfile`…) in the solution's folder, then opens the file.
 - **File references in tool output open the file:** a compiler error's `src\Login.cs(42,7)`, a stack trace's
   `in …\Login.cs:line 42`, Python's `File "app.py", line 12` and `path:line:col` are links to that line.
+- **Web addresses in tool output are links,** as in answers.
 - **Long tool output folded:** more than 200 lines show the first 20 and the last 80, with *Show all N lines*
   between them.
 - **Colors in tool output:** a command's *Output* shows the colors it printed (a failing test's red, git's green),
