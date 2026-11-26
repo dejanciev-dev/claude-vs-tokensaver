@@ -47,6 +47,13 @@ namespace ClaudeVS.Core.Cli
         }
 
         /// <summary>
+        /// A tool's output as <c>Copy</c> puts it on the clipboard (Phase 105): the whole of it, also when it is folded,
+        /// a progress bar's last state, no escape codes, CRLF line breaks, no blank end.
+        /// </summary>
+        public static string ForCopy(string text) =>
+            (Strip(Collapse(text)) ?? "").TrimEnd().Replace("\r\n", "\n").Replace("\n", "\r\n");
+
+        /// <summary>
         /// Lines a progress bar redrew with <c>\r</c> (<c>Downloading 10%\r… 100%</c>) as their last state (Phase 104):
         /// what follows the last <c>\r</c> of a line that has text after it. <c>\r\n</c> is a line break as before.
         /// A redraw shorter than what it covers isn't merged with the rest of the older text; progress bars redraw whole.

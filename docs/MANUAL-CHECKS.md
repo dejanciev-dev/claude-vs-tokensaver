@@ -469,6 +469,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Ask *Run `for i in $(seq 1 500); do echo line $i; done` in Bash* and open the row | *Output* shows lines 1–20, "… 400 lines not shown · Show all 500 lines", then lines 421–500; the link shows all 500 |
 | Break a line in a .cs file of the solution, ask *Build the solution with dotnet build* and open the Bash row | Each `File.cs(line,col): error …` in *Output* is a link (tooltip the file and line) that opens the file at that line and column, also with colored output; a solution under a folder with a space in its name links too |
 | Ask *Run `dotnet --info` in Bash* and open the row | The `https://aka.ms/…` addresses in *Output* are links that open in the browser, without a trailing full stop or bracket |
+| On the folded 500-line row and the colored `git status` row above, click *Copy* beside *Output* and paste into Notepad | All 500 lines (not only what is shown), and git's text without `[32m` codes; the link says *Copied* |
 
 ## 34. Release (Phase 5)
 
