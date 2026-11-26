@@ -2583,11 +2583,15 @@ Planned on 2026-11-25, after Phase 93, on the same branch (PR #96); in 0.17.0.
 Planned on 2026-11-26, after 0.17.0 (PR #96 merged), with 2.1.332 still the newest Claude Code. Items picked from four
 proposed.
 
-- [ ] **Streamed answers drawn incrementally.** `TranscriptView.AppendAnswer` removes and draws the whole answer again
+- [x] **Streamed answers drawn incrementally.** `TranscriptView.AppendAnswer` removes and draws the whole answer again
       for every streamed piece, so a long answer costs the square of its length in WPF blocks. Keep the blocks that
       didn't change and draw again only from the first that did (usually just the last). The rule (which parsed
       blocks are the same as last time) in Core, tested by counting the blocks drawn over an answer streamed piece
-      by piece
+      by piece. `MdBlock.SameAs`, `MarkdownParser.FirstChanged`; `TranscriptView.DrawAnswer` keeps the parsed blocks
+      it drew and removes and draws only from the first changed (the ● stays on a kept first block; a fence that
+      closes is drawn again, for its buttons). `Test_Markdown_StreamedDrawnOnce`: an answer of about 40 blocks in
+      7-character pieces draws about one block per piece, under a tenth of drawing it whole each time. Builds clean;
+      not yet run in VS
 - [ ] **Half-written Markdown and tables.** Tables are drawn as plain lines, and while an answer streams, an open
       `**bold` or `` `code `` shows its markers until it closes. Draw a Markdown table (header, separator, rows, the
       separator's alignment) as a table, also while its rows arrive; while streaming, the last block's unclosed bold or

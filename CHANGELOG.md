@@ -6,6 +6,11 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **Long answers stream without slowing down:** each streamed piece draws only the part of the answer that changed
+  (usually its last paragraph), not the whole answer again, and the links in the rest aren't looked at again.
+
 ## [0.17.0] - 2026-11-25
 
 Still a **preview**, for Claude Code 2.1.318 or newer (tested with 2.1.332). This release keeps up with Claude Code
