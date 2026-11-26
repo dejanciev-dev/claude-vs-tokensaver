@@ -838,6 +838,21 @@ namespace ClaudeVS.Core.Tests
             Eq(null, TerminalText.Strip(null), "null");
         }
 
+        private static void Test_TerminalText_Spans()
+        {
+            // Phase 104: the colors the codes say
+            string S(string t) => string.Join("|", TerminalText.Spans(t));
+            Eq("c2:green|: plain", S("\u001b[32mgreen\u001b[0m plain"), "the probe's output");
+            Eq("c9b:FAIL|b: x|:  y", S("\u001b[1;91mFAIL\u001b[39m x\u001b[22m  y"), "bright, bold, default color, normal weight");
+            Eq("c9:a|c2:b|c11:c", S("\u001b[38;5;196ma\u001b[38;2;0;128;0mb\u001b[38;5;226mc"), "256-color and RGB as the nearest of 16");
+            Eq("c1:redx", S("\u001b[31mred\u001b[2Kx"), "other codes left out; same style joined");
+            Eq(":on blue", S("\u001b[44mon blue"), "a background isn't drawn");
+            Eq("c4:fg", S("\u001b[48;5;21;34mfg"), "a 256-color background skipped, the foreground kept");
+            Eq("c1:a|:z", S("\u001b[31ma\u001b[mz"), "a bare reset");
+            Eq(0, TerminalText.Spans("").Count, "nothing");
+            Eq(8, TerminalText.From256(240), "a dark gray");
+        }
+
         private static void Test_ToolData_Shapes()
         {
             Eq("Read 4 lines", ToolCallView.FromData("Read", JObject.Parse("{\"file\":{\"numLines\":4,\"startLine\":1,\"totalLines\":4}}")), "whole file");

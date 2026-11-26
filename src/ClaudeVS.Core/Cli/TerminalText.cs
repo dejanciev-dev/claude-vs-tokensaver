@@ -1,7 +1,20 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace ClaudeVS.Core.Cli
 {
+    /// <summary>A piece of tool output in one style (Phase 104).</summary>
+    public sealed class TerminalSpan
+    {
+        public string Text;
+        /// <summary>One of the 16 terminal colors (0 black … 7 white, 8–15 their bright forms); null for the default.</summary>
+        public int? Color;
+        public bool Bold;
+        public override string ToString() => (Color.HasValue ? "c" + Color : "") + (Bold ? "b" : "") + ":" + Text;
+    }
+
     /// <summary>
     /// Tool output as a terminal would show it (Phase 104). Claude Code passes a command's escape codes through
     /// (2.1.332: <c>\u001b[32mgreen\u001b[0m plain</c> in a Bash result), and test runners, git, npm and dotnet print
@@ -31,6 +44,85 @@ namespace ClaudeVS.Core.Cli
                 sb.Append(text[i]);
             }
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// The text in pieces of one style, as the color codes (<c>ESC[…m</c>) say (Phase 104): the 16 colors (30–37,
+        /// 90–97), 256-color and RGB ones (38;5;n, 38;2;r;g;b) as the nearest of the 16, bold (1, 22), resets (0, 39).
+        /// Background colors and every other code are left out. Neighbouring pieces of the same style are joined.
+        /// </summary>
+        public static List<TerminalSpan> Spans(string text)
+        {
+            var spans = new List<TerminalSpan>();
+            if (string.IsNullOrEmpty(text)) return spans;
+            int? color = null;
+            bool bold = false;
+            var sb = new StringBuilder();
+            void Flush()
+            {
+                if (sb.Length == 0) return;
+                var last = spans.Count > 0 ? spans[spans.Count - 1] : null;
+                if (last != null && last.Color == color && last.Bold == bold) last.Text += sb.ToString();
+                else spans.Add(new TerminalSpan { Text = sb.ToString(), Color = color, Bold = bold });
+                sb.Clear();
+            }
+            for (int i = 0; i < text.Length; i++)
+            {
+                int end = CodeEnd(text, i);
+                if (end == i) { sb.Append(text[i]); continue; }
+                string code = text.Substring(i, end - i);
+                if (code.EndsWith("m", StringComparison.Ordinal) && (code.StartsWith("\u001b[", StringComparison.Ordinal) || code[0] == Csi8))
+                {
+                    Flush();
+                    ApplySgr(code.Substring(code[0] == Csi8 ? 1 : 2, code.Length - (code[0] == Csi8 ? 2 : 3)), ref color, ref bold);
+                }
+                i = end - 1;
+            }
+            Flush();
+            return spans;
+        }
+
+        private static void ApplySgr(string parameters, ref int? color, ref bool bold)
+        {
+            var p = parameters.Split(';', ':').Select(x => int.TryParse(x, out int v) ? v : 0).ToList();
+            if (p.Count == 0) p.Add(0);
+            for (int k = 0; k < p.Count; k++)
+            {
+                int n = p[k];
+                if (n == 0) { color = null; bold = false; }
+                else if (n == 1) bold = true;
+                else if (n == 22) bold = false;
+                else if (n >= 30 && n <= 37) color = n - 30;
+                else if (n >= 90 && n <= 97) color = n - 90 + 8;
+                else if (n == 39) color = null;
+                else if ((n == 38 || n == 48) && k + 1 < p.Count)
+                {
+                    int? c = null;
+                    if (p[k + 1] == 5 && k + 2 < p.Count) { c = From256(p[k + 2]); k += 2; }
+                    else if (p[k + 1] == 2 && k + 4 < p.Count) { c = FromRgb(p[k + 2], p[k + 3], p[k + 4]); k += 4; }
+                    else k++;
+                    if (n == 38) color = c; // a background isn't drawn
+                }
+            }
+        }
+
+        /// <summary>A 256-color index as the nearest of the 16.</summary>
+        internal static int From256(int n)
+        {
+            if (n < 16) return Math.Max(0, n);
+            if (n >= 232) return n < 244 ? 8 : 7; // the grays: dark gray, light gray
+            n -= 16;
+            int r = n / 36, g = n / 6 % 6, b = n % 6;
+            return FromRgb(r * 51, g * 51, b * 51);
+        }
+
+        /// <summary>An RGB color as the nearest of the 16: which channels are lit, bright when the strongest is.</summary>
+        internal static int FromRgb(int r, int g, int b)
+        {
+            int max = Math.Max(r, Math.Max(g, b));
+            if (max < 64) return 0;
+            int bits = (r >= max / 2 + 32 ? 1 : 0) | (g >= max / 2 + 32 ? 2 : 0) | (b >= max / 2 + 32 ? 4 : 0);
+            return bits + (max >= 200 ? 8 : 0);
         }
 
         /// <summary>Where an escape code that starts at <paramref name="i"/> ends (exclusive), or <paramref name="i"/> for none.</summary>
