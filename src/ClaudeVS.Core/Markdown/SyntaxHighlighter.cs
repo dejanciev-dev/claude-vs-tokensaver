@@ -34,6 +34,7 @@ namespace ClaudeVS.Core.Markdown
             public bool VerbatimStrings;          // C# @"..."
             public bool TripleQuotes;             // Python """..."""
             public bool DashDashComments;         // SQL, Lua
+            public bool SemicolonComments;        // INI
             public bool Markup;                   // XML/HTML
         }
 
@@ -67,6 +68,29 @@ namespace ClaudeVS.Core.Markdown
         private static readonly Lang Yaml = L("true false null yes no on off", l => { l.LineComment = null; l.BlockComments = false; l.HashComments = true; });
         private static readonly Lang Css = L("important media import from to", l => { l.LineComment = null; });
         private static readonly Lang Markup = L("", l => { l.Markup = true; });
+        // Phase 97: more of what Claude writes
+        private static readonly Lang Ruby = L("alias and begin break case class def defined? do else elsif end ensure false for if in module next nil not or redo rescue retry return self super then true undef unless until when while yield require attr_accessor attr_reader puts",
+            l => { l.LineComment = null; l.BlockComments = false; l.HashComments = true; });
+        private static readonly Lang Php = L("abstract and array as break callable case catch class clone const continue declare default do echo else elseif empty enddeclare endfor endforeach endif endswitch endwhile enum extends false final finally fn for foreach function global goto if implements include instanceof insteadof interface isset list match namespace new null or print private protected public readonly require require_once return static switch throw trait true try unset use var while yield",
+            l => l.HashComments = true, ignoreCase: true);
+        private static readonly Lang Swift = L("actor associatedtype async await break case catch class continue default defer deinit do else enum extension fallthrough false fileprivate for func guard if import in init inout internal is let nil open operator private protocol public repeat rethrows return self Self static struct subscript super switch throw throws true try typealias var where while some any");
+        private static readonly Lang Dart = L("abstract as assert async await break case catch class const continue covariant default deferred do dynamic else enum export extends extension external factory false final finally for get if implements import in interface is late library mixin new null on operator part required rethrow return sealed set show static super switch sync this throw true try typedef var void when while with yield");
+        private static readonly Lang Lua = L("and break do else elseif end false for function goto if in local nil not or repeat return then true until while",
+            l => { l.LineComment = null; l.BlockComments = false; l.DashDashComments = true; });
+        private static readonly Lang R = L("if else repeat while function for in next break TRUE FALSE NULL Inf NaN NA library return",
+            l => { l.LineComment = null; l.BlockComments = false; l.HashComments = true; });
+        private static readonly Lang Dockerfile = L("FROM AS RUN CMD LABEL EXPOSE ENV ADD COPY ENTRYPOINT VOLUME USER WORKDIR ARG ONBUILD STOPSIGNAL HEALTHCHECK SHELL",
+            l => { l.LineComment = null; l.BlockComments = false; l.HashComments = true; l.SingleQuoteStrings = false; });
+        private static readonly Lang Makefile = L("ifeq ifneq ifdef ifndef else endif include define endef export override vpath",
+            l => { l.LineComment = null; l.BlockComments = false; l.HashComments = true; l.SingleQuoteStrings = false; });
+        private static readonly Lang Ini = L("true false",
+            l => { l.LineComment = null; l.BlockComments = false; l.HashComments = true; l.SemicolonComments = true; l.SingleQuoteStrings = false; });
+        private static readonly Lang Toml = L("true false",
+            l => { l.LineComment = null; l.BlockComments = false; l.HashComments = true; });
+        private static readonly Lang GraphQL = L("query mutation subscription fragment on type input enum interface union scalar schema extend implements directive true false null",
+            l => { l.LineComment = null; l.BlockComments = false; l.HashComments = true; l.SingleQuoteStrings = false; });
+        private static readonly Lang Hcl = L("resource variable output module provider data locals terraform true false null for in if",
+            l => l.HashComments = true);
         private static readonly Lang Generic = L("");
         private static readonly Lang Diff = L("");
 
@@ -88,6 +112,18 @@ namespace ClaudeVS.Core.Markdown
                 case "yaml": case "yml": return Yaml;
                 case "css": case "scss": case "less": return Css;
                 case "xml": case "html": case "htm": case "xaml": case "csproj": case "props": case "targets": case "svg": case "vue": return Markup;
+                case "rb": case "ruby": case "gemfile": case "rake": return Ruby;
+                case "php": return Php;
+                case "swift": return Swift;
+                case "dart": return Dart;
+                case "lua": return Lua;
+                case "r": return R;
+                case "dockerfile": case "docker": case "containerfile": return Dockerfile;
+                case "makefile": case "make": case "mk": return Makefile;
+                case "ini": case "cfg": case "conf": case "editorconfig": case "gitconfig": case "properties": return Ini;
+                case "toml": return Toml;
+                case "graphql": case "gql": return GraphQL;
+                case "hcl": case "tf": case "terraform": return Hcl;
                 case "diff": case "patch": case "udiff": return Diff;
                 case "": case "text": case "txt": case "plaintext": case "md": case "markdown": case "output": return null;
                 default: return Generic;
@@ -110,6 +146,7 @@ namespace ClaudeVS.Core.Markdown
                 if (lang.LineComment != null && At(code, i, lang.LineComment)) { i = ToLineEnd(code, i, spans, SyntaxKind.Comment); continue; }
                 if (lang.HashComments && c == '#' && !(lang == PowerShell && i + 1 < n && code[i + 1] == '{')) { i = ToLineEnd(code, i, spans, SyntaxKind.Comment); continue; }
                 if (lang.DashDashComments && At(code, i, "--")) { i = ToLineEnd(code, i, spans, SyntaxKind.Comment); continue; }
+                if (lang.SemicolonComments && c == ';' && AtLineStart(code, i)) { i = ToLineEnd(code, i, spans, SyntaxKind.Comment); continue; }
                 if (lang.BlockComments && At(code, i, "/*")) { i = Until(code, i, 2, "*/", spans, SyntaxKind.Comment); continue; }
                 if (lang == PowerShell && At(code, i, "<#")) { i = Until(code, i, 2, "#>", spans, SyntaxKind.Comment); continue; }
                 // Strings
@@ -195,6 +232,14 @@ namespace ClaudeVS.Core.Markdown
 
         private static bool At(string s, int i, string token) => string.CompareOrdinal(s, i, token, 0, token.Length) == 0;
         private static bool IsWordStart(char c) => char.IsLetter(c) || c == '_';
+
+        // Only blanks before it on its line: an INI comment, not a ; inside a value
+        private static bool AtLineStart(string s, int i)
+        {
+            for (int k = i - 1; k >= 0 && s[k] != '\n'; k--)
+                if (s[k] != ' ' && s[k] != '\t') return false;
+            return true;
+        }
         private static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_';
 
         private static int ToLineEnd(string code, int i, List<SyntaxSpan> spans, SyntaxKind kind)

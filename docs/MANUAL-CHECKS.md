@@ -443,6 +443,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Ask *Give numbered steps to build and test this solution, each with its command in a code block under the step, and one step with a sub-step that has a command too* | Each code block is indented under its step (the sub-step's further); **Copy** gives the command without leading spaces, and **Insert** puts it in at the cursor without them |
 | Ask *Show the change you would make to one method as a unified diff in a diff code block*, in the Dark and the Light theme | Added lines green, removed lines red, the `@@` and `---`/`+++` lines in a third color, the other lines plain; readable in both themes |
 | Ask *Print the whole of the largest .cs file of this solution in a code block* (over 40 lines), and watch it stream | While it streams the whole block grows; when it ends, 20 lines and *Show all N lines* below them; the button shows the rest. **Copy** before unfolding gives every line |
+| Ask *Write a Dockerfile for this solution and a Makefile that builds it* | Both blocks colored: `FROM`, `RUN`, `COPY` and `ifeq`/`endif` as keywords, comments as comments |
 
 ## 34. Release (Phase 5)
 
