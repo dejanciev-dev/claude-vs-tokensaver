@@ -22,6 +22,8 @@ All notable changes to this project are listed here. The format follows
 - **Task lists:** `- [ ] add tests` and `- [x] build` show a box (☐, ☑ when done) instead of the bullet and brackets.
 - **Web addresses are links** when Claude writes them out (`https://…` or `<https://…>`), without the full stop or
   bracket that ends the sentence around them.
+- **Diffs in color:** a `diff` or `patch` code block shows added lines green, removed lines red and its `@@` and file
+  lines as headers.
 
 ### Fixed
 
