@@ -2609,9 +2609,12 @@ proposed.
       `FilePicker`, `Routing`, `Sessions`, `Events` (576 lines), `Skills`, `Limits`, `Bookmarks`; the main file keeps
       the layout, attachments and sending (1,187 lines). A sorted line comparison shows only the section comments
       (now each file's summary) and the file headers differ. Release build clean; 260 of 260 offline tests pass
-- [ ] **Live test: file links.** A `links` step in `--live-all`, about a cent: Haiku, in a small project, names a file
+- [x] **Live test: file links.** A `links` step in `--live-all`, about a cent: Haiku, in a small project, names a file
       and line; `FileLink.FromCode` or `FileLink.Parse` must resolve the reference taken from the real answer. Phase 90
-      was built on the system prompt's `file_path:line_number` only
+      was built on the system prompt's `file_path:line_number` only. `LiveSmoke.RunLinks` (`--live-links`, after
+      `webfetch`): "Where is the Validate method defined in this project?", no word on the format; the answer is parsed
+      with `MarkdownParser` and its code spans and links go through `FileLink`. With 2.1.332: "defined at
+      `src\Login.cs:12`" (a backslash path in backticks), linked to line 12; PASS, $0.003. CONTRIBUTING: 19 tests
 
 ---
 
