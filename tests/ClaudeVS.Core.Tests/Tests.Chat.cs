@@ -63,6 +63,46 @@ namespace ClaudeVS.Core.Tests
             Eq(false, ClaudeVS.Core.Markdown.MarkdownParser.Parse("````\nx\n```")[0].Closed, "short fence is content");
         }
 
+        private static void Test_Markdown_StreamedDrawnOnce()
+        {
+            // Phase 95: a streamed answer is parsed again for every piece; only blocks from the first changed are drawn
+            var sb = new System.Text.StringBuilder();
+            for (int k = 0; k < 30; k++)
+                sb.Append(k % 3 == 0 ? $"## Part {k}\n\n" : k % 3 == 1 ? $"Some **text** for part {k}, with `code`.\n\n" : $"- item {k}\n- another\n\n");
+            sb.Append("```csharp\nvar x = 1;\nvar y = 2;\n```\nThe end.");
+            string answer = sb.ToString();
+
+            var drawn = new List<ClaudeVS.Core.Markdown.MdBlock>();
+            int pieces = 0, blocksDrawn = 0, wholeEachTime = 0;
+            for (int at = 0; at < answer.Length; at += 7)
+            {
+                var now = ClaudeVS.Core.Markdown.MarkdownParser.Parse(answer.Substring(0, Math.Min(answer.Length, at + 7)));
+                int keep = ClaudeVS.Core.Markdown.MarkdownParser.FirstChanged(drawn, now);
+                True(keep <= now.Count, "within the blocks");
+                for (int k = 0; k < keep; k++) True(now[k].SameAs(drawn[k]), "kept blocks are the same");
+                blocksDrawn += now.Count - keep;
+                wholeEachTime += now.Count;
+                drawn = now;
+                pieces++;
+            }
+            var final = ClaudeVS.Core.Markdown.MarkdownParser.Parse(answer);
+            Eq(final.Count, drawn.Count, "all blocks drawn in the end");
+            for (int k = 0; k < final.Count; k++) True(final[k].SameAs(drawn[k]), "the end is the whole answer: " + k);
+            // About one block per piece, plus each block once when it starts
+            True(blocksDrawn <= pieces + final.Count * 2, $"drawn {blocksDrawn} for {pieces} pieces and {final.Count} blocks");
+            True(blocksDrawn * 10 < wholeEachTime, $"far fewer than drawing the whole answer each time ({blocksDrawn} vs {wholeEachTime})");
+
+            // Nothing changed; a block that changed in the middle; a shorter list
+            var a = ClaudeVS.Core.Markdown.MarkdownParser.Parse("one\n\ntwo\n\nthree");
+            Eq(3, ClaudeVS.Core.Markdown.MarkdownParser.FirstChanged(a, ClaudeVS.Core.Markdown.MarkdownParser.Parse("one\n\ntwo\n\nthree")), "same");
+            Eq(1, ClaudeVS.Core.Markdown.MarkdownParser.FirstChanged(a, ClaudeVS.Core.Markdown.MarkdownParser.Parse("one\n\n**two**\n\nthree")), "middle");
+            Eq(1, ClaudeVS.Core.Markdown.MarkdownParser.FirstChanged(a, ClaudeVS.Core.Markdown.MarkdownParser.Parse("one")), "shorter");
+            Eq(0, ClaudeVS.Core.Markdown.MarkdownParser.FirstChanged(null, a), "nothing drawn yet");
+            Eq(0, ClaudeVS.Core.Markdown.MarkdownParser.FirstChanged(a, ClaudeVS.Core.Markdown.MarkdownParser.Parse("# one\n\ntwo\n\nthree")), "kind");
+            var closing = ClaudeVS.Core.Markdown.MarkdownParser.Parse("```\nx");
+            Eq(0, ClaudeVS.Core.Markdown.MarkdownParser.FirstChanged(closing, ClaudeVS.Core.Markdown.MarkdownParser.Parse("```\nx\n```")), "a fence that closes is drawn again (its buttons)");
+        }
+
         private static void Test_Markdown_Inlines()
         {
             string Render(string s) => string.Join(",", ClaudeVS.Core.Markdown.MarkdownParser.ParseInlines(s));

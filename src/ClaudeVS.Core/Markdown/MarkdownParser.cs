@@ -16,6 +16,9 @@ namespace ClaudeVS.Core.Markdown
         /// <summary>Link target (Kind == Link).</summary>
         public string Url { get; set; }
         public override string ToString() => $"{Kind}:{Text}";
+
+        public bool SameAs(MdInline other) =>
+            other != null && Kind == other.Kind && Text == other.Text && Url == other.Url;
     }
 
     public sealed class MdBlock
@@ -35,6 +38,23 @@ namespace ClaudeVS.Core.Markdown
         public bool Closed { get; set; } = true;
         public List<MdInline> Inlines { get; } = new List<MdInline>();
         public override string ToString() => Kind == MdBlockKind.Code ? $"Code({Language}):{Code}" : $"{Kind}:{string.Join("", Inlines)}";
+
+        /// <summary>Same kind and content: what was drawn for <paramref name="other"/> can stay as it is.</summary>
+        public bool SameAs(MdBlock other)
+        {
+            if (other == null || Kind != other.Kind || Level != other.Level || Indent != other.Indent || Number != other.Number
+                || Language != other.Language || Code != other.Code || Closed != other.Closed)
+                return false;
+            return SameInlines(Inlines, other.Inlines);
+        }
+
+        internal static bool SameInlines(List<MdInline> a, List<MdInline> b)
+        {
+            if (a.Count != b.Count) return false;
+            for (int i = 0; i < a.Count; i++)
+                if (!a[i].SameAs(b[i])) return false;
+            return true;
+        }
     }
 
     /// <summary>
@@ -141,6 +161,20 @@ namespace ClaudeVS.Core.Markdown
             }
             FlushPara();
             return blocks;
+        }
+
+        /// <summary>
+        /// The first block of <paramref name="now"/> that isn't the same as in <paramref name="before"/>: a streamed
+        /// answer is parsed again for every piece, and the blocks before this one were drawn already and can stay.
+        /// Usually the last block, the one still being written. When one list is a start of the other, the shorter
+        /// one's length: the blocks from there on are drawn (or removed).
+        /// </summary>
+        public static int FirstChanged(IReadOnlyList<MdBlock> before, IReadOnlyList<MdBlock> now)
+        {
+            int n = Math.Min(before?.Count ?? 0, now?.Count ?? 0);
+            for (int i = 0; i < n; i++)
+                if (!now[i].SameAs(before[i])) return i;
+            return n;
         }
 
         private static int IndentLevel(string ws)

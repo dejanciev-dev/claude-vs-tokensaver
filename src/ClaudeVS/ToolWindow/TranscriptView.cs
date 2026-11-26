@@ -411,23 +411,39 @@ namespace ClaudeVS.ToolWindow
             if (string.IsNullOrEmpty(delta)) return;
             _plain = null;
             _answer.Append(delta);
-            foreach (var b in _answerBlocks) _doc.Blocks.Remove(b);
-            _answerBlocks.Clear();
-            foreach (var md in MarkdownParser.Parse(_answer.ToString()))
+            DrawAnswer(MarkdownParser.Parse(_answer.ToString()));
+            ScrollToEndIfNear();
+        }
+
+        // The parsed blocks drawn as _answerBlocks, one for one.
+        private List<MdBlock> _answerMd = new List<MdBlock>();
+
+        // Draws the answer again from its first changed block (Phase 95): the blocks before it were drawn for an
+        // earlier piece and stay, so an answer isn't drawn whole for every piece that arrives.
+        private void DrawAnswer(List<MdBlock> parsed)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            int keep = MarkdownParser.FirstChanged(_answerMd, parsed);
+            for (int k = _answerBlocks.Count - 1; k >= keep; k--)
             {
-                var block = Render(md);
+                _doc.Blocks.Remove(_answerBlocks[k]);
+                _answerBlocks.RemoveAt(k);
+            }
+            for (int k = keep; k < parsed.Count; k++)
+            {
+                var block = Render(parsed[k]);
                 _doc.Blocks.Add(block);
                 _answerBlocks.Add(block);
             }
+            _answerMd = parsed;
             if (_answerBlocks.Count > 0) _lastAnswerStart = _answerBlocks[0];
             // Like the terminal: a ● in front of each piece of text Claude writes between tool calls.
-            if (_answerBlocks.Count > 0 && _answerBlocks[0] is Paragraph first && first.Inlines.FirstInline != null)
+            if (keep == 0 && _answerBlocks.Count > 0 && _answerBlocks[0] is Paragraph first && first.Inlines.FirstInline != null)
             {
                 var bullet = new Run("● ");
                 bullet.SetResourceReference(TextElement.ForegroundProperty, EnvironmentColors.ToolWindowTextBrushKey);
                 first.Inlines.InsertBefore(first.Inlines.FirstInline, bullet);
             }
-            ScrollToEndIfNear();
         }
 
         // First block of the text Claude wrote last (for Focus last message).
@@ -1504,6 +1520,7 @@ namespace ClaudeVS.ToolWindow
         {
             _answer.Clear();
             _answerBlocks.Clear();
+            _answerMd = new List<MdBlock>();
             _linkDisk.Clear();
         }
 
