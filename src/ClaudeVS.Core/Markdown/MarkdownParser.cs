@@ -6,12 +6,12 @@ using System.Text.RegularExpressions;
 
 namespace ClaudeVS.Core.Markdown
 {
-    public enum MdBlockKind { Paragraph, Heading, Code, ListItem, Quote, Rule, Table, Details }
+    public enum MdBlockKind { Paragraph, Heading, Code, ListItem, Quote, Rule, Table, Details, Footnote }
 
     public enum MdAlign { None, Left, Center, Right }
 
     /// <summary>Kbd, Sup, Sub and Underline come from HTML tags in answers (Phase 107).</summary>
-    public enum MdInlineKind { Text, Code, Bold, Italic, Link, Strike, Image, Kbd, Sup, Sub, Underline }
+    public enum MdInlineKind { Text, Code, Bold, Italic, Link, Strike, Image, Kbd, Sup, Sub, Underline, FootnoteRef }
 
     public sealed class MdInline
     {
@@ -235,6 +235,16 @@ namespace ClaudeVS.Core.Markdown
 
                 if (line.Trim().Length == 0) { FlushPara(); continue; }
 
+                // "[^1]: the note" (Phase 107): a footnote, drawn at the answer's end
+                if ((m = FootnoteDef.Match(line)).Success)
+                {
+                    FlushPara();
+                    var note = new MdBlock { Kind = MdBlockKind.Footnote, Anchor = m.Groups["l"].Value };
+                    note.Inlines.AddRange(ParseInlines(m.Groups["t"].Value, Open(i)));
+                    blocks.Add(note);
+                    continue;
+                }
+
                 // "Summary" over "=======" or "-------" (Phase 98): a heading, when it is the paragraph's only line
                 if (para.Length > 0 && para.ToString().IndexOf('\n') < 0 && (m = Underline.Match(line)).Success)
                 {
@@ -331,6 +341,7 @@ namespace ClaudeVS.Core.Markdown
             FlushPara(streaming && lines[lines.Length - 1].Trim().Length > 0);
             Renumber(blocks);
             AssignAnchors(blocks);
+            NumberFootnotes(blocks);
             return blocks;
         }
 
@@ -596,6 +607,14 @@ namespace ClaudeVS.Core.Markdown
                     if (close > i && paren > close) { Emit(MdInlineKind.Image, s.Substring(i + 2, close - i - 2), s.Substring(close + 2, paren - close - 2).Trim()); i = paren + 1; continue; }
                 }
 
+                // A footnote reference, text[^1] (Phase 107): numbered once the whole answer is read
+                if (c == '[' && i + 1 < s.Length && s[i + 1] == '^' && FootnoteRef.Match(s, i) is Match fn && fn.Success)
+                {
+                    Emit(MdInlineKind.FootnoteRef, fn.Groups["l"].Value, fn.Groups["l"].Value);
+                    i += fn.Length;
+                    continue;
+                }
+
                 if (c == '[')
                 {
                     int close = s.IndexOf("](", i + 1, StringComparison.Ordinal);
@@ -642,7 +661,47 @@ namespace ClaudeVS.Core.Markdown
             return result;
         }
 
-        private static readonly Regex InlineTag = new Regex(@"\G<(?<t>kbd|sup|sub|b|strong|i|em|code|u)>(?<in>.*?)</\k<t>>", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex FootnoteRef = new Regex(@"\G\[\^(?<l>[\w\-]+)\](?!:)", RegexOptions.Compiled);
+        private static readonly Regex FootnoteDef = new Regex(@"^ {0,3}\[\^(?<l>[\w\-]+)\]:\s*(?<t>.*)$", RegexOptions.Compiled);
+
+        /// <summary>
+        /// Footnotes (Phase 107): each reference gets its number in the order references first appear (its
+        /// <see cref="MdInline.Text"/>, the label stays in <see cref="MdInline.Url"/>), each note the same number
+        /// (<see cref="MdBlock.Number"/>; a note nothing refers to the next one), and the notes move to the end in
+        /// that order.
+        /// </summary>
+        private static void NumberFootnotes(List<MdBlock> blocks)
+        {
+            var numbers = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            void Walk(IEnumerable<MdInline> inlines)
+            {
+                foreach (var x in inlines)
+                {
+                    if (x.Kind == MdInlineKind.FootnoteRef)
+                    {
+                        if (!numbers.TryGetValue(x.Url, out int n)) numbers[x.Url] = n = numbers.Count + 1;
+                        x.Text = n.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    }
+                    if (x.Children != null) Walk(x.Children);
+                }
+            }
+            foreach (var b in blocks.Where(b => b.Kind != MdBlockKind.Footnote))
+            {
+                Walk(b.Inlines);
+                foreach (var row in b.Rows) foreach (var cell in row) Walk(cell);
+            }
+            var notes = blocks.Where(b => b.Kind == MdBlockKind.Footnote).ToList();
+            foreach (var note in notes)
+            {
+                if (!numbers.TryGetValue(note.Anchor, out int n)) numbers[note.Anchor] = n = numbers.Count + 1;
+                note.Number = n;
+                Walk(note.Inlines);
+            }
+            blocks.RemoveAll(b => b.Kind == MdBlockKind.Footnote);
+            blocks.AddRange(notes.OrderBy(x => x.Number));
+        }
+
+        private static readonly Regex InlineTag =new Regex(@"\G<(?<t>kbd|sup|sub|b|strong|i|em|code|u)>(?<in>.*?)</\k<t>>", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         private static readonly Regex BreakTag = new Regex(@"\G<br\s*/?>", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         private static readonly Regex Entity = new Regex(@"\G&(#[0-9]{1,7}|#[xX][0-9a-fA-F]{1,6}|[a-zA-Z][a-zA-Z0-9]{1,31});", RegexOptions.Compiled);
 

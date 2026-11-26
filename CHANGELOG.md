@@ -45,6 +45,8 @@ All notable changes to this project are listed here. The format follows
   added lines, without `+`), not the diff; Copy still gives the diff.
 - **Copy a terminal session's commands:** a code block with `$ ` or `PS> ` prompts copies just the commands, without
   prompts or output; right-click for *Copy all*.
+- **Footnotes:** `text[^1]` is a raised number that goes to its note, and `[^1]: …` notes are listed at the answer's
+  end, numbered in the order they are referred to.
 - **HTML tags in answers:** `<kbd>Ctrl</kbd>` is drawn as a key, `<sup>` and `<sub>` raised and lowered, `<b>`,
   `<i>`, `<code>` and `<u>` as their Markdown would be.
 - **Collapsed sections:** `<details><summary>…</summary> … </details>` in an answer is a section that opens from its
