@@ -2649,11 +2649,15 @@ phases on one branch. Claude writes some Markdown the chat's parser doesn't know
 Planned on 2026-11-26, after Phase 96, on the same branch. Code blocks are most of what Claude shows in a coding
 chat; four things about them that are wrong or missing.
 
-- [ ] **Code inside a list item.** Claude puts steps' commands in fences indented under the item (`1. Run:` then
+- [x] **Code inside a list item.** Claude puts steps' commands in fences indented under the item (`1. Run:` then
       `   ```bash`). Each code line keeps the fence's indent (the Copy and Insert buttons too), and a fence indented
       four or more spaces under a nested item isn't a fence at all. The fence's indent comes off its lines (as much
       as each has), a fence under a list item may be indented as deep as the item's text, and the block is drawn
-      indented with its item. Test in Core
+      indented with its item. Test in Core.
+      The fence pattern takes any indent; more than three spaces only right after a list item (or a code block
+      under one), as CommonMark's indented code is not read here anyway. A code block's `Indent` is its item's depth
+      plus one (0 at the margin); `RenderCode` indents it as the item's text. `Test_Markdown_CodeInListItems`.
+      Builds clean; not yet run in VS
 - [ ] **Diffs in color.** A ` ```diff ` block (or a `patch`) is drawn in one color. Added lines green, removed lines
       red, `@@` hunk headers and `---`/`+++` file lines as such, in both palettes. The tokens in Core, tested
 - [ ] **Long code blocks folded.** A 300-line file Claude prints fills screens and pushes the rest of the answer

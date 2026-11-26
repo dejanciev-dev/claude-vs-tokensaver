@@ -1778,7 +1778,9 @@ namespace ClaudeVS.ToolWindow
             panel.Children.Add(header);
             panel.Children.Add(body);
             var border = new Border { Background = CodeBackground, CornerRadius = new CornerRadius(3), Padding = new Thickness(6, 4, 6, 6), Child = panel };
-            return new BlockUIContainer(border) { Margin = new Thickness(0, 4, 0, 4) };
+            // Under a list item (Phase 97): indented with the item's text
+            double left = b.Indent > 0 ? 12 + 16 * (b.Indent - 1) : 0;
+            return new BlockUIContainer(border) { Margin = new Thickness(left, 4, 0, 4) };
         }
 
         // ---------------- Syntax coloring ----------------

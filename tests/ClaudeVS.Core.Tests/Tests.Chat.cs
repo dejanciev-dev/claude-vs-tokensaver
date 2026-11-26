@@ -63,6 +63,24 @@ namespace ClaudeVS.Core.Tests
             Eq(false, ClaudeVS.Core.Markdown.MarkdownParser.Parse("````\nx\n```")[0].Closed, "short fence is content");
         }
 
+        private static void Test_Markdown_CodeInListItems()
+        {
+            // Phase 97: fences indented under list items
+            var b = ClaudeVS.Core.Markdown.MarkdownParser.Parse(
+                "1. Build:\n   ```bash\n   dotnet build\n     --no-restore\n   ```\n2. Test:\n\n   ```\n   dotnet test\n  short\n   ```\n   ```js\n   x\n   ```\n" +
+                "   - nested:\n       ```cs\n       var x = 1;\n       ```\n```\nat the margin\n```");
+            string kinds = string.Join(",", b.Select(x => x.Kind + (x.Kind == ClaudeVS.Core.Markdown.MdBlockKind.Code ? x.Indent.ToString() : "")));
+            Eq("ListItem,Code1,ListItem,Code1,Code1,ListItem,Code2,Code0", kinds, "kinds and indents");
+            Eq("dotnet build\n  --no-restore", b[1].Code, "the fence's indent off each line, deeper indent kept");
+            Eq("bash", b[1].Language, "language");
+            Eq("dotnet test\nshort", b[3].Code, "a line with less indent loses what it has");
+            Eq("var x = 1;", b[6].Code, "a fence seven spaces in under a nested item");
+            Eq("at the margin", b[7].Code, "a fence at the margin");
+            // Not under an item: four spaces in is text, as before
+            Eq("Paragraph", string.Join(",", ClaudeVS.Core.Markdown.MarkdownParser.Parse("Text\n\n    ```\n    x").Select(x => x.Kind).Distinct()), "deep fence without an item");
+            Eq(0, ClaudeVS.Core.Markdown.MarkdownParser.Parse("Text:\n  ```\n  x\n  ```")[0 + 1].Indent, "a shallow fence after a paragraph");
+        }
+
         private static void Test_Markdown_StreamedDrawnOnce()
         {
             // Phase 95: a streamed answer is parsed again for every piece; only blocks from the first changed are drawn

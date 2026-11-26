@@ -35,7 +35,10 @@ namespace ClaudeVS.Core.Markdown
         public MdBlockKind Kind { get; set; }
         /// <summary>Heading level 1-6.</summary>
         public int Level { get; set; }
-        /// <summary>List nesting depth, 0-based.</summary>
+        /// <summary>
+        /// List nesting depth, 0-based. For a code block (Phase 97): 0 at the answer's margin, else the depth of the
+        /// list item it is under plus one, so it is drawn indented with that item's text.
+        /// </summary>
         public int Indent { get; set; }
         /// <summary>Ordered list number, or null for a bullet.</summary>
         public int? Number { get; set; }
@@ -96,7 +99,8 @@ namespace ClaudeVS.Core.Markdown
     /// </summary>
     public static class MarkdownParser
     {
-        private static readonly Regex Fence = new Regex(@"^ {0,3}(```+|~~~+)\s*([\w#+.\-]*)\s*$", RegexOptions.Compiled);
+        // Any indent: more than three spaces is a fence only under a list item (Phase 97)
+        private static readonly Regex Fence = new Regex(@"^( *)(```+|~~~+)\s*([\w#+.\-]*)\s*$", RegexOptions.Compiled);
         private static readonly Regex HeadingRx = new Regex(@"^ {0,3}(#{1,6})\s+(.*?)\s*#*\s*$", RegexOptions.Compiled);
         private static readonly Regex Bullet = new Regex(@"^(\s*)[-*+]\s+(.*)$", RegexOptions.Compiled);
         private static readonly Regex Ordered = new Regex(@"^(\s*)(\d{1,9})[.)]\s+(.*)$", RegexOptions.Compiled);
@@ -152,10 +156,11 @@ namespace ClaudeVS.Core.Markdown
                     continue;
                 }
 
-                if ((m = Fence.Match(line)).Success)
+                if ((m = Fence.Match(line)).Success && (m.Groups[1].Length <= 3 || (para.Length == 0 && ListItemAbove(blocks) != null)))
                 {
                     FlushPara();
-                    string marker = m.Groups[1].Value;
+                    int fenceIndent = m.Groups[1].Length;
+                    string marker = m.Groups[2].Value;
                     var code = new StringBuilder();
                     bool closed = false;
                     for (i++; i < lines.Length; i++)
@@ -164,9 +169,22 @@ namespace ClaudeVS.Core.Markdown
                         string t = lines[i].Trim();
                         if (t.Length >= marker.Length && t.Trim(marker[0]).Length == 0) { closed = true; break; }
                         if (code.Length > 0) code.Append('\n');
-                        code.Append(lines[i]);
+                        // The fence's indent comes off its lines, as much as each has (Phase 97)
+                        string l = lines[i];
+                        int strip = 0;
+                        while (strip < fenceIndent && strip < l.Length && l[strip] == ' ') strip++;
+                        code.Append(l, strip, l.Length - strip);
                     }
-                    blocks.Add(new MdBlock { Kind = MdBlockKind.Code, Language = m.Groups[2].Value, Code = code.ToString(), Closed = closed });
+                    // Under a list item (indented, after one): drawn with it
+                    var item = fenceIndent >= 2 ? ListItemAbove(blocks) : null;
+                    blocks.Add(new MdBlock
+                    {
+                        Kind = MdBlockKind.Code,
+                        Language = m.Groups[3].Value,
+                        Code = code.ToString(),
+                        Closed = closed,
+                        Indent = item == null ? 0 : (item.Kind == MdBlockKind.Code ? item.Indent : item.Indent + 1),
+                    });
                     continue;
                 }
 
@@ -230,6 +248,18 @@ namespace ClaudeVS.Core.Markdown
             }
             FlushPara(streaming && lines[lines.Length - 1].Trim().Length > 0);
             return blocks;
+        }
+
+        /// <summary>
+        /// The list item a fence just after it belongs to: the last block, when it is a list item, or a code block
+        /// already under one (a second fence in the same item). Null otherwise.
+        /// </summary>
+        private static MdBlock ListItemAbove(List<MdBlock> blocks)
+        {
+            var last = blocks.Count > 0 ? blocks[blocks.Count - 1] : null;
+            return last == null ? null
+                : last.Kind == MdBlockKind.ListItem || (last.Kind == MdBlockKind.Code && last.Indent > 0) ? last
+                : null;
         }
 
         private static readonly Regex SeparatorCell = new Regex(@"^:?-+:?$", RegexOptions.Compiled);

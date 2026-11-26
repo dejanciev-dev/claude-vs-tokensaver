@@ -440,6 +440,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Ask *Write a Markdown task list of three steps, the first one done, one with a nested sub-task* | ☑ before the done step, ☐ before the others in place of the bullet, no brackets; the sub-task indented |
 | Ask *Write the address of the .NET docs at the end of a sentence, and once in parentheses* | Both are links (hand cursor, tooltip the address) that open in the browser; the full stop and the closing bracket are not part of them |
 | Ask *Write a bold sentence that holds a method name in backticks and a link* | The whole sentence bold; the method name as code (and a link when it names a file), the link clickable; no backticks or brackets |
+| Ask *Give numbered steps to build and test this solution, each with its command in a code block under the step, and one step with a sub-step that has a command too* | Each code block is indented under its step (the sub-step's further); **Copy** gives the command without leading spaces, and **Insert** puts it in at the cursor without them |
 
 ## 34. Release (Phase 5)
 
