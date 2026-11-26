@@ -41,4 +41,23 @@ namespace ClaudeVS.Core.Markdown
         /// <summary>The button that unfolds it: "Show all 312 lines".</summary>
         public static string ShowAll(string code) => "Show all " + Lines(code).ToString(System.Globalization.CultureInfo.InvariantCulture) + " lines";
     }
+
+    /// <summary>
+    /// Long tables in answers are folded (Phase 102), as long code is: more than <see cref="FoldOver"/> rows under the
+    /// header show the header, the first <see cref="Shown"/> and a link for the rest. A table still arriving folds
+    /// once it is that long, and the link's count grows with it.
+    /// </summary>
+    public static class TableFold
+    {
+        public const int FoldOver = 25;
+        public const int Shown = 10;
+
+        /// <summary>The rows under the header.</summary>
+        public static int Rows(MdBlock table) => table == null || table.Kind != MdBlockKind.Table ? 0 : Math.Max(0, table.Rows.Count - 1);
+
+        public static bool Folds(MdBlock table) => Rows(table) > FoldOver;
+
+        /// <summary>"Show all 60 rows".</summary>
+        public static string ShowAll(MdBlock table) => "Show all " + Rows(table).ToString(System.Globalization.CultureInfo.InvariantCulture) + " rows";
+    }
 }

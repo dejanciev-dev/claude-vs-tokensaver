@@ -266,6 +266,18 @@ namespace ClaudeVS.Core.Tests
             Eq(null, b[1].Anchor, "only headings");
         }
 
+        private static void Test_TableFold_LongTables()
+        {
+            // Phase 102: a long table shows its first rows and a link for the rest
+            ClaudeVS.Core.Markdown.MdBlock T(int rows) => ClaudeVS.Core.Markdown.MarkdownParser.Parse("| a |\n|---|\n" + string.Join("\n", Enumerable.Range(1, rows).Select(k => "| " + k + " |")))[0];
+            Eq(25, ClaudeVS.Core.Markdown.TableFold.Rows(T(25)), "rows under the header");
+            True(!ClaudeVS.Core.Markdown.TableFold.Folds(T(25)), "25 rows aren't folded");
+            True(ClaudeVS.Core.Markdown.TableFold.Folds(T(26)), "26 are");
+            Eq("Show all 60 rows", ClaudeVS.Core.Markdown.TableFold.ShowAll(T(60)), "the link");
+            True(!ClaudeVS.Core.Markdown.TableFold.Folds(ClaudeVS.Core.Markdown.MarkdownParser.Parse("text")[0]), "not a table");
+            Eq(61, T(60).Rows.Count, "the block keeps every row (Copy table takes them)");
+        }
+
         private static void Test_Markdown_HalfWritten()
         {
             // Phase 95: while an answer streams, its last line may be cut off

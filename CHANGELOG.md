@@ -26,6 +26,8 @@ All notable changes to this project are listed here. The format follows
   (`snippet.cs`, `Dockerfile`…) in the solution's folder, then opens the file.
 - **Copy as plain text:** right-click an answer's copy button for *Copy as Markdown* or *Copy as plain text* (no
   marks; code, bullets and boxes kept; tables tab-separated).
+- **Long tables folded:** more than 25 rows show the header, the first 10 and *Show all N rows*; *Copy table* still
+  takes all of them.
 - **Copy table** under each table in an answer: it pastes into Excel as cells and into Word or Outlook as a table.
 - **Strikethrough:** `~~old~~` in an answer is struck through, not shown with its tildes (also in tables and while
   it streams).

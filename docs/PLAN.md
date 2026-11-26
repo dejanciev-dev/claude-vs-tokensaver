@@ -2808,9 +2808,13 @@ as ten commits.
       `MarkdownParser.Slug` and `MdBlock.Anchor` (per answer, part of `SameAs`); a heading's paragraph is tagged with
       it. `TranscriptView.AnchorLink`: the tagged heading nearest the link (its own answer, as other answers may
       have the same anchor) is brought into view. `Test_Markdown_HeadingAnchors`. Builds clean; not yet run in VS
-- [ ] **Long tables folded.** A table of 60 rows pushes the answer away as long code did. A finished table of more
+- [x] **Long tables folded.** A table of 60 rows pushes the answer away as long code did. A finished table of more
       than 25 rows shows its header and first 10 rows and *Show all N rows*; *Copy table* still takes all of it. The
-      rule in Core, tested
+      rule in Core, tested.
+      Not only finished ones: a table doesn't know when it is (a code block has its closing fence), so one still
+      arriving folds once it passes 25 rows and its link's count grows. `TableFold` beside `CodeFold`;
+      `RenderTable` draws rows through `TableRowOf` and the link adds the rest to the same row group.
+      `Test_TableFold_LongTables`. Builds clean; not yet run in VS
 - [ ] **Line ends.** A line ending in a backslash (Markdown's hard break) shows the backslash; two spaces at a line's
       end are a break already (lines are kept). The backslash goes, the break stays. Test in Core
 
