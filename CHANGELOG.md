@@ -20,6 +20,8 @@ All notable changes to this project are listed here. The format follows
 - **Strikethrough:** `~~old~~` in an answer is struck through, not shown with its tildes (also in tables and while
   it streams).
 - **Task lists:** `- [ ] add tests` and `- [x] build` show a box (☐, ☑ when done) instead of the bullet and brackets.
+- **Web addresses are links** when Claude writes them out (`https://…` or `<https://…>`), without the full stop or
+  bracket that ends the sentence around them.
 
 ## [0.17.0] - 2026-11-25
 
