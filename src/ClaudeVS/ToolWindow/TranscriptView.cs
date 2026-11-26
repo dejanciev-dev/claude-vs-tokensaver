@@ -1694,6 +1694,10 @@ namespace ClaudeVS.ToolWindow
                     case MdInlineKind.Link:
                         target.Add(MakeLink(i, a.Link));
                         break;
+                    case MdInlineKind.Image:
+                        // Not drawn: a link to the picture's file or address (Phase 98)
+                        target.Add(MakeLink(new MdInline { Kind = MdInlineKind.Link, Text = i.ImageLabel, Url = i.Url }, a.Link));
+                        break;
                     default:
                         AddTextWithBreaks(target, i.Text);
                         break;
