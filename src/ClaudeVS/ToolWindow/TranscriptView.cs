@@ -1945,7 +1945,8 @@ namespace ClaudeVS.ToolWindow
                 header.Children.Add(copy);
                 header.Children.Add(save);
             }
-            header.Children.Add(new TextBlock { Text = string.IsNullOrEmpty(b.Language) ? "code" : b.Language, Opacity = 0.7, FontSize = 11, VerticalAlignment = VerticalAlignment.Center });
+            // "C# · 48 lines" (Phase 101)
+            header.Children.Add(new TextBlock { Text = CodeFileName.Header(b.Language, code), Opacity = 0.7, FontSize = 11, VerticalAlignment = VerticalAlignment.Center });
 
             // A long finished block shows its start and a button for the rest (Phase 97); Copy and Insert take it all
             bool folded = CodeFold.Folds(code, b.Closed);

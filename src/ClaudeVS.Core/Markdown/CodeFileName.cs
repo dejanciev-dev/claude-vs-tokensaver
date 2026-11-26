@@ -64,5 +64,20 @@ namespace ClaudeVS.Core.Markdown
                 Filter = $"{known.Kind} (*{known.Ext})|*{known.Ext}|All files (*.*)|*.*",
             };
         }
+
+        /// <summary>
+        /// A code block's header (Phase 101): the language's name and the block's length, "C# · 48 lines". An unknown
+        /// language is named as the fence wrote it, none is "code"; a single line says no length.
+        /// </summary>
+        public static string Header(string language, string code)
+        {
+            string lang = (language ?? "").Trim();
+            string key = lang.ToLowerInvariant();
+            string name = WholeNames.TryGetValue(key, out string whole) ? whole
+                : Known.TryGetValue(key, out var known) ? known.Kind
+                : lang.Length > 0 ? lang : "code";
+            int lines = CodeFold.Lines(code);
+            return lines > 1 ? name + " · " + lines.ToString(System.Globalization.CultureInfo.InvariantCulture) + " lines" : name;
+        }
     }
 }

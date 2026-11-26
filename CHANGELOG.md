@@ -20,6 +20,8 @@ All notable changes to this project are listed here. The format follows
 - **Find in chat** (Tools → Claude Code, `Ctrl+Alt+K, Ctrl+F`, or the **/** menu): a bar over the conversation that
   goes from match to match (`Enter`/`F3`, `Shift+Enter` back), says *3 of 12*, and can match case. It searches the
   conversation's text, not inside code blocks.
+- **Code blocks say what they hold:** the header names the language and the length ("C# · 48 lines") instead of the
+  fence's short name.
 - **Save a code block as a file:** *Save…* beside Copy and Insert suggests a name for the block's language
   (`snippet.cs`, `Dockerfile`…) in the solution's folder, then opens the file.
 - **Copy as plain text:** right-click an answer's copy button for *Copy as Markdown* or *Copy as plain text* (no
