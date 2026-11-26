@@ -2677,6 +2677,24 @@ chat; four things about them that are wrong or missing.
       comment only at a line's start (`SemicolonComments`), Lua's `--`, PHP's `#` and `//`. `Test_Syntax_MoreLanguages`.
       Builds clean; not yet run in VS
 
+## Phase 98 — HTML bits, images, notes and headings in answers
+
+Planned on 2026-11-26, after Phase 97, on the same branch. More of what Claude writes that shows as source.
+
+- [ ] **`<br>` and entities.** Claude breaks lines inside table cells with `<br>`, and writes `&lt;T&gt;`, `&amp;`
+      or `&nbsp;` now and then; all show as written. Outside code, `<br>` (`<br/>`, `<br />`) is a line break and the
+      usual named and numbered entities are their characters; in code they stay as written. Test in Core
+- [ ] **Images.** `![diagram](docs/arch.png)` shows a `!` and a link named "diagram". An image is a link with a
+      picture sign (🖼 diagram) that opens the file (as Phase 90's links) or the web address; the picture isn't drawn
+      in the chat. Test in Core
+- [ ] **Notes and quotes that hold lists.** GitHub's `> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]` and
+      `> [!CAUTION]` show their brackets, a quote's `> - item` its dash, and `>> nested` its second `>`. An alert is a
+      quote with its title (Note, Tip…) in its color; a list item in a quote has its bullet; `>>` is a deeper quote.
+      Test in Core
+- [ ] **Underlined headings.** `Summary` over a line of `===` or `---` is a heading in Markdown (levels 1 and 2);
+      here it is a paragraph and a rule. Read it as a heading when the line before is a paragraph's only line; a
+      `---` after a blank line stays a rule. Test in Core
+
 ---
 
 ## Working in Visual Studio — daily loop
