@@ -24,6 +24,8 @@ All notable changes to this project are listed here. The format follows
   bracket that ends the sentence around them.
 - **Diffs in color:** a `diff` or `patch` code block shows added lines green, removed lines red and its `@@` and file
   lines as headers.
+- **Long code blocks folded:** a finished block of more than 40 lines shows its first 20 and *Show all N lines*, so a
+  whole file Claude prints doesn't push the rest of the answer away; Copy and Insert still take all of it.
 
 ### Fixed
 

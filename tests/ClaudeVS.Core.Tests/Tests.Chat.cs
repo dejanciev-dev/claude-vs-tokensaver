@@ -823,6 +823,22 @@ namespace ClaudeVS.Core.Tests
             True(Colored("a.b(1)", "cs").Contains("N:1") && !Colored("x1 = 2", "cs").Contains("N:1"), "digits inside names are not numbers");
         }
 
+        private static void Test_CodeFold_LongBlocks()
+        {
+            // Phase 97: a long finished block shows its start and a button for the rest
+            string Code(int lines) => string.Join("\n", Enumerable.Range(1, lines).Select(k => "line " + k));
+            Eq(0, ClaudeVS.Core.Markdown.CodeFold.Lines(""), "empty");
+            Eq(3, ClaudeVS.Core.Markdown.CodeFold.Lines("a\nb\nc\n"), "a last line break isn't a line");
+            True(!ClaudeVS.Core.Markdown.CodeFold.Folds(Code(40), true), "forty lines aren't folded");
+            True(ClaudeVS.Core.Markdown.CodeFold.Folds(Code(41), true), "forty-one are");
+            True(!ClaudeVS.Core.Markdown.CodeFold.Folds(Code(300), false), "not while it streams");
+            string head = ClaudeVS.Core.Markdown.CodeFold.Head(Code(300).Replace("\n", "\r\n"));
+            Eq(20, ClaudeVS.Core.Markdown.CodeFold.Lines(head), "twenty lines shown");
+            True(head.EndsWith("line 20"), "ends at line 20, no line break: " + head.Substring(head.Length - 8));
+            Eq("Show all 1200 lines", ClaudeVS.Core.Markdown.CodeFold.ShowAll(Code(1200)), "the button");
+            Eq("a\nb", ClaudeVS.Core.Markdown.CodeFold.Head("a\nb"), "short code whole");
+        }
+
         private static void Test_Syntax_Diff()
         {
             // Phase 97: a diff's lines in color
