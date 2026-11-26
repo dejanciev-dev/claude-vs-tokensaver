@@ -33,6 +33,14 @@ namespace ClaudeVS.Core.Markdown
         public int Indent { get; set; }
         /// <summary>Ordered list number, or null for a bullet.</summary>
         public int? Number { get; set; }
+        /// <summary>A task list item (<c>- [ ]</c>, <c>- [x]</c>): whether it is done; null for an ordinary item.</summary>
+        public bool? Task { get; set; }
+        /// <summary>
+        /// What a list item is drawn after: "1. ", "• ", or a task's box in place of the bullet ("☐ ", "☑ ";
+        /// "2. ☑ " in a numbered list).
+        /// </summary>
+        public string Marker =>
+            (Number.HasValue ? Number + ". " : Task.HasValue ? "" : "• ") + (Task == true ? "☑ " : Task == false ? "☐ " : "");
         /// <summary>Code fence language tag (Kind == Code).</summary>
         public string Language { get; set; }
         /// <summary>Raw code (Kind == Code).</summary>
@@ -53,7 +61,7 @@ namespace ClaudeVS.Core.Markdown
         public bool SameAs(MdBlock other)
         {
             if (other == null || Kind != other.Kind || Level != other.Level || Indent != other.Indent || Number != other.Number
-                || Language != other.Language || Code != other.Code || Closed != other.Closed)
+                || Task != other.Task || Language != other.Language || Code != other.Code || Closed != other.Closed)
                 return false;
             if (Rows.Count != other.Rows.Count || !Align.SequenceEqual(other.Align)) return false;
             for (int r = 0; r < Rows.Count; r++)
@@ -87,6 +95,7 @@ namespace ClaudeVS.Core.Markdown
         private static readonly Regex Ordered = new Regex(@"^(\s*)(\d{1,9})[.)]\s+(.*)$", RegexOptions.Compiled);
         private static readonly Regex RuleRx = new Regex(@"^ {0,3}([-*_])(\s*\1){2,}\s*$", RegexOptions.Compiled);
         private static readonly Regex QuoteRx = new Regex(@"^ {0,3}>\s?(.*)$", RegexOptions.Compiled);
+        private static readonly Regex TaskBox = new Regex(@"^\[([ xX])\](?:\s+|$)", RegexOptions.Compiled);
 
         /// <summary>
         /// Parses <paramref name="markdown"/> into blocks. <paramref name="streaming"/>: the text is an answer still
@@ -177,7 +186,15 @@ namespace ClaudeVS.Core.Markdown
                         Indent = IndentLevel(m.Groups[1].Value),
                         Number = ordered ? int.Parse(m.Groups[2].Value) : (int?)null,
                     };
-                    b.Inlines.AddRange(ParseInlines(m.Groups[ordered ? 3 : 2].Value, Open(i)));
+                    string content = m.Groups[ordered ? 3 : 2].Value;
+                    // A task (Phase 96): "- [ ] add tests", "- [x] build"
+                    var box = TaskBox.Match(content);
+                    if (box.Success)
+                    {
+                        b.Task = box.Groups[1].Value != " ";
+                        content = content.Substring(box.Length);
+                    }
+                    b.Inlines.AddRange(ParseInlines(content, Open(i)));
                     blocks.Add(b);
                     continue;
                 }
