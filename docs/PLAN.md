@@ -2891,8 +2891,11 @@ Planned on 2026-11-26, after Phase 104, on the same branch (PR #98 still open). 
 result in a text box: a build log of thousands of lines, compiler errors whose files can't be opened from it, web
 addresses that are text.
 
-- [ ] **Long output folded.** Output of more than 200 lines shows its first 20 and last 80 lines (a build's or a
-      test run's end is what matters) with *Show all N lines* between them. The rule in Core, tested
+- [x] **Long output folded.** Output of more than 200 lines shows its first 20 and last 80 lines (a build's or a
+      test run's end is what matters) with *Show all N lines* between them. The rule in Core, tested.
+      `OutputFold` beside `CodeFold`; `TranscriptView.FoldedOutput` draws the head, "… N lines not shown · Show all",
+      the tail, each through `OutputBox` (colored or plain, as Phase 104). A color set before the cut doesn't carry
+      into the tail. `Test_OutputFold_LongOutput`. Builds clean; not yet run in VS
 - [ ] **File references in output open the file.** `src/Login.cs(42,7): error CS0103` (MSBuild and the C#
       compiler), `src/a.ts:12:5` (most tools), `File "app.py", line 12` (Python) and `in C:\repo\Login.cs:line 42`
       (.NET stack traces) are links to the file at that line, when it exists. In Core, tested

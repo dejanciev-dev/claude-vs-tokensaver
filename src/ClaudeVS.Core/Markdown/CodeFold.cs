@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 
 namespace ClaudeVS.Core.Markdown
 {
@@ -59,5 +60,33 @@ namespace ClaudeVS.Core.Markdown
 
         /// <summary>"Show all 60 rows".</summary>
         public static string ShowAll(MdBlock table) => "Show all " + Rows(table).ToString(System.Globalization.CultureInfo.InvariantCulture) + " rows";
+    }
+
+    /// <summary>
+    /// A tool's long output is folded (Phase 105): more than <see cref="FoldOver"/> lines show the first
+    /// <see cref="HeadLines"/> and the last <see cref="TailLines"/>, a build's or a test run's end being what matters.
+    /// Lines are split at <c>\n</c> (a <c>\r</c> before it stays with its line).
+    /// </summary>
+    public static class OutputFold
+    {
+        public const int FoldOver = 200;
+        public const int HeadLines = 20;
+        public const int TailLines = 80;
+
+        private static string[] Split(string text) => (text ?? "").TrimEnd().Split('\n');
+
+        public static int Lines(string text) => string.IsNullOrWhiteSpace(text) ? 0 : Split(text).Length;
+
+        public static bool Folds(string text) => Lines(text) > FoldOver;
+
+        public static string Head(string text) => string.Join("\n", Split(text).Take(HeadLines));
+
+        public static string Tail(string text) { var l = Split(text); return string.Join("\n", l.Skip(Math.Max(0, l.Length - TailLines))); }
+
+        /// <summary>The lines between the head and the tail.</summary>
+        public static int Hidden(string text) => Math.Max(0, Lines(text) - HeadLines - TailLines);
+
+        /// <summary>"Show all 1200 lines".</summary>
+        public static string ShowAll(string text) => "Show all " + Lines(text).ToString(System.Globalization.CultureInfo.InvariantCulture) + " lines";
     }
 }
