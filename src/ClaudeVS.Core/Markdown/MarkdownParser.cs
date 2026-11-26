@@ -377,11 +377,54 @@ namespace ClaudeVS.Core.Markdown
                     if (close > i && paren > close) { Emit(MdInlineKind.Link, s.Substring(i + 1, close - i - 1), s.Substring(close + 2, paren - close - 2)); i = paren + 1; continue; }
                 }
 
+                // <https://…> and a bare https://… (Phase 96) are links to themselves
+                if (c == '<' && IsWebAddressAt(s, i + 1))
+                {
+                    int end = s.IndexOf('>', i + 1);
+                    string url = end > 0 ? s.Substring(i + 1, end - i - 1) : null;
+                    if (url != null && url.IndexOfAny(new[] { ' ', '\t', '\n', '<' }) < 0) { Emit(MdInlineKind.Link, url, url); i = end + 1; continue; }
+                }
+                if ((c == 'h' || c == 'H') && (i == 0 || !char.IsLetterOrDigit(s[i - 1])) && IsWebAddressAt(s, i))
+                {
+                    int end = WebAddressEnd(s, i);
+                    if (end > i) { string url = s.Substring(i, end - i); Emit(MdInlineKind.Link, url, url); i = end; continue; }
+                }
+
                 plain.Append(c);
                 i++;
             }
             if (plain.Length > 0) result.Add(new MdInline { Kind = MdInlineKind.Text, Text = plain.ToString() });
             return result;
+        }
+
+        private static bool IsWebAddressAt(string s, int i)
+        {
+            foreach (string scheme in new[] { "https://", "http://" })
+                if (string.Compare(s, i, scheme, 0, scheme.Length, StringComparison.OrdinalIgnoreCase) == 0)
+                    return s.Length > i + scheme.Length && !char.IsWhiteSpace(s[i + scheme.Length]);
+            return false;
+        }
+
+        /// <summary>
+        /// Where a bare web address that starts at <paramref name="i"/> ends: at a blank, a quote or <c>&lt;</c>, and
+        /// without what ends the sentence around it (<c>.</c>, <c>,</c>, a <c>)</c> that has no <c>(</c> in the address).
+        /// </summary>
+        private static int WebAddressEnd(string s, int i)
+        {
+            int end = i;
+            while (end < s.Length && !char.IsWhiteSpace(s[end]) && s[end] != '<' && s[end] != '>' && s[end] != '"' && s[end] != '`') end++;
+            while (end > i)
+            {
+                char last = s[end - 1];
+                if (".,;:!?'*_~".IndexOf(last) >= 0) { end--; continue; }
+                if (last == ')')
+                {
+                    string url = s.Substring(i, end - i);
+                    if (url.Count(ch => ch == '(') < url.Count(ch => ch == ')')) { end--; continue; }
+                }
+                break;
+            }
+            return end;
         }
     }
 }

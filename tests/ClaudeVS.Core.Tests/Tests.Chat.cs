@@ -209,6 +209,22 @@ namespace ClaudeVS.Core.Tests
             Eq("Paragraph", ClaudeVS.Core.Markdown.MarkdownParser.Parse("[x] alone")[0].Kind.ToString(), "only in a list");
         }
 
+        private static void Test_Markdown_BareLinks()
+        {
+            // Phase 96: web addresses written out are links
+            var inl = ClaudeVS.Core.Markdown.MarkdownParser.ParseInlines("See https://learn.microsoft.com/dotnet/api. Or <http://x.y/a b>, <https://x.y/q?a=1>.");
+            Eq("Text:See ,Link:https://learn.microsoft.com/dotnet/api,Text:. Or <,Link:http://x.y/a,Text: b>, ,Link:https://x.y/q?a=1,Text:.", string.Join(",", inl), "bare and in angle brackets (with a blank: bare up to it)");
+            Eq("https://learn.microsoft.com/dotnet/api", inl[1].Url, "the link's target");
+            string L(string s) => string.Join(",", ClaudeVS.Core.Markdown.MarkdownParser.ParseInlines(s).Where(x => x.Kind == ClaudeVS.Core.Markdown.MdInlineKind.Link).Select(x => x.Url));
+            Eq("https://en.wikipedia.org/wiki/Foo_(bar)", L("(see https://en.wikipedia.org/wiki/Foo_(bar))"), "a ) the address opened is kept, the sentence's isn't");
+            Eq("https://x.y/a_b_c", L("at https://x.y/a_b_c, then"), "underscores are not italic in an address");
+            Eq("https://x.y", L("\"https://x.y\""), "quotes around it");
+            Eq("", L("`https://x.y` and xhttps://x.y and https:// alone"), "code, inside a word, nothing after the scheme");
+            Eq("ftp://x.y", string.Join(",", ClaudeVS.Core.Markdown.MarkdownParser.ParseInlines("ftp://x.y").Select(x => x.Text)), "other schemes stay text");
+            Eq("Link:docs", string.Join(",", ClaudeVS.Core.Markdown.MarkdownParser.ParseInlines("[docs](https://x.y)")), "a Markdown link is still one link");
+            Eq("HTTPS://X.Y/a", L("HTTPS://X.Y/a!"), "any case; a ! ends the sentence");
+        }
+
         private static void Test_PromptHistory_BrowseAndDraft()
         {
             var h = new ClaudeVS.Core.Chat.PromptHistory(max: 3);

@@ -2631,9 +2631,12 @@ phases on one branch. Claude writes some Markdown the chat's parser doesn't know
       `MdBlock.Task` (null for an ordinary item; part of `SameAs`, so ticking draws it again) and `MdBlock.Marker`
       ("☐ ", "☑ ", "2. ☑ " in a numbered list); `[]` and a link stay text, and only list items have boxes.
       `Test_Markdown_TaskLists`. Builds clean; not yet run in VS
-- [ ] **Bare web addresses are links.** `https://…` in text and `<https://…>` show as plain text. Both are links
+- [x] **Bare web addresses are links.** `https://…` in text and `<https://…>` show as plain text. Both are links
       (http and https only), without trailing punctuation (`.`, `,`, `)` that has no `(` in the address); never
-      inside code. Test in Core
+      inside code. Test in Core. `ParseInlines` makes a `Link` whose text is the address: at a word's start, up to a
+      blank, quote, backtick or angle bracket, then without `.,;:!?'*_~` and an unopened `)`; any case of the scheme;
+      `<…>` with a blank inside is bare up to the blank. `TranscriptView.MakeLink` opens it as any web link.
+      `Test_Markdown_BareLinks`. Builds clean; not yet run in VS
 - [ ] **Bold and italic that hold code or links.** `**`Validate`** is called` shows its backticks inside bold text,
       and `**see [docs](url)**` its brackets. Bold, italic and struck text hold inlines of their own (code, links,
       the other emphasis), drawn nested; a streamed open bold holds them too. Test in Core
