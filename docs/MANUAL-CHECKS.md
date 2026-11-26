@@ -437,6 +437,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Do | Expect |
 |---|---|
 | Ask *Write a sentence with ~~a struck word~~ in it, and a table with one struck cell* | The word and the cell are struck through, no tildes; while it streams too |
+| Ask *Write a Markdown task list of three steps, the first one done, one with a nested sub-task* | ☑ before the done step, ☐ before the others in place of the bullet, no brackets; the sub-task indented |
 
 ## 34. Release (Phase 5)
 

@@ -1607,7 +1607,7 @@ namespace ClaudeVS.ToolWindow
                 case MdBlockKind.ListItem:
                 {
                     var p = new Paragraph { Margin = new Thickness(12 + 16 * b.Indent, 1, 0, 1), TextIndent = -12 };
-                    p.Inlines.Add(new Run(b.Number.HasValue ? b.Number + ". " : "• ") { Foreground = ChatTheme.Accents(Box).Brand });
+                    p.Inlines.Add(new Run(b.Marker) { Foreground = ChatTheme.Accents(Box).Brand });
                     AddInlines(p.Inlines, b.Inlines);
                     return p;
                 }

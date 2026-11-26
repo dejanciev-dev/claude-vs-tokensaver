@@ -193,6 +193,22 @@ namespace ClaudeVS.Core.Tests
             Eq("Code", ClaudeVS.Core.Markdown.MarkdownParser.Parse("~~~\ncode\n~~~")[0].Kind.ToString(), "a ~~~ fence is still a fence");
         }
 
+        private static void Test_Markdown_TaskLists()
+        {
+            // Phase 96: "- [ ]" and "- [x]" are boxes, not brackets
+            var b = ClaudeVS.Core.Markdown.MarkdownParser.Parse("- [ ] add tests\n- [x] build\n  - [X] **nested** done\n1. [ ] first\n- [link](u) stays\n- [] not a box\n- [ ]\n- plain");
+            Eq("False,True,True,False,,,False,", string.Join(",", b.Select(x => x.Task)), "tasks");
+            Eq("☐ |☑ |☑ |1. ☐ |• |• |☐ |• ", string.Join("|", b.Select(x => x.Marker)), "markers");
+            Eq("Text:add tests", string.Join(",", b[0].Inlines), "the text after the box");
+            Eq("Bold:nested,Text: done", string.Join(",", b[2].Inlines), "inlines after the box");
+            Eq(1, b[2].Indent, "nested task");
+            Eq("Link:link,Text: stays", string.Join(",", b[4].Inlines), "a link is not a box");
+            Eq("Text:[] not a box", string.Join(",", b[5].Inlines), "empty brackets");
+            Eq(0, b[6].Inlines.Count, "a box with nothing after it yet");
+            True(!b[0].SameAs(ClaudeVS.Core.Markdown.MarkdownParser.Parse("- [x] add tests")[0]), "ticked is a change");
+            Eq("Paragraph", ClaudeVS.Core.Markdown.MarkdownParser.Parse("[x] alone")[0].Kind.ToString(), "only in a list");
+        }
+
         private static void Test_PromptHistory_BrowseAndDraft()
         {
             var h = new ClaudeVS.Core.Chat.PromptHistory(max: 3);

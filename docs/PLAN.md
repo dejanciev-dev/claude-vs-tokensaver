@@ -2626,8 +2626,11 @@ phases on one branch. Claude writes some Markdown the chat's parser doesn't know
       `MdInlineKind.Strike`, parsed with bold's rule (`\~` escapes); a `~~~` fence stays a fence. `TranscriptView`
       draws a `Span` with `TextDecorations.Strikethrough`. A new MANUAL-CHECKS 33 for Phases 96–99, *Release* becomes
       34. `Test_Markdown_Strike`. Builds clean; not yet run in VS
-- [ ] **Task lists.** `- [ ] add tests` and `- [x] build` show their brackets. A list item that starts with `[ ]`,
-      `[x]` or `[X]` is a task: a box (☐, or ☑ when done) instead of the bullet, the text after it. Test in Core
+- [x] **Task lists.** `- [ ] add tests` and `- [x] build` show their brackets. A list item that starts with `[ ]`,
+      `[x]` or `[X]` is a task: a box (☐, or ☑ when done) instead of the bullet, the text after it. Test in Core.
+      `MdBlock.Task` (null for an ordinary item; part of `SameAs`, so ticking draws it again) and `MdBlock.Marker`
+      ("☐ ", "☑ ", "2. ☑ " in a numbered list); `[]` and a link stay text, and only list items have boxes.
+      `Test_Markdown_TaskLists`. Builds clean; not yet run in VS
 - [ ] **Bare web addresses are links.** `https://…` in text and `<https://…>` show as plain text. Both are links
       (http and https only), without trailing punctuation (`.`, `,`, `)` that has no `(` in the address); never
       inside code. Test in Core
