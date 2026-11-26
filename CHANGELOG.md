@@ -51,6 +51,7 @@ All notable changes to this project are listed here. The format follows
 
 - **Code and links inside bold or italic text:** `` **`Validate`** `` showed its backticks inside bold text, and
   `**see [docs](url)**` its brackets; they are drawn as code and links, in bold.
+- **A backslash at a line's end** (Markdown's line break) showed; it is a line break only.
 - **Numbered lists count:** a list written `1.` `1.` `1.` showed 1, 1, 1; it counts from its first number, also
   around nested lists and code blocks in its items.
 - **`<br>` and `&lt;`-style entities in answers** showed as written (Claude breaks lines in table cells with `<br>`):
