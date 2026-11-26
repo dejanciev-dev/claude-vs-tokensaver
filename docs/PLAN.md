@@ -2740,6 +2740,22 @@ Planned on 2026-11-26, after Phase 98, on the same branch; the last of the four.
       overview's chat paragraph names tables, task lists, notes, colored diffs and folded blocks. CONTRIBUTING got the
       count and cost with item 3. The changelog's Unreleased section has an entry for each item of Phases 96–99
 
+## Phase 100 — Taking things out of an answer
+
+Planned on 2026-11-26, after Phase 99, on the same branch (PR #98 still open). An answer can be copied only whole, as
+Markdown; a code block only to the clipboard or the cursor.
+
+- [ ] **Copy a table.** A table Claude draws (Phase 95) can only be copied with the answer's Markdown, pipes and all.
+      A *Copy* link under each finished table puts it on the clipboard tab-separated (pasted into Excel it fills
+      cells) with the Markdown as well, for an editor that takes it. Cells as plain text: no marks, a `<br>` a blank.
+      The text in Core, tested
+- [ ] **Copy an answer as plain text.** The footer's copy button gives Markdown. Its right-click menu offers *Copy as
+      Markdown* and *Copy as plain text*: no marks, code blocks' code as it is, lists with their bullets and boxes,
+      tables tab-separated, links as their text. The text in Core, tested
+- [ ] **Save a code block as a file.** A finished code block gets *Save…*: a save dialog in the solution's folder,
+      its file type from the block's language (`.cs`, `.ps1`, `.json`, `Dockerfile`…), the code written as it is,
+      then the file opened in VS. The names in Core, tested
+
 ---
 
 ## Working in Visual Studio — daily loop
