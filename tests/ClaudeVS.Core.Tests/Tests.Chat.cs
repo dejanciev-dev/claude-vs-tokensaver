@@ -314,6 +314,16 @@ namespace ClaudeVS.Core.Tests
             Eq(null, C("echo $HOME", "sh"), "a $ inside a line isn't a prompt");
         }
 
+        private static void Test_CodeText_DiffNewSide()
+        {
+            // Phase 103: Insert on a diff gives its new side
+            string d = "--- a/x.cs\n+++ b/x.cs\n@@ -1,4 +1,4 @@\n public void A()\n {\n-    Old();\n+    New();\n+    More();\n }\n\\ No newline at end of file";
+            Eq("public void A()\n{\n    New();\n    More();\n}", ClaudeVS.Core.Markdown.CodeText.DiffNewSide(d, "diff"), "context and added lines");
+            Eq(null, ClaudeVS.Core.Markdown.CodeText.DiffNewSide(d, "csharp"), "not a diff block");
+            Eq(null, ClaudeVS.Core.Markdown.CodeText.DiffNewSide(" a\n b", "diff"), "nothing added or removed");
+            Eq("x", ClaudeVS.Core.Markdown.CodeText.DiffNewSide("-y\n+x", "PATCH"), "patch, any case");
+        }
+
         private static void Test_Markdown_HalfWritten()
         {
             // Phase 95: while an answer streams, its last line may be cut off

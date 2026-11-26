@@ -33,6 +33,29 @@ namespace ClaudeVS.Core.Markdown
             return sb.ToString();
         }
 
+        /// <summary>
+        /// A diff block's new side (Phase 103), for <c>Insert</c>: context and added lines without their marker; removed
+        /// lines, file lines and <c>@@</c> headers left out. Null when <paramref name="language"/> isn't a diff or the
+        /// diff adds and removes nothing.
+        /// </summary>
+        public static string DiffNewSide(string code, string language)
+        {
+            string lang = (language ?? "").Trim().ToLowerInvariant();
+            if (lang != "diff" && lang != "patch" && lang != "udiff") return null;
+            var kept = new List<string>();
+            bool changes = false;
+            foreach (string line in SplitLines(code))
+            {
+                if (line.StartsWith("@@") || line.StartsWith("+++ ") || line.StartsWith("--- ") || line.StartsWith("diff ")
+                    || line.StartsWith("index ") || line.StartsWith("\\ No newline")) continue;
+                if (line.StartsWith("+")) { kept.Add(line.Substring(1)); changes = true; }
+                else if (line.StartsWith("-")) changes = true;
+                else if (line.StartsWith(" ")) kept.Add(line.Substring(1));
+                else kept.Add(line);
+            }
+            return changes ? string.Join("\n", kept) : null;
+        }
+
         // "$ dotnet test", "PS> Get-Item", "PS C:\repo> Get-Item"; in a console block also "> " and "# " (root)
         private static readonly System.Text.RegularExpressions.Regex ShellPrompt =
             new System.Text.RegularExpressions.Regex(@"^\s*(?:\$|PS(?: [^>]*)?>)\s");

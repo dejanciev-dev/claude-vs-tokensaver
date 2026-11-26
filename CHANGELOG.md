@@ -24,6 +24,8 @@ All notable changes to this project are listed here. The format follows
   fence's short name.
 - **Save a code block as a file:** *Save…* beside Copy and Insert suggests a name for the block's language
   (`snippet.cs`, `Dockerfile`…) in the solution's folder, then opens the file.
+- **Insert a diff's new side:** *Insert* on a `diff` block puts in the code as it is after the change (context and
+  added lines, without `+`), not the diff; Copy still gives the diff.
 - **Copy a terminal session's commands:** a code block with `$ ` or `PS> ` prompts copies just the commands, without
   prompts or output; right-click for *Copy all*.
 - **Copy as plain text:** right-click an answer's copy button for *Copy as Markdown* or *Copy as plain text* (no

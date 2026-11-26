@@ -1966,11 +1966,15 @@ namespace ClaudeVS.ToolWindow
             var header = new DockPanel { Margin = new Thickness(0, 0, 0, 2) };
             if (b.Closed)
             {
-                var insert = SmallButton("Insert", "Insert at the cursor in the active editor");
+                // A diff inserts its new side, without + and - (Phase 103)
+                string newSide = CodeText.DiffNewSide(code, b.Language);
+                var insert = SmallButton("Insert", newSide != null
+                    ? "Insert the new side at the cursor: the context and added lines, without + and the removed lines"
+                    : "Insert at the cursor in the active editor");
                 insert.Click += (s, e) =>
                 {
                     ThreadHelper.ThrowIfNotOnUIThread();
-                    insert.Content = VsContext.InsertAtCursor(code, fitIndent: true) ? "Inserted" : "No editor open";
+                    insert.Content = VsContext.InsertAtCursor(newSide ?? code, fitIndent: true) ? "Inserted" : "No editor open";
                 };
                 // A terminal session's block copies its commands, without prompts or output (Phase 103)
                 string commands = CodeText.ConsoleCommands(code, b.Language);

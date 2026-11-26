@@ -2838,9 +2838,12 @@ Planned on 2026-11-26, after Phase 102, on the same branch; the second of the tw
       (elsewhere they are comments and redirections); a command continued with `\` or a backtick keeps its next line;
       null without prompts, so other blocks copy as before and have no menu. `Test_CodeText_ConsoleCommands`. Builds
       clean; not yet run in VS
-- [ ] **Insert a diff's new side.** *Insert* on a `diff` block puts the diff, `+` and `-` and all, into the code.
+- [x] **Insert a diff's new side.** *Insert* on a `diff` block puts the diff, `+` and `-` and all, into the code.
       It inserts the new side: context and added lines without their marker, no removed lines or headers. Copy
-      still gives the diff. The text in Core, tested
+      still gives the diff. The text in Core, tested.
+      `CodeText.DiffNewSide` (`diff`, `patch`, `udiff`; null when nothing is added or removed, so such a block inserts
+      as written); the result goes through item 1's indent fit. Insert's tooltip says what it inserts.
+      `Test_CodeText_DiffNewSide`. Builds clean; not yet run in VS
 - [ ] **Line numbers.** A block of more than 10 lines gets its line numbers in a gutter beside it (not selected or
       copied with the code), so "line 14" in the answer can be found. The numbers in Core, tested
 
