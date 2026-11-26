@@ -446,6 +446,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Ask *Write a Dockerfile for this solution and a Makefile that builds it* | Both blocks colored: `FROM`, `RUN`, `COPY` and `ifeq`/`endif` as keywords, comments as comments |
 | Ask *Write a table with two lines in one cell, joined by `<br>`, and the text `List&lt;T&gt;` outside code and inside backticks* | The cell has two lines, no `<br>`; the text reads `List<T>`, and in backticks `List&lt;T&gt;` as written |
 | With a picture in the solution, ask *Show that picture in Markdown image syntax, and one from the web* | Each is a link "🖼 …" (no `!`); the solution's opens in VS, the web one in the browser |
+| Ask *Write a GitHub `[!WARNING]` alert with two lines and a bullet list in it, then a quote with a nested `>>` quote* | *Warning* in bold over the lines, its bar orange-ish and not italic, the list with bullets (no dashes); the nested quote further in, no second `>` |
 
 ## 34. Release (Phase 5)
 

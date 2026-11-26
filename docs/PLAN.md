@@ -2697,7 +2697,11 @@ Planned on 2026-11-26, after Phase 97, on the same branch. More of what Claude w
 - [ ] **Notes and quotes that hold lists.** GitHub's `> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]` and
       `> [!CAUTION]` show their brackets, a quote's `> - item` its dash, and `>> nested` its second `>`. An alert is a
       quote with its title (Note, Tip…) in its color; a list item in a quote has its bullet; `>>` is a deeper quote.
-      Test in Core
+      Test in Core. A quote's `Level` is its depth; `MdBlock.Alert` and `AlertTitle` (the `[!NOTE]` line, with any
+      text after it); the quote lines right below at the same depth carry the alert. A quoted list item starts with
+      its marker as text ("• ", "2. "). `TranscriptView`: deeper quotes 12px further in; an alert's bar in the
+      link, success, brand, running or failure color, its title bold in it, not italic. `Test_Markdown_Quotes`.
+      Builds clean; not yet run in VS
 - [ ] **Underlined headings.** `Summary` over a line of `===` or `---` is a heading in Markdown (levels 1 and 2);
       here it is a paragraph and a rule. Read it as a heading when the line before is a paragraph's only line; a
       `---` after a blank line stays a rule. Test in Core

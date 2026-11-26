@@ -1613,7 +1613,21 @@ namespace ClaudeVS.ToolWindow
                 }
                 case MdBlockKind.Quote:
                 {
-                    var p = new Paragraph { Margin = new Thickness(4, 2, 0, 2), Padding = new Thickness(8, 0, 0, 0), BorderBrush = QuoteBar, BorderThickness = new Thickness(3, 0, 0, 0), FontStyle = FontStyles.Italic };
+                    // Deeper quotes further in (Phase 98); an alert's lines have its color and aren't italic
+                    var alertColor = AlertBrush(b.Alert);
+                    var p = new Paragraph
+                    {
+                        Margin = new Thickness(4 + 12 * (Math.Max(1, b.Level) - 1), b.AlertTitle ? 4 : 2, 0, 2),
+                        Padding = new Thickness(8, 0, 0, 0),
+                        BorderBrush = alertColor ?? QuoteBar,
+                        BorderThickness = new Thickness(3, 0, 0, 0),
+                        FontStyle = b.Alert == null ? FontStyles.Italic : FontStyles.Normal,
+                    };
+                    if (b.AlertTitle)
+                    {
+                        p.Inlines.Add(new Bold(new Run(b.Alert)) { Foreground = alertColor });
+                        if (b.Inlines.Count > 0) p.Inlines.Add(new Run(" "));
+                    }
                     AddInlines(p.Inlines, b.Inlines);
                     return p;
                 }
@@ -1629,6 +1643,22 @@ namespace ClaudeVS.ToolWindow
                     AddInlines(p.Inlines, b.Inlines);
                     return p;
                 }
+            }
+        }
+
+        // A GitHub alert's color (Phase 98): Note as links, Tip as success, Important as the brand, Warning as running,
+        // Caution as failure. Null for an ordinary quote.
+        private Brush AlertBrush(string alert)
+        {
+            if (alert == null) return null;
+            var a = ChatTheme.Accents(Box);
+            switch (alert)
+            {
+                case "Note": return a.Link;
+                case "Tip": return a.Success;
+                case "Important": return a.Brand;
+                case "Warning": return a.Running;
+                default: return a.Failure;
             }
         }
 

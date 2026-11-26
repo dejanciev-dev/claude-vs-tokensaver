@@ -52,8 +52,15 @@ namespace ClaudeVS.Core.Markdown
     public sealed class MdBlock
     {
         public MdBlockKind Kind { get; set; }
-        /// <summary>Heading level 1-6.</summary>
+        /// <summary>Heading level 1-6; a quote's depth, 1 for <c>&gt;</c>, 2 for <c>&gt;&gt;</c> (Phase 98).</summary>
         public int Level { get; set; }
+        /// <summary>
+        /// A quote that is part of a GitHub alert (Phase 98): "Note", "Tip", "Important", "Warning" or "Caution".
+        /// Null for an ordinary quote.
+        /// </summary>
+        public string Alert { get; set; }
+        /// <summary>The alert's first line, <c>&gt; [!NOTE]</c>: drawn as its title.</summary>
+        public bool AlertTitle { get; set; }
         /// <summary>
         /// List nesting depth, 0-based. For a code block (Phase 97): 0 at the answer's margin, else the depth of the
         /// list item it is under plus one, so it is drawn indented with that item's text.
@@ -89,7 +96,7 @@ namespace ClaudeVS.Core.Markdown
         public bool SameAs(MdBlock other)
         {
             if (other == null || Kind != other.Kind || Level != other.Level || Indent != other.Indent || Number != other.Number
-                || Task != other.Task || Language != other.Language || Code != other.Code || Closed != other.Closed)
+                || Task != other.Task || Alert != other.Alert || AlertTitle != other.AlertTitle || Language != other.Language || Code != other.Code || Closed != other.Closed)
                 return false;
             if (Rows.Count != other.Rows.Count || !Align.SequenceEqual(other.Align)) return false;
             for (int r = 0; r < Rows.Count; r++)
@@ -125,6 +132,7 @@ namespace ClaudeVS.Core.Markdown
         private static readonly Regex Ordered = new Regex(@"^(\s*)(\d{1,9})[.)]\s+(.*)$", RegexOptions.Compiled);
         private static readonly Regex RuleRx = new Regex(@"^ {0,3}([-*_])(\s*\1){2,}\s*$", RegexOptions.Compiled);
         private static readonly Regex QuoteRx = new Regex(@"^ {0,3}>\s?(.*)$", RegexOptions.Compiled);
+        private static readonly Regex AlertRx = new Regex(@"^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*(.*)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         private static readonly Regex TaskBox = new Regex(@"^\[([ xX])\](?:\s+|$)", RegexOptions.Compiled);
 
         /// <summary>
@@ -246,8 +254,35 @@ namespace ClaudeVS.Core.Markdown
                 if ((m = QuoteRx.Match(line)).Success)
                 {
                     FlushPara();
-                    var b = new MdBlock { Kind = MdBlockKind.Quote };
-                    b.Inlines.AddRange(ParseInlines(m.Groups[1].Value, Open(i)));
+                    var b = new MdBlock { Kind = MdBlockKind.Quote, Level = 1 };
+                    string inner = m.Groups[1].Value;
+                    // ">> deeper" and "> > deeper" (Phase 98)
+                    Match deeper;
+                    while ((deeper = QuoteRx.Match(inner)).Success) { b.Level++; inner = deeper.Groups[1].Value; }
+                    // GitHub's alerts: "> [!NOTE]" titles the quote lines after it at its depth
+                    var alert = AlertRx.Match(inner);
+                    var prev = blocks.Count > 0 ? blocks[blocks.Count - 1] : null;
+                    if (alert.Success)
+                    {
+                        b.Alert = char.ToUpperInvariant(alert.Groups[1].Value[0]) + alert.Groups[1].Value.Substring(1).ToLowerInvariant();
+                        b.AlertTitle = true;
+                        inner = alert.Groups[2].Value;
+                    }
+                    else if (prev != null && prev.Kind == MdBlockKind.Quote && prev.Alert != null && prev.Level == b.Level && i > 0 && QuoteRx.IsMatch(lines[i - 1]))
+                        b.Alert = prev.Alert;
+                    // "> - item", "> 1. step": the item's marker drawn, not its dash
+                    Match item;
+                    if ((item = Bullet.Match(inner)).Success && !RuleRx.IsMatch(inner))
+                    {
+                        b.Inlines.Add(new MdInline { Kind = MdInlineKind.Text, Text = "• " });
+                        inner = item.Groups[2].Value;
+                    }
+                    else if ((item = Ordered.Match(inner)).Success)
+                    {
+                        b.Inlines.Add(new MdInline { Kind = MdInlineKind.Text, Text = item.Groups[2].Value + ". " });
+                        inner = item.Groups[3].Value;
+                    }
+                    b.Inlines.AddRange(ParseInlines(inner, Open(i)));
                     blocks.Add(b);
                     continue;
                 }
