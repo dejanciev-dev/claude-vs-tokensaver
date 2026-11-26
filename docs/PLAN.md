@@ -2960,9 +2960,14 @@ Planned on 2026-11-26, after Phase 106, on the same branch; the second of four.
       counted, one line too, unclosed while streaming, "Details" without a summary). `TranscriptView.RenderDetails`
       adds the blocks when it opens and takes them out when it closes. Copy as plain text gives the summary and the
       inside. `Test_Markdown_Details`. Builds clean; not yet run in VS
-- [ ] **Inline tags.** `<kbd>Ctrl</kbd>`, `<sup>2</sup>`, `<sub>2</sub>`, `<b>`/`<strong>`, `<i>`/`<em>`, `<code>`
+- [x] **Inline tags.** `<kbd>Ctrl</kbd>`, `<sup>2</sup>`, `<sub>2</sub>`, `<b>`/`<strong>`, `<i>`/`<em>`, `<code>`
       and `<u>` show as tags. Keys drawn as keys, superscript and subscript raised and lowered, the rest as their
-      Markdown equal; other tags stay as written. In Core, tested
+      Markdown equal; other tags stay as written. In Core, tested.
+      `MdInlineKind.Kbd`, `Sup`, `Sub`, `Underline`; `ParseInlines` reads a tag with its closing one (any case,
+      Markdown inside, `<code>`'s entities read). `TranscriptView`: a key is a framed `TextBlock` in an
+      `InlineUIContainer`, `Sup`/`Sub` a `Span` with `BaselineAlignment`. `ScreenReaderText` drops the tags. Phase 98's
+      test used `<b>` for a tag that stays; it uses `<span>` now. `Test_Markdown_InlineTags`. Builds clean; not yet
+      run in VS
 - [ ] **Footnotes.** `text[^1]` and `[^1]: the note` show their brackets. The reference as a raised number that
       goes to its note, the notes together at the answer's end. In Core, tested
 - [ ] **Emoji shortcodes.** `:white_check_mark:`, `:x:`, `:warning:`, `:rocket:` and the other GitHub shortcodes

@@ -2006,9 +2006,16 @@ namespace ClaudeVS.ToolWindow
                     case MdInlineKind.Bold:
                     case MdInlineKind.Italic:
                     case MdInlineKind.Strike:
+                    case MdInlineKind.Sup:
+                    case MdInlineKind.Sub:
+                    case MdInlineKind.Underline:
                     {
-                        // What they hold drawn inside them (Phase 96): **`Validate`**, *see [docs](url)*
-                        Span span = i.Kind == MdInlineKind.Bold ? new Bold() : i.Kind == MdInlineKind.Italic ? (Span)new Italic() : new Span { TextDecorations = TextDecorations.Strikethrough };
+                        // What they hold drawn inside them (Phase 96): **`Validate`**, *see [docs](url)*; <sup>, <sub>, <u> (Phase 107)
+                        Span span = i.Kind == MdInlineKind.Bold ? new Bold()
+                            : i.Kind == MdInlineKind.Italic ? new Italic()
+                            : i.Kind == MdInlineKind.Strike ? new Span { TextDecorations = TextDecorations.Strikethrough }
+                            : i.Kind == MdInlineKind.Underline ? new Span { TextDecorations = TextDecorations.Underline }
+                            : new Span { BaselineAlignment = i.Kind == MdInlineKind.Sup ? BaselineAlignment.Superscript : BaselineAlignment.Subscript, FontSize = 10 };
                         if (i.Children != null) AddInlines(span.Inlines, i.Children);
                         else span.Inlines.Add(new Run(i.Text));
                         target.Add(span);
@@ -2017,6 +2024,21 @@ namespace ClaudeVS.ToolWindow
                     case MdInlineKind.Link:
                         target.Add(MakeLink(i, a.Link));
                         break;
+                    case MdInlineKind.Kbd:
+                    {
+                        // <kbd>Ctrl</kbd> (Phase 107): a key, in a small frame
+                        var key = new Border
+                        {
+                            BorderBrush = QuoteBar,
+                            BorderThickness = new Thickness(1, 1, 1, 2),
+                            CornerRadius = new CornerRadius(3),
+                            Background = a.CodeBack,
+                            Padding = new Thickness(4, 0, 4, 0),
+                            Child = new TextBlock { Text = i.Text, FontFamily = Mono, FontSize = 11.5 },
+                        };
+                        target.Add(new InlineUIContainer(key) { BaselineAlignment = BaselineAlignment.Center });
+                        break;
+                    }
                     case MdInlineKind.Image:
                         // Not drawn: a link to the picture's file or address (Phase 98)
                         target.Add(MakeLink(new MdInline { Kind = MdInlineKind.Link, Text = i.ImageLabel, Url = i.Url }, a.Link));
