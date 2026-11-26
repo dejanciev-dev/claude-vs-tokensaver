@@ -2927,10 +2927,15 @@ twenty commits. A tool row's ⎿ line says what happened: for a search, a test r
       context, with an optional column, so `path:9:2` keeps its column) and a line that is only a path; both may hold
       blanks, as Grep gives absolute paths. Any tool's output gets them, only for files that exist.
       `Test_FileLink_SearchResults` (in a temp folder with a blank). Builds clean; not yet run in VS
-- [ ] **Test results summarized.** `● Bash(dotnet test)` shows its output's first lines, mostly the build. The ⎿
+- [x] **Test results summarized.** `● Bash(dotnet test)` shows its output's first lines, mostly the build. The ⎿
       line says how the run went, from the runner's summary: dotnet test, xUnit/NUnit/MSTest through it, Jest,
       Vitest, pytest, Go: "✓ 12 passed", "✗ 2 failed · 10 passed · 1 skipped", red when anything failed. In Core,
-      tested on each runner's summary
+      tested on each runner's summary.
+      `Cli/RunResults.Tests` (`RunSummary`): VSTest's line per project summed, Microsoft.Testing.Platform's "Test
+      summary", Jest's and Vitest's "Tests", pytest's last `=== … in 0.5s` (errors count as failures), go test's
+      package lines. `ToolCallView.Summarize` checks it for Bash and PowerShell before the error branch, as a failing
+      run exits non-zero; the whole output stays behind "… +N lines". The summaries were written from each runner's
+      documented format, not captured live. `Test_RunResults_Tests`. Builds clean; not yet run in VS
 - [ ] **Build results summarized.** The same for builds: MSBuild and `dotnet build` ("Build succeeded · 3
       warnings", "Build failed · 2 errors"), `tsc` ("Found 3 errors"), Cargo. In Core, tested
 - [ ] **Errors first.** A failed command's preview lines are its first lines (`Determining projects to restore…`).

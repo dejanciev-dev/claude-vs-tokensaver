@@ -890,6 +890,29 @@ namespace ClaudeVS.Core.Tests
             Eq("", TerminalText.ForCopy(null), "nothing");
         }
 
+        private static void Test_RunResults_Tests()
+        {
+            // Phase 106: a test run's own summary on the row's ⎿ line
+            string L(string o) => RunResults.Tests(o)?.Line;
+            Eq("✗ 2 failed · 20 passed · 1 skipped", L("Build succeeded.\nFailed!  - Failed:     2, Passed:    10, Skipped:     1, Total:    13, Duration: 1 s - A.Tests.dll (net8.0)\n" +
+                "Passed!  - Failed:     0, Passed:    10, Skipped:     0, Total:    10, Duration: 1 s - B.Tests.dll (net8.0)"), "dotnet test, two projects summed");
+            Eq("✓ 12 passed", L("Test summary: total: 12, failed: 0, succeeded: 12, skipped: 0, duration: 1.1s"), "Microsoft.Testing.Platform");
+            Eq("✗ 2 failed · 10 passed · 1 skipped", L("Test Suites: 1 failed, 3 passed, 4 total\nTests:       2 failed, 1 skipped, 10 passed, 13 total\nTime: 2 s"), "Jest");
+            Eq("✗ 2 failed · 10 passed · 1 skipped", L(" Test Files  1 failed | 3 passed (4)\n      Tests  2 failed | 10 passed | 1 skipped (13)"), "Vitest");
+            Eq("✗ 3 failed · 10 passed · 1 skipped", L("...\n===== 2 failed, 10 passed, 1 skipped, 1 error in 0.52s =====\n"), "pytest, an error is a failure");
+            Eq("✓ 5 passed", L("============ 5 passed in 0.01s ============"), "pytest, all passed");
+            Eq("✗ 1 package failed · 2 passed", L("ok  \texample.com/a\t0.01s\nok  \texample.com/b\t(cached)\n--- FAIL: TestX\nFAIL\texample.com/c\t0.02s"), "go test");
+            Eq(null, L("Build succeeded.\n    0 Warning(s)"), "not a test run");
+            Eq(null, L(null), "nothing");
+
+            // The row: the summary, failed in red even though the command exited non-zero, the rest a click away
+            var row = ToolCallView.Summarize("Bash", "Determining projects to restore...\nFailed!  - Failed:     1, Passed:     4, Skipped:     0, Total:     5", isError: true);
+            Eq("✗ 1 failed · 4 passed", row.Lines.Single(), "the line");
+            True(row.IsError, "red");
+            Eq(2, row.MoreLines, "the output behind a click");
+            Eq("Read 1 line", ToolCallView.Summarize("Read", "Passed!  - Failed: 0, Passed: 1, Skipped: 0, Total: 1", false).Lines.Single(), "only commands");
+        }
+
         private static void Test_ToolData_Shapes()
         {
             Eq("Read 4 lines", ToolCallView.FromData("Read", JObject.Parse("{\"file\":{\"numLines\":4,\"startLine\":1,\"totalLines\":4}}")), "whole file");

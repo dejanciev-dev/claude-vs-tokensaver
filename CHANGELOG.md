@@ -27,6 +27,8 @@ All notable changes to this project are listed here. The format follows
 - **File references in tool output open the file:** a compiler error's `src\Login.cs(42,7)`, a stack trace's
   `in …\Login.cs:line 42`, Python's `File "app.py", line 12` and `path:line:col` are links to that line.
 - **Web addresses in tool output are links,** as in answers.
+- **Test runs summarized:** a command that ran tests says how it went on its ⎿ line, "✓ 12 passed" or "✗ 2 failed ·
+  10 passed" in red, from dotnet test, Jest, Vitest, pytest or go test, instead of its first lines.
 - **Search results link to files:** Grep's `path:line:` lines and Grep's and Glob's file lists in *Output* open each
   file (at the line Grep found), also absolute paths under a folder with a space.
 - **Copy output:** a *Copy* link beside a tool row's *Output* copies all of it, also when folded, without codes.
