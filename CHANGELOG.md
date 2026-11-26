@@ -11,6 +11,13 @@ All notable changes to this project are listed here. The format follows
 - **Long answers stream without slowing down:** each streamed piece draws only the part of the answer that changed
   (usually its last paragraph), not the whole answer again, and the links in the rest aren't looked at again.
 
+### Added
+
+- **Tables in Claude's answers are tables** (they were lines of pipes): a shaded header row, lines between columns,
+  each column aligned as the separator row says, also while the rows arrive.
+- **Bold and inline code while they stream:** a `**bold` or `` `code `` that hasn't closed yet shows as bold or code,
+  not its markers; when the answer ends it is read as written.
+
 ## [0.17.0] - 2026-11-25
 
 Still a **preview**, for Claude Code 2.1.318 or newer (tested with 2.1.332). This release keeps up with Claude Code

@@ -103,6 +103,68 @@ namespace ClaudeVS.Core.Tests
             Eq(0, ClaudeVS.Core.Markdown.MarkdownParser.FirstChanged(closing, ClaudeVS.Core.Markdown.MarkdownParser.Parse("```\nx\n```")), "a fence that closes is drawn again (its buttons)");
         }
 
+        private static void Test_Markdown_Tables()
+        {
+            // Phase 95: a table is a table, its columns aligned as the separator row says
+            var b = ClaudeVS.Core.Markdown.MarkdownParser.Parse("Sizes:\n| Name | Lines | Note |\n|:-----|------:|:---:|\n| `a.cs` | 12 | **big** |\n| b\\|c | 3\n\nafter");
+            Eq("Paragraph,Table,Paragraph", string.Join(",", b.Select(x => x.Kind)), "kinds");
+            var t = b[1];
+            Eq(3, t.Rows.Count, "header and two rows");
+            Eq("Left,Right,Center", string.Join(",", t.Align), "alignment");
+            Eq("Text:Name|Text:Lines|Text:Note", string.Join("|", t.Rows[0].Select(c => string.Join(",", c))), "header");
+            Eq("Code:a.cs|Text:12|Bold:big", string.Join("|", t.Rows[1].Select(c => string.Join(",", c))), "inlines in cells");
+            Eq("Text:b|c|Text:3|", string.Join("|", t.Rows[2].Select(c => string.Join(",", c))), "an escaped pipe; a missing cell is empty");
+            Eq("Table", string.Join(",", ClaudeVS.Core.Markdown.MarkdownParser.Parse("a | b\n--- | ---\n1 | 2").Select(x => x.Kind)), "without outer pipes");
+
+            // Not tables
+            Eq("Paragraph", string.Join(",", ClaudeVS.Core.Markdown.MarkdownParser.Parse("a | b\nc | d").Select(x => x.Kind)), "no separator row");
+            Eq("Paragraph", string.Join(",", ClaudeVS.Core.Markdown.MarkdownParser.Parse("| a | b |\n|---|").Select(x => x.Kind)), "separator with fewer cells");
+            Eq("Paragraph", string.Join(",", ClaudeVS.Core.Markdown.MarkdownParser.Parse("| a | b |").Select(x => x.Kind)), "a header alone, finished");
+            Eq("Code", string.Join(",", ClaudeVS.Core.Markdown.MarkdownParser.Parse("```\n| a | b |\n|---|---|\n```").Select(x => x.Kind)), "in a fence");
+            // Rows stop at a blank line
+            var two = ClaudeVS.Core.Markdown.MarkdownParser.Parse("| a |\n|---|\n| 1 |\n\n| x | y |");
+            Eq(2, two[0].Rows.Count, "one row");
+            Eq(ClaudeVS.Core.Markdown.MdBlockKind.Paragraph, two[1].Kind, "then a paragraph");
+        }
+
+        private static void Test_Markdown_HalfWritten()
+        {
+            // Phase 95: while an answer streams, its last line may be cut off
+            List<ClaudeVS.Core.Markdown.MdBlock> S(string s) => ClaudeVS.Core.Markdown.MarkdownParser.Parse(s, streaming: true);
+            string Last(string s) => string.Join(",", S(s).Last().Inlines);
+            Eq("Text:Use ,Bold:the rea", Last("Use **the rea"), "open bold");
+            Eq("Text:Run ,Code:dotnet te", Last("Run `dotnet te"), "open code");
+            Eq("Text:Use ", Last("Use **"), "the marker alone shows nothing yet");
+            Eq("Text:Run ", Last("Run `"), "a backtick alone too");
+            Eq("Text:2 ** 3 is", Last("2 ** 3 is"), "not a bold that starts a word");
+            Eq("Text:x**y", Last("x**y"), "inside a word");
+            Eq("Text:a **b\nc ,Code:d", Last("a **b\nc `d"), "only the last line is open");
+            Eq("Text:one ,Bold:tw", Last("- one **tw"), "a list item");
+            Eq("Bold:Tit", Last("## **Tit"), "a heading");
+            // Finished text, or the last line ended: markers are literal
+            Eq("Text:Use **the rea", string.Join(",", ClaudeVS.Core.Markdown.MarkdownParser.Parse("Use **the rea")[0].Inlines), "finished");
+            Eq("Text:Use **the rea", string.Join(",", S("Use **the rea\n")[0].Inlines), "a line that ended");
+
+            // A table while it arrives: a header that is the last line, a separator being written, a row being written
+            Eq("Table", string.Join(",", S("Here:\n| Name | Li").Skip(1).Select(x => x.Kind)), "header arriving");
+            Eq("Table", string.Join(",", S("| Name | Lines |\n|---|-").Select(x => x.Kind)), "separator arriving");
+            var t = S("| Name | Lines |\n|---|---|\n| a.cs | 1")[0];
+            Eq(2, t.Rows.Count, "row arriving");
+            Eq("Text:1", string.Join(",", t.Rows[1][1]), "its last cell");
+            Eq("Paragraph", string.Join(",", S("a | b").Select(x => x.Kind)), "no leading pipe: prose");
+            Eq("Paragraph,Paragraph", string.Join(",", S("| a |\n\nnext").Select(x => x.Kind)), "not the last line");
+
+            // Once finished, the answer parses as written; a block that only looked like a table changes
+            var streamed = S("| not | a table");
+            var finished = ClaudeVS.Core.Markdown.MarkdownParser.Parse("| not | a table");
+            Eq(0, ClaudeVS.Core.Markdown.MarkdownParser.FirstChanged(streamed, finished), "drawn again as a paragraph");
+            Eq(2, ClaudeVS.Core.Markdown.MarkdownParser.FirstChanged(S("Done.\n\nAll **good**."), ClaudeVS.Core.Markdown.MarkdownParser.Parse("Done.\n\nAll **good**.")), "closed markers: nothing to draw again");
+            var tables = ClaudeVS.Core.Markdown.MarkdownParser.Parse("| a |\n|---|\n| 1 |");
+            True(tables[0].SameAs(ClaudeVS.Core.Markdown.MarkdownParser.Parse("| a |\n|---|\n| 1 |")[0]), "same table");
+            True(!tables[0].SameAs(ClaudeVS.Core.Markdown.MarkdownParser.Parse("| a |\n|---|\n| 2 |")[0]), "a cell changed");
+            True(!tables[0].SameAs(ClaudeVS.Core.Markdown.MarkdownParser.Parse("| a |\n|--:|\n| 1 |")[0]), "alignment changed");
+        }
+
         private static void Test_Markdown_Inlines()
         {
             string Render(string s) => string.Join(",", ClaudeVS.Core.Markdown.MarkdownParser.ParseInlines(s));

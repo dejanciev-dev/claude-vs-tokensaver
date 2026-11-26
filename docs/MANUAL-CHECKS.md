@@ -423,7 +423,16 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Type *check the parser* in the box, then pick a skill from the **/** button (one with arguments, such as a skill of your own) | The box reads */skill check the parser*, caret at the end; with */compact* alone in the box, picking a skill replaces it; with an empty box, */skill * |
 | Ask *Write a long answer that names five .cs files of this solution as `path:line` in backticks and as Markdown links*, and watch Process Monitor (filter: Path contains the solution folder, Process devenv.exe) while it streams | Each file is looked at once or twice while the answer streams, not again for every piece; the links work as before. Then ask Claude to create a new file and link it in the same turn: after the Write row, the link to it works |
 
-## 32. Release (Phase 5)
+## 32. Streamed answers and tables (Phase 95)
+
+| Do | Expect |
+|---|---|
+| Ask *Write a 2,000-word explanation of this solution, with headings, lists and code* and scroll up while it streams | The chat stays responsive and the answer grows smoothly, no flicker in the parts already written; a selection made in an earlier paragraph stays selected while the answer goes on |
+| Ask *Show a Markdown table of five files of this solution, their line counts right-aligned and a note centred* | A table: the header bold on a shaded row over a line, lines between columns, the counts right-aligned, the notes centred; inline code and bold in cells as in text. It is a table while its rows arrive, not lines of pipes |
+| Ask *Write a sentence with **bold words** and `inline code` in it* and watch it stream (Haiku streams in large pieces: try Sonnet) | The bold and the code show as bold and code while they are written, never their `**` or backticks |
+| Ask *Write `2 ** 10`, a lone `\|`, and the line \| not \| a table* | After the answer ends, all three read as written: no bold, no table |
+
+## 33. Release (Phase 5)
 
 These need you rather than a check list:
 

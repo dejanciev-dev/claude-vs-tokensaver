@@ -2592,11 +2592,17 @@ proposed.
       closes is drawn again, for its buttons). `Test_Markdown_StreamedDrawnOnce`: an answer of about 40 blocks in
       7-character pieces draws about one block per piece, under a tenth of drawing it whole each time. Builds clean;
       not yet run in VS
-- [ ] **Half-written Markdown and tables.** Tables are drawn as plain lines, and while an answer streams, an open
+- [x] **Half-written Markdown and tables.** Tables are drawn as plain lines, and while an answer streams, an open
       `**bold` or `` `code `` shows its markers until it closes. Draw a Markdown table (header, separator, rows, the
       separator's alignment) as a table, also while its rows arrive; while streaming, the last block's unclosed bold or
       inline code draws as bold or code to its end. When the answer ends it is parsed once more as finished text.
-      Parser tests on cut-off input
+      Parser tests on cut-off input. `MdBlockKind.Table` with `Rows` and `Align` (a separator with a cell per header
+      cell; `\|` in a cell; outer pipes optional; rows to a blank line); `Parse(text, streaming)`: a header starting
+      with `|` that is the last line, or whose separator is being written, is a table; `ParseInlines(text, openEnd)`
+      on the last line only (`**` must start a word: `2 ** 3` stays). `TranscriptView.RenderTable` (WPF `Table`);
+      `EndAnswer` parses the answer as finished and draws again from the first changed block (usually none). Four
+      rows in a new MANUAL-CHECKS 32 (with item 1's), *Release* becomes 33. `Test_Markdown_Tables`,
+      `Test_Markdown_HalfWritten`. Builds clean; not yet run in VS
 - [ ] **Split `ClaudeChatControl`.** `ClaudeChatControl.cs` is 3,040 lines. Move whole concerns into partial files, as
       `.Notices.cs` and `.Waiting.cs` already are. No change in behavior; the build and all offline tests stay green
 - [ ] **Live test: file links.** A `links` step in `--live-all`, about a cent: Haiku, in a small project, names a file
