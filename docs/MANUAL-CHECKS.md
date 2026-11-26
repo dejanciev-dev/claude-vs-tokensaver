@@ -472,6 +472,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | On the folded 500-line row and the colored `git status` row above, click *Copy* beside *Output* and paste into Notepad | All 500 lines (not only what is shown), and git's text without `[32m` codes; the link says *Copied* |
 | Ask *Search this solution for "class " and show the matching lines, then list all .cs files* and open the Search rows | Each line's path (and line number) in *Output* is a link that opens the file at that line; the file list's paths open their files |
 | In a solution with tests, ask *Run dotnet test*; then make one test fail and ask again | The row's ⎿ line reads "✓ N passed", then "✗ 1 failed · N passed" in red, with "… +N lines" under it; a click shows the whole output |
+| Ask *Run dotnet build* on a clean solution, then with a compile error | The ⎿ line reads "Build succeeded" (with its warnings, if any), then "Build failed · 1 error" in red |
 
 ## 34. Release (Phase 5)
 

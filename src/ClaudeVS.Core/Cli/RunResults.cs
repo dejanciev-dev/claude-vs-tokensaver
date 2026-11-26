@@ -78,5 +78,54 @@ namespace ClaudeVS.Core.Cli
             if (skipped > 0) parts.Add($"{skipped} skipped");
             return new RunSummary { Line = (failed > 0 ? "✗ " : "✓ ") + string.Join(" · ", parts), Failed = failed > 0 };
         }
+
+        // MSBuild's classic end: "Build succeeded." / "Build FAILED." then "    3 Warning(s)" "    2 Error(s)"
+        private static readonly Regex MsBuildEnd = new Regex(@"^\s*Build (?<r>succeeded|FAILED)\.\s*$", RegexOptions.Compiled | RegexOptions.Multiline);
+        private static readonly Regex MsBuildCount = new Regex(@"^\s*(?<n>\d+) (?<w>Warning|Error)\(s\)\s*$", RegexOptions.Compiled | RegexOptions.Multiline);
+        // dotnet build's terminal logger: "Build succeeded with 3 warning(s) in 2.1s", "Build failed with 2 error(s) and 1 warning(s) in 1.0s"
+        private static readonly Regex TerminalLogger = new Regex(@"^\s*Build (?<r>succeeded|failed)(?: with (?<parts>.*?))? in [\d.]+s", RegexOptions.Compiled | RegexOptions.Multiline | RegexOptions.IgnoreCase);
+        private static readonly Regex LoggerPart = new Regex(@"(?<n>\d+) (?<w>error|warning)\(s\)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        // tsc: "Found 3 errors in 2 files." / "Found 1 error."
+        private static readonly Regex Tsc = new Regex(@"^Found (?<n>\d+) errors?\b", RegexOptions.Compiled | RegexOptions.Multiline);
+        // Cargo: "error: could not compile `app` (bin "app") due to 2 previous errors"; "Finished `dev` profile …"
+        private static readonly Regex CargoFailed = new Regex(@"^error: could not compile `[^`]+`.*?(?:due to (?<n>\d+) previous errors?)?;?\s*$", RegexOptions.Compiled | RegexOptions.Multiline);
+        private static readonly Regex CargoFinished = new Regex(@"^\s*Finished `?\w+`? (?:profile|target)", RegexOptions.Compiled | RegexOptions.Multiline);
+
+        /// <summary>A build's summary ("Build succeeded · 3 warnings", "Build failed · 2 errors"), or null when there is none.</summary>
+        public static RunSummary Build(string output)
+        {
+            if (string.IsNullOrEmpty(output)) return null;
+            string Count(int n, string w) => n == 1 ? "1 " + w : n + " " + w + "s";
+            RunSummary Make(bool ok, int errors, int warnings)
+            {
+                var parts = new List<string> { ok ? "Build succeeded" : "Build failed" };
+                if (errors > 0) parts.Add(Count(errors, "error"));
+                if (warnings > 0) parts.Add(Count(warnings, "warning"));
+                return new RunSummary { Line = string.Join(" · ", parts), Failed = !ok };
+            }
+
+            var logger = TerminalLogger.Matches(output).Cast<Match>().LastOrDefault();
+            if (logger != null)
+            {
+                int e = 0, w = 0;
+                foreach (Match p in LoggerPart.Matches(logger.Groups["parts"].Value))
+                    if (p.Groups["w"].Value.ToLowerInvariant() == "error") e += N(p.Groups["n"]); else w += N(p.Groups["n"]);
+                return Make(logger.Groups["r"].Value.ToLowerInvariant() == "succeeded", e, w);
+            }
+            var end = MsBuildEnd.Matches(output).Cast<Match>().LastOrDefault();
+            if (end != null)
+            {
+                int e = 0, w = 0;
+                foreach (Match c in MsBuildCount.Matches(output, end.Index))
+                    if (c.Groups["w"].Value == "Error") e = N(c.Groups["n"]); else w = N(c.Groups["n"]);
+                return Make(end.Groups["r"].Value == "succeeded", e, w);
+            }
+            var tsc = Tsc.Match(output);
+            if (tsc.Success) return Make(false, N(tsc.Groups["n"]), 0);
+            var cargo = CargoFailed.Match(output);
+            if (cargo.Success) return Make(false, N(cargo.Groups["n"]), 0);
+            if (CargoFinished.IsMatch(output)) return Make(true, 0, 0);
+            return null;
+        }
     }
 }

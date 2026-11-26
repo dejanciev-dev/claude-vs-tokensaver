@@ -913,6 +913,25 @@ namespace ClaudeVS.Core.Tests
             Eq("Read 1 line", ToolCallView.Summarize("Read", "Passed!  - Failed: 0, Passed: 1, Skipped: 0, Total: 1", false).Lines.Single(), "only commands");
         }
 
+        private static void Test_RunResults_Build()
+        {
+            // Phase 106: a build's summary on the row's ⎿ line
+            string L(string o) => RunResults.Build(o)?.Line;
+            Eq("Build succeeded · 3 warnings", L("  Demo -> C:\\r\\bin\\Demo.dll\n\nBuild succeeded.\n    3 Warning(s)\n    0 Error(s)\n\nTime Elapsed 00:00:02.10"), "MSBuild");
+            Eq("Build failed · 2 errors · 1 warning", L("src\\a.cs(3,1): error CS1002\n\nBuild FAILED.\n\n    1 Warning(s)\n    2 Error(s)"), "MSBuild failed");
+            Eq("Build failed · 2 errors · 1 warning", L("Restore complete (0.4s)\n  Demo failed with 2 error(s) and 1 warning(s) (0.9s)\n\nBuild failed with 2 error(s) and 1 warning(s) in 1.6s"), "dotnet build's terminal logger");
+            Eq("Build succeeded", L("Build succeeded in 0.8s"), "terminal logger, clean");
+            Eq("Build failed · 3 errors", L("src/a.ts:1:7 - error TS2322\n\nFound 3 errors in 2 files."), "tsc");
+            Eq("Build failed · 2 errors", L("error[E0425]: cannot find value `x`\nerror: could not compile `app` (bin \"app\") due to 2 previous errors"), "Cargo failed");
+            Eq("Build succeeded", L("   Compiling app v0.1.0\n    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.2s"), "Cargo");
+            Eq(null, L("hello world"), "not a build");
+
+            var row = ToolCallView.Summarize("Bash", "Determining projects to restore...\nBuild FAILED.\n    0 Warning(s)\n    1 Error(s)", isError: true);
+            Eq("Build failed · 1 error", row.Lines.Single(), "the row");
+            True(row.IsError, "red");
+            Eq("✓ 4 passed", ToolCallView.Summarize("Bash", "Build succeeded.\n    0 Warning(s)\nPassed!  - Failed: 0, Passed: 4, Skipped: 0, Total: 4", false).Lines.Single(), "a test run builds first: tests win");
+        }
+
         private static void Test_ToolData_Shapes()
         {
             Eq("Read 4 lines", ToolCallView.FromData("Read", JObject.Parse("{\"file\":{\"numLines\":4,\"startLine\":1,\"totalLines\":4}}")), "whole file");
