@@ -2720,9 +2720,12 @@ Planned on 2026-11-26, after Phase 98, on the same branch; the last of the four.
       `FileLink.FindInText` (words without the brackets, quotes and sentence marks around them; web addresses left
       to Phase 96's links; the file through `FromCode`); `TranscriptView.AddTextWithFileLinks` for every text run,
       also inside bold, with the answer's `DiskLookups`. `Test_FileLink_InPlainText`. Builds clean; not yet run in VS
-- [ ] **What screen readers hear.** The answer read aloud (`ScreenReaderText`) still has the new Markdown's marks:
+- [x] **What screen readers hear.** The answer read aloud (`ScreenReaderText`) still has the new Markdown's marks:
       `[x]`, `[!WARNING]`, `<br>`, `&lt;`, `![`. A done task reads "done:", an open one "to do:", an alert its title
-      and a colon, `<br>` a blank, entities their characters, an image "image:" and its alt text. Test in Core
+      and a colon, `<br>` a blank, entities their characters, an image "image:" and its alt text. Test in Core.
+      Four patterns in `ScreenReaderText.Plain` (a task after the list marker is gone, an alert after the quote marks,
+      all of `>>`), `WebUtility.HtmlDecode` last. Under *Fixed*. `Test_ScreenReaderText_NewMarkdown`. Builds clean;
+      not yet run in VS
 - [ ] **Live test: Markdown in a real answer.** A `markdown` step in `--live-all`, about a cent: Haiku writes a
       task list, a struck word, a table with a `<br>` in a cell, a `diff` block and a `[!NOTE]`; the answer parsed as
       the chat does must have each (task boxes, a `Strike`, a cell with a line break, a diff with added and removed

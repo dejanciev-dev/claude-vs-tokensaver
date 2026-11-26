@@ -25,6 +25,15 @@ namespace ClaudeVS.Core.Tests
             Eq("", ScreenReaderText.Plain(null));
         }
 
+        private static void Test_ScreenReaderText_NewMarkdown()
+        {
+            // Phase 99: what Phases 96-98 draw, said as words
+            Eq("done: build to do: add tests", ScreenReaderText.Plain("- [x] build\n- [ ] add tests"), "tasks");
+            Eq("Warning: Back up first. deeper", ScreenReaderText.Plain("> [!WARNING]\n> Back up first.\n>> deeper"), "an alert and a nested quote");
+            Eq("image: the diagram and image", ScreenReaderText.Plain("![the diagram](a.png) and ![](b.png)"), "images");
+            Eq("one two List<T> & old", ScreenReaderText.Plain("| one<br>two |\n|---|\n\nList&lt;T&gt; &amp; ~~old~~"), "breaks, entities, struck");
+        }
+
         private static void Test_ScreenReaderText_AnswerFinished()
         {
             Eq("Claude finished. Done.", ScreenReaderText.AnswerFinished("**Done.**"));
