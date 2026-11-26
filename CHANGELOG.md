@@ -40,6 +40,8 @@ All notable changes to this project are listed here. The format follows
   outside code they are a line break and their characters.
 - **Images in answers** (`![diagram](docs/arch.png)`) showed a `!` and a link: they are one link, "🖼 diagram", that
   opens the picture's file or address.
+- **Underlined headings:** a line over `===` or `---` was a paragraph and a rule; it is a heading (a `---` after a
+  blank line is still a rule).
 - **Code blocks inside list items:** each line kept the indent of the fence (also in what Copy and Insert gave), and a
   fence under a nested item showed as text. The indent comes off, and the block is drawn indented with its item.
 
