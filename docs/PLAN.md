@@ -2820,6 +2820,22 @@ as ten commits.
       In `ParseInlines`: a backslash before a line break is dropped; one inside a line, at the very end, or in code
       stays. Under *Fixed*. `Test_Markdown_LineEnds`. Builds clean; not yet run in VS
 
+## Phase 103 — Code you take into the editor
+
+Planned on 2026-11-26, after Phase 102, on the same branch; the second of the two phases.
+
+- [ ] **Insert fits the caret's indent.** *Insert* puts a block in as written: inside a method, every line after the
+      first starts at the margin (or at Claude's own indent). Take off the block's common indent and start each line
+      after the first at the indent of the caret's line; line breaks as the document's. The text in Core, tested
+- [ ] **Copy a console block's commands.** A `console` or `shell-session` block (or one whose lines start with
+      `$ ` or `PS> `) holds commands and their output; Copy gives all of it, prompts too. Copy gives the commands
+      without their prompts; *Copy all* (right-click) the block as it is. The text in Core, tested
+- [ ] **Insert a diff's new side.** *Insert* on a `diff` block puts the diff, `+` and `-` and all, into the code.
+      It inserts the new side: context and added lines without their marker, no removed lines or headers. Copy
+      still gives the diff. The text in Core, tested
+- [ ] **Line numbers.** A block of more than 10 lines gets its line numbers in a gutter beside it (not selected or
+      copied with the code), so "line 14" in the answer can be found. The numbers in Core, tested
+
 ---
 
 ## Working in Visual Studio — daily loop
