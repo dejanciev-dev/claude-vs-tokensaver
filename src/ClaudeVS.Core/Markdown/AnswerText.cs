@@ -28,6 +28,44 @@ namespace ClaudeVS.Core.Markdown
         private static string Cell(List<MdInline> cell) =>
             Inline(cell).Replace("\r", "").Replace('\n', ' ').Replace('\t', ' ').Trim();
 
+        /// <summary>
+        /// A whole answer as plain text (Phase 100), for where Markdown's marks get in the way: no marks, code blocks'
+        /// code as it is, list items with their bullet, number or box, notes with their title, tables tab-separated,
+        /// links as their text. Blocks are apart by a blank line, a list's items and a quote's lines by a line break.
+        /// Line breaks are CRLF.
+        /// </summary>
+        public static string Plain(string markdown)
+        {
+            var sb = new StringBuilder();
+            MdBlock prev = null;
+            foreach (var b in MarkdownParser.Parse(markdown))
+            {
+                if (prev != null)
+                {
+                    bool together = (b.Kind == MdBlockKind.ListItem && prev.Kind == MdBlockKind.ListItem)
+                        || (b.Kind == MdBlockKind.Quote && prev.Kind == MdBlockKind.Quote);
+                    sb.Append(together ? "\r\n" : "\r\n\r\n");
+                }
+                switch (b.Kind)
+                {
+                    case MdBlockKind.Code: sb.Append((b.Code ?? "").Replace("\r\n", "\n").Replace("\n", "\r\n")); break;
+                    case MdBlockKind.Table: sb.Append(TableTsv(b)); break;
+                    case MdBlockKind.Rule: sb.Append("———"); break;
+                    case MdBlockKind.ListItem: sb.Append(new string(' ', 2 * b.Indent)).Append(b.Marker).Append(Lines(b.Inlines)); break;
+                    case MdBlockKind.Quote:
+                        sb.Append(new string(' ', 2 * (b.Level - 1)));
+                        if (b.AlertTitle) sb.Append(b.Alert).Append(':').Append(b.Inlines.Count > 0 ? " " : "");
+                        sb.Append(Lines(b.Inlines));
+                        break;
+                    default: sb.Append(Lines(b.Inlines)); break;
+                }
+                prev = b;
+            }
+            return sb.ToString();
+        }
+
+        private static string Lines(IEnumerable<MdInline> inlines) => Inline(inlines).Replace("\r\n", "\n").Replace("\n", "\r\n");
+
         /// <summary>A table tab-separated, a row per line (CRLF): pasted into Excel it fills cells.</summary>
         public static string TableTsv(MdBlock table)
         {

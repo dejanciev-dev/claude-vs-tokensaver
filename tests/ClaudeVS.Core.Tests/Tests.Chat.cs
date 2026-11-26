@@ -175,6 +175,18 @@ namespace ClaudeVS.Core.Tests
             Eq(bytes.Length, Offset("EndHTML"), "to the end");
         }
 
+        private static void Test_AnswerText_Plain()
+        {
+            // Phase 100: an answer copied as plain text
+            string md = "## Steps\n\nRun **the** `build`, see [docs](https://x.y).\n\n- [x] build\n- [ ] test\n  1. nested\n\n" +
+                        "```bash\n  dotnet test\n```\n\n> [!NOTE]\n> Mind ~~this~~ it.\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n---\nend ![pic](p.png)";
+            Eq("Steps\r\n\r\nRun the build, see docs.\r\n\r\n☑ build\r\n☐ test\r\n  1. nested\r\n\r\n  dotnet test\r\n\r\n" +
+               "Note:\r\nMind this it.\r\n\r\na\tb\r\n1\t2\r\n\r\n———\r\n\r\nend pic",
+               ClaudeVS.Core.Markdown.AnswerText.Plain(md));
+            Eq("", ClaudeVS.Core.Markdown.AnswerText.Plain(""), "empty");
+            Eq("one\r\ntwo", ClaudeVS.Core.Markdown.AnswerText.Plain("one\ntwo"), "a paragraph's line breaks");
+        }
+
         private static void Test_Markdown_HalfWritten()
         {
             // Phase 95: while an answer streams, its last line may be cut off

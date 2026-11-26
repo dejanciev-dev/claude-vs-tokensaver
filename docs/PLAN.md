@@ -2754,9 +2754,12 @@ Markdown; a code block only to the clipboard or the cursor.
       alignment, escaped), `ClipboardHtml` (CF_HTML, offsets in UTF-8 bytes). `RenderTable` returns the table and a
       *Copy table* link in a `Section`; a table still streaming has it too (it copies what has arrived).
       `Test_AnswerText_Tables`. Builds clean; not yet run in VS
-- [ ] **Copy an answer as plain text.** The footer's copy button gives Markdown. Its right-click menu offers *Copy as
+- [x] **Copy an answer as plain text.** The footer's copy button gives Markdown. Its right-click menu offers *Copy as
       Markdown* and *Copy as plain text*: no marks, code blocks' code as it is, lists with their bullets and boxes,
-      tables tab-separated, links as their text. The text in Core, tested
+      tables tab-separated, links as their text. The text in Core, tested.
+      `AnswerText.Plain` from the parsed blocks (`MdBlock.Marker` for items, nested ones indented; a note's title and
+      a colon; a rule as "———"; CRLF). The button's `ContextMenu`; a click still copies Markdown, its tooltip says
+      right-click. `Test_AnswerText_Plain`. Builds clean; not yet run in VS
 - [ ] **Save a code block as a file.** A finished code block gets *Save…*: a save dialog in the solution's folder,
       its file type from the block's language (`.cs`, `.ps1`, `.json`, `Dockerfile`…), the code written as it is,
       then the file opened in VS. The names in Core, tested
