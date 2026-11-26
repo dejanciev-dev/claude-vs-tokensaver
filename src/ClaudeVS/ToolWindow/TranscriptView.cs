@@ -74,6 +74,73 @@ namespace ClaudeVS.ToolWindow
 
         public RichTextBox Box { get; }
 
+        // ---------------- Find in the chat (Phase 101) ----------------
+
+        /// <summary>
+        /// The conversation's text as one string, for <see cref="Core.Chat.TextSearch"/>, with where each piece of it is
+        /// in the document. Paragraphs are apart by a line break. Text inside embedded controls (code blocks, tool rows'
+        /// details) isn't in it.
+        /// </summary>
+        public sealed class TextMap
+        {
+            public string Text;
+            internal List<(int Offset, TextPointer Start, int Length)> Runs = new List<(int, TextPointer, int)>();
+
+            internal TextPointer At(int offset)
+            {
+                // The run that holds the offset (or the next one after a paragraph break)
+                foreach (var r in Runs)
+                    if (offset < r.Offset + r.Length) return r.Start.GetPositionAtOffset(Math.Max(0, offset - r.Offset));
+                var last = Runs.Count > 0 ? Runs[Runs.Count - 1] : default;
+                return last.Start?.GetPositionAtOffset(last.Length);
+            }
+        }
+
+        public TextMap MapText()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var map = new TextMap();
+            var sb = new StringBuilder();
+            DependencyObject lastParagraph = null;
+            for (var p = _doc.ContentStart; p != null && p.CompareTo(_doc.ContentEnd) < 0; p = p.GetNextContextPosition(LogicalDirection.Forward))
+            {
+                if (p.GetPointerContext(LogicalDirection.Forward) != TextPointerContext.Text) continue;
+                string run = p.GetTextInRun(LogicalDirection.Forward);
+                if (run.Length == 0) continue;
+                var paragraph = p.Paragraph;
+                if (lastParagraph != null && paragraph != lastParagraph) sb.Append('\n');
+                lastParagraph = paragraph;
+                map.Runs.Add((sb.Length, p, run.Length));
+                sb.Append(run);
+            }
+            map.Text = sb.ToString();
+            return map;
+        }
+
+        /// <summary>Selects a match (shown while the find bar has the focus) and scrolls it to a third of the view.</summary>
+        public void ShowMatch(TextMap map, int offset, int length)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var start = map.At(offset);
+            var end = map.At(offset + length - 1)?.GetPositionAtOffset(1);
+            if (start == null || end == null) return;
+            Box.IsInactiveSelectionHighlightEnabled = true;
+            Box.Selection.Select(start, end);
+            var rect = start.GetCharacterRect(LogicalDirection.Forward);
+            if (!rect.IsEmpty && (rect.Top < 0 || rect.Bottom > Box.ActualHeight))
+            {
+                _followEnd = false; // the user is reading back: don't jump to the end when output arrives
+                Box.ScrollToVerticalOffset(Box.VerticalOffset + rect.Top - Box.ActualHeight / 3);
+            }
+        }
+
+        /// <summary>Clears what find selected.</summary>
+        public void ClearMatch()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            Box.Selection.Select(Box.Selection.Start, Box.Selection.Start);
+        }
+
         /// <summary>Whether to show message times (read on each message, so the option applies right away).</summary>
         public Func<bool> ShowTimestamps { get; set; } = () => true;
         private DateTime? _lastDay;

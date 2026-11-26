@@ -56,6 +56,12 @@
           <ButtonText>Focus Last Message</ButtonText>
         </Strings>
       </Button>
+      <Button guid="guidClaudeVSCmdSet" id="cmdidFindInChat" priority="0x0072" type="Button">
+        <Parent guid="guidClaudeVSCmdSet" id="ClaudeSubMenuGroup" />
+        <Strings>
+          <ButtonText>Find in Chat</ButtonText>
+        </Strings>
+      </Button>
       <Button guid="guidClaudeVSCmdSet" id="cmdidAttachCurrentFile" priority="0x0150" type="Button">
         <Parent guid="guidClaudeVSCmdSet" id="ClaudeSubMenuGroup" />
         <Strings>
@@ -148,6 +154,7 @@
     <KeyBinding guid="guidClaudeVSCmdSet" id="cmdidAttachErrorList" editor="guidVSStd97" key1="K" mod1="Control Alt" key2="E" />
     <KeyBinding guid="guidClaudeVSCmdSet" id="cmdidNewChatWindow" editor="guidVSStd97" key1="K" mod1="Control Alt" key2="N" />
     <KeyBinding guid="guidClaudeVSCmdSet" id="cmdidFocusLastMessage" editor="guidVSStd97" key1="K" mod1="Control Alt" key2="M" />
+    <KeyBinding guid="guidClaudeVSCmdSet" id="cmdidFindInChat" editor="guidVSStd97" key1="K" mod1="Control Alt" key2="F" mod2="Control" />
   </KeyBindings>
 
   <Symbols>
@@ -170,6 +177,7 @@
       <IDSymbol name="cmdidSaveSavingsReport" value="0x010A" />
       <IDSymbol name="cmdidOpenUsageLogFolder" value="0x010B" />
       <IDSymbol name="cmdidAddToChat" value="0x010C" />
+      <IDSymbol name="cmdidFindInChat" value="0x010D" />
       <IDSymbol name="SolutionExplorerGroup" value="0x1004" />
     </GuidSymbol>
   </Symbols>

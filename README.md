@@ -261,6 +261,7 @@ First run:
 | Add files, folders or projects as references | Solution Explorer right-click | |
 | Attach Error List | Tools → Claude Code | `Ctrl+Alt+K, E` |
 | Focus last message (keyboard to Claude's last answer; `Esc` goes back) | Tools → Claude Code · `/` | `Ctrl+Alt+K, M` |
+| Find in chat (`Enter`/`F3` next, `Shift+Enter` before, `Esc` closes) | Tools → Claude Code · `/` | `Ctrl+Alt+K, Ctrl+F` (and `Ctrl+F` in the chat when VS passes it on) |
 | Show Savings Report | Tools → Claude Code | |
 | Save Savings Report as Markdown… | Tools → Claude Code | |
 | Export Usage as CSV… | Tools → Claude Code | |
