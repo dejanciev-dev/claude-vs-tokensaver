@@ -411,6 +411,26 @@ namespace ClaudeVS.Core.Tests
             finally { Directory.Delete(root, true); }
         }
 
+        private static void Test_FileLink_SearchResults()
+        {
+            // Phase 106: Grep's and Glob's lines link to their files (absolute, under a folder with a blank)
+            string root = Path.Combine(Path.GetTempPath(), "claudevs test " + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(Path.Combine(root, "src"));
+            string login = Path.Combine(root, "src", "Login.cs");
+            File.WriteAllText(login, "x");
+            try
+            {
+                string Found(string text) => string.Join(" | ", FileLink.FindInOutput(text, root).Select(m =>
+                    text.Substring(m.Start, m.Length).Replace(root, "~") + "→" + m.Link.Line));
+                Eq("~\\src\\Login.cs:42→42 | ~\\src\\Login.cs-43→43", Found(login + ":42:    var x = 1;\n" + login + "-43-    var y = 2;"), "content lines, a match and its context");
+                Eq("~\\src\\Login.cs→", Found("Found 1 file\n" + login + "\n"), "a file list");
+                Eq("src/Login.cs→", Found("src/Login.cs"), "relative");
+                Eq("", Found(login.Replace("Login", "Missing") + ":3:x"), "nothing on disk");
+                Eq("", Found("No matches found"), "nothing");
+            }
+            finally { Directory.Delete(root, true); }
+        }
+
         private static void Test_FileLink_CheckedOncePerAnswer()
         {
             // Phase 94: a streamed answer is drawn again for every piece; its links look at the disk once

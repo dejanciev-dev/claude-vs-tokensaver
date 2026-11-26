@@ -470,6 +470,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Break a line in a .cs file of the solution, ask *Build the solution with dotnet build* and open the Bash row | Each `File.cs(line,col): error …` in *Output* is a link (tooltip the file and line) that opens the file at that line and column, also with colored output; a solution under a folder with a space in its name links too |
 | Ask *Run `dotnet --info` in Bash* and open the row | The `https://aka.ms/…` addresses in *Output* are links that open in the browser, without a trailing full stop or bracket |
 | On the folded 500-line row and the colored `git status` row above, click *Copy* beside *Output* and paste into Notepad | All 500 lines (not only what is shown), and git's text without `[32m` codes; the link says *Copied* |
+| Ask *Search this solution for "class " and show the matching lines, then list all .cs files* and open the Search rows | Each line's path (and line number) in *Output* is a link that opens the file at that line; the file list's paths open their files |
 
 ## 34. Release (Phase 5)
 
