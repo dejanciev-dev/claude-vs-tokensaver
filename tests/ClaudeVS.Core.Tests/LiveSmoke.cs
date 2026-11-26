@@ -78,6 +78,7 @@ namespace ClaudeVS.Core.Tests
                 ("ask", () => RunInteractive(null, PermissionModeChoice.Default, ask)),
                 ("webfetch", RunWebFetch), // a site's 404 is a failed row though Claude Code sends no error (Phase 89)
                 ("links", RunLinks), // a file reference in a real answer links to the file and line (Phase 95)
+                ("markdown", RunMarkdown), // tasks, struck text, a <br> in a table, a diff and a note in a real answer (Phase 99)
                 ("session", RunSession),
                 ("long-prompt", RunLongPrompt),
                 ("prompt-tokens", RunPromptTokens),
@@ -602,6 +603,58 @@ namespace ClaudeVS.Core.Tests
                     ? "FAIL live links: nothing in the answer links to a file (did Claude Code change how it writes references?)"
                     : $"FAIL live links: no link to src/Login.cs at line {line}");
                 return 1;
+            }
+            finally { session.Dispose(); try { Directory.Delete(dir, true); } catch (IOException) { } }
+        }
+
+        /// <summary>
+        /// `--live-markdown` (in --live-all, about a cent): the Markdown of Phases 96–98 in a real answer (Phase 99).
+        /// Haiku, no tools, writes a task list, a struck word, a table with a <c>&lt;br&gt;</c> in a cell, a diff block
+        /// and a GitHub note; the answer parsed as the chat does must have each: task boxes (done and not), a
+        /// <c>Strike</c>, a table cell with a line break, a diff with added and removed lines, a Note alert.
+        /// </summary>
+        public static int RunMarkdown()
+        {
+            string exe = ClaudeCliLocator.Resolve("");
+            if (exe == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-live-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            var events = new BlockingCollection<ClaudeEvent>();
+            var session = NewSession(new ClaudeLaunchOptions { WorkingDirectory = dir, Model = ModelChoice.Haiku, Effort = EffortChoice.Low });
+            session.EventReceived += (s, e) => events.Add(e);
+            var deltas = new StringBuilder();
+            var texts = new StringBuilder();
+            try
+            {
+                session.SendPromptAsync("Without using any tools, reply with Markdown only, these five parts: " +
+                    "1) a task list of two steps, the first one done; 2) a sentence with one word struck through; " +
+                    "3) a two-column table with one row, whose second cell is exactly: line one<br>line two; 4) a diff code block that removes one line and adds one; " +
+                    "5) a GitHub [!NOTE] alert.").GetAwaiter().GetResult();
+                var deadline = DateTime.UtcNow.AddSeconds(120);
+                while (DateTime.UtcNow < deadline)
+                {
+                    if (!events.TryTake(out var e, TimeSpan.FromMilliseconds(200))) continue;
+                    if (e.IsSubagent) continue;
+                    if (e.Kind == ClaudeEventKind.TextDelta) deltas.Append(e.Text);
+                    if (e.Kind == ClaudeEventKind.AssistantText) texts.Append(e.Text).Append("\n\n");
+                    if (e.Kind == ClaudeEventKind.TurnCompleted) { Console.WriteLine($"  turn completed: error={e.IsError}, cost=${e.TotalCostUsd:0.0000}"); break; }
+                }
+
+                string answer = deltas.Length > 0 ? deltas.ToString() : texts.ToString();
+                foreach (var l in answer.Trim().Split('\n')) Console.WriteLine("  | " + l.TrimEnd('\r'));
+                var blocks = MarkdownParser.Parse(answer);
+                IEnumerable<MdInline> All(IEnumerable<MdInline> list) => list.SelectMany(i => new[] { i }.Concat(i.Children == null ? Enumerable.Empty<MdInline>() : All(i.Children)));
+                var inlines = All(blocks.SelectMany(b => b.Inlines.Concat(b.Rows.SelectMany(r => r.SelectMany(c => c))))).ToList();
+                var failures = new List<string>();
+                void Check(bool ok, string what) { Console.WriteLine((ok ? "  ok   " : "  FAIL ") + what); if (!ok) failures.Add(what); }
+                Check(blocks.Any(b => b.Task == true) && blocks.Any(b => b.Task == false), "a task list: one done, one not");
+                Check(inlines.Any(i => i.Kind == MdInlineKind.Strike), "a struck word");
+                Check(blocks.Any(b => b.Kind == MdBlockKind.Table && b.Rows.Any(r => r.Any(c => All(c).Any(i => i.Kind == MdInlineKind.Text && i.Text.Contains("\n"))))), "a table cell with a line break");
+                var diff = blocks.FirstOrDefault(b => b.Kind == MdBlockKind.Code && SyntaxHighlighter.Tokenize(b.Code, b.Language).Any(s => s.Kind == SyntaxKind.Inserted));
+                Check(diff != null && SyntaxHighlighter.Tokenize(diff.Code, diff.Language).Any(s => s.Kind == SyntaxKind.Deleted), "a diff block with added and removed lines");
+                Check(blocks.Any(b => b.Kind == MdBlockKind.Quote && b.Alert == "Note" && b.AlertTitle), "a Note alert");
+                Console.WriteLine(failures.Count == 0 ? "PASS live markdown" : "FAIL live markdown: " + string.Join("; ", failures));
+                return failures.Count == 0 ? 0 : 1;
             }
             finally { session.Dispose(); try { Directory.Delete(dir, true); } catch (IOException) { } }
         }

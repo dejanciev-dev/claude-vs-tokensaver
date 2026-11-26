@@ -53,6 +53,7 @@ namespace ClaudeVS.Core.Tests
             if (args.Length > 0 && args[0] == "--live-restart") return LiveSmoke.RunRestart();
             if (args.Length > 0 && args[0] == "--live-webfetch") return LiveSmoke.RunWebFetch();
             if (args.Length > 0 && args[0] == "--live-links") return LiveSmoke.RunLinks();
+            if (args.Length > 0 && args[0] == "--live-markdown") return LiveSmoke.RunMarkdown();
             if (args.Length > 0 && args[0] == "--live-session-rules") return LiveSmoke.RunSessionRules();
             if (args.Length > 0 && args[0] == "--live-prices") return LiveSmoke.RunPrices(olderOnly: args.Length > 1 && args[1] == "older");
             if (args.Length > 0 && args[0] == "--live-prompt-tokens") return LiveSmoke.RunPromptTokens();
