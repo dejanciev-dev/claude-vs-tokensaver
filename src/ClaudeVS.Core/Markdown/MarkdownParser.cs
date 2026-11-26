@@ -61,6 +61,8 @@ namespace ClaudeVS.Core.Markdown
         public string Alert { get; set; }
         /// <summary>The alert's first line, <c>&gt; [!NOTE]</c>: drawn as its title.</summary>
         public bool AlertTitle { get; set; }
+        /// <summary>A heading's anchor in its answer (Phase 102): "setup", "setup-1" for the second.</summary>
+        public string Anchor { get; set; }
         /// <summary>
         /// List nesting depth, 0-based. For a code block (Phase 97): 0 at the answer's margin, else the depth of the
         /// list item it is under plus one, so it is drawn indented with that item's text.
@@ -96,7 +98,7 @@ namespace ClaudeVS.Core.Markdown
         public bool SameAs(MdBlock other)
         {
             if (other == null || Kind != other.Kind || Level != other.Level || Indent != other.Indent || Number != other.Number
-                || Task != other.Task || Alert != other.Alert || AlertTitle != other.AlertTitle || Language != other.Language || Code != other.Code || Closed != other.Closed)
+                || Task != other.Task || Alert != other.Alert || AlertTitle != other.AlertTitle || Anchor != other.Anchor || Language != other.Language || Code != other.Code || Closed != other.Closed)
                 return false;
             if (Rows.Count != other.Rows.Count || !Align.SequenceEqual(other.Align)) return false;
             for (int r = 0; r < Rows.Count; r++)
@@ -314,7 +316,36 @@ namespace ClaudeVS.Core.Markdown
             }
             FlushPara(streaming && lines[lines.Length - 1].Trim().Length > 0);
             Renumber(blocks);
+            AssignAnchors(blocks);
             return blocks;
+        }
+
+        /// <summary>
+        /// Each heading's anchor (Phase 102), as GitHub makes them: <c>[see Setup](#setup)</c> goes there. A heading
+        /// that comes again gets <c>-1</c>, <c>-2</c>.
+        /// </summary>
+        private static void AssignAnchors(List<MdBlock> blocks)
+        {
+            var seen = new Dictionary<string, int>();
+            foreach (var b in blocks)
+            {
+                if (b.Kind != MdBlockKind.Heading) continue;
+                string slug = Slug(AnswerText.Inline(b.Inlines));
+                if (seen.TryGetValue(slug, out int n)) { seen[slug] = n + 1; b.Anchor = slug + "-" + n; }
+                else { seen[slug] = 1; b.Anchor = slug; }
+            }
+        }
+
+        /// <summary>GitHub's anchor for a heading: lower case, blanks as <c>-</c>, punctuation dropped.</summary>
+        public static string Slug(string heading)
+        {
+            var sb = new StringBuilder();
+            foreach (char c in (heading ?? "").Trim().ToLowerInvariant())
+            {
+                if (char.IsLetterOrDigit(c) || c == '-' || c == '_') sb.Append(c);
+                else if (c == ' ') sb.Append('-');
+            }
+            return sb.ToString();
         }
 
         /// <summary>

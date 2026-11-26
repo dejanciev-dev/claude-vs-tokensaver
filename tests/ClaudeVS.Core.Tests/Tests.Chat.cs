@@ -254,6 +254,18 @@ namespace ClaudeVS.Core.Tests
             Eq("1,•,2", N("1. a\n  - b\n1. c"), "a bullet nested doesn't");
         }
 
+        private static void Test_Markdown_HeadingAnchors()
+        {
+            // Phase 102: [see Setup](#setup) goes to the heading
+            Eq("step-2-run-the-tests", ClaudeVS.Core.Markdown.MarkdownParser.Slug("Step 2: Run the tests!"), "GitHub's slug");
+            Eq("loginvalidate", ClaudeVS.Core.Markdown.MarkdownParser.Slug("Login.Validate()"), "punctuation dropped");
+            Eq("my_var-and-a-b", ClaudeVS.Core.Markdown.MarkdownParser.Slug(" My_Var and a-b "), "underscores and hyphens kept");
+            var b = ClaudeVS.Core.Markdown.MarkdownParser.Parse("# Setup\n\ntext [go](#setup)\n\n## Setup\n\n## The `Login` class\n\nSetup\n---");
+            Eq("setup,setup-1,the-login-class,setup-2", string.Join(",", b.Where(x => x.Kind == ClaudeVS.Core.Markdown.MdBlockKind.Heading).Select(x => x.Anchor)), "repeats numbered; code's text kept");
+            Eq("#setup", b[1].Inlines.Last().Url, "the link keeps its target");
+            Eq(null, b[1].Anchor, "only headings");
+        }
+
         private static void Test_Markdown_HalfWritten()
         {
             // Phase 95: while an answer streams, its last line may be cut off

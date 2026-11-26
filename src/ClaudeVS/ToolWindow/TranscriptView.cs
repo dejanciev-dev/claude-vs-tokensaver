@@ -1679,6 +1679,7 @@ namespace ClaudeVS.ToolWindow
                 {
                     var p = new Paragraph { FontWeight = FontWeights.SemiBold, FontSize = b.Level == 1 ? 17 : b.Level == 2 ? 15 : 13.5, Margin = new Thickness(0, 8, 0, 4) };
                     if (b.Level <= 2) p.Foreground = ChatTheme.Accents(Box).Brand;
+                    p.Tag = AnchorTag + b.Anchor; // where [see Setup](#setup) goes (Phase 102)
                     AddInlines(p.Inlines, b.Inlines);
                     return p;
                 }
@@ -1879,9 +1880,52 @@ namespace ClaudeVS.ToolWindow
             return h;
         }
 
+        private const string AnchorTag = "anchor:";
+
+        /// <summary>
+        /// A link to a heading of the answer (Phase 102): scrolls to the heading with that anchor nearest the link
+        /// (the link's own answer, as the same anchor may be in others).
+        /// </summary>
+        private Hyperlink AnchorLink(MdInline i, Brush color)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            string tag = AnchorTag + i.Url.Substring(1).ToLowerInvariant();
+            var link = new Hyperlink(new Run(i.Text)) { ToolTip = "Go to " + i.Url, Foreground = color, Cursor = System.Windows.Input.Cursors.Hand };
+            link.Click += (s, e) =>
+            {
+                ThreadHelper.ThrowIfNotOnUIThread();
+                int from = IndexOfTopBlock(link);
+                Paragraph target = null;
+                int best = int.MaxValue;
+                for (int k = 0; k < _doc.Blocks.Count; k++)
+                {
+                    if (_doc.Blocks.ElementAt(k) is Paragraph p && (p.Tag as string) == tag && Math.Abs(k - from) < best)
+                    {
+                        best = Math.Abs(k - from);
+                        target = p;
+                    }
+                }
+                if (target == null) { link.ToolTip = "No heading " + i.Url + " in this chat"; return; }
+                _followEnd = false;
+                target.BringIntoView();
+            };
+            return link;
+        }
+
+        /// <summary>The index in the document of the top-level block that holds <paramref name="element"/>.</summary>
+        private int IndexOfTopBlock(TextElement element)
+        {
+            DependencyObject d = element;
+            while (d is TextElement t && !(t.Parent is FlowDocument)) d = t.Parent;
+            int k = 0;
+            foreach (var b in _doc.Blocks) { if (b == d) return k; k++; }
+            return _doc.Blocks.Count;
+        }
+
         private Inline MakeLink(MdInline i, Brush color)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
+            if (i.Url != null && i.Url.StartsWith("#", StringComparison.Ordinal) && i.Url.Length > 1) return AnchorLink(i, color);
             // A file or folder on disk (Phase 90): opens it, at the line when the link names one
             if (Core.Context.FileLink.Parse(i.Url, BaseDirectory?.Invoke(), _linkDisk.FileExists, _linkDisk.DirExists) is Core.Context.FileLink file)
                 return FileLinkTo(new Run(i.Text), file, color);
