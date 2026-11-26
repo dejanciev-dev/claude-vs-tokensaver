@@ -2664,13 +2664,13 @@ chat; four things about them that are wrong or missing.
       `udiff`; `diff --git` and `index` lines are headers too, a line's `\r` is left out). Both palettes in
       `TranscriptView` get the three colors (the edit view's colors for a `.diff` file too). `Test_Syntax_Diff`.
       Builds clean; not yet run in VS
-- [ ] **Long code blocks folded.** A 300-line file Claude prints fills screens and pushes the rest of the answer
+- [x] **Long code blocks folded.** A 300-line file Claude prints fills screens and pushes the rest of the answer
       away. A finished block of more than 40 lines shows its first 20 and *Show all N lines*; Copy and Insert take the
       whole code. While it streams it isn't folded (the end is what is new). The rule in Core, tested.
       `Markdown/CodeFold.cs` (`Folds`, `Head`, `ShowAll`; a last line break isn't a line). `RenderCode` draws the head
       and a button docked under it that puts the whole code view in its place. A block that closes is drawn again
       anyway (Phase 95), so it folds when it ends. `Test_CodeFold_LongBlocks`. Builds clean; not yet run in VS
-- [ ] **More languages colored.** Ruby, PHP, Swift, Dart, Lua, R, Dockerfile, Makefile, TOML/INI, GraphQL and HCL
+- [x] **More languages colored.** Ruby, PHP, Swift, Dart, Lua, R, Dockerfile, Makefile, TOML/INI, GraphQL and HCL
       fall back to plain text. Keywords and comments for each (`#`, `--`, `;` line comments as each language has
       them); the fence's name and the usual short names. Test in Core.
       Twelve `Lang`s in `SyntaxHighlighter` (`rb`, `tf`, `gql`, `mk`, `cfg`, `docker`… as names too); INI's `;` is a
@@ -2687,14 +2687,14 @@ Planned on 2026-11-26, after Phase 97, on the same branch. More of what Claude w
       In `ParseInlines`' plain text: `<br>` becomes a line break in the text (drawn as one, as a paragraph's own
       breaks), an entity goes through `WebUtility.HtmlDecode` and stays as written when it isn't one. Other tags
       stay as written. Under *Fixed*. `Test_Markdown_BreaksAndEntities`. Builds clean; not yet run in VS
-- [ ] **Images.** `![diagram](docs/arch.png)` shows a `!` and a link named "diagram". An image is a link with a
+- [x] **Images.** `![diagram](docs/arch.png)` shows a `!` and a link named "diagram". An image is a link with a
       picture sign (🖼 diagram) that opens the file (as Phase 90's links) or the web address; the picture isn't drawn
       in the chat. Test in Core.
       `MdInlineKind.Image` (alt in `Text`, target in `Url`); `MdInline.ImageLabel` ("🖼 " and the alt text, else
       the file name). `TranscriptView` draws it through `MakeLink`, so a file opens in VS and an address in the
       browser; anything else is its label as text. Under *Fixed*. `Test_Markdown_Images`. Builds clean; not yet run
       in VS
-- [ ] **Notes and quotes that hold lists.** GitHub's `> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]` and
+- [x] **Notes and quotes that hold lists.** GitHub's `> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]` and
       `> [!CAUTION]` show their brackets, a quote's `> - item` its dash, and `>> nested` its second `>`. An alert is a
       quote with its title (Note, Tip…) in its color; a list item in a quote has its bullet; `>>` is a deeper quote.
       Test in Core. A quote's `Level` is its depth; `MdBlock.Alert` and `AlertTitle` (the `[!NOTE]` line, with any
@@ -2702,12 +2702,30 @@ Planned on 2026-11-26, after Phase 97, on the same branch. More of what Claude w
       its marker as text ("• ", "2. "). `TranscriptView`: deeper quotes 12px further in; an alert's bar in the
       link, success, brand, running or failure color, its title bold in it, not italic. `Test_Markdown_Quotes`.
       Builds clean; not yet run in VS
-- [ ] **Underlined headings.** `Summary` over a line of `===` or `---` is a heading in Markdown (levels 1 and 2);
+- [x] **Underlined headings.** `Summary` over a line of `===` or `---` is a heading in Markdown (levels 1 and 2);
       here it is a paragraph and a rule. Read it as a heading when the line before is a paragraph's only line; a
       `---` after a blank line stays a rule. Test in Core.
       Three or more marks (so a `-` that starts a list item while it streams isn't one), only the marks on the line;
       a paragraph of more lines, a list item or a blank line before it keeps the rule. Under *Fixed*.
       `Test_Markdown_UnderlinedHeadings`. Builds clean; not yet run in VS
+
+## Phase 99 — File paths in text, what screen readers hear, and Phases 96–98 checked live
+
+Planned on 2026-11-26, after Phase 98, on the same branch; the last of the four.
+
+- [ ] **File paths in plain text are links.** Phase 90 links a path in backticks; Claude also writes
+      `see src/Login.cs:42` without them. A word in text that is shaped like a path (a slash or backslash and a file
+      extension, or `name.ext:line`) and names a file of the solution links to it, at its line. Only path-shaped
+      words go to the disk, looked up once per answer (Phase 94). Test in Core
+- [ ] **What screen readers hear.** The answer read aloud (`ScreenReaderText`) still has the new Markdown's marks:
+      `[x]`, `[!WARNING]`, `<br>`, `&lt;`, `![`. A done task reads "done:", an open one "to do:", an alert its title
+      and a colon, `<br>` a blank, entities their characters, an image "image:" and its alt text. Test in Core
+- [ ] **Live test: Markdown in a real answer.** A `markdown` step in `--live-all`, about a cent: Haiku writes a
+      task list, a struck word, a table with a `<br>` in a cell, a `diff` block and a `[!NOTE]`; the answer parsed as
+      the chat does must have each (task boxes, a `Strike`, a cell with a line break, a diff with added and removed
+      lines, an alert). Phases 96–98 were built on Markdown's rules, not on what Claude writes
+- [ ] **README and the overview.** README's chat section and the Marketplace overview name what answers now draw
+      (tasks, struck text, notes, diffs, folded code, more languages); CONTRIBUTING the live test count and cost
 
 ---
 
