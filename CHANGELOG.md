@@ -33,6 +33,8 @@ All notable changes to this project are listed here. The format follows
 
 - **Code and links inside bold or italic text:** `` **`Validate`** `` showed its backticks inside bold text, and
   `**see [docs](url)**` its brackets; they are drawn as code and links, in bold.
+- **`<br>` and `&lt;`-style entities in answers** showed as written (Claude breaks lines in table cells with `<br>`):
+  outside code they are a line break and their characters.
 - **Code blocks inside list items:** each line kept the indent of the fence (also in what Copy and Insert gave), and a
   fence under a nested item showed as text. The indent comes off, and the block is drawn indented with its item.
 

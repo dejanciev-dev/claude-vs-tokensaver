@@ -2681,9 +2681,12 @@ chat; four things about them that are wrong or missing.
 
 Planned on 2026-11-26, after Phase 97, on the same branch. More of what Claude writes that shows as source.
 
-- [ ] **`<br>` and entities.** Claude breaks lines inside table cells with `<br>`, and writes `&lt;T&gt;`, `&amp;`
+- [x] **`<br>` and entities.** Claude breaks lines inside table cells with `<br>`, and writes `&lt;T&gt;`, `&amp;`
       or `&nbsp;` now and then; all show as written. Outside code, `<br>` (`<br/>`, `<br />`) is a line break and the
-      usual named and numbered entities are their characters; in code they stay as written. Test in Core
+      usual named and numbered entities are their characters; in code they stay as written. Test in Core.
+      In `ParseInlines`' plain text: `<br>` becomes a line break in the text (drawn as one, as a paragraph's own
+      breaks), an entity goes through `WebUtility.HtmlDecode` and stays as written when it isn't one. Other tags
+      stay as written. Under *Fixed*. `Test_Markdown_BreaksAndEntities`. Builds clean; not yet run in VS
 - [ ] **Images.** `![diagram](docs/arch.png)` shows a `!` and a link named "diagram". An image is a link with a
       picture sign (🖼 diagram) that opens the file (as Phase 90's links) or the web address; the picture isn't drawn
       in the chat. Test in Core

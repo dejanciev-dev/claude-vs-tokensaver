@@ -243,6 +243,20 @@ namespace ClaudeVS.Core.Tests
             Eq("HTTPS://X.Y/a", L("HTTPS://X.Y/a!"), "any case; a ! ends the sentence");
         }
 
+        private static void Test_Markdown_BreaksAndEntities()
+        {
+            // Phase 98: <br> and HTML entities outside code
+            string P(string s) => string.Join(",", ClaudeVS.Core.Markdown.MarkdownParser.ParseInlines(s));
+            Eq("Text:one\ntwo\nthree\nfour", P("one<br>two<BR/>three<br />four"), "breaks");
+            Eq("Text:List<T> & co → ©", P("List&lt;T&gt; &amp; co&nbsp;&#8594; &copy;"), "entities");
+            Eq("Text:&unknown; and & alone and A", P("&unknown; and & alone and &#x41;"), "unknown names stay; hex decodes");
+            Eq("Code:a<br>b &lt;", P("`a<br>b &lt;`"), "code keeps them");
+            Eq("Text:<b>bold</b> stays", P("<b>bold</b> stays"), "other tags stay as written");
+            var t = ClaudeVS.Core.Markdown.MarkdownParser.Parse("| a |\n|---|\n| x<br>y |")[0];
+            Eq("Text:x\ny", string.Join(",", t.Rows[1][0]), "a break in a table cell");
+            Eq("Bold[Text:a\nb]", string.Join(",", ClaudeVS.Core.Markdown.MarkdownParser.ParseInlines("**a<br>b**").Select(x => $"{x.Kind}[{string.Join(",", x.Children)}]")), "in bold");
+        }
+
         private static void Test_Markdown_NestedInlines()
         {
             // Phase 96: bold, italic and struck text hold code, links and each other
