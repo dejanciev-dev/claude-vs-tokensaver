@@ -16,24 +16,38 @@ namespace ClaudeVS.Core.Chat
         private static readonly Regex Link = new Regex(@"!?\[([^\]]*)\]\([^)]*\)");
         private static readonly Regex Heading = new Regex(@"^\s{0,3}#{1,6}\s+", RegexOptions.Multiline);
         private static readonly Regex ListMarker = new Regex(@"^\s*([-*+]|\d+[.)])\s+", RegexOptions.Multiline);
-        private static readonly Regex Quote = new Regex(@"^\s*>\s?", RegexOptions.Multiline);
+        private static readonly Regex Quote = new Regex(@"^\s*(>\s?)+", RegexOptions.Multiline);
         private static readonly Regex Emphasis = new Regex(@"(\*\*|__|\*|_|~~|`)");
         private static readonly Regex TableRule = new Regex(@"^\s*\|?\s*:?-{3,}.*$", RegexOptions.Multiline);
         private static readonly Regex Spaces = new Regex(@"\s+");
+        // Phase 99: what Phases 96-98 draw, said as words
+        private static readonly Regex Image = new Regex(@"!\[([^\]]*)\]\([^)]*\)");
+        private static readonly Regex Task = new Regex(@"^[ \t]*\[([ xX])\][ \t]+", RegexOptions.Multiline);
+        private static readonly Regex Alert = new Regex(@"^[ \t]*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\][ \t]*", RegexOptions.Multiline | RegexOptions.IgnoreCase);
+        private static readonly Regex Break = new Regex(@"<br\s*/?>", RegexOptions.IgnoreCase);
 
-        /// <summary>Markdown as plain text: code blocks become "(code block)", links keep their text, marks are dropped.</summary>
+        /// <summary>
+        /// Markdown as plain text: code blocks become "(code block)", links keep their text, marks are dropped; a task
+        /// reads "done:" or "to do:", an alert its title and a colon, an image "image:" and its alt text, entities their
+        /// characters.
+        /// </summary>
         public static string Plain(string markdown)
         {
             if (string.IsNullOrEmpty(markdown)) return "";
             string s = markdown.Replace("\r\n", "\n");
             s = Fence.Replace(s, " (code block) ");
+            s = Image.Replace(s, m => m.Groups[1].Value.Trim().Length > 0 ? "image: " + m.Groups[1].Value : "image");
             s = Link.Replace(s, "$1");
             s = TableRule.Replace(s, "");
             s = Heading.Replace(s, "");
             s = ListMarker.Replace(s, "");
+            s = Task.Replace(s, m => m.Groups[1].Value == " " ? "to do: " : "done: ");
             s = Quote.Replace(s, "");
+            s = Alert.Replace(s, m => char.ToUpperInvariant(m.Groups[1].Value[0]) + m.Groups[1].Value.Substring(1).ToLowerInvariant() + ": ");
+            s = Break.Replace(s, " ");
             s = Emphasis.Replace(s, "");
             s = s.Replace("|", " ");
+            s = System.Net.WebUtility.HtmlDecode(s);
             return Spaces.Replace(s, " ").Trim();
         }
 

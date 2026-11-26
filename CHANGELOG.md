@@ -42,6 +42,8 @@ All notable changes to this project are listed here. The format follows
   outside code they are a line break and their characters.
 - **Images in answers** (`![diagram](docs/arch.png)`) showed a `!` and a link: they are one link, "🖼 diagram", that
   opens the picture's file or address.
+- **Screen readers** heard the marks of the new Markdown: a task reads "done:" or "to do:", a note its title, an image
+  "image:" and its alt text, and `<br>` and entities are left out or read as their characters.
 - **Underlined headings:** a line over `===` or `---` was a paragraph and a rule; it is a heading (a `---` after a
   blank line is still a rule).
 - **Code blocks inside list items:** each line kept the indent of the fence (also in what Copy and Insert gave), and a
