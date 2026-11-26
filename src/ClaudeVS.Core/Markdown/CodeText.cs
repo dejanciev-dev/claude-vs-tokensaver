@@ -32,5 +32,38 @@ namespace ClaudeVS.Core.Markdown
             }
             return sb.ToString();
         }
+
+        // "$ dotnet test", "PS> Get-Item", "PS C:\repo> Get-Item"; in a console block also "> " and "# " (root)
+        private static readonly System.Text.RegularExpressions.Regex ShellPrompt =
+            new System.Text.RegularExpressions.Regex(@"^\s*(?:\$|PS(?: [^>]*)?>)\s");
+        private static readonly System.Text.RegularExpressions.Regex ConsolePrompt =
+            new System.Text.RegularExpressions.Regex(@"^\s*(?:\$|#|>|PS(?: [^>]*)?>)\s");
+        private static readonly HashSet<string> ConsoleLanguages = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        { "console", "shell-session", "shellsession", "terminal", "ps-session", "pwsh-session", "doscon" };
+
+        /// <summary>
+        /// The commands of a block that shows a terminal session (Phase 103): the lines after a prompt, without it, and
+        /// the lines that continue them (after a <c>\</c> or <c>`</c> at a line's end); output left out. Null when the
+        /// block has no prompts: then it is code, and copied as it is. <c>#</c> and <c>&gt;</c> count as prompts only
+        /// in a <c>console</c>-like block, where they aren't comments or redirections.
+        /// </summary>
+        public static string ConsoleCommands(string code, string language)
+        {
+            var prompt = ConsoleLanguages.Contains((language ?? "").Trim()) ? ConsolePrompt : ShellPrompt;
+            var commands = new List<string>();
+            bool continued = false;
+            foreach (string line in SplitLines(code))
+            {
+                string command;
+                var m = prompt.Match(line);
+                if (m.Success) command = line.Substring(m.Length);
+                else if (continued) command = line;
+                else continue;
+                commands.Add(command.TrimEnd());
+                string end = command.TrimEnd();
+                continued = end.EndsWith("\\", StringComparison.Ordinal) || end.EndsWith("`", StringComparison.Ordinal);
+            }
+            return commands.Count == 0 ? null : string.Join("\r\n", commands);
+        }
     }
 }

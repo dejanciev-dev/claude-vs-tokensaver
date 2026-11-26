@@ -301,6 +301,19 @@ namespace ClaudeVS.Core.Tests
             Eq("x\nb", ClaudeVS.Core.Markdown.CodeText.FitToCaret("x\nb", null, "\n"), "the document's line breaks");
         }
 
+        private static void Test_CodeText_ConsoleCommands()
+        {
+            // Phase 103: a terminal session's block copies its commands
+            string C(string code, string lang) => ClaudeVS.Core.Markdown.CodeText.ConsoleCommands(code, lang);
+            Eq("dotnet build\r\ndotnet test --no-build \\\r\n  --filter Login", C("$ dotnet build\nBuild succeeded.\n$ dotnet test --no-build \\\n  --filter Login\nPassed: 3", "console"), "commands, a continued one, no output");
+            Eq("Get-Item .\r\ncd src", C("PS C:\\repo> Get-Item .\n\n    Directory: C:\\repo\nPS> cd src", "powershell"), "PowerShell prompts");
+            Eq("apt update", C("# apt update\nok", "console"), "# is root's prompt in a console block");
+            Eq(null, C("# a comment\necho hi", "bash"), "but a comment in a script: no prompts, copied as it is");
+            Eq(null, C("var x = 1;", "csharp"), "code");
+            Eq("ls", C("  $ ls\nfile", ""), "an indented prompt, no language");
+            Eq(null, C("echo $HOME", "sh"), "a $ inside a line isn't a prompt");
+        }
+
         private static void Test_Markdown_HalfWritten()
         {
             // Phase 95: while an answer streams, its last line may be cut off

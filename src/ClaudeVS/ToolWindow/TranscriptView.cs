@@ -1972,8 +1972,22 @@ namespace ClaudeVS.ToolWindow
                     ThreadHelper.ThrowIfNotOnUIThread();
                     insert.Content = VsContext.InsertAtCursor(code, fitIndent: true) ? "Inserted" : "No editor open";
                 };
-                var copy = SmallButton("Copy", "Copy to clipboard");
-                copy.Click += (s, e) => { try { Clipboard.SetText(code); copy.Content = "Copied"; } catch (Exception) { copy.Content = "Clipboard busy"; } };
+                // A terminal session's block copies its commands, without prompts or output (Phase 103)
+                string commands = CodeText.ConsoleCommands(code, b.Language);
+                var copy = SmallButton("Copy", commands != null ? "Copy the commands, without prompts or output (right-click: copy all)" : "Copy to clipboard");
+                void CopyText(string text) { try { Clipboard.SetText(text); copy.Content = "Copied"; } catch (Exception) { copy.Content = "Clipboard busy"; } }
+                copy.Click += (s, e) => CopyText(commands ?? code);
+                if (commands != null)
+                {
+                    var menu = new ContextMenu();
+                    var onlyCommands = new MenuItem { Header = "Copy commands" };
+                    onlyCommands.Click += (s, e) => CopyText(commands);
+                    var all = new MenuItem { Header = "Copy all" };
+                    all.Click += (s, e) => CopyText(code);
+                    menu.Items.Add(onlyCommands);
+                    menu.Items.Add(all);
+                    copy.ContextMenu = menu;
+                }
                 // Save… (Phase 100): a file named for the block's language, in the solution's folder, then opened
                 var save = SmallButton("Save…", "Save the code as a file and open it");
                 save.Click += (s, e) =>

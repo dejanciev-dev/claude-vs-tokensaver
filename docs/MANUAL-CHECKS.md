@@ -460,6 +460,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Ask *Make a Markdown table of the first 40 prime numbers and their squares* | While it streams the table grows, then folds after 25 rows: the header, 10 rows and *Copy table · Show all 40 rows*; the link shows the rest; *Copy table* before it pastes all 40 rows into Excel |
 | Ask *Write an address on three lines, each line ending with a backslash for a line break, and a Windows path `C:\temp\x` in the text* | Three lines, no backslashes at their ends; the path keeps its backslashes |
 | Ask *Write an if statement of five lines in C#*; put the caret on an empty, indented line inside a method and click **Insert** | Every line starts at the method's indent, the braces lined up; one **Undo** removes it all; line endings stay CRLF (no mixed endings warning) |
+| Ask *Show a console session that builds and tests this solution, with `$` prompts and the output* and click **Copy**, then right-click it | **Copy** gives only the two commands, no `$` or output (its tooltip says so); the menu's *Copy all* gives the block as shown. A C# block's **Copy** has no menu |
 
 ## 34. Release (Phase 5)
 
