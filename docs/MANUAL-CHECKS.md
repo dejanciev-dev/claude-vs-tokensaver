@@ -457,6 +457,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Look at the headers of the code blocks above (C#, the Dockerfile, a one-line command) | "C# · N lines", "Dockerfile · N lines", and the one-line block only its language (e.g. "Shell script"), no line count |
 | Ask *Write five numbered steps, numbering every step `1.`, one with two numbered sub-steps and one with a code block* | The steps read 1 to 5, the sub-steps 1 and 2, the step after the code block goes on with its number |
 | Ask *Write a long answer with five headings and a table of contents at the top that links to them with `#` anchors*, then click the links | Each link scrolls to its heading in that answer (tooltip "Go to #…"); a link to a heading that isn't there says so in its tooltip |
+| Ask *Make a Markdown table of the first 40 prime numbers and their squares* | While it streams the table grows, then folds after 25 rows: the header, 10 rows and *Copy table · Show all 40 rows*; the link shows the rest; *Copy table* before it pastes all 40 rows into Excel |
 
 ## 34. Release (Phase 5)
 

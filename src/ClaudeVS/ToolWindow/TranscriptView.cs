@@ -1750,26 +1750,10 @@ namespace ClaudeVS.ToolWindow
             int columns = b.Rows.Count > 0 ? b.Rows[0].Count : 0;
             for (int c = 0; c < columns; c++) table.Columns.Add(new TableColumn { Width = GridLength.Auto });
             var group = new TableRowGroup();
-            for (int r = 0; r < b.Rows.Count; r++)
-            {
-                var row = new TableRow();
-                if (r == 0) row.FontWeight = FontWeights.SemiBold;
-                for (int c = 0; c < b.Rows[r].Count; c++)
-                {
-                    var p = new Paragraph { Margin = new Thickness(0) };
-                    AddInlines(p.Inlines, b.Rows[r][c]);
-                    var align = c < b.Align.Count ? b.Align[c] : MdAlign.None;
-                    p.TextAlignment = align == MdAlign.Center ? TextAlignment.Center : align == MdAlign.Right ? TextAlignment.Right : TextAlignment.Left;
-                    row.Cells.Add(new TableCell(p)
-                    {
-                        Padding = new Thickness(6, 2, 6, 2),
-                        BorderBrush = QuoteBar,
-                        BorderThickness = new Thickness(c == 0 ? 0 : 1, 0, 0, r == 0 ? 1 : 0),
-                        Background = r == 0 ? CodeBackground : null,
-                    });
-                }
-                group.Rows.Add(row);
-            }
+            // A long table shows its header and first rows (Phase 102); Copy table still takes all of it
+            bool folded = TableFold.Folds(b);
+            int shown = folded ? 1 + TableFold.Shown : b.Rows.Count;
+            for (int r = 0; r < shown; r++) group.Rows.Add(TableRowOf(b, r));
             table.RowGroups.Add(group);
 
             // "Copy table" under it (Phase 100): tab-separated for Excel, and HTML for Word and Outlook
@@ -1787,11 +1771,47 @@ namespace ClaudeVS.ToolWindow
                 catch (Exception) { ((Run)copy.Inlines.FirstInline).Text = "Clipboard busy, try again"; }
             };
             var links = new Paragraph(copy) { Margin = new Thickness(0, 0, 0, 4), FontSize = 11 };
+            if (folded)
+            {
+                var sep = new Run("  ·  ");
+                var more = new Hyperlink(new Run(TableFold.ShowAll(b))) { Cursor = System.Windows.Input.Cursors.Hand, Foreground = ChatTheme.Accents(Box).Link };
+                more.Click += (s, e) =>
+                {
+                    ThreadHelper.ThrowIfNotOnUIThread();
+                    for (int r = shown; r < b.Rows.Count; r++) group.Rows.Add(TableRowOf(b, r));
+                    links.Inlines.Remove(more);
+                    links.Inlines.Remove(sep);
+                };
+                links.Inlines.Add(sep);
+                links.Inlines.Add(more);
+            }
             table.Margin = new Thickness(0, 4, 0, 1);
             var section = new Section();
             section.Blocks.Add(table);
             section.Blocks.Add(links);
             return section;
+        }
+
+        private TableRow TableRowOf(MdBlock b, int r)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var row = new TableRow();
+            if (r == 0) row.FontWeight = FontWeights.SemiBold;
+            for (int c = 0; c < b.Rows[r].Count; c++)
+            {
+                var p = new Paragraph { Margin = new Thickness(0) };
+                AddInlines(p.Inlines, b.Rows[r][c]);
+                var align = c < b.Align.Count ? b.Align[c] : MdAlign.None;
+                p.TextAlignment = align == MdAlign.Center ? TextAlignment.Center : align == MdAlign.Right ? TextAlignment.Right : TextAlignment.Left;
+                row.Cells.Add(new TableCell(p)
+                {
+                    Padding = new Thickness(6, 2, 6, 2),
+                    BorderBrush = QuoteBar,
+                    BorderThickness = new Thickness(c == 0 ? 0 : 1, 0, 0, r == 0 ? 1 : 0),
+                    Background = r == 0 ? CodeBackground : null,
+                });
+            }
+            return row;
         }
 
         private void AddInlines(InlineCollection target, IEnumerable<MdInline> inlines)
