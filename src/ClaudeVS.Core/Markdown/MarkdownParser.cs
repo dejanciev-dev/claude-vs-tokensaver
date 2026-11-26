@@ -607,6 +607,15 @@ namespace ClaudeVS.Core.Markdown
                     if (close > i && paren > close) { Emit(MdInlineKind.Image, s.Substring(i + 2, close - i - 2), s.Substring(close + 2, paren - close - 2).Trim()); i = paren + 1; continue; }
                 }
 
+                // :white_check_mark: and the other common shortcodes (Phase 107); unknown ones stay
+                if (c == ':' && (i == 0 || !char.IsLetterOrDigit(s[i - 1])) && Shortcode.Match(s, i) is Match sc && sc.Success
+                    && Emoji.For(sc.Groups["c"].Value) is string emoji)
+                {
+                    plain.Append(emoji);
+                    i += sc.Length;
+                    continue;
+                }
+
                 // A footnote reference, text[^1] (Phase 107): numbered once the whole answer is read
                 if (c == '[' && i + 1 < s.Length && s[i + 1] == '^' && FootnoteRef.Match(s, i) is Match fn && fn.Success)
                 {
@@ -661,7 +670,8 @@ namespace ClaudeVS.Core.Markdown
             return result;
         }
 
-        private static readonly Regex FootnoteRef = new Regex(@"\G\[\^(?<l>[\w\-]+)\](?!:)", RegexOptions.Compiled);
+        private static readonly Regex Shortcode = new Regex(@"\G:(?<c>[a-z0-9_+\-]{1,40}):", RegexOptions.Compiled);
+        private static readonly Regex FootnoteRef =new Regex(@"\G\[\^(?<l>[\w\-]+)\](?!:)", RegexOptions.Compiled);
         private static readonly Regex FootnoteDef = new Regex(@"^ {0,3}\[\^(?<l>[\w\-]+)\]:\s*(?<t>.*)$", RegexOptions.Compiled);
 
         /// <summary>
