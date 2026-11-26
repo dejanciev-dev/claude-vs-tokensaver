@@ -2936,8 +2936,12 @@ twenty commits. A tool row's ⎿ line says what happened: for a search, a test r
       package lines. `ToolCallView.Summarize` checks it for Bash and PowerShell before the error branch, as a failing
       run exits non-zero; the whole output stays behind "… +N lines". The summaries were written from each runner's
       documented format, not captured live. `Test_RunResults_Tests`. Builds clean; not yet run in VS
-- [ ] **Build results summarized.** The same for builds: MSBuild and `dotnet build` ("Build succeeded · 3
-      warnings", "Build failed · 2 errors"), `tsc` ("Found 3 errors"), Cargo. In Core, tested
+- [x] **Build results summarized.** The same for builds: MSBuild and `dotnet build` ("Build succeeded · 3
+      warnings", "Build failed · 2 errors"), `tsc` ("Found 3 errors"), Cargo. In Core, tested.
+      `RunResults.Build`: dotnet's terminal logger ("Build failed with 2 error(s) and 1 warning(s) in 1.6s"), MSBuild's
+      "Build succeeded." with the counts after it, `tsc`'s "Found N errors", Cargo's "could not compile … due to N
+      previous errors" and "Finished". A test run builds first, so its summary wins. `Test_RunResults_Build`. Builds
+      clean; not yet run in VS
 - [ ] **Errors first.** A failed command's preview lines are its first lines (`Determining projects to restore…`).
       When its output has error lines (`: error `, `error:`, `FAIL`, `Error:`), the preview shows those. In Core,
       tested
