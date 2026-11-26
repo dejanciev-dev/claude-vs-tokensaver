@@ -2942,9 +2942,12 @@ twenty commits. A tool row's ⎿ line says what happened: for a search, a test r
       "Build succeeded." with the counts after it, `tsc`'s "Found N errors", Cargo's "could not compile … due to N
       previous errors" and "Finished". A test run builds first, so its summary wins. `Test_RunResults_Build`. Builds
       clean; not yet run in VS
-- [ ] **Errors first.** A failed command's preview lines are its first lines (`Determining projects to restore…`).
+- [x] **Errors first.** A failed command's preview lines are its first lines (`Determining projects to restore…`).
       When its output has error lines (`: error `, `error:`, `FAIL`, `Error:`), the preview shows those. In Core,
-      tested
+      tested. `ToolCallView.ErrorLines` (also `error[E…]`, `fatal:`, `npm ERR!`, a line starting with an exception's
+      name; each line once, as MSBuild repeats its errors); the error branch shows them when there are any, the
+      first lines otherwise. Run summaries (items 2 and 3) come first. `Test_ToolCallView_ErrorsFirst`. Builds clean;
+      not yet run in VS
 
 ---
 
