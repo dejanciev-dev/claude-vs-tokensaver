@@ -289,6 +289,18 @@ namespace ClaudeVS.Core.Tests
             Eq("Code:a\\", P("`a\\`"), "in code it stays");
         }
 
+        private static void Test_CodeText_FitToCaret()
+        {
+            // Phase 103: Insert starts each line after the first at the caret line's indent
+            string F(string code, string before) => ClaudeVS.Core.Markdown.CodeText.FitToCaret(code, before);
+            Eq("if (x)\r\n        {\r\n            y();\r\n        }", F("if (x)\n{\n    y();\n}", "        "), "inside a method");
+            Eq("if (x)\r\n\t{\r\n\t    y();\r\n\t}", F("    if (x)\n    {\n        y();\n    }", "\t"), "Claude's own indent taken off; a tab indent");
+            Eq("a\r\n\r\n    b", F("a\n\nb", "    var z = "), "the line's indent, also after text; a blank line stays blank");
+            Eq("a\r\nb", F("a\r\nb", ""), "at the margin");
+            Eq("one", F("one", "   "), "one line");
+            Eq("x\nb", ClaudeVS.Core.Markdown.CodeText.FitToCaret("x\nb", null, "\n"), "the document's line breaks");
+        }
+
         private static void Test_Markdown_HalfWritten()
         {
             // Phase 95: while an answer streams, its last line may be cut off
