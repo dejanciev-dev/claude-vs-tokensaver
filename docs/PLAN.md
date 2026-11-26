@@ -2578,6 +2578,27 @@ Planned on 2026-11-25, after Phase 93, on the same branch (PR #96); in 0.17.0.
       menu with a message typed, links looked at once while an answer streams); both under Fixed, the menu in the
       highlights
 
+## Phase 95 — Streamed answers drawn once, tables, a smaller chat control, and file links checked live
+
+Planned on 2026-11-26, after 0.17.0 (PR #96 merged), with 2.1.332 still the newest Claude Code. Items picked from four
+proposed.
+
+- [ ] **Streamed answers drawn incrementally.** `TranscriptView.AppendAnswer` removes and draws the whole answer again
+      for every streamed piece, so a long answer costs the square of its length in WPF blocks. Keep the blocks that
+      didn't change and draw again only from the first that did (usually just the last). The rule (which parsed
+      blocks are the same as last time) in Core, tested by counting the blocks drawn over an answer streamed piece
+      by piece
+- [ ] **Half-written Markdown and tables.** Tables are drawn as plain lines, and while an answer streams, an open
+      `**bold` or `` `code `` shows its markers until it closes. Draw a Markdown table (header, separator, rows, the
+      separator's alignment) as a table, also while its rows arrive; while streaming, the last block's unclosed bold or
+      inline code draws as bold or code to its end. When the answer ends it is parsed once more as finished text.
+      Parser tests on cut-off input
+- [ ] **Split `ClaudeChatControl`.** `ClaudeChatControl.cs` is 3,040 lines. Move whole concerns into partial files, as
+      `.Notices.cs` and `.Waiting.cs` already are. No change in behavior; the build and all offline tests stay green
+- [ ] **Live test: file links.** A `links` step in `--live-all`, about a cent: Haiku, in a small project, names a file
+      and line; `FileLink.FromCode` or `FileLink.Parse` must resolve the reference taken from the real answer. Phase 90
+      was built on the system prompt's `file_path:line_number` only
+
 ---
 
 ## Working in Visual Studio — daily loop
