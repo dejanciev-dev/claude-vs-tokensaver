@@ -2621,8 +2621,11 @@ proposed.
 Planned on 2026-11-26, after Phase 95 (PR #97 merged), with 2.1.332 still the newest Claude Code; the first of four
 phases on one branch. Claude writes some Markdown the chat's parser doesn't know, and it shows as raw markers.
 
-- [ ] **Strikethrough.** `~~old~~` shows its tildes. Draw it struck through (also in table cells), and while an
-      answer streams an unclosed `~~` that starts a word is struck to its end, as bold is. Test in Core
+- [x] **Strikethrough.** `~~old~~` shows its tildes. Draw it struck through (also in table cells), and while an
+      answer streams an unclosed `~~` that starts a word is struck to its end, as bold is. Test in Core.
+      `MdInlineKind.Strike`, parsed with bold's rule (`\~` escapes); a `~~~` fence stays a fence. `TranscriptView`
+      draws a `Span` with `TextDecorations.Strikethrough`. A new MANUAL-CHECKS 33 for Phases 96–99, *Release* becomes
+      34. `Test_Markdown_Strike`. Builds clean; not yet run in VS
 - [ ] **Task lists.** `- [ ] add tests` and `- [x] build` show their brackets. A list item that starts with `[ ]`,
       `[x]` or `[X]` is a task: a box (☐, or ☑ when done) instead of the bullet, the text after it. Test in Core
 - [ ] **Bare web addresses are links.** `https://…` in text and `<https://…>` show as plain text. Both are links

@@ -10,7 +10,7 @@ namespace ClaudeVS.Core.Markdown
 
     public enum MdAlign { None, Left, Center, Right }
 
-    public enum MdInlineKind { Text, Code, Bold, Italic, Link }
+    public enum MdInlineKind { Text, Code, Bold, Italic, Link, Strike }
 
     public sealed class MdInline
     {
@@ -289,9 +289,10 @@ namespace ClaudeVS.Core.Markdown
         }
 
         /// <summary>
-        /// Inline code, **bold** / __bold__, *italic* / _italic_, [text](url). Unmatched markers stay literal, except
-        /// with <paramref name="openEnd"/> (text still arriving): an unclosed <c>`code</c> is code to the end, and an
-        /// unclosed <c>**bold</c> that starts a word is bold to the end; just the marker alone shows nothing yet.
+        /// Inline code, **bold** / __bold__, *italic* / _italic_, ~~struck~~, [text](url). Unmatched markers stay
+        /// literal, except with <paramref name="openEnd"/> (text still arriving): an unclosed <c>`code</c> is code to the
+        /// end, and an unclosed <c>**bold</c> or <c>~~struck</c> that starts a word is bold or struck to the end; just
+        /// the marker alone shows nothing yet.
         /// </summary>
         public static List<MdInline> ParseInlines(string text, bool openEnd = false)
         {
@@ -312,7 +313,7 @@ namespace ClaudeVS.Core.Markdown
             {
                 char c = s[i];
 
-                if (c == '\\' && i + 1 < s.Length && "\\`*_[]()#+-.!".IndexOf(s[i + 1]) >= 0) { plain.Append(s[i + 1]); i += 2; continue; }
+                if (c == '\\' && i + 1 < s.Length && "\\`*_[]()#+-.!~".IndexOf(s[i + 1]) >= 0) { plain.Append(s[i + 1]); i += 2; continue; }
 
                 if (c == '`')
                 {
@@ -329,15 +330,17 @@ namespace ClaudeVS.Core.Markdown
                     }
                 }
 
-                if ((c == '*' || c == '_') && i + 1 < s.Length && s[i + 1] == c)
+                // **bold**, __bold__, and ~~struck~~ (Phase 96) the same way
+                if ((c == '*' || c == '_' || c == '~') && i + 1 < s.Length && s[i + 1] == c)
                 {
+                    var kind = c == '~' ? MdInlineKind.Strike : MdInlineKind.Bold;
                     string marker = new string(c, 2);
                     int end = s.IndexOf(marker, i + 2, StringComparison.Ordinal);
-                    if (end > i + 2) { Emit(MdInlineKind.Bold, s.Substring(i + 2, end - i - 2)); i = end + 2; continue; }
+                    if (end > i + 2) { Emit(kind, s.Substring(i + 2, end - i - 2)); i = end + 2; continue; }
                     // Still arriving: "**bol" (not "2 ** 3", whose marker doesn't start a word)
                     if (i >= openFrom && end < 0 && (i + 2 == s.Length || !char.IsWhiteSpace(s[i + 2])) && (i == 0 || !char.IsLetterOrDigit(s[i - 1])))
                     {
-                        if (i + 2 < s.Length) Emit(MdInlineKind.Bold, s.Substring(i + 2));
+                        if (i + 2 < s.Length) Emit(kind, s.Substring(i + 2));
                         break;
                     }
                 }
