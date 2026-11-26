@@ -2885,6 +2885,22 @@ Planned on 2026-11-26, after Phase 103, on the same branch (PR #98 still open). 
       may have started stripping them. With 2.1.332: `ESC[32mgreenESC[0m plain`, all three checks pass; PASS,
       $0.0033. CONTRIBUTING: 21 tests
 
+## Phase 105 — Tool output you can use
+
+Planned on 2026-11-26, after Phase 104, on the same branch (PR #98 still open). A tool row's *Output* is the whole
+result in a text box: a build log of thousands of lines, compiler errors whose files can't be opened from it, web
+addresses that are text.
+
+- [ ] **Long output folded.** Output of more than 200 lines shows its first 20 and last 80 lines (a build's or a
+      test run's end is what matters) with *Show all N lines* between them. The rule in Core, tested
+- [ ] **File references in output open the file.** `src/Login.cs(42,7): error CS0103` (MSBuild and the C#
+      compiler), `src/a.ts:12:5` (most tools), `File "app.py", line 12` (Python) and `in C:\repo\Login.cs:line 42`
+      (.NET stack traces) are links to the file at that line, when it exists. In Core, tested
+- [ ] **Web addresses in output are links.** As in answers (Phase 96): `https://…` in output opens in the browser.
+      The same rule, tested on output
+- [ ] **Copy output.** A *Copy* link beside the *Output* label copies all of it, without the escape codes, also when
+      it is folded; README's test count, which Phase 104 left at 287
+
 ---
 
 ## Working in Visual Studio — daily loop
