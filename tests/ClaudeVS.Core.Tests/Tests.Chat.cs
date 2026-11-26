@@ -257,6 +257,19 @@ namespace ClaudeVS.Core.Tests
             Eq("Bold[Text:a\nb]", string.Join(",", ClaudeVS.Core.Markdown.MarkdownParser.ParseInlines("**a<br>b**").Select(x => $"{x.Kind}[{string.Join(",", x.Children)}]")), "in bold");
         }
 
+        private static void Test_Markdown_Images()
+        {
+            // Phase 98: an image is a link with a picture sign, not "!" and a link
+            var inl = ClaudeVS.Core.Markdown.MarkdownParser.ParseInlines("See ![the diagram](docs/arch.png) and ![](https://x.y/img/logo.svg?v=2). Hi! [a](b)");
+            Eq("Text:See ,Image:the diagram,Text: and ,Image:,Text:. Hi! ,Link:a", string.Join(",", inl), "images and a link");
+            Eq("docs/arch.png", inl[1].Url, "the target");
+            Eq("\U0001F5BC the diagram", inl[1].ImageLabel, "alt text");
+            Eq("\U0001F5BC logo.svg", inl[3].ImageLabel, "no alt: the file name");
+            Eq("\U0001F5BC image", new ClaudeVS.Core.Markdown.MdInline { Kind = ClaudeVS.Core.Markdown.MdInlineKind.Image, Url = "" }.ImageLabel, "nothing at all");
+            Eq("Text:!,Code:x", string.Join(",", ClaudeVS.Core.Markdown.MarkdownParser.ParseInlines("!`x`")), "a ! before anything else stays");
+            Eq("Text:![not closed", string.Join(",", ClaudeVS.Core.Markdown.MarkdownParser.ParseInlines("![not closed")), "unfinished");
+        }
+
         private static void Test_Markdown_NestedInlines()
         {
             // Phase 96: bold, italic and struck text hold code, links and each other

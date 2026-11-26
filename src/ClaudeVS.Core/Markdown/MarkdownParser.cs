@@ -10,7 +10,7 @@ namespace ClaudeVS.Core.Markdown
 
     public enum MdAlign { None, Left, Center, Right }
 
-    public enum MdInlineKind { Text, Code, Bold, Italic, Link, Strike }
+    public enum MdInlineKind { Text, Code, Bold, Italic, Link, Strike, Image }
 
     public sealed class MdInline
     {
@@ -24,6 +24,25 @@ namespace ClaudeVS.Core.Markdown
         /// </summary>
         public List<MdInline> Children { get; set; }
         public override string ToString() => $"{Kind}:{Text}";
+
+        /// <summary>
+        /// What an image (Phase 98) is drawn as, since the picture itself isn't: "🖼 " and its alt text, or the file
+        /// name when it has none.
+        /// </summary>
+        public string ImageLabel
+        {
+            get
+            {
+                string name = Text;
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    string path = (Url ?? "").Split('?', '#')[0].TrimEnd('/', '\\');
+                    int slash = path.LastIndexOfAny(new[] { '/', '\\' });
+                    name = slash >= 0 ? path.Substring(slash + 1) : path;
+                }
+                return "\U0001F5BC " + (string.IsNullOrWhiteSpace(name) ? "image" : name.Trim()); // 🖼
+            }
+        }
 
         public bool SameAs(MdInline other) =>
             other != null && Kind == other.Kind && Text == other.Text && Url == other.Url
@@ -409,6 +428,14 @@ namespace ClaudeVS.Core.Markdown
                     int end = s.IndexOf(c, i + 1);
                     bool boundaryOk = end > i + 1 && !char.IsWhiteSpace(s[end - 1]) && (c == '*' || end + 1 >= s.Length || !char.IsLetterOrDigit(s[end + 1]));
                     if (boundaryOk) { Emit(MdInlineKind.Italic, s.Substring(i + 1, end - i - 1)); i = end + 1; continue; }
+                }
+
+                // ![alt](path): an image (Phase 98), a link drawn with a picture sign
+                if (c == '!' && i + 1 < s.Length && s[i + 1] == '[')
+                {
+                    int close = s.IndexOf("](", i + 2, StringComparison.Ordinal);
+                    int paren = close > 0 ? s.IndexOf(')', close + 2) : -1;
+                    if (close > i && paren > close) { Emit(MdInlineKind.Image, s.Substring(i + 2, close - i - 2), s.Substring(close + 2, paren - close - 2).Trim()); i = paren + 1; continue; }
                 }
 
                 if (c == '[')

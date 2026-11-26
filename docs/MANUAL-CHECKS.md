@@ -445,6 +445,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Ask *Print the whole of the largest .cs file of this solution in a code block* (over 40 lines), and watch it stream | While it streams the whole block grows; when it ends, 20 lines and *Show all N lines* below them; the button shows the rest. **Copy** before unfolding gives every line |
 | Ask *Write a Dockerfile for this solution and a Makefile that builds it* | Both blocks colored: `FROM`, `RUN`, `COPY` and `ifeq`/`endif` as keywords, comments as comments |
 | Ask *Write a table with two lines in one cell, joined by `<br>`, and the text `List&lt;T&gt;` outside code and inside backticks* | The cell has two lines, no `<br>`; the text reads `List<T>`, and in backticks `List&lt;T&gt;` as written |
+| With a picture in the solution, ask *Show that picture in Markdown image syntax, and one from the web* | Each is a link "🖼 …" (no `!`); the solution's opens in VS, the web one in the browser |
 
 ## 34. Release (Phase 5)
 

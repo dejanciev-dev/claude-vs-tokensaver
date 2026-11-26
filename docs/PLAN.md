@@ -2689,7 +2689,11 @@ Planned on 2026-11-26, after Phase 97, on the same branch. More of what Claude w
       stay as written. Under *Fixed*. `Test_Markdown_BreaksAndEntities`. Builds clean; not yet run in VS
 - [ ] **Images.** `![diagram](docs/arch.png)` shows a `!` and a link named "diagram". An image is a link with a
       picture sign (🖼 diagram) that opens the file (as Phase 90's links) or the web address; the picture isn't drawn
-      in the chat. Test in Core
+      in the chat. Test in Core.
+      `MdInlineKind.Image` (alt in `Text`, target in `Url`); `MdInline.ImageLabel` ("🖼 " and the alt text, else
+      the file name). `TranscriptView` draws it through `MakeLink`, so a file opens in VS and an address in the
+      browser; anything else is its label as text. Under *Fixed*. `Test_Markdown_Images`. Builds clean; not yet run
+      in VS
 - [ ] **Notes and quotes that hold lists.** GitHub's `> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]` and
       `> [!CAUTION]` show their brackets, a quote's `> - item` its dash, and `>> nested` its second `>`. An alert is a
       quote with its title (Note, Tip…) in its color; a list item in a quote has its bullet; `>>` is a deeper quote.
