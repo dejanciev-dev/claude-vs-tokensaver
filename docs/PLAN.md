@@ -2773,10 +2773,17 @@ Markdown; a code block only to the clipboard or the cursor.
 Planned on 2026-11-26, after Phase 100, on the same branch (PR #98 still open). A long conversation can only be
 scrolled; a code block says only the fence's short name.
 
-- [ ] **Find in the chat.** A find bar over the conversation: the matches highlighted, *3 of 12*, Enter and F3 for
+- [x] **Find in the chat.** A find bar over the conversation: the matches highlighted, *3 of 12*, Enter and F3 for
       the next, Shift+Enter and Shift+F3 for the one before (scrolled into view), *Aa* for match case, Esc closes it
       and clears the highlights. Opened by *Find in Chat* (Tools → Claude Code, Ctrl+Alt+K, Ctrl+F, and the **/**
-      menu) and by Ctrl+F in the chat when VS lets it through. The matching and the count's words in Core, tested
+      menu) and by Ctrl+F in the chat when VS lets it through. The matching and the count's words in Core, tested.
+      The match shown is selected (with the inactive selection shown) rather than every match colored: coloring
+      runs would change the answer's own backgrounds (inline code) and split the runs Phase 95 keeps. The text is the
+      document's runs (`TranscriptView.MapText`, paragraphs apart by a line break); code blocks and tool details are
+      controls inside it and aren't searched. Each step finds again and goes by offset (`TextSearch.Next`), so a chat
+      that grew meanwhile is searched too. `Core/Chat/TextSearch.cs`, `ClaudeChatControl.Find.cs`; command
+      `cmdidFindInChat` (0x010D). README's commands table. `Test_TextSearch_FindInChat`. Builds clean; not yet run in
+      VS
 - [ ] **Code blocks say what they hold.** A block's header shows the fence's name (`cs`, `ps1`) or "code". Show the
       language's name and its length: "C# · 48 lines", "PowerShell", "code · 3 lines" (one line says nothing). The
       words in Core, tested

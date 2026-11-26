@@ -89,6 +89,7 @@
     <Compile Include="ToolWindow\ClaudeChatControl.Skills.cs" />
     <Compile Include="ToolWindow\ClaudeChatControl.Limits.cs" />
     <Compile Include="ToolWindow\ClaudeChatControl.Bookmarks.cs" />
+    <Compile Include="ToolWindow\ClaudeChatControl.Find.cs" />
     <Compile Include="ToolWindow\TranscriptView.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

@@ -124,6 +124,7 @@ namespace ClaudeVS.ToolWindow
                 new ChatPopup.Entry { Group = "Context", Label = "Focus view", Description = "Collapse tool calls into one summary row", Checked = Options?.FocusView == true, Run = ToggleFocusView },
                 new ChatPopup.Entry { Group = "Context", Label = "Copy last response", Description = "Claude's last answer as Markdown", Run = CopyLastAnswer },
                 new ChatPopup.Entry { Group = "Context", Label = "Copy session summary", Description = "Turns, cost, tokens, cache and context as text", Run = CopySessionSummary },
+                new ChatPopup.Entry { Group = "Context", Label = "Find in chat…", Detail = "Ctrl+Alt+K, Ctrl+F", Description = "Find text in this conversation", Run = ShowFind },
                 new ChatPopup.Entry { Group = "Context", Label = "Focus last message", Detail = "Ctrl+Alt+K, M", Description = "Move the keyboard to Claude's last answer (for screen readers)", Run = FocusLastMessage },
                 new ChatPopup.Entry { Group = "Context", Label = "Export conversation…", Description = "Save the whole conversation as Markdown", Run = ExportConversation },
                 new ChatPopup.Entry { Group = "Context", Label = "Bookmarks", Description = "Answers you starred", Run = ToggleBookmarksPanel },

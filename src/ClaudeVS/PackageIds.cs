@@ -24,5 +24,6 @@ namespace ClaudeVS
         public const int SaveSavingsReport = 0x010A;
         public const int OpenUsageLogFolder = 0x010B;
         public const int AddToChat = 0x010C;
+        public const int FindInChat = 0x010D;
     }
 }

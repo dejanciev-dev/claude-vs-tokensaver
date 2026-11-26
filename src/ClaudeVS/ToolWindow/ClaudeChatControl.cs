@@ -323,10 +323,16 @@ namespace ClaudeVS.ToolWindow
             var transcript = new Grid();
             transcript.Children.Add(_view.Box);
             transcript.Children.Add(_emptyState); // shown over the transcript until the first message
+            // The find bar over the conversation (Phase 101)
+            InitFind();
+            var conversation = new DockPanel();
+            DockPanel.SetDock(_findBar, Dock.Top);
+            conversation.Children.Add(_findBar);
+            conversation.Children.Add(transcript);
             var middle = new DockPanel();
             DockPanel.SetDock(_bookmarks.View, Dock.Right);
             middle.Children.Add(_bookmarks.View);
-            middle.Children.Add(transcript);
+            middle.Children.Add(conversation);
             root.Children.Add(middle);
             return root;
         }

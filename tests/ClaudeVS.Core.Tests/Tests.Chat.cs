@@ -203,6 +203,31 @@ namespace ClaudeVS.Core.Tests
             Eq("snippet.diff", ClaudeVS.Core.Markdown.CodeFileName.For("diff").FileName, "a diff");
         }
 
+        private static void Test_TextSearch_FindInChat()
+        {
+            // Phase 101: find in the chat
+            Eq("0,7,13", string.Join(",", TextSearch.FindAll("Login: login LOGIN", "login", false)), "any case");
+            Eq("7", string.Join(",", TextSearch.FindAll("Login: login LOGIN", "login", true)), "match case");
+            Eq("0,2", string.Join(",", TextSearch.FindAll("aaaa", "aa", false)), "not overlapping");
+            Eq(0, TextSearch.FindAll("text", "", false).Count, "empty query");
+            Eq(0, TextSearch.FindAll(null, "x", false).Count, "no text");
+
+            var starts = new List<int> { 5, 20, 40 };
+            Eq(0, TextSearch.Next(starts, -1, false), "first");
+            Eq(2, TextSearch.Next(starts, -1, true), "last, going back");
+            Eq(1, TextSearch.Next(starts, 5, false), "next");
+            Eq(0, TextSearch.Next(starts, 40, false), "wraps to the first");
+            Eq(2, TextSearch.Next(starts, 5, true), "wraps to the last");
+            Eq(1, TextSearch.Next(starts, 40, true), "the one before");
+            Eq(-1, TextSearch.Next(new List<int>(), 3, false), "none");
+
+            Eq("3 of 12", TextSearch.Status(2, 12, "x"), "where");
+            Eq("No results", TextSearch.Status(-1, 0, "x"), "none");
+            Eq("4 matches", TextSearch.Status(-1, 4, "x"), "before going to one");
+            Eq("1 match", TextSearch.Status(-1, 1, "x"), "one");
+            Eq("", TextSearch.Status(-1, 0, ""), "nothing asked");
+        }
+
         private static void Test_Markdown_HalfWritten()
         {
             // Phase 95: while an answer streams, its last line may be cut off

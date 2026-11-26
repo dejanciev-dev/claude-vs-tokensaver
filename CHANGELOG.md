@@ -17,6 +17,9 @@ All notable changes to this project are listed here. The format follows
   each column aligned as the separator row says, also while the rows arrive.
 - **Bold and inline code while they stream:** a `**bold` or `` `code `` that hasn't closed yet shows as bold or code,
   not its markers; when the answer ends it is read as written.
+- **Find in chat** (Tools → Claude Code, `Ctrl+Alt+K, Ctrl+F`, or the **/** menu): a bar over the conversation that
+  goes from match to match (`Enter`/`F3`, `Shift+Enter` back), says *3 of 12*, and can match case. It searches the
+  conversation's text, not inside code blocks.
 - **Save a code block as a file:** *Save…* beside Copy and Insert suggests a name for the block's language
   (`snippet.cs`, `Dockerfile`…) in the solution's folder, then opens the file.
 - **Copy as plain text:** right-click an answer's copy button for *Copy as Markdown* or *Copy as plain text* (no
