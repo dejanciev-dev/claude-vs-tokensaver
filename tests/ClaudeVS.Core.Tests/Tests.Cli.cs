@@ -823,6 +823,21 @@ namespace ClaudeVS.Core.Tests
             Eq(null, QuestionCardKeys.NextQuestion(1, 2), "after the last: answer");
         }
 
+        private static void Test_TerminalText_Strip()
+        {
+            // Phase 104: what 2.1.332's Bash result held for printf '\033[32mgreen\033[0m plain\n'
+            Eq("green plain", TerminalText.Strip("\u001b[32mgreen\u001b[0m plain"), "the probe's stdout");
+            Eq("Passed!  - Failed: 0", TerminalText.Strip("\u001b[1;32mPassed!\u001b[0m  - Failed: \u001b[38;5;196m0\u001b[m"), "bold, 256 colors, a bare reset");
+            Eq("abc", TerminalText.Strip("a\u001b[2Kb\u001b[1Gc"), "erase and cursor codes");
+            Eq("title gone, link text", TerminalText.Strip("\u001b]0;my title\atitle gone, \u001b]8;;https://x.y\u001b\\link text\u001b]8;;\u001b\\"), "window title and a link");
+            Eq("x", TerminalText.Strip("\u001b(Bx\u001b="), "two-character codes");
+            Eq("red", TerminalText.Strip("\u009b31mred"), "the one-character CSI");
+            Eq("cut", TerminalText.Strip("cut\u001b[3"), "a code cut off at the end");
+            string plain = "no codes [32m here";
+            True(ReferenceEquals(plain, TerminalText.Strip(plain)), "text without ESC is returned as it is");
+            Eq(null, TerminalText.Strip(null), "null");
+        }
+
         private static void Test_ToolData_Shapes()
         {
             Eq("Read 4 lines", ToolCallView.FromData("Read", JObject.Parse("{\"file\":{\"numLines\":4,\"startLine\":1,\"totalLines\":4}}")), "whole file");
