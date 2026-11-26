@@ -108,7 +108,47 @@ namespace ClaudeVS.Core.Context
             return link != null && !link.IsFolder ? link : null;
         }
 
-        private static readonly char[] NotInCodePath = { '\t', '(', ')', '[', ']', '{', '}', '<', '>', '=', ',', ';', '\'', '"', '`', '$', '&', '|', '*', '?', '!', '@', '+' };
+        /// <summary>A file reference found in plain text: where it is and where it goes.</summary>
+        public struct TextMatch
+        {
+            public int Start;
+            public int Length;
+            public FileLink Link;
+        }
+
+        // A word shaped like a file path (Phase 99): an optional drive, path characters, a file extension, a line
+        private static readonly Regex PathWord = new Regex(@"^(?:[A-Za-z]:)?[\w.\-/\\]*[\w\-]\.[A-Za-z][A-Za-z0-9]{0,9}(?<line>:\d+(?::\d+)?(?:-\d+)?)?$", RegexOptions.Compiled);
+        private static readonly Regex Word = new Regex(@"\S+", RegexOptions.Compiled);
+
+        /// <summary>
+        /// File references in plain text, <c>see src/Login.cs:42</c> (Phase 99): words shaped like a path, with a
+        /// slash or a backslash, or a file name with a line (<c>Login.cs:42</c>), that name a file. Brackets, quotes and
+        /// the punctuation that ends a sentence around the word aren't part of it. Other words never go to the disk:
+        /// <c>Program.cs</c> alone, <c>ASP.NET</c>, <c>e.g.</c>, web addresses.
+        /// </summary>
+        public static System.Collections.Generic.List<TextMatch> FindInText(string text, string baseDir, Func<string, bool> fileExists = null)
+        {
+            var found = new System.Collections.Generic.List<TextMatch>();
+            if (string.IsNullOrEmpty(text) || (text.IndexOf('.') < 0)) return found;
+            foreach (Match w in Word.Matches(text))
+            {
+                int start = w.Index, end = w.Index + w.Length;
+                while (start < end && "([{\"'*_".IndexOf(text[start]) >= 0) start++;
+                while (end > start && ".,;:!?)]}\"'*_".IndexOf(text[end - 1]) >= 0) end--;
+                if (end - start < 4) continue;
+                string word = text.Substring(start, end - start);
+                if (word.Contains("://")) continue;
+                var m = PathWord.Match(word);
+                if (!m.Success) continue;
+                bool slashes = word.IndexOf('/') >= 0 || word.IndexOf('\\') >= 0;
+                if (!slashes && !m.Groups["line"].Success) continue;
+                if (FromCode(word, baseDir, fileExists) is FileLink link)
+                    found.Add(new TextMatch { Start = start, Length = end - start, Link = link });
+            }
+            return found;
+        }
+
+        private static readonly char[] NotInCodePath ={ '\t', '(', ')', '[', ']', '{', '}', '<', '>', '=', ',', ';', '\'', '"', '`', '$', '&', '|', '*', '?', '!', '@', '+' };
 
         private static bool ReadFragment(string fragment, ref int? line, ref int? end, ref int? col)
         {

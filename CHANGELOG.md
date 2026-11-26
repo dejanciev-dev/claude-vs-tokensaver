@@ -22,6 +22,8 @@ All notable changes to this project are listed here. The format follows
 - **Task lists:** `- [ ] add tests` and `- [x] build` show a box (☐, ☑ when done) instead of the bullet and brackets.
 - **Web addresses are links** when Claude writes them out (`https://…` or `<https://…>`), without the full stop or
   bracket that ends the sentence around them.
+- **File paths in plain text are links** too (`see src/Login.cs:42`, not only in backticks): a word shaped like a path
+  that names a file of the solution opens it at its line.
 - **Diffs in color:** a `diff` or `patch` code block shows added lines green, removed lines red and its `@@` and file
   lines as headers.
 - **Notes and warnings:** GitHub's `> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]` and `[!CAUTION]` quotes show

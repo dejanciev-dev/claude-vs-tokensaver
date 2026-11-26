@@ -361,6 +361,32 @@ namespace ClaudeVS.Core.Tests
             finally { Directory.Delete(root, true); }
         }
 
+        private static void Test_FileLink_InPlainText()
+        {
+            // Phase 99: "see src/Login.cs:42" without backticks
+            string root = Path.Combine(Path.GetTempPath(), "claudevs-test-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(Path.Combine(root, "src"));
+            File.WriteAllText(Path.Combine(root, "src", "Login.cs"), "x");
+            File.WriteAllText(Path.Combine(root, "App.cs"), "x");
+            try
+            {
+                string Found(string text) => string.Join(" | ", FileLink.FindInText(text, root).Select(m =>
+                    text.Substring(m.Start, m.Length) + "→" + m.Link.Path.Substring(root.Length + 1) + (m.Link.Line is int l ? ":" + l : "")));
+                Eq(@"src/Login.cs:42→src\Login.cs:42", Found("The check is in src/Login.cs:42."), "with a line, without the full stop");
+                Eq(@"src\Login.cs→src\Login.cs", Found(@"(see src\Login.cs)"), "backslashes, in brackets");
+                Eq(@"App.cs:3→App.cs:3", Found("App.cs:3, then"), "a file name with a line");
+                Eq(@"src/Login.cs:5:2→src\Login.cs:5", Found("**src/Login.cs:5:2**"), "line and column, in bold marks");
+                Eq("", Found("Edit App.cs and src/Missing.cs:3"), "a name without a line, or nothing on disk");
+                // Words that aren't shaped like a path never go to the disk
+                bool looked = false;
+                foreach (string text in new[] { "ASP.NET Core, e.g. this", "Program.cs alone", "https://x.y/src/a.cs", "v1.2.3 and 3.14", "a/b without an extension", "x = a.b(c)" })
+                    True(FileLink.FindInText(text, root, f => { looked = true; return true; }).Count == 0, "linked: " + text);
+                True(!looked, "no disk lookups");
+                Eq(2, FileLink.FindInText("src/Login.cs:1 and src/Login.cs:2", root).Count, "two in one text");
+            }
+            finally { Directory.Delete(root, true); }
+        }
+
         private static void Test_FileLink_CheckedOncePerAnswer()
         {
             // Phase 94: a streamed answer is drawn again for every piece; its links look at the disk once

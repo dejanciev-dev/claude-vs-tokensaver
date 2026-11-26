@@ -2713,10 +2713,13 @@ Planned on 2026-11-26, after Phase 97, on the same branch. More of what Claude w
 
 Planned on 2026-11-26, after Phase 98, on the same branch; the last of the four.
 
-- [ ] **File paths in plain text are links.** Phase 90 links a path in backticks; Claude also writes
+- [x] **File paths in plain text are links.** Phase 90 links a path in backticks; Claude also writes
       `see src/Login.cs:42` without them. A word in text that is shaped like a path (a slash or backslash and a file
       extension, or `name.ext:line`) and names a file of the solution links to it, at its line. Only path-shaped
-      words go to the disk, looked up once per answer (Phase 94). Test in Core
+      words go to the disk, looked up once per answer (Phase 94). Test in Core.
+      `FileLink.FindInText` (words without the brackets, quotes and sentence marks around them; web addresses left
+      to Phase 96's links; the file through `FromCode`); `TranscriptView.AddTextWithFileLinks` for every text run,
+      also inside bold, with the answer's `DiskLookups`. `Test_FileLink_InPlainText`. Builds clean; not yet run in VS
 - [ ] **What screen readers hear.** The answer read aloud (`ScreenReaderText`) still has the new Markdown's marks:
       `[x]`, `[!WARNING]`, `<br>`, `&lt;`, `![`. A done task reads "done:", an open one "to do:", an alert its title
       and a colon, `<br>` a blank, entities their characters, an image "image:" and its alt text. Test in Core
