@@ -2802,9 +2802,12 @@ as ten commits.
       `MarkdownParser.Renumber` after parsing: the next number per depth; a deeper item keeps the outer count, a
       bullet at the same depth or a block outside a list clears it. Numbers are part of `SameAs`, so a renumbered
       item is drawn again. Under *Fixed*. `Test_Markdown_ListNumbers`. Builds clean; not yet run in VS
-- [ ] **Links to headings.** `[see Setup](#setup)` in an answer is plain text (it isn't a web address or a file).
+- [x] **Links to headings.** `[see Setup](#setup)` in an answer is plain text (it isn't a web address or a file).
       It goes to that heading of the answer, as GitHub's anchors do: lower case, blanks as `-`, punctuation dropped,
-      a repeated heading `-1`, `-2`. The slugs in Core, tested
+      a repeated heading `-1`, `-2`. The slugs in Core, tested.
+      `MarkdownParser.Slug` and `MdBlock.Anchor` (per answer, part of `SameAs`); a heading's paragraph is tagged with
+      it. `TranscriptView.AnchorLink`: the tagged heading nearest the link (its own answer, as other answers may
+      have the same anchor) is brought into view. `Test_Markdown_HeadingAnchors`. Builds clean; not yet run in VS
 - [ ] **Long tables folded.** A table of 60 rows pushes the answer away as long code did. A finished table of more
       than 25 rows shows its header and first 10 rows and *Show all N rows*; *Copy table* still takes all of it. The
       rule in Core, tested

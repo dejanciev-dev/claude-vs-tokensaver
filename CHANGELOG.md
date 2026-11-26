@@ -30,6 +30,7 @@ All notable changes to this project are listed here. The format follows
 - **Strikethrough:** `~~old~~` in an answer is struck through, not shown with its tildes (also in tables and while
   it streams).
 - **Task lists:** `- [ ] add tests` and `- [x] build` show a box (☐, ☑ when done) instead of the bullet and brackets.
+- **Links to headings:** `[see Setup](#setup)` in an answer goes to that heading (GitHub's anchors).
 - **Web addresses are links** when Claude writes them out (`https://…` or `<https://…>`), without the full stop or
   bracket that ends the sentence around them.
 - **File paths in plain text are links** too (`see src/Login.cs:42`, not only in backticks): a word shaped like a path
