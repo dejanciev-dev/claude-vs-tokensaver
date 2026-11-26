@@ -2896,9 +2896,14 @@ addresses that are text.
       `OutputFold` beside `CodeFold`; `TranscriptView.FoldedOutput` draws the head, "… N lines not shown · Show all",
       the tail, each through `OutputBox` (colored or plain, as Phase 104). A color set before the cut doesn't carry
       into the tail. `Test_OutputFold_LongOutput`. Builds clean; not yet run in VS
-- [ ] **File references in output open the file.** `src/Login.cs(42,7): error CS0103` (MSBuild and the C#
+- [x] **File references in output open the file.** `src/Login.cs(42,7): error CS0103` (MSBuild and the C#
       compiler), `src/a.ts:12:5` (most tools), `File "app.py", line 12` (Python) and `in C:\repo\Login.cs:line 42`
-      (.NET stack traces) are links to the file at that line, when it exists. In Core, tested
+      (.NET stack traces) are links to the file at that line, when it exists. In Core, tested.
+      `FileLink.FindInOutput`: the compiler's form at a line's start may hold blanks (a user folder with a space,
+      which the test's own temp folder has), elsewhere not; then Python's and .NET's forms, then `FindInText`'s.
+      `TranscriptView.OutputBox` turns output with links (or codes) into `RichOutput`, which cuts colored runs where
+      a link starts and ends; the answer's `DiskLookups` are reused. `Test_FileLink_InOutput`. Builds clean; not yet
+      run in VS
 - [ ] **Web addresses in output are links.** As in answers (Phase 96): `https://…` in output opens in the browser.
       The same rule, tested on output
 - [ ] **Copy output.** A *Copy* link beside the *Output* label copies all of it, without the escape codes, also when
