@@ -2975,9 +2975,11 @@ Planned on 2026-11-26, after Phase 106, on the same branch; the second of four.
       in tables) and moves the notes to the end. `TranscriptView.TagLink`, now shared with heading links, goes to the
       nearest note. Copy as plain text writes `[1]` and "1. note"; screen readers skip the labels. One-line notes only.
       `Test_Markdown_Footnotes`. Builds clean; not yet run in VS
-- [ ] **Emoji shortcodes.** `:white_check_mark:`, `:x:`, `:warning:`, `:rocket:` and the other GitHub shortcodes
+- [x] **Emoji shortcodes.** `:white_check_mark:`, `:x:`, `:warning:`, `:rocket:` and the other GitHub shortcodes
       Claude uses show as words between colons. The common ones (about 40) are their emoji; others stay. In Core,
-      tested
+      tested. About 80 in `Markdown/Emoji.cs`; `ParseInlines` takes a known code that doesn't follow a letter or
+      digit, so `std::vector::size` and `10:30:00` are left alone. `Test_Markdown_EmojiShortcodes`. Builds clean;
+      not yet run in VS
 
 ---
 

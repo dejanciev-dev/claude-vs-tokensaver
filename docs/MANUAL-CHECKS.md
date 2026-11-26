@@ -477,6 +477,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Ask *Answer with a short summary and put a long list of steps and a code block inside an HTML `<details>` section with a `<summary>`* | "▸ summary" as a link, no tags; clicking it shows the list and the code block indented under it ("▾"), clicking again hides them |
 | Ask *Write the shortcut Ctrl+Shift+B with `<kbd>` tags, x squared with `<sup>`, H2O with `<sub>`, and one word in `<u>`* | Each key in a small frame, the 2s raised and lowered, the word underlined; no tags |
 | Ask *Write three sentences with Markdown footnotes `[^1]` and `[^2]`, the notes defined in the middle* | Raised blue numbers in the text; the notes at the end of the answer as "1. …", "2. …"; clicking a number scrolls to its note |
+| Ask *Write a status list using GitHub emoji shortcodes like `:white_check_mark:`, `:x:` and `:warning:`, and mention `std::vector`* | The shortcodes show as ✅ ❌ ⚠️; `std::vector` is untouched |
 
 ## 34. Release (Phase 5)
 

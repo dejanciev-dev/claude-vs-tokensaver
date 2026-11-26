@@ -555,6 +555,19 @@ namespace ClaudeVS.Core.Tests
             Eq("Uses a cache. Per user.", ScreenReaderText.Plain("Uses a cache[^a].\n\n[^a]: Per user."), "read without the labels");
         }
 
+        private static void Test_Markdown_EmojiShortcodes()
+        {
+            // Phase 107: GitHub's common shortcodes are their emoji
+            string P(string s) => string.Join(",", ClaudeVS.Core.Markdown.MarkdownParser.ParseInlines(s));
+            Eq("Text:✅ build ❌ tests ⚠️ slow", P(":white_check_mark: build :x: tests :warning: slow"), "known codes");
+            Eq("Text:👍 and 👎", P(":+1: and :-1:"), "plus and minus");
+            Eq("Text::not_a_code: stays", P(":not_a_code: stays"), "unknown codes stay");
+            Eq("Text:std::vector::size at 10:30:00", P("std::vector::size at 10:30:00"), "C++ and times untouched");
+            Eq("Text:a:x:b", P("a:x:b"), "not inside a word");
+            Eq("Code::rocket:", P("`:rocket:`"), "in code it stays");
+            Eq("Bold[Text:🚀 shipped]", string.Join(",", ClaudeVS.Core.Markdown.MarkdownParser.ParseInlines("**:rocket: shipped**").Select(x => $"{x.Kind}[{string.Join(",", x.Children)}]")), "in bold");
+        }
+
         private static void Test_Markdown_NestedInlines()
         {
             // Phase 96: bold, italic and struck text hold code, links and each other
