@@ -154,6 +154,27 @@ namespace ClaudeVS.Core.Tests
             Eq(ClaudeVS.Core.Markdown.MdBlockKind.Paragraph, two[1].Kind, "then a paragraph");
         }
 
+        private static void Test_AnswerText_Tables()
+        {
+            // Phase 100: a table copied for Excel (tab-separated) and Word (HTML)
+            var t = ClaudeVS.Core.Markdown.MarkdownParser.Parse("| Name | Lines |\n|:--|--:|\n| `a.cs` & **b** | 12 |\n| one<br>two\\|x | [docs](u) |")[0];
+            Eq("Name\tLines\r\na.cs & b\t12\r\none two|x\tdocs", ClaudeVS.Core.Markdown.AnswerText.TableTsv(t), "tab-separated, plain cells");
+            Eq("<table><tr><th style=\"text-align:left\">Name</th><th style=\"text-align:right\">Lines</th></tr>" +
+               "<tr><td style=\"text-align:left\">a.cs &amp; b</td><td style=\"text-align:right\">12</td></tr>" +
+               "<tr><td style=\"text-align:left\">one two|x</td><td style=\"text-align:right\">docs</td></tr></table>",
+               ClaudeVS.Core.Markdown.AnswerText.TableHtml(t), "HTML, escaped, aligned");
+            Eq("", ClaudeVS.Core.Markdown.AnswerText.TableTsv(ClaudeVS.Core.Markdown.MarkdownParser.Parse("text")[0]), "not a table");
+
+            // CF_HTML: the offsets point at the document and the fragment, in UTF-8 bytes
+            string frag = "<b>é</b>";
+            string html = ClaudeVS.Core.Markdown.AnswerText.ClipboardHtml(frag);
+            byte[] bytes = System.Text.Encoding.UTF8.GetBytes(html);
+            int Offset(string name) => int.Parse(System.Text.RegularExpressions.Regex.Match(html, name + @":(\d+)").Groups[1].Value);
+            Eq(frag, System.Text.Encoding.UTF8.GetString(bytes, Offset("StartFragment"), Offset("EndFragment") - Offset("StartFragment")), "the fragment");
+            True(System.Text.Encoding.UTF8.GetString(bytes, Offset("StartHTML"), Offset("EndHTML") - Offset("StartHTML")).StartsWith("<html>"), "the document");
+            Eq(bytes.Length, Offset("EndHTML"), "to the end");
+        }
+
         private static void Test_Markdown_HalfWritten()
         {
             // Phase 95: while an answer streams, its last line may be cut off

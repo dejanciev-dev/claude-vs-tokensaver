@@ -2745,10 +2745,15 @@ Planned on 2026-11-26, after Phase 98, on the same branch; the last of the four.
 Planned on 2026-11-26, after Phase 99, on the same branch (PR #98 still open). An answer can be copied only whole, as
 Markdown; a code block only to the clipboard or the cursor.
 
-- [ ] **Copy a table.** A table Claude draws (Phase 95) can only be copied with the answer's Markdown, pipes and all.
+- [x] **Copy a table.** A table Claude draws (Phase 95) can only be copied with the answer's Markdown, pipes and all.
       A *Copy* link under each finished table puts it on the clipboard tab-separated (pasted into Excel it fills
       cells) with the Markdown as well, for an editor that takes it. Cells as plain text: no marks, a `<br>` a blank.
-      The text in Core, tested
+      The text in Core, tested.
+      With HTML rather than Markdown beside the tab-separated text: an editor that takes Markdown takes plain text,
+      and Word and Outlook paste HTML as a table. `Markdown/AnswerText.cs`: `TableTsv`, `TableHtml` (header in `th`,
+      alignment, escaped), `ClipboardHtml` (CF_HTML, offsets in UTF-8 bytes). `RenderTable` returns the table and a
+      *Copy table* link in a `Section`; a table still streaming has it too (it copies what has arrived).
+      `Test_AnswerText_Tables`. Builds clean; not yet run in VS
 - [ ] **Copy an answer as plain text.** The footer's copy button gives Markdown. Its right-click menu offers *Copy as
       Markdown* and *Copy as plain text*: no marks, code blocks' code as it is, lists with their bullets and boxes,
       tables tab-separated, links as their text. The text in Core, tested

@@ -1692,7 +1692,27 @@ namespace ClaudeVS.ToolWindow
                 group.Rows.Add(row);
             }
             table.RowGroups.Add(group);
-            return table;
+
+            // "Copy table" under it (Phase 100): tab-separated for Excel, and HTML for Word and Outlook
+            var copy = new Hyperlink(new Run("Copy table")) { ToolTip = "Copy the table: it pastes into Excel as cells, into Word as a table", Cursor = System.Windows.Input.Cursors.Hand, Foreground = ChatTheme.Accents(Box).Link };
+            copy.Click += (s, e) =>
+            {
+                try
+                {
+                    var data = new DataObject();
+                    data.SetData(DataFormats.UnicodeText, AnswerText.TableTsv(b));
+                    data.SetData(DataFormats.Html, AnswerText.ClipboardHtml(AnswerText.TableHtml(b)));
+                    Clipboard.SetDataObject(data, true);
+                    ((Run)copy.Inlines.FirstInline).Text = "Copied";
+                }
+                catch (Exception) { ((Run)copy.Inlines.FirstInline).Text = "Clipboard busy, try again"; }
+            };
+            var links = new Paragraph(copy) { Margin = new Thickness(0, 0, 0, 4), FontSize = 11 };
+            table.Margin = new Thickness(0, 4, 0, 1);
+            var section = new Section();
+            section.Blocks.Add(table);
+            section.Blocks.Add(links);
+            return section;
         }
 
         private void AddInlines(InlineCollection target, IEnumerable<MdInline> inlines)
