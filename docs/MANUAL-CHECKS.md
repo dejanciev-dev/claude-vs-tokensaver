@@ -462,6 +462,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Ask *Write an if statement of five lines in C#*; put the caret on an empty, indented line inside a method and click **Insert** | Every line starts at the method's indent, the braces lined up; one **Undo** removes it all; line endings stay CRLF (no mixed endings warning) |
 | Ask *Show a console session that builds and tests this solution, with `$` prompts and the output* and click **Copy**, then right-click it | **Copy** gives only the two commands, no `$` or output (its tooltip says so); the menu's *Copy all* gives the block as shown. A C# block's **Copy** has no menu |
 | On the diff block above, hover **Insert**, click it in an empty file, then click **Copy** | The tooltip says it inserts the new side; the file gets the context and added lines without `+`, no removed lines or `@@`; **Copy** still gives the whole diff |
+| Look at the long C# block above (also folded, then after *Show all*), select a few lines with the mouse and copy them; also a five-line block | Numbers 1 to N in a dimmed gutter, each beside its line (also after scrolling sideways and with Windows scaled to 150%); the copied text has no numbers; the short block has no gutter |
 
 ## 34. Release (Phase 5)
 

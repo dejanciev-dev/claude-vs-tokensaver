@@ -324,6 +324,17 @@ namespace ClaudeVS.Core.Tests
             Eq("x", ClaudeVS.Core.Markdown.CodeText.DiffNewSide("-y\n+x", "PATCH"), "patch, any case");
         }
 
+        private static void Test_CodeText_Gutter()
+        {
+            // Phase 103: line numbers beside a long block
+            string Code(int n) => string.Join("\n", Enumerable.Range(1, n).Select(k => "x" + k));
+            Eq(null, ClaudeVS.Core.Markdown.CodeText.Gutter(Code(10)), "ten lines: none");
+            string g = ClaudeVS.Core.Markdown.CodeText.Gutter(Code(12));
+            Eq("1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12", g, "one number per line");
+            Eq(20, ClaudeVS.Core.Markdown.CodeText.Gutter(ClaudeVS.Core.Markdown.CodeFold.Head(Code(100))).Split('\n').Length, "a folded block numbers what it shows");
+            Eq(null, ClaudeVS.Core.Markdown.CodeText.Gutter(null), "nothing");
+        }
+
         private static void Test_Markdown_HalfWritten()
         {
             // Phase 95: while an answer streams, its last line may be cut off

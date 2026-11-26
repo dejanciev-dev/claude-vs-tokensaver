@@ -2844,8 +2844,12 @@ Planned on 2026-11-26, after Phase 102, on the same branch; the second of the tw
       `CodeText.DiffNewSide` (`diff`, `patch`, `udiff`; null when nothing is added or removed, so such a block inserts
       as written); the result goes through item 1's indent fit. Insert's tooltip says what it inserts.
       `Test_CodeText_DiffNewSide`. Builds clean; not yet run in VS
-- [ ] **Line numbers.** A block of more than 10 lines gets its line numbers in a gutter beside it (not selected or
-      copied with the code), so "line 14" in the answer can be found. The numbers in Core, tested
+- [x] **Line numbers.** A block of more than 10 lines gets its line numbers in a gutter beside it (not selected or
+      copied with the code), so "line 14" in the answer can be found. The numbers in Core, tested.
+      `CodeText.Gutter`; `TranscriptView.NumberedCodeView` docks a dimmed `TextBlock` left of the code view, both at a
+      fixed 16px line height so they line up (the code's own line height changes from the font's to that). A folded
+      block numbers its first 20 lines, and *Show all* all of them. README's code blocks row and its test count (287).
+      `Test_CodeText_Gutter`. Builds clean; not yet run in VS
 
 ---
 

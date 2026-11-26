@@ -33,6 +33,20 @@ namespace ClaudeVS.Core.Markdown
             return sb.ToString();
         }
 
+        /// <summary>Line numbers are shown beside a block of more than this many lines (Phase 103).</summary>
+        public const int NumberedOver = 10;
+
+        /// <summary>
+        /// The gutter beside a code block (Phase 103): "1" to the number of lines, one per line, or null for a block of
+        /// <see cref="NumberedOver"/> lines or fewer. It is drawn apart from the code, so it isn't selected or copied.
+        /// </summary>
+        public static string Gutter(string code)
+        {
+            int lines = CodeFold.Lines(code);
+            if (lines <= NumberedOver) return null;
+            return string.Join("\n", Enumerable.Range(1, lines).Select(n => n.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        }
+
         /// <summary>
         /// A diff block's new side (Phase 103), for <c>Insert</c>: context and added lines without their marker; removed
         /// lines, file lines and <c>@@</c> headers left out. Null when <paramref name="language"/> isn't a diff or the
