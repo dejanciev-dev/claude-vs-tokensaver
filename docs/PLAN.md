@@ -2644,6 +2644,25 @@ phases on one branch. Claude writes some Markdown the chat's parser doesn't know
       `TranscriptView.AddInlines` draws them inside a `Bold`, `Italic` or struck `Span`, so code in bold that names a
       file links too. Under *Fixed* in the changelog. `Test_Markdown_NestedInlines`. Builds clean; not yet run in VS
 
+## Phase 97 — Code blocks
+
+Planned on 2026-11-26, after Phase 96, on the same branch. Code blocks are most of what Claude shows in a coding
+chat; four things about them that are wrong or missing.
+
+- [ ] **Code inside a list item.** Claude puts steps' commands in fences indented under the item (`1. Run:` then
+      `   ```bash`). Each code line keeps the fence's indent (the Copy and Insert buttons too), and a fence indented
+      four or more spaces under a nested item isn't a fence at all. The fence's indent comes off its lines (as much
+      as each has), a fence under a list item may be indented as deep as the item's text, and the block is drawn
+      indented with its item. Test in Core
+- [ ] **Diffs in color.** A ` ```diff ` block (or a `patch`) is drawn in one color. Added lines green, removed lines
+      red, `@@` hunk headers and `---`/`+++` file lines as such, in both palettes. The tokens in Core, tested
+- [ ] **Long code blocks folded.** A 300-line file Claude prints fills screens and pushes the rest of the answer
+      away. A finished block of more than 40 lines shows its first 20 and *Show all N lines*; Copy and Insert take the
+      whole code. While it streams it isn't folded (the end is what is new). The rule in Core, tested
+- [ ] **More languages colored.** Ruby, PHP, Swift, Dart, Lua, R, Dockerfile, Makefile, TOML/INI, GraphQL and HCL
+      fall back to plain text. Keywords and comments for each (`#`, `--`, `;` line comments as each language has
+      them); the fence's name and the usual short names. Test in Core
+
 ---
 
 ## Working in Visual Studio — daily loop
