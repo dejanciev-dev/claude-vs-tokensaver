@@ -2032,7 +2032,7 @@ namespace ClaudeVS.ToolWindow
 
             // A long finished block shows its start and a button for the rest (Phase 97); Copy and Insert take it all
             bool folded = CodeFold.Folds(code, b.Closed);
-            var body = CodeView(folded ? CodeFold.Head(code) : code, b.Language);
+            var body = NumberedCodeView(folded ? CodeFold.Head(code) : code, b.Language);
             ForwardMouseWheel(body);
 
             var panel = new DockPanel();
@@ -2049,7 +2049,7 @@ namespace ClaudeVS.ToolWindow
                     ThreadHelper.ThrowIfNotOnUIThread();
                     panel.Children.Remove(more);
                     panel.Children.Remove(body);
-                    var all = CodeView(code, b.Language);
+                    var all = NumberedCodeView(code, b.Language);
                     ForwardMouseWheel(all);
                     panel.Children.Add(all);
                 };
@@ -2091,10 +2091,42 @@ namespace ClaudeVS.ToolWindow
         /// A read-only, selectable code view with colored tokens and no wrapping. Its page is as wide as the longest
         /// line, so long lines scroll sideways like the plain text box did.
         /// </summary>
+        // Code lines and the gutter's numbers keep the same height, so they line up (Phase 103)
+        private const double CodeLineHeight = 16;
+
+        /// <summary>
+        /// The code view, with its line numbers in a gutter beside it when the block is long (Phase 103). The gutter is
+        /// its own text, so selecting or copying the code doesn't take the numbers.
+        /// </summary>
+        private FrameworkElement NumberedCodeView(string code, string language)
+        {
+            var view = CodeView(code, language);
+            string gutter = CodeText.Gutter(code);
+            if (gutter == null) return view;
+            var numbers = new TextBlock
+            {
+                Text = gutter,
+                FontFamily = Mono,
+                FontSize = 12,
+                LineHeight = CodeLineHeight,
+                LineStackingStrategy = LineStackingStrategy.BlockLineHeight,
+                TextAlignment = TextAlignment.Right,
+                Margin = new Thickness(0, 0, 8, 0),
+                Opacity = 0.5,
+                IsHitTestVisible = false,
+            };
+            System.Windows.Automation.AutomationProperties.SetName(numbers, "Line numbers");
+            var panel = new DockPanel();
+            DockPanel.SetDock(numbers, Dock.Left);
+            panel.Children.Add(numbers);
+            panel.Children.Add(view);
+            return panel;
+        }
+
         private RichTextBox CodeView(string code, string language)
         {
             var palette = CurrentPalette();
-            var para = new Paragraph { Margin = new Thickness(0) };
+            var para = new Paragraph { Margin = new Thickness(0), LineHeight = CodeLineHeight, LineStackingStrategy = LineStackingStrategy.BlockLineHeight };
             int pos = 0;
             foreach (var s in SyntaxHighlighter.Tokenize(code, language))
             {
