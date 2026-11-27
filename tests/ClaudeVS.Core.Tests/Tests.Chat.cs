@@ -346,6 +346,24 @@ namespace ClaudeVS.Core.Tests
             True(TextSearch.IsWholeWord("a.b", 2, 1), "punctuation is an edge");
         }
 
+        private static void Test_TextSearch_Regex()
+        {
+            // Phase 108: the query as a regular expression
+            string M(string text, string q, bool matchCase = false, bool word = false)
+            {
+                var found = TextSearch.Matches(text, q, matchCase, word, regex: true, out string error);
+                return error ?? string.Join(",", found.Select(m => text.Substring(m.Start, m.Length)));
+            }
+            Eq("Validate,ValidateAll", M("Validate(); ValidateAll(); validator", "Validate\\w*", matchCase: true), "a pattern, with match case");
+            Eq("TODO,fixme", M("// TODO a\n// fixme b", "TODO|FIXME"), "alternatives, any case");
+            Eq("id", M("width id", "i.", word: true), "whole words");
+            Eq("x,x", M("x x", "x*"), "empty matches passed over");
+            True(M("a", "(").StartsWith("Not a valid pattern: ", StringComparison.Ordinal), "a pattern that doesn't parse: " + M("a", "("));
+            var plain = TextSearch.Matches("a.b a.b", "a.b", false, false, regex: false, out string none);
+            Eq("0:3,4:3", string.Join(",", plain.Select(m => m.Start + ":" + m.Length)), "without it, literal");
+            Eq(null, none, "no error");
+        }
+
         private static void Test_Markdown_HalfWritten()
         {
             // Phase 95: while an answer streams, its last line may be cut off

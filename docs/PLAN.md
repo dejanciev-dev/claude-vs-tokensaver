@@ -2998,9 +2998,11 @@ conversation's text only, a word as part of any other, and literally.
       digits and `_`). In Core, tested. `TextSearch.FindAll(…, wholeWord)` and `IsWholeWord`; a match that isn't one
       is passed over by one character, so `ididid id` still finds the last. `Test_TextSearch_WholeWord`. Builds clean;
       not yet run in VS
-- [ ] **Regular expressions.** A *.\** toggle: the query is a .NET regular expression (`Validate\w*`, `TODO|FIXME`);
+- [x] **Regular expressions.** A *.\** toggle: the query is a .NET regular expression (`Validate\w*`, `TODO|FIXME`);
       a pattern that doesn't parse says so in the bar instead of a count, and an empty match is skipped. In Core,
-      tested
+      tested. `TextSearch.Matches` (starts and lengths; whole word wraps the pattern in lookarounds; a one-second
+      timeout says the pattern takes too long); `FindStep` selects each match's own length. `Test_TextSearch_Regex`.
+      Builds clean; not yet run in VS
 - [ ] **Screen readers hear the result.** The bar's *3 of 12* or *No results* is announced as it changes (it is
       text a screen reader can't see change), and the toggles have names. The words in Core, tested
 

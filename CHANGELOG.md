@@ -19,7 +19,7 @@ All notable changes to this project are listed here. The format follows
   not its markers; when the answer ends it is read as written.
 - **Find in chat** (Tools → Claude Code, `Ctrl+Alt+K, Ctrl+F`, or the **/** menu): a bar over the conversation that
   goes from match to match (`Enter`/`F3`, `Shift+Enter` back), says *3 of 12*, and can match case. It searches the
-  conversation's text, its code blocks and the tool output that is open. *W* finds whole words only.
+  conversation's text, its code blocks and the tool output that is open. *W* finds whole words only, `.*` takes a regular expression.
 - **Code blocks say what they hold:** the header names the language and the length ("C# · 48 lines") instead of the
   fence's short name.
 - **Save a code block as a file:** *Save…* beside Copy and Insert suggests a name for the block's language

@@ -27,6 +27,49 @@ namespace ClaudeVS.Core.Chat
             return found;
         }
 
+        /// <summary>
+        /// Every match with its length (Phase 108). With <paramref name="regex"/> the query is a .NET regular expression
+        /// (an empty match is passed over); one that doesn't parse, or takes too long, gives no matches and says why in
+        /// <paramref name="error"/>. Otherwise as <see cref="FindAll"/>.
+        /// </summary>
+        public static List<(int Start, int Length)> Matches(string text, string query, bool matchCase, bool wholeWord, bool regex, out string error)
+        {
+            error = null;
+            var found = new List<(int, int)>();
+            if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(query)) return found;
+            if (!regex)
+            {
+                foreach (int at in FindAll(text, query, matchCase, wholeWord)) found.Add((at, query.Length));
+                return found;
+            }
+            try
+            {
+                string pattern = wholeWord ? @"(?<![\w])(?:" + query + @")(?![\w])" : query;
+                var options = System.Text.RegularExpressions.RegexOptions.CultureInvariant | (matchCase ? 0 : System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                var re = new System.Text.RegularExpressions.Regex(pattern, options, TimeSpan.FromSeconds(1));
+                foreach (System.Text.RegularExpressions.Match m in re.Matches(text))
+                    if (m.Length > 0) found.Add((m.Index, m.Length));
+            }
+            catch (ArgumentException ex)
+            {
+                found.Clear();
+                error = "Not a valid pattern: " + ShortReason(ex.Message);
+            }
+            catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+            {
+                found.Clear();
+                error = "The pattern takes too long";
+            }
+            return found;
+        }
+
+        // .NET's message is "Invalid pattern '(' at offset 1. Not enough )'s.": the reason after the offset
+        private static string ShortReason(string message)
+        {
+            int dot = message.IndexOf(". ", StringComparison.Ordinal);
+            return (dot > 0 && dot + 2 < message.Length ? message.Substring(dot + 2) : message).TrimEnd('.');
+        }
+
         private static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_';
 
         /// <summary>Whether the match at <paramref name="at"/> stands as a word: no word character joins it on either side.</summary>
