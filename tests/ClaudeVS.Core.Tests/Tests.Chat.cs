@@ -381,7 +381,7 @@ namespace ClaudeVS.Core.Tests
             Eq("<h2 id=\"setup\">Setup</h2>\n<p>Run <strong>the</strong> <code>a&lt;b&gt;</code><br>next &amp; <a href=\"https://x.y\">docs</a></p>",
                H("## Setup\n\nRun **the** `a<b>`\nnext & [docs](https://x.y)"), "heading, paragraph, inlines, escaping");
             Eq("<ol><li>one<ul><li>☑ a</li><li>☐ b</li></ul></li><li>two<pre><code class=\"language-sh\">ls</code></pre></li></ol>",
-               H("1. one\n   - [x] a\n   - [ ] b\n1. two\n   ```sh\n   ls\n   ```"), "nested lists, tasks, a code block in an item");
+               System.Text.RegularExpressions.Regex.Replace(H("1. one\n   - [x] a\n   - [ ] b\n1. two\n   ```sh\n   ls\n   ```"), " style=\"[^\"]*\"", ""), "nested lists, tasks, a code block in an item");
             Eq("<ol start=\"3\"><li>c</li></ol>", H("3. c"), "a list's start");
             Eq("<blockquote><p><strong>Warning</strong></p><p>Back up.</p></blockquote>", H("> [!WARNING]\n> Back up."), "a note");
             Eq("<table><tr><th style=\"text-align:right\">n</th></tr><tr><td style=\"text-align:right\"><em>1</em></td></tr></table>", H("| n |\n|--:|\n| *1* |"), "a table with inlines");
@@ -391,6 +391,18 @@ namespace ClaudeVS.Core.Tests
             Eq("<p>bad</p>", H("[bad](javascript:void)"), "no other schemes in a link");
             Eq("<p><a href=\"src/a.cs\">a</a></p>", H("[a](src/a.cs)"), "a relative path stays a link");
             Eq("<hr>", H("---"), "a rule");
+        }
+
+        private static void Test_MarkdownHtml_ColoredCode()
+        {
+            // Phase 109: code in HTML keeps its colors, as inline styles
+            string html = ClaudeVS.Core.Markdown.MarkdownHtml.Render("```cs\nvar s = \"<x>\"; // c\n```");
+            True(html.StartsWith("<pre style=\"background:#f6f8fa;", StringComparison.Ordinal), "a monospace block: " + html);
+            True(html.Contains("<span style=\"color:#0000FF\">var</span>"), "a keyword");
+            True(html.Contains("<span style=\"color:#A31515\">&quot;&lt;x&gt;&quot;</span>"), "a string, escaped");
+            True(html.Contains("<span style=\"color:#008000\">// c</span>"), "a comment");
+            True(ClaudeVS.Core.Markdown.MarkdownHtml.Render("```diff\n+a\n```").Contains("<span style=\"color:#22863A\">+a</span>"), "a diff's added line");
+            True(ClaudeVS.Core.Markdown.MarkdownHtml.Render("```\nplain <b>\n```").Contains("<code>plain &lt;b&gt;</code>"), "no language: plain, escaped");
         }
 
         private static void Test_Markdown_HalfWritten()

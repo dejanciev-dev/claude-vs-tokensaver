@@ -3020,8 +3020,10 @@ Markdown or plain text (Phase 100); pasted into Word, Outlook or Teams it loses 
       item's code block inside it), headings with their anchors as ids, footnotes as `#fn-…` links, links only to
       web addresses, anchors and relative paths (another scheme is its text). Nothing shows it yet (items 3 and 4).
       `Test_MarkdownHtml_Render`. Builds clean
-- [ ] **Colored code in HTML.** A code block's HTML carries its syntax colors (the light palette, as inline styles,
-      so they survive a paste) in a monospace block. In Core, tested
+- [x] **Colored code in HTML.** A code block's HTML carries its syntax colors (the light palette, as inline styles,
+      so they survive a paste) in a monospace block. In Core, tested. `MarkdownHtml.Code` through
+      `SyntaxHighlighter.Tokenize`, a `span` with a color per token (diffs too), the `pre` styled inline (a light
+      background, Consolas). `Test_MarkdownHtml_ColoredCode`. Builds clean
 - [ ] **Copy keeps formatting.** The answer's copy button puts HTML on the clipboard beside the Markdown text, so
       Word, Outlook and Teams paste headings, lists, tables and colored code; an editor still gets the Markdown
 - [ ] **Export as HTML.** *Export conversation…* offers an HTML page beside Markdown: the same conversation as a page
