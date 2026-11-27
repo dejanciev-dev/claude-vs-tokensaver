@@ -3220,9 +3220,15 @@ Then the docs and a release for Phases 100–113.
       cost line, the contents, dark and print, and *Save as…* for one answer; the shortcuts table's `Ctrl+Up` row the
       search and the kept history; a *Go to prompt* command row; 321 tests. The overview's chat paragraph names the
       same. The `--live-all` count and cost follow with item 4's full run
-- [ ] **Release 0.18.0.** Manifest, assembly and package registration at 0.18.0, still a preview; the Unreleased
+- [x] **Release 0.18.0.** Manifest, assembly and package registration at 0.18.0, still a preview; the Unreleased
       changelog becomes `## [0.18.0]` with highlights; `--live-all` run in full with its count, cost and time in
       CONTRIBUTING. Tagging after the merge, when asked.
+      The Release VSIX builds at 0.18.0; 321 tests pass; five highlights for Phases 93–113. `--live-all` with 2.1.332:
+      22 of 24 ($0.24, 7.5 min). Neither failure touches this branch: `haiku-router` had one warm route at 5.2 s
+      (its limit is 4 s; the router is unchanged here) and passed on the second rerun with every route under 3 s;
+      `links` got "`src\Login.cs` at line 12", the line in words, and passed on rerun with `src\Login.cs:12`. Both are
+      the API's speed and the model's wording varying. `tools`, `git` and `export` passed. CONTRIBUTING and README:
+      24 tests, about $0.24
 
 ---
 

@@ -6,6 +6,27 @@ All notable changes to this project are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-11-27
+
+Still a **preview**, for Claude Code 2.1.318 or newer (tested with 2.1.332). This release is about reading and
+taking things out of a conversation: Markdown that draws the way it is meant to, tool rows that say what happened,
+and answers and conversations that leave the chat with their formatting.
+
+### Highlights
+
+- **Answers drawn in full:** tables, task lists, notes, struck text, collapsed sections, footnotes and colored diffs;
+  code blocks that say what they hold, fold when long, and go into the editor at the caret's indent.
+- **Tool rows that say what happened:** "✗ 2 failed · 10 passed" with the failing tests named, "Build failed · 2
+  errors", "✗ 3 errors · 2 warnings", "Committed a0b4892 · 3 files", "Added 120 packages"; output in its colors, with
+  file references and web addresses as links.
+- **Find in chat** (`Ctrl+Alt+K, Ctrl+F`), with whole words and regular expressions, and *Go to prompt*.
+- **Out of the chat with the formatting:** an answer, or a part of one, pastes into Word, Outlook and Teams with its
+  headings, lists, tables and colored code; a conversation exports as a page with what it cost, a list of prompts,
+  the tool output folded, dark and printable; one answer saves on its own.
+- **A prompt history kept per solution** that `Ctrl+Up` searches.
+
+The full list follows.
+
 ### Changed
 
 - **Long answers stream without slowing down:** each streamed piece draws only the part of the answer that changed
