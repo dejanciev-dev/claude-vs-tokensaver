@@ -1239,6 +1239,10 @@ namespace ClaudeVS.Core.Tests
             True(from.Contains("· the whole conversation $0.42 ($0.10 agents) ·"), "from a prompt on, the cost says it is the whole conversation's: " + from);
             True(ConversationExport.ToHtml(t, "T", when, new ExportOptions { Cost = cost }).Contains("<p><em>2 prompts · $0.42"), "on the page too");
 
+            // Phase 114: what --live-export found; a Haiku conversation under a cent showed "$0.00"
+            cost.CostUsd = 0.0032; cost.AgentCostUsd = 0;
+            True(ConversationExport.ToMarkdown(t, "T", when, new ExportOptions { Cost = cost }).Contains("· $0.0032 ·"), "under a cent: four decimals");
+
             Eq("Haiku 5.5", ConversationExport.ModelName("claude-haiku-5-5"));
             Eq("Sonnet 4.5", ConversationExport.ModelName("claude-sonnet-4-5-20250929"), "a dated ID");
             Eq("Opus 5.5", ConversationExport.ModelName("claude-opus-5-5[1m]"), "the long-context mark");
@@ -1333,6 +1337,14 @@ namespace ClaudeVS.Core.Tests
             Eq(2, ConversationExport.StartIndex(t, "gone", "Run it "), "an id not in the file: the prompt's text");
             Eq(0, ConversationExport.StartIndex(t, "gone", "never sent"), "neither found: the whole conversation");
             True(!ConversationExport.ToMarkdown(t, "T", when).Contains("<details>"), "the default stays lines only");
+
+            // Phase 114: Claude Code's "Shell cwd was reset to …" after a command isn't the command's output
+            var echo = new SessionTranscript();
+            echo.Items.Add(new TranscriptItem { Kind = TranscriptItemKind.Tool, Text = "Bash: echo hi", ResultChars = 40, ResultText = "hi\nShell cwd was reset to C:\\Temp\\x" });
+            echo.Items.Add(new TranscriptItem { Kind = TranscriptItemKind.Tool, Text = "Bash: cd x", ResultChars = 30, ResultText = "Shell cwd was reset to C:\\Temp\\x" });
+            string echoed = ConversationExport.ToMarkdown(echo, "T", when, new ExportOptions { Tools = ExportTools.WithOutput });
+            True(echoed.Contains("⎿ Output · 1 line</summary>\n\n```\nhi\n```") && !echoed.Contains("Shell cwd"), "left out of the fold: " + echoed);
+            True(echoed.Contains("- 🔧 `Bash: cd x`") && echoed.Split(new[] { "<details>" }, StringSplitOptions.None).Length == 2, "nothing else: no fold: " + echoed);
         }
 
         private static void Test_Export_FileName()

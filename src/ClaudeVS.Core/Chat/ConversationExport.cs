@@ -179,7 +179,8 @@ namespace ClaudeVS.Core.Chat
             return parts.Count == 0 ? null : "*" + string.Join(" · ", parts) + "*";
         }
 
-        private static string Usd(double v) => "$" + v.ToString(v >= 100 ? "0" : "0.00", System.Globalization.CultureInfo.InvariantCulture);
+        // Under a cent with four decimals: a short conversation on Haiku costs $0.0032, not "$0.00" (Phase 114)
+        private static string Usd(double v) => "$" + v.ToString(v >= 100 ? "0" : v >= 0.01 || v == 0 ? "0.00" : "0.0000", System.Globalization.CultureInfo.InvariantCulture);
 
         /// <summary>
         /// A model ID as a short name when the catalog doesn't know it (Phase 112): "claude-haiku-5-5" → "Haiku 5.5",
@@ -205,6 +206,9 @@ namespace ClaudeVS.Core.Chat
         {
             if (string.IsNullOrWhiteSpace(resultText)) return null;
             string text = Cli.TerminalText.ForCopy(resultText).Replace("\r\n", "\n").Trim('\n');
+            // Claude Code's own last line after a command (2.1.332), not the command's output (Phase 114)
+            text = System.Text.RegularExpressions.Regex.Replace(text, @"\n?Shell cwd was reset to [^\n]*$", "").Trim('\n');
+            if (text.Length == 0) return null;
             text = System.Text.RegularExpressions.Regex.Replace(text, "<(/?)details", "<$1" + (char)0x200B + "details", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
             int lines = text.Split('\n').Length;
             int longest = System.Text.RegularExpressions.Regex.Matches(text, "`+").Cast<System.Text.RegularExpressions.Match>().Select(m => m.Length).DefaultIfEmpty(0).Max();
