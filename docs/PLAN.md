@@ -3014,9 +3014,12 @@ conversation's text only, a word as part of any other, and literally.
 Planned on 2026-11-27, after Phase 108, on the same branch; the last of the four. An answer leaves the chat as
 Markdown or plain text (Phase 100); pasted into Word, Outlook or Teams it loses its headings, lists and code.
 
-- [ ] **Markdown to HTML.** A small HTML writer for what the chat draws: headings, paragraphs, lists and tasks,
+- [x] **Markdown to HTML.** A small HTML writer for what the chat draws: headings, paragraphs, lists and tasks,
       quotes and notes, tables, code blocks, rules, sections, footnotes, and the inline kinds, everything escaped. In
-      Core, tested
+      Core, tested. `Markdown/MarkdownHtml.cs` from the parsed blocks: nested `ul`/`ol` (a start number kept, an
+      item's code block inside it), headings with their anchors as ids, footnotes as `#fn-…` links, links only to
+      web addresses, anchors and relative paths (another scheme is its text). Nothing shows it yet (items 3 and 4).
+      `Test_MarkdownHtml_Render`. Builds clean
 - [ ] **Colored code in HTML.** A code block's HTML carries its syntax colors (the light palette, as inline styles,
       so they survive a paste) in a monospace block. In Core, tested
 - [ ] **Copy keeps formatting.** The answer's copy button puts HTML on the clipboard beside the Markdown text, so
