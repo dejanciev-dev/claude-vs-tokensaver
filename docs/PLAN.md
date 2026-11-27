@@ -3189,6 +3189,25 @@ history the one you want is far back.
       emptied by `Clear`. `ShowGoToPrompt` (beside the rewind picker, in the same popup, so typing filters it):
       "12. first line" and "5 min ago"; picking one is `ScrollTo` its bubble. Builds clean; not yet run in VS
 
+## Phase 114 — Phases 110–113 checked live, and release 0.18.0
+
+Planned on 2026-11-27, after Phase 113, on the same branch; the last of four. Phase 111's git summaries and Phase
+112's export were built from captured or documented output; a live test each shows what Claude Code really passes on.
+Then the docs and a release for Phases 100–113.
+
+- [ ] **Live test: git rows.** A `git` step in `--live-all`: in a temp repository with a local remote, Haiku runs
+      `git status`, `git commit -am …`, `git push` and `git log --oneline`; each row summarized as the chat does must
+      read "1 modified", "Committed … · 1 file", "Pushed main", "2 commits".
+- [ ] **Live test: an export from a real session.** An `export` step: a turn with a Bash call, then the session file
+      exported as the chat does, with the tool output folded and the cost; the page must hold the command's output,
+      the prompt count, a model name and a cost.
+- [ ] **README and the overview.** README's rows and the Marketplace overview for Phases 111–113: summarized git,
+      lint and installs, failing tests named, the export's cost, contents, dark and print, saving one answer, the kept
+      and searchable prompt history, *Go to prompt*; the test counts.
+- [ ] **Release 0.18.0.** Manifest, assembly and package registration at 0.18.0, still a preview; the Unreleased
+      changelog becomes `## [0.18.0]` with highlights; `--live-all` run in full with its count, cost and time in
+      CONTRIBUTING. Tagging after the merge, when asked.
+
 ---
 
 ## Working in Visual Studio — daily loop
