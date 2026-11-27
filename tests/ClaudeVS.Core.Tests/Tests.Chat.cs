@@ -690,6 +690,40 @@ namespace ClaudeVS.Core.Tests
             Eq(null, h.Next(), "not browsing");
         }
 
+        private static void Test_PromptHistory_Kept()
+        {
+            // Phase 113: the prompts you sent, kept per solution for the next chat window
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-ph-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                var store = new ClaudeVS.Core.Chat.PromptHistoryStore(Path.Combine(dir, "prompt-history.json"));
+                var now = new DateTime(2026, 11, 27, 12, 0, 0, DateTimeKind.Utc);
+                Eq(0, store.Get(@"C:\src\Shop").Count, "nothing yet");
+                foreach (var p in new[] { "one", "two", "two", new string('x', 20_001) }) store.Add(@"C:\src\Shop\", p, now);
+                Eq("one|two", string.Join("|", store.Get(@"c:\SRC\shop")), "per solution, any case or trailing slash; a repeat once; a pasted log isn't kept");
+                var otherWindow = new ClaudeVS.Core.Chat.PromptHistoryStore(store.Path);
+                otherWindow.Add(@"C:\src\Shop", "three", now);
+                Eq("one|two|three", string.Join("|", store.Get(@"C:\src\Shop")), "another window's prompt is added, not overwritten");
+                for (int i = 1; i <= 120; i++) store.Add(@"C:\src\Other", "p" + i, now.AddMinutes(1));
+                var other = store.Get(@"C:\src\Other");
+                Eq(100, other.Count, "the newest 100");
+                Eq("p21", other[0], "the oldest kept");
+                Eq("one|two|three", string.Join("|", store.Get(@"C:\src\Shop")), "another solution's are kept");
+                for (int i = 0; i < 50; i++) store.Add(@"C:\s" + i, "x", now.AddMinutes(2 + i));
+                Eq(0, store.Get(@"C:\src\Shop").Count, "past 50 solutions, the one used longest ago goes");
+                File.WriteAllText(store.Path, "{ not json");
+                Eq(0, store.Get(@"C:\s1").Count, "a damaged file reads as empty");
+
+                var h = new ClaudeVS.Core.Chat.PromptHistory(max: 3);
+                h.Add("sent here");
+                h.Load(new[] { "a", "b", "b", "c", "sent here" });
+                Eq("b|c|sent here", string.Join("|", h.Items), "saved ones before this chat's, consecutive repeats once, the newest max kept");
+                Eq("sent here", h.Previous(""), "Ctrl+Up starts with the newest");
+                Eq("c", h.Previous("sent here"), "then the saved ones");
+            }
+            finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
+        }
+
         private static void Test_PromptHistory_EditsKept()
         {
             // As VS Code's 2.1.331-2.1.332 fixes: changing a recalled prompt, then moving on, doesn't lose the change

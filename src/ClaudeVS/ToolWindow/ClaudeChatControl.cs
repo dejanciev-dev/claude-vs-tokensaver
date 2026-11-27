@@ -80,6 +80,23 @@ namespace ClaudeVS.ToolWindow
         private string _sessionDir;
         private string _resumeId;
         private readonly PromptHistory _promptHistory = new PromptHistory();
+
+        // The prompts sent in this solution before (Phase 113): loaded into _promptHistory once per solution
+        internal static readonly PromptHistoryStore PromptHistoryFile = new PromptHistoryStore(PromptHistoryStore.DefaultPath);
+        private string _historySolution;
+
+        /// <summary>The solution's saved prompts in the history, the first time it is used for that solution (Phase 113).</summary>
+        private string EnsurePromptHistory()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            string solution = VsContext.GetSolutionDirectory() ?? "";
+            if (_historySolution != solution)
+            {
+                _historySolution = solution;
+                _promptHistory.Load(PromptHistoryFile.Get(solution));
+            }
+            return solution;
+        }
         private List<SlashCommand> _commands = new List<SlashCommand>(SlashCommands.BuiltIn);
         private string _commandsDir;
         private readonly ListBox _fileList = new ListBox { MaxHeight = 220, FontFamily = new FontFamily("Cascadia Mono, Consolas"), FontSize = 12, BorderThickness = new Thickness(0) };
@@ -790,6 +807,7 @@ namespace ClaudeVS.ToolWindow
             else if ((e.Key == Key.Up || e.Key == Key.Down) && (Keyboard.Modifiers & ModifierKeys.Control) != 0)
             {
                 e.Handled = true;
+                EnsurePromptHistory();
                 string text = e.Key == Key.Up ? _promptHistory.Previous(_prompt.Text) : _promptHistory.Next(_prompt.Text);
                 if (text != null) { _prompt.Text = text; _prompt.CaretIndex = text.Length; }
             }
@@ -821,7 +839,14 @@ namespace ClaudeVS.ToolWindow
             string text = _prompt.Text.Trim();
             if (text.Length == 0 && _images.Count == 0) return; // an image alone is a valid prompt
             if (!SlashCommands.IsCommand(text) && (!PastDailyLimitConfirmed() || !PastConversationLimitConfirmed())) return; // the prompt stays in the box
+            string solution = EnsurePromptHistory();
             _promptHistory.Add(text);
+            // Kept for the next chat window (Phase 113), off the UI thread; a full disk only loses that
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                try { PromptHistoryFile.Add(solution, text, DateTime.UtcNow); }
+                catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException) { ClaudeOutputPane.WriteLine("Could not save the prompt history: " + ex.Message); }
+            }).FileAndForget("ClaudeVS/ChatControl/PromptHistory");
             _prompt.Clear();
             // Long pastes are marked only in what Claude gets; your message shows the text as you typed it.
             string forClaude = PromptSanitizer.MarkPastes(text, _pastes);

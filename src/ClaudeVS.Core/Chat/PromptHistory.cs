@@ -18,6 +18,26 @@ namespace ClaudeVS.Core.Chat
 
         public int Count => _items.Count;
 
+        /// <summary>The prompts, oldest first (Phase 113: what is saved for the solution).</summary>
+        public IReadOnlyList<string> Items => _items.AsReadOnly();
+
+        /// <summary>
+        /// Puts saved prompts before the ones sent in this chat (Phase 113), oldest first, the newest
+        /// <see cref="PromptHistory(int)"/> max of them kept. Ends browsing.
+        /// </summary>
+        public void Load(IEnumerable<string> saved)
+        {
+            _pos = -1;
+            _edits.Clear();
+            var merged = new List<string>();
+            foreach (var p in saved ?? new string[0])
+                if (!string.IsNullOrWhiteSpace(p) && (merged.Count == 0 || merged[merged.Count - 1] != p)) merged.Add(p);
+            foreach (var p in _items)
+                if (merged.Count == 0 || merged[merged.Count - 1] != p) merged.Add(p);
+            _items.Clear();
+            _items.AddRange(merged.Count > _max ? merged.GetRange(merged.Count - _max, _max) : merged);
+        }
+
         public void Add(string prompt)
         {
             _pos = -1;

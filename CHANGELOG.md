@@ -79,6 +79,8 @@ All notable changes to this project are listed here. The format follows
   or the tool output, with long code lines wrapped.
 - **Save one answer:** right-click an answer's copy button → *Save as…* saves that answer alone, as Markdown or as a
   web page, named after its first heading.
+- **Prompt history kept:** `Ctrl+Up` in a new chat window, also after Visual Studio restarts, steps back through the
+  prompts you sent in that solution before (the last 100, on this computer only).
 - **Copied answers keep their formatting:** the copy button (and *Copy last response*) puts HTML beside the Markdown,
   so Word, Outlook and Teams paste headings, lists, tables and colored code; an editor still gets the Markdown.
 - **A copied part of an answer keeps its formatting too:** Ctrl+C on a selection puts the selected headings, lists,
