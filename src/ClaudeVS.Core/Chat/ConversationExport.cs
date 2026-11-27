@@ -220,7 +220,17 @@ namespace ClaudeVS.Core.Chat
             "pre code{padding:0;background:none}blockquote{margin:0;padding:0 1em;border-left:3px solid #d0d7de;color:#57606a}" +
             "table{border-collapse:collapse}th,td{border:1px solid #d0d7de;padding:.2em .6em}th{background:#f6f8fa}" +
             "li.tool{color:#6e7781;font-size:.9em;list-style:none}" +
-            "details.tool{margin:-.6em 0 .6em 2.5em;font-size:.85em}details.tool summary{color:#6e7781;cursor:pointer}details.tool pre{max-height:30em;overflow:auto}kbd{border:1px solid #d0d7de;border-bottom-width:2px;border-radius:3px;padding:0 .3em;font-size:.9em}";
+            "details.tool{margin:-.6em 0 .6em 2.5em;font-size:.85em}details.tool summary{color:#6e7781;cursor:pointer}details.tool pre{max-height:30em;overflow:auto}" +
+            "nav.contents{background:#f6f8fa;border-radius:6px;padding:.4em 1em;margin:1em 0}nav.contents ol{margin:.3em 0}" +
+            // Dark when the system is (Phase 112). Code blocks keep their light background (an inline style, so a paste
+            // keeps it), so their plain text keeps a dark color
+            "@media (prefers-color-scheme:dark){body{background:#0d1117;color:#e6edf3}a{color:#4493f8}h2{border-color:#30363d}" +
+            "code{background:#262c36}pre{color:#1f2328}pre code{background:none}blockquote{border-color:#30363d;color:#9198a1}" +
+            "th,td{border-color:#30363d}th{background:#161b22}li.tool,details.tool summary{color:#9198a1}nav.contents{background:#161b22}kbd{border-color:#30363d}}" +
+            // Printed (Phase 112): light, no contents or tool output, long code lines wrapped, code and headings kept together
+            "@media print{body{background:#fff;color:#1f2328;max-width:none;margin:0}nav.contents,details.tool{display:none}" +
+            "pre{white-space:pre-wrap!important;break-inside:avoid;color:#1f2328}h2{break-after:avoid}a{color:inherit;text-decoration:none}}" +
+            "kbd{border:1px solid #d0d7de;border-bottom-width:2px;border-radius:3px;padding:0 .3em;font-size:.9em}";
 
         /// <summary>
         /// The conversation as a web page (Phase 109): the Markdown of <see cref="ToMarkdown"/> as HTML, styled for
@@ -241,7 +251,7 @@ namespace ClaudeVS.Core.Chat
             int end = c < 0 ? -1 : body.IndexOf("</ol>", c, StringComparison.Ordinal);
             if (end > 0) body = body.Substring(0, c) + "<nav class=\"contents\">" + body.Substring(c, end + 5 - c) + "</nav>" + body.Substring(end + 5);
             string pageTitle = Markdown.MarkdownHtml.E(OneLine(string.IsNullOrWhiteSpace(title) ? "Claude Code conversation" : title));
-            return "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n" +
+            return "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<meta name=\"color-scheme\" content=\"light dark\">\n" +
                    "<title>" + pageTitle + "</title>\n<style>" + PageStyle + "</style>\n</head>\n<body>\n" + body + "</body>\n</html>\n";
         }
 

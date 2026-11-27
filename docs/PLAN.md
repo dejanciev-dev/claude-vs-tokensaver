@@ -3140,8 +3140,14 @@ page; it says nothing about what the conversation cost, a long one has no way in
       prompt holds a "You" heading of its own (the counts differ), rather than linking wrong. Inserted after the
       header lines; the page wraps it in `<nav class="contents">` for item 3. `Test_Export_Contents`. Builds clean;
       not yet run in VS
-- [ ] **Dark and print.** The page follows the system's dark theme, and prints cleanly (tool output folded away, no
+- [x] **Dark and print.** The page follows the system's dark theme, and prints cleanly (tool output folded away, no
       contents list, page breaks kept out of code). In Core, tested.
+      `PageStyle`: `@media (prefers-color-scheme:dark)` with GitHub's dark colors, and `<meta name="color-scheme">` for
+      the browser's own parts. A code block keeps its light background (an inline style, so a paste keeps its colors),
+      so its plain text is given a dark color there. `@media print`: light, no `nav.contents` or `details.tool`, code
+      wrapped (`!important`, over the inline `white-space:pre`) and not split across pages, a heading kept with what
+      follows, links as text. The contents get a shaded box. `Test_Export_DarkAndPrint`. Builds clean; not yet run
+      in a browser
 - [ ] **Save one answer.** Right-click an answer's copy button → *Save as…*: that answer alone as Markdown or a
       web page. In Core, tested.
 
