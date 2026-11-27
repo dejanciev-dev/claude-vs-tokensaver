@@ -2994,8 +2994,10 @@ conversation's text only, a word as part of any other, and literally.
       the box with each run; `ShowMatch` selects in that box and scrolls by its position in the conversation, and
       clears the last box's selection. No Core part: the mapping is WPF's. The changelog's find entry says so.
       Builds clean; not yet run in VS
-- [ ] **Whole word.** A *W* toggle beside *Aa*: `id` doesn't find `width`. Word edges as in an editor (letters,
-      digits and `_`). In Core, tested
+- [x] **Whole word.** A *W* toggle beside *Aa*: `id` doesn't find `width`. Word edges as in an editor (letters,
+      digits and `_`). In Core, tested. `TextSearch.FindAll(…, wholeWord)` and `IsWholeWord`; a match that isn't one
+      is passed over by one character, so `ididid id` still finds the last. `Test_TextSearch_WholeWord`. Builds clean;
+      not yet run in VS
 - [ ] **Regular expressions.** A *.\** toggle: the query is a .NET regular expression (`Validate\w*`, `TODO|FIXME`);
       a pattern that doesn't parse says so in the bar instead of a count, and an empty match is skipped. In Core,
       tested

@@ -9,16 +9,29 @@ namespace ClaudeVS.Core.Chat
     /// </summary>
     public static class TextSearch
     {
-        /// <summary>The start of each match, left to right, not overlapping; none for an empty query.</summary>
-        public static List<int> FindAll(string text, string query, bool matchCase)
+        /// <summary>
+        /// The start of each match, left to right, not overlapping; none for an empty query. With
+        /// <paramref name="wholeWord"/> (Phase 108) only a match with no word character (letter, digit, <c>_</c>) right
+        /// before or after it: <c>id</c> doesn't find <c>width</c>.
+        /// </summary>
+        public static List<int> FindAll(string text, string query, bool matchCase, bool wholeWord = false)
         {
             var found = new List<int>();
             if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(query)) return found;
             var how = matchCase ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
-            for (int at = text.IndexOf(query, 0, how); at >= 0; at = text.IndexOf(query, at + query.Length, how))
-                found.Add(at);
+            for (int at = text.IndexOf(query, 0, how); at >= 0; )
+            {
+                if (!wholeWord || IsWholeWord(text, at, query.Length)) { found.Add(at); at = text.IndexOf(query, at + query.Length, how); }
+                else at = text.IndexOf(query, at + 1, how);
+            }
             return found;
         }
+
+        private static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_';
+
+        /// <summary>Whether the match at <paramref name="at"/> stands as a word: no word character joins it on either side.</summary>
+        public static bool IsWholeWord(string text, int at, int length) =>
+            (at == 0 || !IsWordChar(text[at - 1])) && (at + length >= text.Length || !IsWordChar(text[at + length]));
 
         /// <summary>
         /// The match to go to from the one at <paramref name="from"/> (an offset in the text; -1 when none was shown):

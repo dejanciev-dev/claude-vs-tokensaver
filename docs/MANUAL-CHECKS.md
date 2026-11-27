@@ -479,6 +479,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Ask *Write three sentences with Markdown footnotes `[^1]` and `[^2]`, the notes defined in the middle* | Raised blue numbers in the text; the notes at the end of the answer as "1. …", "2. …"; clicking a number scrolls to its note |
 | Ask *Write a status list using GitHub emoji shortcodes like `:white_check_mark:`, `:x:` and `:warning:`, and mention `std::vector`* | The shortcodes show as ✅ ❌ ⚠️; `std::vector` is untouched |
 | Find a word that is only inside a code block (and one only in an open tool row's *Output*), then press `Enter` through all matches | The match inside the code block is selected there and scrolled into view; the count includes it; moving on clears it; a word only in a closed tool row isn't found |
+| In the find bar type `id` in a chat that has `width` and `id`, then press *W* | The count drops to the whole-word `id`s; `width` is no longer found |
 
 ## 34. Release (Phase 5)
 
