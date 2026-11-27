@@ -3036,6 +3036,22 @@ Markdown or plain text (Phase 100); pasted into Word, Outlook or Teams it loses 
       emoji and boxes stay characters (the page and CF_HTML are UTF-8) rather than numeric entities. README's export
       row and test count (308). `Test_Export_Html`. Builds clean; not yet run in VS
 
+## Phase 110 — Tool rows checked live, a copied part keeps its formatting, a fuller export, and the docs
+
+Planned on 2026-11-27, after Phase 109 (PR #99 merged); the four items picked from four proposed.
+
+- [ ] **Live test: tool rows.** Phase 106's run summaries were written from each tool's documented format, not from
+      what Claude Code sends. A `tools` step in `--live-all`: Haiku runs `dotnet build` and `dotnet test` on a tiny
+      test project in a temp folder; each Bash result summarized as the chat does must read "Build succeeded" and
+      "✓ N passed". Fix what it finds.
+- [ ] **Copy a selection as HTML.** Copying part of an answer (Ctrl+C on a selection) puts only text on the
+      clipboard. The selected blocks also go as HTML, so a pasted part keeps its headings, lists and colored code.
+- [ ] **Export: pick and fold.** *Export conversation…* writes everything. The HTML page can carry each tool's output
+      folded (`<details>`), the export can leave the tool lines out, and it can start at a chosen message. In Core,
+      tested.
+- [ ] **README and the overview.** README, the Marketplace overview and CONTRIBUTING describe Phases 100–110: copying
+      out, find in chat, code into the editor, tool output, answers as HTML; the test counts.
+
 ---
 
 ## Working in Visual Studio — daily loop
