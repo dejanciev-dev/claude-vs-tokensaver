@@ -26,10 +26,17 @@ namespace ClaudeVS.ToolWindow
         private void InitFind()
         {
             AutomationProperties.SetName(_findBox, "Find in chat");
+            // Names for screen readers (Phase 108): the toggles show only "Aa", "W", ".*"
+            AutomationProperties.SetName(_findCase, "Match case");
+            AutomationProperties.SetName(_findWord, "Whole word");
+            AutomationProperties.SetName(_findRegex, "Regular expression");
             ChatTheme.Muted(_findStatus);
             var previous = ChatTheme.IconButton(ChatTheme.IconUp, "Previous match (Shift+Enter)");
             var next = ChatTheme.IconButton(ChatTheme.IconDown, "Next match (Enter)");
             var close = ChatTheme.IconButton(ChatTheme.IconClose, "Close (Esc)");
+            AutomationProperties.SetName(previous, "Previous match");
+            AutomationProperties.SetName(next, "Next match");
+            AutomationProperties.SetName(close, "Close find");
             previous.Click += (s, e) => FindStep(back: true);
             next.Click += (s, e) => FindStep(back: false);
             close.Click += (s, e) => CloseFind();
@@ -95,7 +102,10 @@ namespace ClaudeVS.ToolWindow
             var matches = TextSearch.Matches(map.Text, query, _findCase.IsChecked == true, _findWord.IsChecked == true, _findRegex.IsChecked == true, out string error);
             var starts = matches.Select(m => m.Start).ToList();
             int index = TextSearch.Next(starts, _findAt, back);
-            _findStatus.Text = error ?? TextSearch.Status(index, starts.Count, query);
+            string status = error ?? TextSearch.Status(index, starts.Count, query);
+            // Said as it changes (Phase 108): a screen reader can't see the bar's text change
+            if (status != _findStatus.Text) Announce(TextSearch.Announcement(status, query));
+            _findStatus.Text = status;
             if (index < 0) { _findAt = -1; _view.ClearMatch(); return; }
             _findAt = starts[index];
             _view.ShowMatch(map, _findAt, matches[index].Length);

@@ -364,6 +364,16 @@ namespace ClaudeVS.Core.Tests
             Eq(null, none, "no error");
         }
 
+        private static void Test_TextSearch_Announcement()
+        {
+            // Phase 108: what a screen reader hears from the find bar
+            Eq("3 of 12 for Validate", TextSearch.Announcement("3 of 12", "Validate"), "where");
+            Eq("No results for xyz", TextSearch.Announcement("No results", "xyz"), "none");
+            Eq("4 matches for a", TextSearch.Announcement("4 matches", "a"), "a count");
+            Eq("Not a valid pattern: Not enough )'s", TextSearch.Announcement("Not a valid pattern: Not enough )'s", "("), "the bar's own words");
+            Eq("", TextSearch.Announcement("", ""), "nothing asked");
+        }
+
         private static void Test_Markdown_HalfWritten()
         {
             // Phase 95: while an answer streams, its last line may be cut off

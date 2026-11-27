@@ -481,6 +481,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Find a word that is only inside a code block (and one only in an open tool row's *Output*), then press `Enter` through all matches | The match inside the code block is selected there and scrolled into view; the count includes it; moving on clears it; a word only in a closed tool row isn't found |
 | In the find bar type `id` in a chat that has `width` and `id`, then press *W* | The count drops to the whole-word `id`s; `width` is no longer found |
 | Press *.\*\* in the find bar and type `Valid\w*`, then `(` | Matches of different lengths each selected whole; `(` says "Not a valid pattern: …" instead of a count |
+| With Narrator on, open find, type a word, press `Enter` twice, then tab across the toggles | Narrator says "N matches for …", then "1 of N for …", "2 of N for …"; the toggles are read as Match case, Whole word, Regular expression |
 
 ## 34. Release (Phase 5)
 

@@ -3003,8 +3003,11 @@ conversation's text only, a word as part of any other, and literally.
       tested. `TextSearch.Matches` (starts and lengths; whole word wraps the pattern in lookarounds; a one-second
       timeout says the pattern takes too long); `FindStep` selects each match's own length. `Test_TextSearch_Regex`.
       Builds clean; not yet run in VS
-- [ ] **Screen readers hear the result.** The bar's *3 of 12* or *No results* is announced as it changes (it is
-      text a screen reader can't see change), and the toggles have names. The words in Core, tested
+- [x] **Screen readers hear the result.** The bar's *3 of 12* or *No results* is announced as it changes (it is
+      text a screen reader can't see change), and the toggles have names. The words in Core, tested.
+      `TextSearch.Announcement` ("3 of 12 for Validate"; an error as the bar says it); `FindStep` announces through
+      the chat's live region when the bar's text changes. The three toggles and three buttons have automation names.
+      `Test_TextSearch_Announcement`. Builds clean; not yet run in VS
 
 ---
 
