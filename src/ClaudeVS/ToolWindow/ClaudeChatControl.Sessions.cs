@@ -374,6 +374,9 @@ namespace ClaudeVS.ToolWindow
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             if (t.Skipped > 0) Append($"{t.Skipped} earlier items are not shown.");
+            // Its prompts are the newest in Ctrl+Up's history (Phase 113), after the solution's saved ones
+            EnsurePromptHistory();
+            _promptHistory.AddRange(t.Items.Where(i => i.Kind == TranscriptItemKind.User).Select(i => (i.Text ?? "").Trim()));
             string prompt = null;
             System.Windows.Documents.Block anchor = null;
             foreach (var item in t.Items)
