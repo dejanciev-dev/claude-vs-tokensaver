@@ -3085,9 +3085,14 @@ Planned on 2026-11-27, after Phase 110, on the same branch (PR #100 still open);
 as twenty commits. Phase 106 summarizes test runs and builds; the other commands Claude runs most still show their
 first lines.
 
-- [ ] **Failing tests named.** "✗ 2 failed · 10 passed" says how many, not which. The row's lines under the summary
+- [x] **Failing tests named.** "✗ 2 failed · 10 passed" says how many, not which. The row's lines under the summary
       name the failing tests (up to three): VSTest's `Failed Name [35 ms]`, pytest's `FAILED path::name`, Jest's
       `● Suite › name`, go test's `--- FAIL: TestX`. In Core, tested.
+      `RunResults.FailedTests` (also Microsoft.Testing.Platform's `failed Name (12ms)` and Vitest's `FAIL file > suite
+      > name`; each name once, in output order) into `RunSummary.Details` when anything failed: three names and
+      "+N more", or four names rather than "+1 more". `ToolCallView.Summarize` puts them under the summary line. The
+      VSTest case is the output Phase 110's live test captured; `--live-tools` now checks "AddsWrong" under the
+      summary. `Test_RunResults_FailingTestsNamed`. Builds clean; not yet run in VS
 - [ ] **Lint results.** ESLint's `✖ 5 problems (3 errors, 2 warnings)`, Ruff's `Found 3 errors.`, `dotnet format
       --verify-no-changes` and a clean run: "✗ 3 errors · 2 warnings", "✓ No problems". In Core, tested.
 - [ ] **Git results.** `git status` ("2 modified · 1 untracked", "Clean"), `git diff --stat` ("3 files · +10 −2"),

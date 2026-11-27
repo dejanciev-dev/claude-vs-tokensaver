@@ -913,6 +913,28 @@ namespace ClaudeVS.Core.Tests
             Eq("Read 1 line", ToolCallView.Summarize("Read", "Passed!  - Failed: 0, Passed: 1, Skipped: 0, Total: 1", false).Lines.Single(), "only commands");
         }
 
+        private static void Test_RunResults_FailingTestsNamed()
+        {
+            // Phase 111: which tests failed, under the summary
+            string N(string o) => string.Join(" | ", RunResults.FailedTests(o));
+            // VSTest, as dotnet test 11 printed it with its output redirected (captured for Phase 110's live test)
+            Eq("AddsWrong", N("  Failed AddsWrong [35 ms]\n  Error Message:\n   Assert.AreEqual failed.\n  Stack Trace:\n     at Calc.CalcTests.AddsWrong() in C:\\t\\CalcTests.cs:line 6\n\n" +
+                "Failed!  - Failed:     1, Passed:     1, Skipped:     0, Total:     2, Duration: 49 ms - Calc.dll (net11.0)"), "VSTest");
+            Eq("Calc.Add(a: 1, b: 2)", N("  Failed Calc.Add(a: 1, b: 2) [3 ms]"), "a test with arguments");
+            Eq("Adds", N("  failed Adds (12ms)\n  passed Other (1ms)"), "Microsoft.Testing.Platform");
+            Eq("tests/test_a.py::test_x | tests/test_a.py::test_y", N("FAILED tests/test_a.py::test_x - assert 1 == 2\nFAILED tests/test_a.py::test_y\n=== 2 failed in 0.1s ==="), "pytest");
+            Eq("Login › rejects a bad password", N("  ● Login › rejects a bad password\n\n    expect(received).toBe(expected)\n  ● Login › rejects a bad password"), "Jest, once");
+            Eq("src/a.test.ts > sum > adds", N(" FAIL  src/a.test.ts > sum > adds\n × src/a.test.ts > sum > adds 3ms"), "Vitest, once");
+            Eq("TestParse", N("=== RUN   TestParse\n--- FAIL: TestParse (0.00s)\nFAIL\texample.com/p\t0.01s"), "go test");
+
+            var row = ToolCallView.Summarize("Bash", "  Failed A [1 ms]\n  Failed B [1 ms]\n  Failed C [1 ms]\n  Failed D [1 ms]\n  Failed E [1 ms]\n" +
+                "Failed!  - Failed:     5, Passed:     1, Skipped:     0, Total:     6", isError: true);
+            Eq("✗ 5 failed · 1 passed | A | B | C | +2 more", string.Join(" | ", row.Lines), "three names and how many more");
+            Eq("✗ 4 failed · 0 passed | A | B | C | D", string.Join(" | ", ToolCallView.Summarize("Bash", "  Failed A [1 ms]\n  Failed B [1 ms]\n  Failed C [1 ms]\n  Failed D [1 ms]\n" +
+                "Failed!  - Failed:     4, Passed:     0, Skipped:     0, Total:     4", true).Lines), "a fourth name rather than \"+1 more\"");
+            Eq(1, ToolCallView.Summarize("Bash", "Passed!  - Failed:     0, Passed:     3, Skipped:     0, Total:     3", false).Lines.Count, "all passed: the summary alone");
+        }
+
         private static void Test_RunResults_Build()
         {
             // Phase 106: a build's summary on the row's ⎿ line

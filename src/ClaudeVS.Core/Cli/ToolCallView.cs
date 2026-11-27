@@ -325,7 +325,7 @@ namespace ClaudeVS.Core.Cli
             // A test run says how it went (Phase 106), the rest a click away; a failing run exits non-zero (an error)
             // …and a build (a test run builds first, so tests come first)
             if ((toolName == "Bash" || toolName == "PowerShell") && (RunResults.Tests(resultText) ?? RunResults.Build(resultText)) is RunSummary run)
-                return new ToolResultSummary { Lines = new[] { run.Line }, IsError = run.Failed, MoreLines = output.Count };
+                return new ToolResultSummary { Lines = new[] { run.Line }.Concat(run.Details.Select(Cut)).ToList(), IsError = run.Failed, MoreLines = output.Count };
             if (isError && toolName == "Grep" && GrepRejected(output) is string why)
                 return new ToolResultSummary { IsError = true, Lines = new[] { why } };
             if (isError)
