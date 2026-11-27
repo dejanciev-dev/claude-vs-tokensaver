@@ -405,6 +405,7 @@ namespace ClaudeVS.ToolWindow
             bubble.BorderThickness = new Thickness(1);
             LastUserMessage = new BlockUIContainer(bubble) { Margin = new Thickness(0, stamped ? 2 : 14, 0, 6) };
             _doc.Blocks.Add(LastUserMessage);
+            _prompts.Add((text ?? "", timeUtc ?? DateTime.UtcNow, LastUserMessage));
             Box.ScrollToEnd(); // you just sent it: always show it
         }
 
@@ -442,6 +443,11 @@ namespace ClaudeVS.ToolWindow
                 button.ToolTip = "Not saved: " + ex.Message;
             }
         }
+
+        private readonly List<(string Text, DateTime TimeUtc, Block Block)> _prompts = new List<(string, DateTime, Block)>();
+
+        /// <summary>This chat's prompts as shown, oldest first, with each one's bubble (Phase 113: *Go to prompt…*).</summary>
+        public IReadOnlyList<(string Text, DateTime TimeUtc, Block Block)> Prompts => _prompts;
 
         /// <summary>The bubble of the prompt sent last (where a bookmark of its answer scrolls to).</summary>
         public Block LastUserMessage { get; private set; }
@@ -1923,6 +1929,7 @@ namespace ClaudeVS.ToolWindow
             _toolGroup = null;
             _lookGroupOf.Clear();
             _lookGroup = null;
+            _prompts.Clear();
             LastUserMessage = null;
             _lastAnswerStart = null;
             _lastDay = null;

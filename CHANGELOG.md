@@ -84,6 +84,8 @@ All notable changes to this project are listed here. The format follows
 - **Search the prompt history:** type a word, then `Ctrl+Up`: only the earlier prompts that contain it, newest first.
 - **A resumed conversation's prompts in the history:** after resuming, `Ctrl+Up` steps back through that
   conversation's prompts first. A prompt sent again moves to the newest place rather than being there twice.
+- **Go to prompt:** `/` → *Go to prompt…* lists this chat's prompts, newest first, with when each was sent; pick one
+  to scroll to it.
 - **Copied answers keep their formatting:** the copy button (and *Copy last response*) puts HTML beside the Markdown,
   so Word, Outlook and Teams paste headings, lists, tables and colored code; an editor still gets the Markdown.
 - **A copied part of an answer keeps its formatting too:** Ctrl+C on a selection puts the selected headings, lists,

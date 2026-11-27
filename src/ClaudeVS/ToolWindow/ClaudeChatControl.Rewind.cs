@@ -55,6 +55,26 @@ namespace ClaudeVS.ToolWindow
         }
 
         /// <summary>
+        /// *Go to prompt…* (Phase 113): this chat's prompts, newest first, with when each was sent; picking one scrolls
+        /// the chat to it. Prompts no longer shown (a cleared chat) aren't listed.
+        /// </summary>
+        private void ShowGoToPrompt()
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var now = DateTime.UtcNow;
+            var prompts = _view.Prompts;
+            var entries = prompts.Select((p, i) => (p, i)).Reverse().Select(x => new ChatPopup.Entry
+            {
+                Label = (x.i + 1) + ". " + (SessionMetaStore.Clean(x.p.Text) ?? "(image)"),
+                Detail = SessionHistory.TimeAgo(x.p.TimeUtc, now),
+                Run = () => { ThreadHelper.ThrowIfNotOnUIThread(); _view.ScrollTo(x.p.Block); },
+            }).ToList();
+            if (entries.Count == 0) entries.Add(new ChatPopup.Entry { Label = "No prompts in this chat yet", Enabled = false });
+            _manage.Footer = prompts.Count > 0 ? $"{prompts.Count} prompts · Ctrl+Up in the box steps through them" : null;
+            _manage.Show(entries, _inputBox);
+        }
+
+        /// <summary>
         /// Continues this conversation in a new session (a copy, <c>--fork-session</c>), leaving the original as it
         /// was, so you can try another direction. Takes effect with the next prompt.
         /// </summary>

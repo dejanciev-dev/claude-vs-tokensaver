@@ -3183,8 +3183,11 @@ history the one you want is far back.
       adds a resumed conversation's prompts as if sent now, so `Ctrl+Up` reaches them first; `RenderTranscript` calls
       it after loading the solution's saved ones. They aren't written to the file: Claude Code's session file has them.
       `Test_PromptHistory_SentAgainAndResumed`. Builds clean; not yet run in VS
-- [ ] **Go to prompt.** `/` → *Go to prompt…* lists this chat's prompts, newest first, with when each was sent;
+- [x] **Go to prompt.** `/` → *Go to prompt…* lists this chat's prompts, newest first, with when each was sent;
       picking one scrolls to it.
+      `TranscriptView.Prompts`: each bubble with its text and time as `AppendUserMessage` adds it (live and resumed),
+      emptied by `Clear`. `ShowGoToPrompt` (beside the rewind picker, in the same popup, so typing filters it):
+      "12. first line" and "5 min ago"; picking one is `ScrollTo` its bubble. Builds clean; not yet run in VS
 
 ---
 
