@@ -53,6 +53,8 @@ All notable changes to this project are listed here. The format follows
   `<i>`, `<code>` and `<u>` as their Markdown would be.
 - **Collapsed sections:** `<details><summary>…</summary> … </details>` in an answer is a section that opens from its
   summary, its Markdown drawn inside.
+- **Copied answers keep their formatting:** the copy button (and *Copy last response*) puts HTML beside the Markdown,
+  so Word, Outlook and Teams paste headings, lists, tables and colored code; an editor still gets the Markdown.
 - **Copy as plain text:** right-click an answer's copy button for *Copy as Markdown* or *Copy as plain text* (no
   marks; code, bullets and boxes kept; tables tab-separated).
 - **Long tables folded:** more than 25 rows show the header, the first 10 and *Show all N rows*; *Copy table* still

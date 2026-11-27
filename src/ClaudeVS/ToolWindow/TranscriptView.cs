@@ -399,16 +399,21 @@ namespace ClaudeVS.ToolWindow
                 copy.Margin = new Thickness(0, 0, 4, 0);
                 ChatTheme.Muted(copy);
                 string answer = answerToCopy.Trim();
-                void CopyAs(string text)
+                void CopyAs(string text, bool withHtml = false)
                 {
-                    try { Clipboard.SetText(text); copy.Content = ChatTheme.IconCheck; copy.ToolTip = "Copied"; }
+                    try
+                    {
+                        if (withHtml) CopyMarkdown(text); else Clipboard.SetText(text);
+                        copy.Content = ChatTheme.IconCheck;
+                        copy.ToolTip = "Copied";
+                    }
                     catch (Exception) { copy.ToolTip = "Clipboard busy, try again"; }
                 }
-                copy.Click += (s, e) => CopyAs(answer);
+                copy.Click += (s, e) => CopyAs(answer, withHtml: true);
                 // Right-click: Markdown or plain text (Phase 100)
                 var menu = new ContextMenu();
                 var asMarkdown = new MenuItem { Header = "Copy as Markdown" };
-                asMarkdown.Click += (s, e) => CopyAs(answer);
+                asMarkdown.Click += (s, e) => CopyAs(answer, withHtml: true);
                 var asPlain = new MenuItem { Header = "Copy as plain text" };
                 asPlain.Click += (s, e) => CopyAs(AnswerText.Plain(answer));
                 menu.Items.Add(asMarkdown);
@@ -2216,6 +2221,18 @@ namespace ClaudeVS.ToolWindow
             if (!Uri.TryCreate(i.Url, UriKind.Absolute, out Uri uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
                 return new Run(i.Text); // only open web links and files; anything else is shown as text
             return WebLinkTo(new Run(i.Text), uri, color);
+        }
+
+        /// <summary>
+        /// An answer on the clipboard (Phase 109): its Markdown as text, for an editor, and as HTML, so Word, Outlook and
+        /// Teams paste its headings, lists, tables and colored code. Throws when the clipboard is busy.
+        /// </summary>
+        public static void CopyMarkdown(string markdown)
+        {
+            var data = new DataObject();
+            data.SetData(DataFormats.UnicodeText, markdown ?? "");
+            data.SetData(DataFormats.Html, AnswerText.ClipboardHtml(MarkdownHtml.Render(markdown)));
+            Clipboard.SetDataObject(data, true);
         }
 
         /// <summary>A link that opens <paramref name="uri"/> in the browser.</summary>

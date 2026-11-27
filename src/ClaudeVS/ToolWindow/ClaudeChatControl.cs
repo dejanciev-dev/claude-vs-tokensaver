@@ -1024,7 +1024,7 @@ namespace ClaudeVS.ToolWindow
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             if (string.IsNullOrWhiteSpace(_lastAnswer)) { Append("No response to copy yet."); return; }
-            try { Clipboard.SetText(_lastAnswer.Trim()); Append("Copied the last response."); }
+            try { TranscriptView.CopyMarkdown(_lastAnswer.Trim()); Append("Copied the last response."); }
             catch (Exception) { Append("The clipboard is busy; try again."); }
         }
 

@@ -3024,8 +3024,11 @@ Markdown or plain text (Phase 100); pasted into Word, Outlook or Teams it loses 
       so they survive a paste) in a monospace block. In Core, tested. `MarkdownHtml.Code` through
       `SyntaxHighlighter.Tokenize`, a `span` with a color per token (diffs too), the `pre` styled inline (a light
       background, Consolas). `Test_MarkdownHtml_ColoredCode`. Builds clean
-- [ ] **Copy keeps formatting.** The answer's copy button puts HTML on the clipboard beside the Markdown text, so
-      Word, Outlook and Teams paste headings, lists, tables and colored code; an editor still gets the Markdown
+- [x] **Copy keeps formatting.** The answer's copy button puts HTML on the clipboard beside the Markdown text, so
+      Word, Outlook and Teams paste headings, lists, tables and colored code; an editor still gets the Markdown.
+      `TranscriptView.CopyMarkdown` (`UnicodeText` and CF_HTML through Phase 100's `ClipboardHtml`) for the button's
+      click, its *Copy as Markdown* and the **/** menu's *Copy last response*; *Copy as plain text* stays text.
+      Builds clean; not yet run in VS
 - [ ] **Export as HTML.** *Export conversation…* offers an HTML page beside Markdown: the same conversation as a page
       that opens in a browser, styled for reading, the tool lines muted. In Core, tested
 

@@ -482,6 +482,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | In the find bar type `id` in a chat that has `width` and `id`, then press *W* | The count drops to the whole-word `id`s; `width` is no longer found |
 | Press *.\*\* in the find bar and type `Valid\w*`, then `(` | Matches of different lengths each selected whole; `(` says "Not a valid pattern: …" instead of a count |
 | With Narrator on, open find, type a word, press `Enter` twice, then tab across the toggles | Narrator says "N matches for …", then "1 of N for …", "2 of N for …"; the toggles are read as Match case, Whole word, Regular expression |
+| Click the copy button under an answer with a heading, a list, a table and a C# block; paste into Word or Outlook, then into Notepad | Word/Outlook get a heading, a bulleted list, a table and colored code in a gray block; Notepad gets the Markdown |
 
 ## 34. Release (Phase 5)
 
