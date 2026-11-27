@@ -3162,8 +3162,14 @@ Planned on 2026-11-27, after Phase 112, on the same branch; the third of four. `
 chat's prompts only: a new chat, a restart of Visual Studio or a resumed conversation starts with none, and in a long
 history the one you want is far back.
 
-- [ ] **History kept.** The prompts you send are kept per solution (the last 100) and a new chat window starts with
+- [x] **History kept.** The prompts you send are kept per solution (the last 100) and a new chat window starts with
       them, also after Visual Studio restarts. In Core, tested.
+      `PromptHistoryStore` (`%LOCALAPPDATA%\claude-vs-tokensaver\prompt-history.json`, beside the bookmarks): `Add`
+      appends one prompt, read from the file again, so two chat windows of a solution don't overwrite each other's;
+      the newest 100 of the 50 solutions used last; a prompt over 20,000 characters (a pasted log) isn't kept; a
+      damaged file reads as empty. `PromptHistory.Load` puts the saved ones before this chat's. The chat loads them
+      the first time `Ctrl+Up` or a send needs them for the solution (`EnsurePromptHistory`) and adds each send off
+      the UI thread. `Test_PromptHistory_Kept`. Builds clean; not yet run in VS
 - [ ] **Search as you step back.** With text in the box, `Ctrl+Up` goes only to earlier prompts that contain it, as
       a shell's history search does; with nothing matching, to all of them. In Core, tested.
 - [ ] **A resumed conversation's prompts.** Resuming a conversation puts its prompts in the history, and a prompt
