@@ -3213,9 +3213,13 @@ Then the docs and a release for Phases 100–113.
       cwd was reset to …" (`Output` leaves that last line out; a call with only that has no fold). Then PASS, $0.0032:
       "*1 prompt · $0.0032 · 59.1k tokens · Haiku 5.5 · …*", "⎿ Output · 1 line". The chat's *Output* still shows that
       line, as Claude Code sent it. Tests in `Test_Export_WhatItCost` and `Test_Export_OutputAndStart`; CONTRIBUTING
-- [ ] **README and the overview.** README's rows and the Marketplace overview for Phases 111–113: summarized git,
+- [x] **README and the overview.** README's rows and the Marketplace overview for Phases 111–113: summarized git,
       lint and installs, failing tests named, the export's cost, contents, dark and print, saving one answer, the kept
       and searchable prompt history, *Go to prompt*; the test counts.
+      README: *Tool rows* names the failing tests, lint, git and install summaries with an example each; *Export* the
+      cost line, the contents, dark and print, and *Save as…* for one answer; the shortcuts table's `Ctrl+Up` row the
+      search and the kept history; a *Go to prompt* command row; 321 tests. The overview's chat paragraph names the
+      same. The `--live-all` count and cost follow with item 4's full run
 - [ ] **Release 0.18.0.** Manifest, assembly and package registration at 0.18.0, still a preview; the Unreleased
       changelog becomes `## [0.18.0]` with highlights; `--live-all` run in full with its count, cost and time in
       CONTRIBUTING. Tagging after the merge, when asked.

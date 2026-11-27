@@ -62,10 +62,10 @@ warm, and shows what every turn costs.
 A suggested next prompt in the empty box when an answer ends with an offer, and after a failed turn what to do next
 (Tab takes it; no model call), a full disk included. Behind a gateway whose model takes fewer output tokens, one click sets the limit it
 names and the conversation carries on. Markdown answers with tables, task lists, notes, collapsed sections and footnotes, syntax-colored code blocks (Copy, Insert, Save; diffs in color, long ones folded) and links that open files at the line; answers, or a part of one, copied with their formatting for Word, Outlook and Teams; find in the chat (whole words, regular expressions);
-tool rows that say how a test run or build went, with the output in its colors and file references as links; diffs for Claude's edits and per-change review,
+tool rows that say how a test run, build, lint, git command or package install went (the failing tests named), with the output in its colors and file references as links; diffs for Claude's edits and per-change review,
 question cards (by keyboard too) and plan cards, Manual / Edit automatically / Plan / Auto modes, sessions with resume, rename, fork and groups,
 restart in place (Claude Code reads a `CLAUDE.md` or `.mcp.json` you edited, and the conversation goes on),
-rewind, images, bookmarks, export as Markdown or a web page (with tool output, or from a chosen prompt), Claude Code dialogs (status, usage, memory, output style, rules, hooks) and
+rewind, images, bookmarks, export as Markdown or a web page (with tool output, from a chosen prompt, what it cost and a list of prompts; dark and printable) or one answer alone, a prompt history kept per solution that `Ctrl+Up` searches, Claude Code dialogs (status, usage, memory, output style, rules, hooks) and
 screen reader announcements.
 
 ## First run
