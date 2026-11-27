@@ -71,6 +71,8 @@ All notable changes to this project are listed here. The format follows
 - **Export with tool output, without tools, or from a prompt on:** the export's file types include each tool call's
   output folded under its line (a click opens it, on the page and on GitHub) and no tool calls at all; the type picked
   is kept for next time. Right-click a prompt for *Export from here…*.
+- **An export says what the conversation cost:** under its title, the number of prompts, the cost (and the agents'
+  part), the tokens, the models that answered and when it started and ended.
 - **Copied answers keep their formatting:** the copy button (and *Copy last response*) puts HTML beside the Markdown,
   so Word, Outlook and Teams paste headings, lists, tables and colored code; an editor still gets the Markdown.
 - **A copied part of an answer keeps its formatting too:** Ctrl+C on a selection puts the selected headings, lists,

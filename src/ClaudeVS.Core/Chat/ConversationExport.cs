@@ -25,6 +25,10 @@ namespace ClaudeVS.Core.Chat
         public string FromUuid { get; set; }
         /// <summary>The same prompt's text, used when its id isn't in the file (the last prompt with this text).</summary>
         public string FromText { get; set; }
+        /// <summary>What the conversation cost (<see cref="SessionCost.Read"/>), for the line under the title; null leaves it out (Phase 112).</summary>
+        public SessionCostInfo Cost { get; set; }
+        /// <summary>"Haiku 5.5" for a model ID, as Claude Code names it; null falls back to <see cref="ConversationExport.ModelName"/>.</summary>
+        public Func<string, string> ModelName { get; set; }
     }
 
     /// <summary>Turns a conversation read from the CLI's session file into a Markdown document.</summary>
@@ -67,6 +71,7 @@ namespace ClaudeVS.Core.Chat
             sb.Append("*Exported from Claude Code in Visual Studio on ").Append(exportedLocal.ToString("yyyy-MM-dd HH:mm")).Append("*\n");
             int start = options.FromUuid != null || options.FromText != null ? StartIndex(transcript, options.FromUuid, options.FromText) : 0;
             int skipped = transcript.Skipped + start;
+            if (Summary(transcript, options, whole: start == 0) is string summary) sb.Append('\n').Append(summary).Append('\n');
             if (start > 0) sb.Append("\n*From a chosen prompt on; ").Append(skipped).Append(" earlier items are not included.*\n");
             else if (skipped > 0) sb.Append("\n*").Append(skipped).Append(" earlier items are not included.*\n");
 
@@ -108,6 +113,52 @@ namespace ClaudeVS.Core.Chat
                 }
             }
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// The line under the title (Phase 112): "*12 prompts · $0.42 ($0.10 agents) · 1.2M tokens · Sonnet 5.5, Haiku 5.5 ·
+        /// 2026-11-27 09:00–11:30*", from the session file's cost and the prompts' times; the parts it has. When the
+        /// export starts at a chosen prompt, the cost is the whole conversation's and says so. Null with nothing to say.
+        /// </summary>
+        private static string Summary(SessionTranscript transcript, ExportOptions options, bool whole)
+        {
+            var parts = new System.Collections.Generic.List<string>();
+            int prompts = transcript.Items.Count(i => i.Kind == TranscriptItemKind.User);
+            if (prompts > 0) parts.Add(prompts == 1 ? "1 prompt" : prompts + " prompts");
+            var cost = options.Cost;
+            if (cost != null && cost.Requests > 0)
+            {
+                string usd = Usd(cost.CostUsd) + (cost.AgentCostUsd >= 0.005 ? " (" + Usd(cost.AgentCostUsd) + " agents)" : "");
+                parts.Add(whole ? usd : "the whole conversation " + usd);
+                parts.Add(TokenMeter.Format(cost.Usage.Total) + " tokens");
+                var names = cost.Models.Select(m => options.ModelName?.Invoke(m) ?? ModelName(m)).Where(n => !string.IsNullOrEmpty(n)).Distinct().ToList();
+                if (names.Count > 0) parts.Add(string.Join(", ", names));
+            }
+            var times = transcript.Items.Where(i => i.TimestampUtc.HasValue).Select(i => i.TimestampUtc.Value.ToLocalTime()).ToList();
+            if (times.Count > 0)
+            {
+                DateTime first = times.Min(), last = times.Max();
+                string span = first.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+                if (last - first >= TimeSpan.FromMinutes(1))
+                    span += "–" + last.ToString(last.Date == first.Date ? "HH:mm" : "yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+                parts.Add(span);
+            }
+            return parts.Count == 0 ? null : "*" + string.Join(" · ", parts) + "*";
+        }
+
+        private static string Usd(double v) => "$" + v.ToString(v >= 100 ? "0" : "0.00", System.Globalization.CultureInfo.InvariantCulture);
+
+        /// <summary>
+        /// A model ID as a short name when the catalog doesn't know it (Phase 112): "claude-haiku-5-5" → "Haiku 5.5",
+        /// "claude-sonnet-4-5-20250929" → "Sonnet 4.5"; anything else as it is.
+        /// </summary>
+        public static string ModelName(string model)
+        {
+            if (string.IsNullOrEmpty(model)) return model;
+            var m = System.Text.RegularExpressions.Regex.Match(model, @"^claude-(?<f>[a-z]+)-(?<v>\d{1,2}(?:-\d{1,2})?)(?:-\d{8})?(?<rest>\[.*\])?$");
+            if (!m.Success) return model;
+            string family = m.Groups["f"].Value;
+            return char.ToUpperInvariant(family[0]) + family.Substring(1) + " " + m.Groups["v"].Value.Replace('-', '.');
         }
 
         private const string OutputSummary = "⎿ Output";

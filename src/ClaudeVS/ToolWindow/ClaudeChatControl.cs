@@ -452,6 +452,10 @@ namespace ClaudeVS.ToolWindow
                 target = System.IO.Path.ChangeExtension(target, ".html");
             bool html = System.IO.Path.GetExtension(target).StartsWith(".htm", StringComparison.OrdinalIgnoreCase);
             var options = new ExportOptions { Tools = kind.Tools, FromUuid = fromUuid, FromText = fromText };
+            // What it cost, with the models as Claude Code names them (Phase 112)
+            var prices = Options?.ToPriceTable();
+            var catalog = _session?.Models;
+            if (catalog != null) options.ModelName = m => catalog.DisplayName(m);
 
             Jtf.RunAsync(async () =>
             {
@@ -462,6 +466,7 @@ namespace ClaudeVS.ToolWindow
                     await System.Threading.Tasks.Task.Run(() =>
                     {
                         var transcript = SessionTranscript.Read(source, maxItems: int.MaxValue);
+                        options.Cost = SessionCost.Get(source, prices);
                         items = transcript.Items.Count - (fromUuid != null || fromText != null ? ConversationExport.StartIndex(transcript, fromUuid, fromText) : 0);
                         Core.SafeFile.Replace(target, html
                             ? ConversationExport.ToHtml(transcript, title, DateTime.Now, options)

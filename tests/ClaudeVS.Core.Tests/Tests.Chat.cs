@@ -1115,6 +1115,7 @@ namespace ClaudeVS.Core.Tests
             string md = ConversationExport.ToMarkdown(t, "Login\nquestions", new DateTime(2026, 11, 3, 10, 5, 0));
             string expected =
                 "# Login questions\n\n*Exported from Claude Code in Visual Studio on 2026-11-03 10:05*\n" +
+                "\n*2 prompts*\n" +
                 "\n## You\n\nHow does login work?\n" +
                 "\n## Claude\n\nLet me look.\n" +
                 "\n- 🔧 `Read: C:/a/Login.cs` · ~2.7k tok\n- 🔧 `Bash: echo 'x'` · failed\n" +
@@ -1141,6 +1142,32 @@ namespace ClaudeVS.Core.Tests
             True(html.Contains("<strong>JWT</strong>") && html.Contains("<span style=\"color:#0000FF\">var</span>"), "the answer with colored code");
             True(html.Contains("<style>") && !html.Contains("<script") && !html.Contains("<link"), "styled inline, nothing loaded from elsewhere");
             Eq("Login.md", ConversationExport.FileName("Login"), "the dialog still suggests Markdown first");
+        }
+
+        private static void Test_Export_WhatItCost()
+        {
+            // Phase 112: the line under the title says what the conversation was
+            var t = new SessionTranscript();
+            var start = new DateTime(2026, 11, 27, 9, 0, 0, DateTimeKind.Local).ToUniversalTime();
+            t.Items.Add(new TranscriptItem { Kind = TranscriptItemKind.User, Text = "One", Uuid = "u1", TimestampUtc = start });
+            t.Items.Add(new TranscriptItem { Kind = TranscriptItemKind.Answer, Text = "A", TimestampUtc = start.AddMinutes(1) });
+            t.Items.Add(new TranscriptItem { Kind = TranscriptItemKind.User, Text = "Two", Uuid = "u2", TimestampUtc = start.AddMinutes(150) });
+            var cost = new SessionCostInfo { Requests = 4, Usage = new TokenUsage { Input = 1000, CacheRead = 1200000, Output = 3000 }, CostUsd = 0.4249, AgentCostUsd = 0.1 };
+            cost.Models.Add("claude-sonnet-5-5");
+            cost.Models.Add("claude-haiku-5-5");
+            var when = new DateTime(2026, 11, 27, 12, 0, 0);
+            string md = ConversationExport.ToMarkdown(t, "T", when, new ExportOptions { Cost = cost });
+            True(md.Contains("\n*2 prompts · $0.42 ($0.10 agents) · 1.2M tokens · Sonnet 5.5, Haiku 5.5 · 2026-11-27 09:00–11:30*\n"), "the summary: " + md);
+            string named = ConversationExport.ToMarkdown(t, "T", when, new ExportOptions { Cost = cost, ModelName = m => m == "claude-haiku-5-5" ? "Haiku 5.5 (fast)" : null });
+            True(named.Contains("Sonnet 5.5, Haiku 5.5 (fast)"), "the catalog's names first, the fallback for the rest");
+            string from = ConversationExport.ToMarkdown(t, "T", when, new ExportOptions { Cost = cost, FromUuid = "u2" });
+            True(from.Contains("· the whole conversation $0.42 ($0.10 agents) ·"), "from a prompt on, the cost says it is the whole conversation's: " + from);
+            True(ConversationExport.ToHtml(t, "T", when, new ExportOptions { Cost = cost }).Contains("<p><em>2 prompts · $0.42"), "on the page too");
+
+            Eq("Haiku 5.5", ConversationExport.ModelName("claude-haiku-5-5"));
+            Eq("Sonnet 4.5", ConversationExport.ModelName("claude-sonnet-4-5-20250929"), "a dated ID");
+            Eq("Opus 5.5", ConversationExport.ModelName("claude-opus-5-5[1m]"), "the long-context mark");
+            Eq("gpt-x", ConversationExport.ModelName("gpt-x"), "anything else as it is");
         }
 
         private static void Test_Export_OutputAndStart()
