@@ -13,7 +13,7 @@ All notable changes to this project are listed here. The format follows
 - **Build and test rows checked live:** a new live test (`--live-tools`, in `--live-all`, now 22 tests) has Claude
   Code run a real `dotnet build` and `dotnet test`; their rows say "Build succeeded" and "✗ 1 failed · 1 passed".
 - **README and the Marketplace overview** describe find in the chat, the new Markdown, copying and exporting with
-  formatting, and the summarized tool rows.
+  formatting, the summarized tool rows (tests, builds, lint, git, installs) and the kept prompt history.
 
 ### Added
 
