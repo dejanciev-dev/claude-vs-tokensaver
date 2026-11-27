@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using ClaudeVS.Core.Chat;
 using ClaudeVS.Core.Cli;
 using ClaudeVS.Core.Context;
 using ClaudeVS.Core.Markdown;
@@ -82,6 +83,7 @@ namespace ClaudeVS.Core.Tests
                 ("ansi", RunAnsi), // a Bash result's color codes cleaned and colored (Phase 104)
                 ("tools", RunTools), // a real dotnet build and test run summarized on their rows (Phase 110)
                 ("git", RunGit), // git status, commit, push and log summarized on their rows (Phase 114)
+                ("export", RunExport), // a real session file exported with its tool output and cost (Phase 114)
                 ("session", RunSession),
                 ("long-prompt", RunLongPrompt),
                 ("prompt-tokens", RunPromptTokens),
@@ -851,6 +853,70 @@ namespace ClaudeVS.Core.Tests
             Check(log == "2 commits", "git log --oneline: \"2 commits\"");
             Console.WriteLine(failures.Count == 0 ? "PASS live git" : "FAIL live git: " + string.Join("; ", failures));
             return failures.Count == 0 ? 0 : 1;
+        }
+
+        /// <summary>
+        /// `--live-export` (in --live-all, about a cent): a real session exported (Phase 114). Phases 110 and 112 built
+        /// the export's tool output and cost from test data; here Haiku runs one <c>echo</c>, then the session file Claude
+        /// Code wrote is read and exported as the chat does (tool output folded, the cost from the file), and the page
+        /// must hold the echoed text in a muted fold, "1 prompt", a cost, a Haiku model name, and the answer.
+        /// </summary>
+        public static int RunExport()
+        {
+            string exe = ClaudeCliLocator.Resolve("");
+            if (exe == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-live-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            var events = new BlockingCollection<ClaudeEvent>();
+            var session = NewSession(new ClaudeLaunchOptions
+            {
+                WorkingDirectory = dir, Model = ModelChoice.Haiku, Effort = EffortChoice.Low,
+                ExtraArguments = "--allowedTools Bash",
+            });
+            session.EventReceived += (s, e) => events.Add(e);
+            string marker = "cvs-export-" + Guid.NewGuid().ToString("N").Substring(0, 8);
+            string sessionId = null;
+            try
+            {
+                session.SendPromptAsync($"Run this exact bash command once: echo {marker}. Then reply only 'done'.").GetAwaiter().GetResult();
+                var deadline = DateTime.UtcNow.AddSeconds(120);
+                while (DateTime.UtcNow < deadline)
+                {
+                    if (!events.TryTake(out var e, TimeSpan.FromMilliseconds(200))) continue;
+                    if (e.Kind == ClaudeEventKind.TurnCompleted) { Console.WriteLine($"  turn completed: error={e.IsError}, cost=${e.TotalCostUsd:0.0000}"); break; }
+                }
+                sessionId = session.SessionId;
+            }
+            finally { session.Dispose(); }
+
+            try
+            {
+                if (sessionId == null) { Console.WriteLine("FAIL live export: no session id"); return 1; }
+                string file = SessionHistory.SessionFile(null, dir, sessionId);
+                for (int i = 0; i < 50 && !File.Exists(file); i++) System.Threading.Thread.Sleep(100); // written as the turn ends
+                if (!File.Exists(file)) { Console.WriteLine("FAIL live export: no session file at " + file); return 1; }
+                var transcript = SessionTranscript.Read(file, maxItems: int.MaxValue);
+                var cost = SessionCost.Read(file, null);
+                Console.WriteLine($"  session file: {transcript.Items.Count} items, {cost.Requests} requests, ${cost.CostUsd:0.0000}, models {string.Join(", ", cost.Models)}");
+                var options = new ExportOptions { Tools = ExportTools.WithOutput, Cost = cost };
+                string md = ConversationExport.ToMarkdown(transcript, "Live export", DateTime.Now, options);
+                string html = ConversationExport.ToHtml(transcript, "Live export", DateTime.Now, options);
+                foreach (var l in md.Split('\n').Take(24)) Console.WriteLine("  | " + l);
+
+                var failures = new List<string>();
+                void Check(bool ok, string what) { Console.WriteLine((ok ? "  ok   " : "  FAIL ") + what); if (!ok) failures.Add(what); }
+                int fold = html.IndexOf("<details class=\"tool\"><summary>⎿ Output", StringComparison.Ordinal);
+                Check(fold > 0 && html.IndexOf(marker, fold, StringComparison.Ordinal) > fold, "the echo's output in a muted fold");
+                Check(!md.Contains("Shell cwd was reset"), "without Claude Code's \"Shell cwd was reset\" line");
+                Check(html.Contains("<li class=\"tool\">🔧 <code>Bash"), "the Bash line");
+                var summary = System.Text.RegularExpressions.Regex.Match(md, @"\n\*1 prompt · \$(?:0\.0\d[1-9]\d|\d+\.\d\d) · [\d.]+[kM]? tokens · (?<m>[^·*]+)");
+                Check(summary.Success, "the line under the title: 1 prompt, a cost, the tokens");
+                Check(summary.Success && summary.Groups["m"].Value.Contains("Haiku"), "a Haiku model name: " + (summary.Success ? summary.Groups["m"].Value.Trim() : "none"));
+                Check(System.Text.RegularExpressions.Regex.IsMatch(md, @"## Claude\n[\s\S]*done", System.Text.RegularExpressions.RegexOptions.IgnoreCase), "the answer");
+                Console.WriteLine(failures.Count == 0 ? "PASS live export" : "FAIL live export: " + string.Join("; ", failures));
+                return failures.Count == 0 ? 0 : 1;
+            }
+            finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
         }
 
         /// <summary>

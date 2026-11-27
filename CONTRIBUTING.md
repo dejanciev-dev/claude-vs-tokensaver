@@ -62,6 +62,8 @@ and has Haiku run `dotnet build` and `dotnet test`; their rows must read "Build 
 `--live-git` (about $0.005, in `--live-all`; needs git) makes a repository with a local remote and one changed file
 and has Haiku run `git status`, `git commit -am`, `git push` and `git log --oneline`; their rows must read
 "1 modified", "Committed … · 1 file · +1", "Pushed main" and "2 commits".
+`--live-export` (about $0.003, in `--live-all`) has Haiku run one `echo`, then exports the session file Claude Code
+wrote, with the tool output folded and the cost; the page must hold the echoed text, "1 prompt", a cost and "Haiku".
 
 Each test also runs on its own. `--live [path-for-raw-output.txt] [mode]` runs two short turns, in Accept Edits
 unless a mode is named (`Plan` checks that plan mode keeps Haiku, also after a restart and a resume). To capture and answer permission

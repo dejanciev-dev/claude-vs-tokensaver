@@ -3203,9 +3203,16 @@ Then the docs and a release for Phases 100–113.
       the folder can go. First run PASS, $0.0045: Claude Code 2.1.332 passes git's output as git prints it, with "Shell
       cwd was reset to …" after the commit's, the push's and the log's. Phase 111 already left that line out of its
       every-line checks; without that the log wouldn't read "2 commits". CONTRIBUTING describes it
-- [ ] **Live test: an export from a real session.** An `export` step: a turn with a Bash call, then the session file
+- [x] **Live test: an export from a real session.** An `export` step: a turn with a Bash call, then the session file
       exported as the chat does, with the tool output folded and the cost; the page must hold the command's output,
       the prompt count, a model name and a cost.
+      `LiveSmoke.RunExport` (`--live-export`, after `git`): Haiku runs `echo` with a marker; the session file at
+      `SessionHistory.SessionFile` read with `SessionTranscript.Read` and `SessionCost.Read`, exported with
+      `ExportTools.WithOutput` and the cost. The first run passed and showed two things to fix: the cost read "$0.00"
+      for a $0.0032 conversation (`Usd` now gives four decimals under a cent), and the fold held Claude Code's "Shell
+      cwd was reset to …" (`Output` leaves that last line out; a call with only that has no fold). Then PASS, $0.0032:
+      "*1 prompt · $0.0032 · 59.1k tokens · Haiku 5.5 · …*", "⎿ Output · 1 line". The chat's *Output* still shows that
+      line, as Claude Code sent it. Tests in `Test_Export_WhatItCost` and `Test_Export_OutputAndStart`; CONTRIBUTING
 - [ ] **README and the overview.** README's rows and the Marketplace overview for Phases 111–113: summarized git,
       lint and installs, failing tests named, the export's cost, contents, dark and print, saving one answer, the kept
       and searchable prompt history, *Go to prompt*; the test counts.
