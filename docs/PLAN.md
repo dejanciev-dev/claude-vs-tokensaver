@@ -3070,8 +3070,14 @@ Planned on 2026-11-27, after Phase 109 (PR #99 merged); the four items picked fr
       says how many items are left out. The save dialog has six file types (Markdown or web page × lines, output,
       none), the last one kept for the session; a prompt's right-click menu has *Copy* (the selection, else the
       prompt) and *Export from here…*, live and resumed. `Test_Export_OutputAndStart`. Builds clean; not yet run in VS
-- [ ] **README and the overview.** README, the Marketplace overview and CONTRIBUTING describe Phases 100–110: copying
+- [x] **README and the overview.** README, the Marketplace overview and CONTRIBUTING describe Phases 100–110: copying
       out, find in chat, code into the editor, tool output, answers as HTML; the test counts.
+      README: *Tool rows* says how a test run or build went, a failed command's error lines and Grep's links (it still
+      said "the first lines of its output"); *Markdown answers* names sections, footnotes, inline tags, emoji,
+      numbered lists, heading links, long tables and copying with formatting, also a part; *Code blocks* Insert's
+      indent, a diff's new side, the header and a console block's commands; *Export* the tool output, no tools and
+      *Export from here…*; a *Find in chat* row; 310 tests; `--live-all` with its count and cost. The overview's chat
+      paragraph names the same. CONTRIBUTING got the live count with item 1. Under *Changed* in the changelog
 
 ---
 
