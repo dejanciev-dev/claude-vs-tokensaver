@@ -81,6 +81,46 @@ namespace ClaudeVS.Core.Cli
             return new RunSummary { Line = (failed > 0 ? "✗ " : "✓ ") + string.Join(" · ", parts), Failed = failed > 0, Details = failed > 0 ? Shown(FailedTests(output)) : new string[0] };
         }
 
+        // ESLint: "✖ 5 problems (3 errors, 2 warnings)"
+        private static readonly Regex EsLint = new Regex(@"^\s*✖ \d+ problems? \((?<e>\d+) errors?, (?<w>\d+) warnings?\)", RegexOptions.Compiled | RegexOptions.Multiline);
+        // Ruff: "Found 3 errors." (tsc says "Found 3 errors in 2 files.", so a .py path must be in the output), "All checks passed!"
+        private static readonly Regex Ruff = new Regex(@"^Found (?<n>\d+) errors?\.\s*$", RegexOptions.Compiled | RegexOptions.Multiline);
+        private static readonly Regex PyPath = new Regex(@"\.pyi?:\d+:\d+", RegexOptions.Compiled);
+        private static readonly Regex RuffClean = new Regex(@"^All checks passed!\s*$", RegexOptions.Compiled | RegexOptions.Multiline);
+        // Pylint: "Your code has been rated at 7.50/10 (previous run: 7.00/10, +0.50)"
+        private static readonly Regex Pylint = new Regex(@"^Your code has been rated at (?<r>-?[\d.]+)/10", RegexOptions.Compiled | RegexOptions.Multiline);
+        // dotnet format --verify-no-changes: "C:\a\P.cs(3,1): error WHITESPACE: Fix whitespace formatting. … [C:\a\a.csproj]"
+        private static readonly Regex DotnetFormat = new Regex(@"^(?<f>.+?)\(\d+,\d+\): (?:error|warning) (?:WHITESPACE|FINALNEWLINE|CHARSET|ENDOFLINE|IMPORTS)\b", RegexOptions.Compiled | RegexOptions.Multiline);
+
+        /// <summary>
+        /// A linter's summary (Phase 111): "✗ 3 errors · 2 warnings", "⚠ 2 warnings", "✓ No problems", "Rated 7.50/10",
+        /// "✗ 4 formatting problems in 2 files"; null when the output has none.
+        /// </summary>
+        public static RunSummary Lint(string output)
+        {
+            if (string.IsNullOrEmpty(output)) return null;
+            string Count(int n, string w) => n == 1 ? "1 " + w : n + " " + w + "s";
+            RunSummary Problems(int errors, int warnings) =>
+                errors > 0 ? new RunSummary { Line = "✗ " + Count(errors, "error") + (warnings > 0 ? " · " + Count(warnings, "warning") : ""), Failed = true }
+                : warnings > 0 ? new RunSummary { Line = "⚠ " + Count(warnings, "warning") }
+                : new RunSummary { Line = "✓ No problems" };
+
+            var es = EsLint.Matches(output).Cast<Match>().LastOrDefault();
+            if (es != null) return Problems(N(es.Groups["e"]), N(es.Groups["w"]));
+            var ruff = Ruff.Match(output);
+            if (ruff.Success && PyPath.IsMatch(output)) return Problems(N(ruff.Groups["n"]), 0);
+            if (RuffClean.IsMatch(output)) return Problems(0, 0);
+            var pylint = Pylint.Match(output);
+            if (pylint.Success) return new RunSummary { Line = "Rated " + pylint.Groups["r"].Value + "/10" };
+            var format = DotnetFormat.Matches(output).Cast<Match>().ToList();
+            if (format.Count > 0)
+            {
+                int files = format.Select(m => m.Groups["f"].Value.Trim()).Distinct(System.StringComparer.OrdinalIgnoreCase).Count();
+                return new RunSummary { Line = "✗ " + Count(format.Count, "formatting problem") + " in " + Count(files, "file"), Failed = true };
+            }
+            return null;
+        }
+
         // A failing test's own line, per runner (Phase 111)
         private static readonly Regex[] FailedTest =
         {
