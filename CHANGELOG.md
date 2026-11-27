@@ -19,6 +19,8 @@ All notable changes to this project are listed here. The format follows
 
 - **Failing tests named:** under "✗ 2 failed · 10 passed" a test run's row names the tests that failed (up to
   three, then "+N more"), from dotnet test, Jest, Vitest, pytest and go test.
+- **Lint results summarized:** ESLint, Ruff, Pylint and `dotnet format --verify-no-changes` say how it went on the
+  row: "✗ 3 errors · 2 warnings", "✓ No problems", "Rated 7.50/10", "✗ 5 formatting problems in 1 file".
 - **Tables in Claude's answers are tables** (they were lines of pipes): a shaded header row, lines between columns,
   each column aligned as the separator row says, also while the rows arrive.
 - **Bold and inline code while they stream:** a `**bold` or `` `code `` that hasn't closed yet shows as bold or code,

@@ -3093,8 +3093,13 @@ first lines.
       "+N more", or four names rather than "+1 more". `ToolCallView.Summarize` puts them under the summary line. The
       VSTest case is the output Phase 110's live test captured; `--live-tools` now checks "AddsWrong" under the
       summary. `Test_RunResults_FailingTestsNamed`. Builds clean; not yet run in VS
-- [ ] **Lint results.** ESLint's `✖ 5 problems (3 errors, 2 warnings)`, Ruff's `Found 3 errors.`, `dotnet format
+- [x] **Lint results.** ESLint's `✖ 5 problems (3 errors, 2 warnings)`, Ruff's `Found 3 errors.`, `dotnet format
       --verify-no-changes` and a clean run: "✗ 3 errors · 2 warnings", "✓ No problems". In Core, tested.
+      `RunResults.Lint`: ESLint (only warnings: "⚠ 1 warning"), Ruff and its "All checks passed!", Pylint's rating
+      ("Rated 7.50/10"), dotnet format's `error WHITESPACE`/`FINALNEWLINE`/… lines ("✗ 5 formatting problems in 1
+      file"; the form checked against dotnet 11's real output). Ruff's "Found 3 errors." is also how an older tsc ends,
+      so it counts only with a `.py:line:col` in the output, and `Summarize` checks lint before builds. A clean ESLint
+      prints nothing, so it keeps its first lines. `Test_RunResults_Lint`. Builds clean; not yet run in VS
 - [ ] **Git results.** `git status` ("2 modified · 1 untracked", "Clean"), `git diff --stat` ("3 files · +10 −2"),
       `git commit` ("Committed abc1234: message"), `git push` ("Pushed to origin/branch"), `git log --oneline`
       ("12 commits"). In Core, tested.

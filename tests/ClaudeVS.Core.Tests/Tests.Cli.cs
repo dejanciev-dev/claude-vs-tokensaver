@@ -913,6 +913,26 @@ namespace ClaudeVS.Core.Tests
             Eq("Read 1 line", ToolCallView.Summarize("Read", "Passed!  - Failed: 0, Passed: 1, Skipped: 0, Total: 1", false).Lines.Single(), "only commands");
         }
 
+        private static void Test_RunResults_Lint()
+        {
+            // Phase 111: a linter's own summary on the row
+            string L(string o) => RunResults.Lint(o)?.Line;
+            Eq("✗ 3 errors · 2 warnings", L("C:\\a\\src\\x.js\n  1:10  error  'x' is defined but never used  no-unused-vars\n\n✖ 5 problems (3 errors, 2 warnings)\n  2 errors and 0 warnings potentially fixable with the `--fix` option."), "ESLint");
+            Eq("⚠ 1 warning", L("✖ 1 problem (0 errors, 1 warning)"), "ESLint, only a warning");
+            Eq("✗ 2 errors", L("a.py:1:8: F401 [*] `os` imported but unused\nb.py:3:1: E741 Ambiguous variable name: `l`\nFound 2 errors.\n[*] 1 fixable with the `--fix` option."), "Ruff");
+            Eq(null, L("src/a.ts:3:1 - error TS2322: Type 'string' is not assignable\nFound 3 errors."), "tsc's line without a .py path is not Ruff");
+            Eq("✓ No problems", L("All checks passed!"), "Ruff, clean");
+            Eq("Rated 7.50/10", L("************* Module a\na.py:1:0: C0114: Missing module docstring\n\n------------------------------------------------------------------\nYour code has been rated at 7.50/10 (previous run: 7.00/10, +0.50)"), "Pylint");
+            Eq("✗ 3 formatting problems in 2 files", L("C:\\a\\P.cs(3,1): error WHITESPACE: Fix whitespace formatting. Replace 1 characters with '\\n'. [C:\\a\\a.csproj]\n" +
+                "C:\\a\\P.cs(9,2): error WHITESPACE: Fix whitespace formatting. [C:\\a\\a.csproj]\nC:\\a\\Q.cs(1,1): error FINALNEWLINE: Fix final newline. [C:\\a\\a.csproj]"), "dotnet format --verify-no-changes");
+            Eq(null, L("Build succeeded.\n    0 Warning(s)"), "not a linter");
+
+            var row = ToolCallView.Summarize("Bash", "a.py:1:8: F401 unused\nFound 1 error.", isError: true);
+            Eq("✗ 1 error", row.Lines.Single(), "the row: Ruff before tsc's build line");
+            True(row.IsError, "red");
+            Eq("Build failed · 3 errors", ToolCallView.Summarize("Bash", "src/a.ts:3:1 - error TS2322\nFound 3 errors in 2 files.", true).Lines.Single(), "tsc stays a build");
+        }
+
         private static void Test_RunResults_FailingTestsNamed()
         {
             // Phase 111: which tests failed, under the summary
