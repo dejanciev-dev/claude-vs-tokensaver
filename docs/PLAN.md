@@ -3009,6 +3009,21 @@ conversation's text only, a word as part of any other, and literally.
       the chat's live region when the bar's text changes. The three toggles and three buttons have automation names.
       `Test_TextSearch_Announcement`. Builds clean; not yet run in VS
 
+## Phase 109 — Answers as HTML
+
+Planned on 2026-11-27, after Phase 108, on the same branch; the last of the four. An answer leaves the chat as
+Markdown or plain text (Phase 100); pasted into Word, Outlook or Teams it loses its headings, lists and code.
+
+- [ ] **Markdown to HTML.** A small HTML writer for what the chat draws: headings, paragraphs, lists and tasks,
+      quotes and notes, tables, code blocks, rules, sections, footnotes, and the inline kinds, everything escaped. In
+      Core, tested
+- [ ] **Colored code in HTML.** A code block's HTML carries its syntax colors (the light palette, as inline styles,
+      so they survive a paste) in a monospace block. In Core, tested
+- [ ] **Copy keeps formatting.** The answer's copy button puts HTML on the clipboard beside the Markdown text, so
+      Word, Outlook and Teams paste headings, lists, tables and colored code; an editor still gets the Markdown
+- [ ] **Export as HTML.** *Export conversation…* offers an HTML page beside Markdown: the same conversation as a page
+      that opens in a browser, styled for reading, the tool lines muted. In Core, tested
+
 ---
 
 ## Working in Visual Studio — daily loop
