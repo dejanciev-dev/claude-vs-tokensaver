@@ -3148,8 +3148,13 @@ page; it says nothing about what the conversation cost, a long one has no way in
       wrapped (`!important`, over the inline `white-space:pre`) and not split across pages, a heading kept with what
       follows, links as text. The contents get a shaded box. `Test_Export_DarkAndPrint`. Builds clean; not yet run
       in a browser
-- [ ] **Save one answer.** Right-click an answer's copy button → *Save as…*: that answer alone as Markdown or a
+- [x] **Save one answer.** Right-click an answer's copy button → *Save as…*: that answer alone as Markdown or a
       web page. In Core, tested.
+      `ConversationExport.AnswerTitle` (its first heading, else its first line, without marks, at most 60) names the
+      file; `AnswerPage` is the answer in the export's page (`Page`, now shared with `ToHtml`) under "Claude's answer,
+      saved … on …". `TranscriptView.SaveAnswer`: Markdown as written or the page, in the solution's folder, then
+      opened; the button's tooltip says where it went or why not. `Test_Export_OneAnswer`. Builds clean; not yet run
+      in VS
 
 ---
 

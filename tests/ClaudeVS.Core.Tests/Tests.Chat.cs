@@ -1170,6 +1170,23 @@ namespace ClaudeVS.Core.Tests
             Eq("gpt-x", ConversationExport.ModelName("gpt-x"), "anything else as it is");
         }
 
+        private static void Test_Export_OneAnswer()
+        {
+            // Phase 112: one answer saved as a page of its own
+            Eq("Login flow", ConversationExport.AnswerTitle("Some intro.\n\n## Login flow\n\ntext"), "its first heading");
+            Eq("It uses JWT", ConversationExport.AnswerTitle("It uses **JWT**.\n\nMore."), "else its first line, without marks");
+            Eq("Steps", ConversationExport.AnswerTitle("- Steps:\n- two"), "a list item");
+            Eq("Claude's answer", ConversationExport.AnswerTitle("```cs\nvar x = 1;\n```"), "only code");
+            Eq(60, ConversationExport.AnswerTitle(new string('a', 100)).Length, "cut at 60");
+            Eq("Login flow.md", ConversationExport.FileName(ConversationExport.AnswerTitle("## Login flow")), "a file name from it");
+
+            string page = ConversationExport.AnswerPage("## Login flow\n\nIt uses `a<b>`:\n\n```cs\nvar x = 1;\n```", new DateTime(2026, 11, 27, 12, 30, 0));
+            True(page.StartsWith("<!doctype html>", StringComparison.Ordinal) && page.Contains("<title>Login flow</title>"), "a page with its title");
+            True(page.Contains("<p><em>Claude's answer, saved from Claude Code in Visual Studio on 2026-11-27 12:30</em></p>"), "when it was saved");
+            True(page.Contains("<h2 id=\"login-flow\">Login flow</h2>") && page.Contains("<code>a&lt;b&gt;</code>") && page.Contains("<span style=\"color:#0000FF\">var</span>"), "the answer, escaped, code colored");
+            True(page.Contains("@media (prefers-color-scheme:dark)"), "the export's style");
+        }
+
         private static void Test_Export_DarkAndPrint()
         {
             // Phase 112: the page follows the system's dark theme and prints cleanly
