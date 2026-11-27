@@ -250,10 +250,36 @@ namespace ClaudeVS.Core.Chat
             int c = body.IndexOf(contentsStart, StringComparison.Ordinal);
             int end = c < 0 ? -1 : body.IndexOf("</ol>", c, StringComparison.Ordinal);
             if (end > 0) body = body.Substring(0, c) + "<nav class=\"contents\">" + body.Substring(c, end + 5 - c) + "</nav>" + body.Substring(end + 5);
-            string pageTitle = Markdown.MarkdownHtml.E(OneLine(string.IsNullOrWhiteSpace(title) ? "Claude Code conversation" : title));
-            return "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<meta name=\"color-scheme\" content=\"light dark\">\n" +
-                   "<title>" + pageTitle + "</title>\n<style>" + PageStyle + "</style>\n</head>\n<body>\n" + body + "</body>\n</html>\n";
+            return Page(string.IsNullOrWhiteSpace(title) ? "Claude Code conversation" : title, body);
         }
+
+        /// <summary>An HTML body in the export's page: its title, the stylesheet, nothing loaded from elsewhere.</summary>
+        private static string Page(string title, string body) =>
+            "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<meta name=\"color-scheme\" content=\"light dark\">\n" +
+            "<title>" + Markdown.MarkdownHtml.E(OneLine(title)) + "</title>\n<style>" + PageStyle + "</style>\n</head>\n<body>\n" + body + "</body>\n</html>\n";
+
+        /// <summary>
+        /// A name for one answer (Phase 112): its first heading, else its first line of text, without Markdown's marks,
+        /// at most 60 characters; "Claude's answer" when it has neither.
+        /// </summary>
+        public static string AnswerTitle(string markdown)
+        {
+            var blocks = Markdown.MarkdownParser.Parse(markdown ?? "");
+            var pick = blocks.FirstOrDefault(b => b.Kind == Markdown.MdBlockKind.Heading)
+                    ?? blocks.FirstOrDefault(b => (b.Kind == Markdown.MdBlockKind.Paragraph || b.Kind == Markdown.MdBlockKind.ListItem) && b.Inlines.Count > 0);
+            string text = pick == null ? "" : OneLine(Markdown.AnswerText.Inline(pick.Inlines)).TrimEnd(':', '.', ' ');
+            if (text.Length > 60) text = text.Substring(0, 59).TrimEnd() + "…";
+            return text.Length == 0 ? "Claude's answer" : text;
+        }
+
+        /// <summary>
+        /// One answer as a page of its own (Phase 112, *Save as…* on its copy button): the answer as the chat draws it,
+        /// under a line saying when it was saved, in the export's style.
+        /// </summary>
+        public static string AnswerPage(string markdown, DateTime savedLocal) =>
+            Page(AnswerTitle(markdown),
+                 "<p><em>Claude's answer, saved from Claude Code in Visual Studio on " + savedLocal.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture) + "</em></p>\n" +
+                 Markdown.MarkdownHtml.Render(markdown ?? ""));
 
         /// <summary>A safe file name from the title: invalid characters become '-', at most 60 characters, ".md".</summary>
         public static string FileName(string title)

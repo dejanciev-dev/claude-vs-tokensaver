@@ -408,6 +408,41 @@ namespace ClaudeVS.ToolWindow
             Box.ScrollToEnd(); // you just sent it: always show it
         }
 
+        /// <summary>
+        /// One answer saved as a file (Phase 112): Markdown as written, or a web page drawn as the export draws it,
+        /// named after its first heading or line, in the solution's folder; then opened. <paramref name="button"/> says
+        /// how it went.
+        /// </summary>
+        private void SaveAnswer(string answer, Button button)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            string dir = BaseDirectory?.Invoke();
+            string name = Core.Chat.ConversationExport.FileName(Core.Chat.ConversationExport.AnswerTitle(answer));
+            var dlg = new Microsoft.Win32.SaveFileDialog
+            {
+                Title = "Save answer",
+                FileName = name,
+                DefaultExt = ".md",
+                Filter = "Markdown (*.md)|*.md|Web page (*.html)|*.html|All files (*.*)|*.*",
+                InitialDirectory = !string.IsNullOrEmpty(dir) && System.IO.Directory.Exists(dir) ? dir : null,
+            };
+            if (dlg.ShowDialog() != true) return;
+            string target = dlg.FileName;
+            if (dlg.FilterIndex == 2 && !System.IO.Path.GetExtension(target).StartsWith(".htm", StringComparison.OrdinalIgnoreCase))
+                target = System.IO.Path.ChangeExtension(target, ".html");
+            bool html = System.IO.Path.GetExtension(target).StartsWith(".htm", StringComparison.OrdinalIgnoreCase);
+            try
+            {
+                Core.SafeFile.Replace(target, html ? Core.Chat.ConversationExport.AnswerPage(answer, DateTime.Now) : answer + "\n");
+                button.ToolTip = "Saved to " + target;
+                VsContext.OpenFile(target);
+            }
+            catch (Exception ex) when (!(ex is OutOfMemoryException))
+            {
+                button.ToolTip = "Not saved: " + ex.Message;
+            }
+        }
+
         /// <summary>The bubble of the prompt sent last (where a bookmark of its answer scrolls to).</summary>
         public Block LastUserMessage { get; private set; }
 
@@ -483,8 +518,13 @@ namespace ClaudeVS.ToolWindow
                 asPlain.Click += (s, e) => CopyAs(AnswerText.Plain(answer));
                 menu.Items.Add(asMarkdown);
                 menu.Items.Add(asPlain);
+                // …or this answer alone as a file (Phase 112)
+                var saveAs = new MenuItem { Header = "Save as…" };
+                saveAs.Click += (s, e) => { ThreadHelper.ThrowIfNotOnUIThread(); SaveAnswer(answer, copy); };
+                menu.Items.Add(new Separator());
+                menu.Items.Add(saveAs);
                 copy.ContextMenu = menu;
-                copy.ToolTip = "Copy response (Markdown); right-click for plain text";
+                copy.ToolTip = "Copy response (Markdown); right-click for plain text or Save as…";
                 DockPanel.SetDock(copy, Dock.Left);
                 row.Children.Add(copy);
             }
