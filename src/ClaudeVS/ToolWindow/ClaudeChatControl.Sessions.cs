@@ -381,7 +381,9 @@ namespace ClaudeVS.ToolWindow
                 switch (item.Kind)
                 {
                     case TranscriptItemKind.User:
-                        _view.AppendUserMessage(item.Text, null, RewindAction(item.Uuid, item.Text, item.TimestampUtc), null, item.TimestampUtc);
+                        string uuid = item.Uuid, said = item.Text;
+                        _view.AppendUserMessage(item.Text, null, RewindAction(item.Uuid, item.Text, item.TimestampUtc), null, item.TimestampUtc,
+                            onExportFrom: () => ExportConversation(uuid, said));
                         prompt = item.Text;
                         anchor = _view.LastUserMessage;
                         break;
