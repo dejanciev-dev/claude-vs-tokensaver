@@ -302,8 +302,9 @@ namespace ClaudeVS.ToolWindow
         /// <summary>
         /// Your prompt as a rounded bubble, with an optional muted line (route, attachments) under it.
         /// <paramref name="onRewind"/> adds a Rewind button, shown while the mouse is over the bubble.
+        /// <paramref name="onExportFrom"/> adds *Export from here…* to its right-click menu (Phase 110).
         /// </summary>
-        public void AppendUserMessage(string text, string meta, Action onRewind = null, IReadOnlyList<ImageSource> images = null, DateTime? timeUtc = null, string metaTip = null)
+        public void AppendUserMessage(string text, string meta, Action onRewind = null, IReadOnlyList<ImageSource> images = null, DateTime? timeUtc = null, string metaTip = null, Action onExportFrom = null)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             EndAnswer();
@@ -380,6 +381,25 @@ namespace ClaudeVS.ToolWindow
             {
                 bubble.MouseEnter += (s, e) => rewind.Visibility = Visibility.Visible;
                 bubble.MouseLeave += (s, e) => rewind.Visibility = Visibility.Hidden;
+            }
+            if (onExportFrom != null)
+            {
+                // Right-click the prompt (Phase 110): copy it, or export the conversation from it on
+                ContextMenu PromptMenu()
+                {
+                    // The TextBox's own menu is replaced, so Copy takes what is selected in it, else the whole prompt
+                    var copyPrompt = new MenuItem { Header = "Copy" };
+                    copyPrompt.Click += (s, e) => { try { Clipboard.SetText(body.SelectionLength > 0 ? body.SelectedText : text ?? ""); } catch (Exception) { } };
+                    copyPrompt.IsEnabled = !string.IsNullOrEmpty(text);
+                    var export = new MenuItem { Header = "Export from here…" };
+                    export.Click += (s, e) => onExportFrom();
+                    var m = new ContextMenu();
+                    m.Items.Add(copyPrompt);
+                    m.Items.Add(export);
+                    return m;
+                }
+                bubble.ContextMenu = PromptMenu();
+                body.ContextMenu = PromptMenu();
             }
             bubble.SetResourceReference(Border.BorderBrushProperty, EnvironmentColors.ToolWindowBorderBrushKey);
             bubble.BorderThickness = new Thickness(1);

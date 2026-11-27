@@ -3059,9 +3059,17 @@ Planned on 2026-11-27, after Phase 109 (PR #99 merged); the four items picked fr
       (a Copying handler on the chat) finds the selected blocks through `_sourceOf` (each drawn block's parsed block,
       kept by `Render`), puts the selection's text and the HTML on the clipboard and cancels WPF's copy; a selection
       with no answer in it is copied as before. `Test_MarkdownHtml_Selection`. Builds clean; not yet run in VS
-- [ ] **Export: pick and fold.** *Export conversation…* writes everything. The HTML page can carry each tool's output
+- [x] **Export: pick and fold.** *Export conversation…* writes everything. The HTML page can carry each tool's output
       folded (`<details>`), the export can leave the tool lines out, and it can start at a chosen message. In Core,
       tested.
+      `ExportOptions` (`ExportTools.Lines`/`WithOutput`/`None`, `FromUuid`/`FromText`) for `ToMarkdown` and `ToHtml`;
+      the old `includeTools` overloads map onto it. The output goes in the Markdown too, so a `.md` folds it on GitHub:
+      a `<details>` with "⎿ Output · N lines", the text without terminal codes (`TerminalText.ForCopy`) in a fence
+      longer than its longest run of backticks, a `details` tag in it broken by a zero-width space; the page mutes it
+      (`details.tool`). `StartIndex`: the prompt's id, else the last prompt with its text, else the start; the header
+      says how many items are left out. The save dialog has six file types (Markdown or web page × lines, output,
+      none), the last one kept for the session; a prompt's right-click menu has *Copy* (the selection, else the
+      prompt) and *Export from here…*, live and resumed. `Test_Export_OutputAndStart`. Builds clean; not yet run in VS
 - [ ] **README and the overview.** README, the Marketplace overview and CONTRIBUTING describe Phases 100–110: copying
       out, find in chat, code into the editor, tool output, answers as HTML; the test counts.
 

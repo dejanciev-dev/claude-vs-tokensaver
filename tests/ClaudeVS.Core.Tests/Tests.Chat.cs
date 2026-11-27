@@ -1143,6 +1143,38 @@ namespace ClaudeVS.Core.Tests
             Eq("Login.md", ConversationExport.FileName("Login"), "the dialog still suggests Markdown first");
         }
 
+        private static void Test_Export_OutputAndStart()
+        {
+            // Phase 110: tool output folded, no tools, from a chosen prompt on
+            var t = new SessionTranscript();
+            t.Items.Add(new TranscriptItem { Kind = TranscriptItemKind.User, Text = "First", Uuid = "u1" });
+            t.Items.Add(new TranscriptItem { Kind = TranscriptItemKind.Answer, Text = "One." });
+            t.Items.Add(new TranscriptItem { Kind = TranscriptItemKind.User, Text = "Run it", Uuid = "u2" });
+            t.Items.Add(new TranscriptItem { Kind = TranscriptItemKind.Tool, Text = "Bash: make", ResultChars = 30, ResultText = "\u001b[32mok\u001b[0m ``` </details>\nline 2" });
+            t.Items.Add(new TranscriptItem { Kind = TranscriptItemKind.Tool, Text = "Read: a.cs", ResultChars = 0, ResultText = "" });
+            t.Items.Add(new TranscriptItem { Kind = TranscriptItemKind.Answer, Text = "Done." });
+            var when = new DateTime(2026, 11, 27, 9, 0, 0);
+
+            string md = ConversationExport.ToMarkdown(t, "T", when, new ExportOptions { Tools = ExportTools.WithOutput });
+            True(md.Contains("- 🔧 `Bash: make` · ~10 tok\n\n<details>\n<summary>⎿ Output · 2 lines</summary>\n\n````\nok ``` </" + (char)0x200B + "details>\nline 2\n````\n\n</details>\n"),
+                 "the output folded, without codes, in a longer fence, its </details> defused: " + md);
+            True(md.Contains("</details>\n\n- 🔧 `Read: a.cs`\n"), "a call with no output: only its line, in a new list");
+
+            string html = ConversationExport.ToHtml(t, "T", when, new ExportOptions { Tools = ExportTools.WithOutput });
+            True(html.Contains("<details class=\"tool\"><summary>⎿ Output · 2 lines</summary>"), "the page folds it, muted: " + html);
+            True(html.Contains("ok ``` &lt;/" + (char)0x200B + "details&gt;"), "the output escaped in the page");
+            True(html.Contains("<p>Done.</p>"), "the answer after the fold is still there");
+
+            string none = ConversationExport.ToMarkdown(t, "T", when, new ExportOptions { Tools = ExportTools.None });
+            True(!none.Contains("🔧") && !none.Contains("<details>"), "no tools: no lines, no output");
+
+            string from = ConversationExport.ToMarkdown(t, "T", when, new ExportOptions { FromUuid = "u2" });
+            True(from.Contains("*From a chosen prompt on; 2 earlier items are not included.*") && !from.Contains("First") && from.Contains("## You\n\nRun it"), "from the second prompt: " + from);
+            Eq(2, ConversationExport.StartIndex(t, "gone", "Run it "), "an id not in the file: the prompt's text");
+            Eq(0, ConversationExport.StartIndex(t, "gone", "never sent"), "neither found: the whole conversation");
+            True(!ConversationExport.ToMarkdown(t, "T", when).Contains("<details>"), "the default stays lines only");
+        }
+
         private static void Test_Export_FileName()
         {
             Eq("Fix - the bug.md", ConversationExport.FileName("Fix / the bug?"));

@@ -55,6 +55,9 @@ All notable changes to this project are listed here. The format follows
   summary, its Markdown drawn inside.
 - **Export as a web page:** *Export conversation…* can save an HTML page beside Markdown, styled for reading, with
   colored code and the tool lines muted; one file, nothing loaded from the web.
+- **Export with tool output, without tools, or from a prompt on:** the export's file types include each tool call's
+  output folded under its line (a click opens it, on the page and on GitHub) and no tool calls at all; the type picked
+  is kept for next time. Right-click a prompt for *Export from here…*.
 - **Copied answers keep their formatting:** the copy button (and *Copy last response*) puts HTML beside the Markdown,
   so Word, Outlook and Teams paste headings, lists, tables and colored code; an editor still gets the Markdown.
 - **A copied part of an answer keeps its formatting too:** Ctrl+C on a selection puts the selected headings, lists,

@@ -404,6 +404,19 @@ namespace ClaudeVS.ToolWindow
         private void ExportConversation()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
+            ExportConversation(null, null);
+        }
+
+        // The file type picked last (Phase 110): Markdown or a web page, with tool lines, their output, or none
+        private static int _exportFilter = 1;
+
+        /// <summary>
+        /// The export, from the prompt with <paramref name="fromUuid"/> (or, when its id isn't in the session file, the
+        /// last prompt reading <paramref name="fromText"/>) on; both null for the whole conversation (Phase 110).
+        /// </summary>
+        private void ExportConversation(string fromUuid, string fromText)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
             string id = _session?.SessionId ?? _resumeId;
             if (id == null) { Append("Nothing to export yet: send a prompt first."); return; }
             string dir = _sessionDir ?? WorkFolder;
@@ -411,20 +424,34 @@ namespace ClaudeVS.ToolWindow
             if (!System.IO.File.Exists(source)) { Append("The conversation is not saved by Claude Code yet (no session file). Try again after the first answer."); return; }
 
             string title = _fullTitle;
+            // A web page too (Phase 109); each with tool lines, with their output folded, or without tools (Phase 110)
+            var kinds = new (string Label, bool Html, ExportTools Tools)[]
+            {
+                ("Markdown (*.md)", false, ExportTools.Lines),
+                ("Web page (*.html)", true, ExportTools.Lines),
+                ("Markdown with tool output (*.md)", false, ExportTools.WithOutput),
+                ("Web page with tool output (*.html)", true, ExportTools.WithOutput),
+                ("Markdown without tool calls (*.md)", false, ExportTools.None),
+                ("Web page without tool calls (*.html)", true, ExportTools.None),
+            };
+            int start = Math.Min(Math.Max(1, _exportFilter), kinds.Length);
             var dlg = new Microsoft.Win32.SaveFileDialog
             {
-                Title = "Export conversation",
-                FileName = ConversationExport.FileName(title),
-                DefaultExt = ".md",
-                // A web page too (Phase 109): the same conversation, for a browser
-                Filter = "Markdown (*.md)|*.md|Web page (*.html)|*.html|All files (*.*)|*.*",
+                Title = fromUuid != null || fromText != null ? "Export conversation from this prompt" : "Export conversation",
+                FileName = System.IO.Path.ChangeExtension(ConversationExport.FileName(title), kinds[start - 1].Html ? ".html" : ".md"),
+                DefaultExt = kinds[start - 1].Html ? ".html" : ".md",
+                Filter = string.Join("|", kinds.Select(k => k.Label + "|" + (k.Html ? "*.html" : "*.md"))) + "|All files (*.*)|*.*",
+                FilterIndex = start,
                 InitialDirectory = dir,
             };
             if (dlg.ShowDialog() != true) return;
             string target = dlg.FileName;
-            if (dlg.FilterIndex == 2 && !System.IO.Path.GetExtension(target).StartsWith(".htm", StringComparison.OrdinalIgnoreCase))
+            var kind = dlg.FilterIndex >= 1 && dlg.FilterIndex <= kinds.Length ? kinds[dlg.FilterIndex - 1] : (Label: "", Html: false, Tools: ExportTools.Lines);
+            if (dlg.FilterIndex <= kinds.Length) _exportFilter = dlg.FilterIndex;
+            if (kind.Html && !System.IO.Path.GetExtension(target).StartsWith(".htm", StringComparison.OrdinalIgnoreCase))
                 target = System.IO.Path.ChangeExtension(target, ".html");
             bool html = System.IO.Path.GetExtension(target).StartsWith(".htm", StringComparison.OrdinalIgnoreCase);
+            var options = new ExportOptions { Tools = kind.Tools, FromUuid = fromUuid, FromText = fromText };
 
             Jtf.RunAsync(async () =>
             {
@@ -435,10 +462,10 @@ namespace ClaudeVS.ToolWindow
                     await System.Threading.Tasks.Task.Run(() =>
                     {
                         var transcript = SessionTranscript.Read(source, maxItems: int.MaxValue);
-                        items = transcript.Items.Count;
+                        items = transcript.Items.Count - (fromUuid != null || fromText != null ? ConversationExport.StartIndex(transcript, fromUuid, fromText) : 0);
                         Core.SafeFile.Replace(target, html
-                            ? ConversationExport.ToHtml(transcript, title, DateTime.Now)
-                            : ConversationExport.ToMarkdown(transcript, title, DateTime.Now));
+                            ? ConversationExport.ToHtml(transcript, title, DateTime.Now, options)
+                            : ConversationExport.ToMarkdown(transcript, title, DateTime.Now, options));
                     });
                 }
                 catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException) { error = Core.SafeFile.Explain(ex, target); }
@@ -921,7 +948,8 @@ namespace ClaudeVS.ToolWindow
                 turn.Render = () =>
                 {
                     ThreadHelper.ThrowIfNotOnUIThread();
-                    _view.AppendUserMessage(userText, string.Join("  ·  ", meta), RewindAction(messageId, userText), previews, metaTip: routeTip);
+                    _view.AppendUserMessage(userText, string.Join("  ·  ", meta), RewindAction(messageId, userText), previews, metaTip: routeTip,
+                        onExportFrom: () => ExportConversation(messageId, userText));
                     turn.Anchor = _view.LastUserMessage;
                 };
                 _turnPrompts.Enqueue(turn);
