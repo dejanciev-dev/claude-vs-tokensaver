@@ -53,7 +53,8 @@ namespace ClaudeVS.Core.Chat
                 var all = Read();
                 if (!all.TryGetValue(Key(solution), out var entry)) all[Key(solution)] = entry = new Entry();
                 entry.UsedUtc = nowUtc;
-                if (entry.Prompts.Count == 0 || entry.Prompts[entry.Prompts.Count - 1] != prompt) entry.Prompts.Add(prompt);
+                entry.Prompts.Remove(prompt); // sent again: the newest place, once
+                entry.Prompts.Add(prompt);
                 if (entry.Prompts.Count > MaxPrompts) entry.Prompts.RemoveRange(0, entry.Prompts.Count - MaxPrompts);
                 var keep = all.OrderByDescending(kv => kv.Value.UsedUtc).Take(MaxSolutions).ToDictionary(kv => kv.Key, kv => kv.Value);
                 SafeFile.Replace(Path, JsonConvert.SerializeObject(keep, Formatting.Indented));

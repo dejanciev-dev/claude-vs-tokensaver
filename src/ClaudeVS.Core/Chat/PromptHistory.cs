@@ -31,10 +31,8 @@ namespace ClaudeVS.Core.Chat
             _pos = -1;
             _edits.Clear();
             var merged = new List<string>();
-            foreach (var p in saved ?? new string[0])
-                if (!string.IsNullOrWhiteSpace(p) && (merged.Count == 0 || merged[merged.Count - 1] != p)) merged.Add(p);
-            foreach (var p in _items)
-                if (merged.Count == 0 || merged[merged.Count - 1] != p) merged.Add(p);
+            foreach (var p in (saved ?? new string[0]).Concat(_items))
+                if (!string.IsNullOrWhiteSpace(p)) { merged.Remove(p); merged.Add(p); } // each once, where it was sent last
             _items.Clear();
             _items.AddRange(merged.Count > _max ? merged.GetRange(merged.Count - _max, _max) : merged);
         }
@@ -44,9 +42,18 @@ namespace ClaudeVS.Core.Chat
             _pos = -1;
             _edits.Clear();
             if (string.IsNullOrWhiteSpace(prompt)) return;
-            if (_items.Count > 0 && _items[_items.Count - 1] == prompt) return; // no consecutive duplicates
+            _items.Remove(prompt); // sent again: it moves to the newest place rather than being there twice (Phase 113)
             _items.Add(prompt);
             if (_items.Count > _max) _items.RemoveAt(0);
+        }
+
+        /// <summary>
+        /// A resumed conversation's prompts, oldest first (Phase 113): each as if sent now, so they are the newest and
+        /// <c>Ctrl+Up</c> reaches them first. Ends browsing.
+        /// </summary>
+        public void AddRange(IEnumerable<string> prompts)
+        {
+            foreach (var p in prompts ?? Enumerable.Empty<string>()) Add(p);
         }
 
         /// <summary>

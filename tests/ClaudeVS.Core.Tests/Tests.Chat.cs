@@ -742,6 +742,29 @@ namespace ClaudeVS.Core.Tests
             Eq("build it", h.Previous("   "), "only blanks: every prompt");
         }
 
+        private static void Test_PromptHistory_SentAgainAndResumed()
+        {
+            // Phase 113: a prompt sent again moves to the newest place; a resumed conversation's prompts come first
+            var h = new ClaudeVS.Core.Chat.PromptHistory();
+            h.Add("build"); h.Add("test"); h.Add("build");
+            Eq("test|build", string.Join("|", h.Items), "sent again: once, at the newest place");
+            h.AddRange(new[] { "resumed one", "test", "resumed two" });
+            Eq("build|resumed one|test|resumed two", string.Join("|", h.Items), "the resumed prompts are the newest, in their order");
+            Eq("resumed two", h.Previous(""), "Ctrl+Up reaches them first");
+            h.Load(new[] { "old", "build", "old" });
+            Eq("old|build|resumed one|test|resumed two", string.Join("|", h.Items), "saved ones before, each once");
+
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-ph-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                var store = new ClaudeVS.Core.Chat.PromptHistoryStore(Path.Combine(dir, "h.json"));
+                var now = DateTime.UtcNow;
+                store.Add("s", "a", now); store.Add("s", "b", now); store.Add("s", "a", now);
+                Eq("b|a", string.Join("|", store.Get("s")), "the store too");
+            }
+            finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
+        }
+
         private static void Test_PromptHistory_EditsKept()
         {
             // As VS Code's 2.1.331-2.1.332 fixes: changing a recalled prompt, then moving on, doesn't lose the change

@@ -3176,8 +3176,13 @@ history the one you want is far back.
       prompt contains it; `Previous` and `Next` then skip the others, past the newest match comes what was typed, and
       `Searching` says it is on. Edits to recalled prompts are kept as before. Only blanks, or no match: every prompt,
       so the old tests stand. `Test_PromptHistory_Search`. Builds clean; not yet run in VS
-- [ ] **A resumed conversation's prompts.** Resuming a conversation puts its prompts in the history, and a prompt
+- [x] **A resumed conversation's prompts.** Resuming a conversation puts its prompts in the history, and a prompt
       sent again moves to the newest place instead of being kept twice. In Core, tested.
+      `PromptHistory.Add` removes an earlier copy before adding (it only skipped a repeat of the last one), `Load`
+      keeps each once where it was sent last, and `PromptHistoryStore.Add` does the same. `PromptHistory.AddRange`
+      adds a resumed conversation's prompts as if sent now, so `Ctrl+Up` reaches them first; `RenderTranscript` calls
+      it after loading the solution's saved ones. They aren't written to the file: Claude Code's session file has them.
+      `Test_PromptHistory_SentAgainAndResumed`. Builds clean; not yet run in VS
 - [ ] **Go to prompt.** `/` → *Go to prompt…* lists this chat's prompts, newest first, with when each was sent;
       picking one scrolls to it.
 
