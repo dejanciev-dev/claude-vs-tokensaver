@@ -56,6 +56,27 @@ namespace ClaudeVS.Core.Chat
             return sb.ToString();
         }
 
+        private const string PageStyle =
+            "body{font-family:'Segoe UI',system-ui,sans-serif;max-width:52em;margin:2em auto;padding:0 1em;line-height:1.5;color:#1f2328}" +
+            "h1{font-size:1.6em}h2{font-size:1.2em;border-bottom:1px solid #d0d7de;padding-bottom:.2em;margin-top:1.6em}" +
+            "code{font-family:Consolas,'Cascadia Mono',monospace;background:#f6f8fa;padding:0 .2em;border-radius:3px}" +
+            "pre code{padding:0;background:none}blockquote{margin:0;padding:0 1em;border-left:3px solid #d0d7de;color:#57606a}" +
+            "table{border-collapse:collapse}th,td{border:1px solid #d0d7de;padding:.2em .6em}th{background:#f6f8fa}" +
+            "li.tool{color:#6e7781;font-size:.9em;list-style:none}kbd{border:1px solid #d0d7de;border-bottom-width:2px;border-radius:3px;padding:0 .3em;font-size:.9em}";
+
+        /// <summary>
+        /// The conversation as a web page (Phase 109): the Markdown of <see cref="ToMarkdown"/> as HTML, styled for
+        /// reading, the tool lines muted. One file, nothing loaded from elsewhere.
+        /// </summary>
+        public static string ToHtml(SessionTranscript transcript, string title, DateTime exportedLocal, bool includeTools = true)
+        {
+            string body = Markdown.MarkdownHtml.Render(ToMarkdown(transcript, title, exportedLocal, includeTools))
+                .Replace("<li>🔧 ", "<li class=\"tool\">🔧 ");
+            string pageTitle = Markdown.MarkdownHtml.E(OneLine(string.IsNullOrWhiteSpace(title) ? "Claude Code conversation" : title));
+            return "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n" +
+                   "<title>" + pageTitle + "</title>\n<style>" + PageStyle + "</style>\n</head>\n<body>\n" + body + "</body>\n</html>\n";
+        }
+
         /// <summary>A safe file name from the title: invalid characters become '-', at most 60 characters, ".md".</summary>
         public static string FileName(string title)
         {

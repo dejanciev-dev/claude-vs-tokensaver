@@ -53,6 +53,8 @@ All notable changes to this project are listed here. The format follows
   `<i>`, `<code>` and `<u>` as their Markdown would be.
 - **Collapsed sections:** `<details><summary>…</summary> … </details>` in an answer is a section that opens from its
   summary, its Markdown drawn inside.
+- **Export as a web page:** *Export conversation…* can save an HTML page beside Markdown, styled for reading, with
+  colored code and the tool lines muted; one file, nothing loaded from the web.
 - **Copied answers keep their formatting:** the copy button (and *Copy last response*) puts HTML beside the Markdown,
   so Word, Outlook and Teams paste headings, lists, tables and colored code; an editor still gets the Markdown.
 - **Copy as plain text:** right-click an answer's copy button for *Copy as Markdown* or *Copy as plain text* (no

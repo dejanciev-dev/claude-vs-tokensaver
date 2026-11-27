@@ -14,7 +14,12 @@ namespace ClaudeVS.Core.Markdown
     {
         public static string Render(string markdown) => Blocks(MarkdownParser.Parse(markdown));
 
-        private static string E(string s) => WebUtility.HtmlEncode(s ?? "");
+        /// <summary>
+        /// Escaped for HTML text and attributes: <c>&amp; &lt; &gt; "</c> only. Other characters stay as they are (the
+        /// page and the clipboard's HTML are UTF-8), so an emoji or a box stays one, not a numeric entity.
+        /// </summary>
+        public static string E(string s) =>
+            (s ?? "").Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("\"", "&quot;");
 
         /// <summary>A link target that is safe in an href: web addresses, anchors and relative paths; nothing with another scheme.</summary>
         private static string Href(string url)

@@ -1110,6 +1110,24 @@ namespace ClaudeVS.Core.Tests
             True(!ConversationExport.ToMarkdown(t, "x", DateTime.Now, includeTools: false).Contains("🔧"), "tools left out");
         }
 
+        private static void Test_Export_Html()
+        {
+            // Phase 109: the conversation as a web page
+            var t = new SessionTranscript();
+            t.Items.Add(new TranscriptItem { Kind = TranscriptItemKind.User, Text = "How does <login> work?" });
+            t.Items.Add(new TranscriptItem { Kind = TranscriptItemKind.Tool, Text = "Read: C:/a/Login.cs", ResultChars = 8000 });
+            t.Items.Add(new TranscriptItem { Kind = TranscriptItemKind.Answer, Text = "It uses **JWT**:\n\n```cs\nvar x = 1;\n```" });
+            string html = ConversationExport.ToHtml(t, "Login & co", new DateTime(2026, 11, 3, 10, 5, 0));
+            True(html.StartsWith("<!doctype html>", StringComparison.Ordinal), "a page");
+            True(html.Contains("<title>Login &amp; co</title>"), "its title, escaped");
+            True(html.Contains("<h1 id=\"login--co\">Login &amp; co</h1>"), "the heading");
+            True(html.Contains("<p>How does &lt;login&gt; work?</p>"), "your prompt, escaped");
+            True(html.Contains("<li class=\"tool\">🔧 <code>Read: C:/a/Login.cs</code>"), "a tool line, muted");
+            True(html.Contains("<strong>JWT</strong>") && html.Contains("<span style=\"color:#0000FF\">var</span>"), "the answer with colored code");
+            True(html.Contains("<style>") && !html.Contains("<script") && !html.Contains("<link"), "styled inline, nothing loaded from elsewhere");
+            Eq("Login.md", ConversationExport.FileName("Login"), "the dialog still suggests Markdown first");
+        }
+
         private static void Test_Export_FileName()
         {
             Eq("Fix - the bug.md", ConversationExport.FileName("Fix / the bug?"));
