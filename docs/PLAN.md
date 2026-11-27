@@ -3079,6 +3079,23 @@ Planned on 2026-11-27, after Phase 109 (PR #99 merged); the four items picked fr
       *Export from here…*; a *Find in chat* row; 310 tests; `--live-all` with its count and cost. The overview's chat
       paragraph names the same. CONTRIBUTING got the live count with item 1. Under *Changed* in the changelog
 
+## Phase 111 — More commands summarized on their rows
+
+Planned on 2026-11-27, after Phase 110, on the same branch (PR #100 still open); the first of four phases asked for
+as twenty commits. Phase 106 summarizes test runs and builds; the other commands Claude runs most still show their
+first lines.
+
+- [ ] **Failing tests named.** "✗ 2 failed · 10 passed" says how many, not which. The row's lines under the summary
+      name the failing tests (up to three): VSTest's `Failed Name [35 ms]`, pytest's `FAILED path::name`, Jest's
+      `● Suite › name`, go test's `--- FAIL: TestX`. In Core, tested.
+- [ ] **Lint results.** ESLint's `✖ 5 problems (3 errors, 2 warnings)`, Ruff's `Found 3 errors.`, `dotnet format
+      --verify-no-changes` and a clean run: "✗ 3 errors · 2 warnings", "✓ No problems". In Core, tested.
+- [ ] **Git results.** `git status` ("2 modified · 1 untracked", "Clean"), `git diff --stat` ("3 files · +10 −2"),
+      `git commit` ("Committed abc1234: message"), `git push` ("Pushed to origin/branch"), `git log --oneline`
+      ("12 commits"). In Core, tested.
+- [ ] **Package installs.** npm, pnpm and yarn ("added 120 packages"), pip ("Installed 3 packages"), `dotnet add
+      package` and restore ("Restored 2 projects"). In Core, tested.
+
 ---
 
 ## Working in Visual Studio — daily loop
