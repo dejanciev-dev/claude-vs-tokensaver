@@ -75,6 +75,8 @@ namespace ClaudeVS.Core.Chat
             if (start > 0) sb.Append("\n*From a chosen prompt on; ").Append(skipped).Append(" earlier items are not included.*\n");
             else if (skipped > 0) sb.Append("\n*").Append(skipped).Append(" earlier items are not included.*\n");
 
+            int header = sb.Length; // where the contents go (Phase 112)
+            var prompts = new System.Collections.Generic.List<string>();
             bool claudeOpen = false; // inside a "## Claude" section, so the next answer or tool row continues it
             bool inToolList = false;
             foreach (var item in transcript.Items.Skip(start))
@@ -85,6 +87,7 @@ namespace ClaudeVS.Core.Chat
                 {
                     case TranscriptItemKind.User:
                         sb.Append("\n## You\n\n").Append(item.Text.Trim()).Append('\n');
+                        prompts.Add(item.Text);
                         claudeOpen = false;
                         break;
                     case TranscriptItemKind.Answer:
@@ -111,6 +114,36 @@ namespace ClaudeVS.Core.Chat
                         claudeOpen = false;
                         break;
                 }
+            }
+            if (Contents(sb.ToString(), prompts) is string contents) sb.Insert(header, contents);
+            return sb.ToString();
+        }
+
+        /// <summary>The line the contents start with, which the page also looks for (Phase 112).</summary>
+        private const string ContentsTitle = "**Prompts**";
+
+        /// <summary>
+        /// A numbered list of the prompts (Phase 112), each its first line linking to its "## You" section, for three
+        /// prompts or more. The anchors come from parsing the document as it is, so they are the ones the page and
+        /// GitHub give those headings ("you", "you-1", …). Null when there are fewer prompts, or when a prompt holds a
+        /// "You" heading of its own and the sections can't be told apart.
+        /// </summary>
+        private static string Contents(string document, System.Collections.Generic.List<string> prompts)
+        {
+            if (prompts.Count < 3) return null;
+            var anchors = Markdown.MarkdownParser.Parse(document)
+                .Where(b => b.Kind == Markdown.MdBlockKind.Heading && b.Level == 2 && Markdown.AnswerText.Inline(b.Inlines) == "You")
+                .Select(b => b.Anchor).ToList();
+            if (anchors.Count != prompts.Count) return null;
+            var sb = new StringBuilder("\n").Append(ContentsTitle).Append("\n\n");
+            for (int i = 0; i < prompts.Count; i++)
+            {
+                string first = OneLine((prompts[i] ?? "").Trim().Split('\n')[0]);
+                // Marks that would end the link or change its text go; a long line is cut
+                first = new string(first.Where(c => "[]`*_<>|\\".IndexOf(c) < 0).ToArray()).Trim();
+                if (first.Length > 80) first = first.Substring(0, 79).TrimEnd() + "…";
+                if (first.Length == 0) first = "(an image or an empty prompt)";
+                sb.Append(i + 1).Append(". [").Append(first).Append("](#").Append(anchors[i]).Append(")\n");
             }
             return sb.ToString();
         }
@@ -202,6 +235,11 @@ namespace ClaudeVS.Core.Chat
             string body = Markdown.MarkdownHtml.Render(ToMarkdown(transcript, title, exportedLocal, options))
                 .Replace("<li>🔧 ", "<li class=\"tool\">🔧 ")
                 .Replace("<details><summary>" + OutputSummary, "<details class=\"tool\"><summary>" + OutputSummary);
+            // The contents in a nav of their own (Phase 112), which a print leaves out
+            const string contentsStart = "<p><strong>Prompts</strong></p>\n<ol>";
+            int c = body.IndexOf(contentsStart, StringComparison.Ordinal);
+            int end = c < 0 ? -1 : body.IndexOf("</ol>", c, StringComparison.Ordinal);
+            if (end > 0) body = body.Substring(0, c) + "<nav class=\"contents\">" + body.Substring(c, end + 5 - c) + "</nav>" + body.Substring(end + 5);
             string pageTitle = Markdown.MarkdownHtml.E(OneLine(string.IsNullOrWhiteSpace(title) ? "Claude Code conversation" : title));
             return "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n" +
                    "<title>" + pageTitle + "</title>\n<style>" + PageStyle + "</style>\n</head>\n<body>\n" + body + "</body>\n</html>\n";
