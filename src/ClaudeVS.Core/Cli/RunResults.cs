@@ -12,6 +12,8 @@ namespace ClaudeVS.Core.Cli
         public string Line;
         /// <summary>Something failed: the line is drawn as a failure.</summary>
         public bool Failed;
+        /// <summary>Lines under the summary (Phase 111): the failing tests' names, "+4 more" after three.</summary>
+        public IReadOnlyList<string> Details = new string[0];
     }
 
     /// <summary>
@@ -76,7 +78,38 @@ namespace ClaudeVS.Core.Cli
             if (failed > 0) parts.Add($"{failed} failed");
             parts.Add($"{passed} passed");
             if (skipped > 0) parts.Add($"{skipped} skipped");
-            return new RunSummary { Line = (failed > 0 ? "✗ " : "✓ ") + string.Join(" · ", parts), Failed = failed > 0 };
+            return new RunSummary { Line = (failed > 0 ? "✗ " : "✓ ") + string.Join(" · ", parts), Failed = failed > 0, Details = failed > 0 ? Shown(FailedTests(output)) : new string[0] };
+        }
+
+        // A failing test's own line, per runner (Phase 111)
+        private static readonly Regex[] FailedTest =
+        {
+            new Regex(@"^\s+Failed (?<n>.+?) \[[^\]]*\]\s*$", RegexOptions.Compiled | RegexOptions.Multiline),          // VSTest: "  Failed AddsWrong [35 ms]"
+            new Regex(@"^\s*failed (?<n>.+?) \([\d.]+m?s\)\s*$", RegexOptions.Compiled | RegexOptions.Multiline),      // Microsoft.Testing.Platform: "failed AddsWrong (35ms)"
+            new Regex(@"^FAILED (?<n>\S+)", RegexOptions.Compiled | RegexOptions.Multiline),                            // pytest: "FAILED tests/test_a.py::test_x - assert …"
+            new Regex(@"^\s*● (?<n>.+ › .+?)\s*$", RegexOptions.Compiled | RegexOptions.Multiline),                     // Jest: "● Suite › name"
+            new Regex(@"^\s*(?:FAIL|×)\s+(?<n>\S+ > .+?)(?: \d+ms)?\s*$", RegexOptions.Compiled | RegexOptions.Multiline), // Vitest: "FAIL  src/a.test.ts > suite > name"
+            new Regex(@"^\s*--- FAIL: (?<n>\S+)", RegexOptions.Compiled | RegexOptions.Multiline),                     // go test: "--- FAIL: TestX (0.00s)"
+        };
+
+        /// <summary>The failing tests' names in a run's output, each once, in the order they first appear (Phase 111).</summary>
+        public static List<string> FailedTests(string output)
+        {
+            var found = new List<(int At, string Name)>();
+            if (string.IsNullOrEmpty(output)) return new List<string>();
+            foreach (var re in FailedTest)
+                foreach (Match m in re.Matches(output)) found.Add((m.Index, m.Groups["n"].Value.Trim()));
+            return found.OrderBy(f => f.At).Select(f => f.Name).Where(n => n.Length > 0).Distinct().ToList();
+        }
+
+        private const int ShownTests = 3;
+
+        private static IReadOnlyList<string> Shown(List<string> names)
+        {
+            if (names.Count <= ShownTests + 1) return names; // "+1 more" would take the line the name needs
+            var shown = names.Take(ShownTests).ToList();
+            shown.Add($"+{names.Count - ShownTests} more");
+            return shown;
         }
 
         // MSBuild's classic end: "Build succeeded." / "Build FAILED." then "    3 Warning(s)" "    2 Error(s)"

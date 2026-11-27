@@ -749,7 +749,8 @@ namespace ClaudeVS.Core.Tests
             Check(build != null, "a dotnet build result");
             Check(build != null && build.Lines.Count == 1 && build.Lines[0].StartsWith("Build succeeded", StringComparison.Ordinal) && !build.IsError, "the build's row: \"Build succeeded…\"");
             Check(test != null, "a dotnet test result");
-            Check(test != null && test.Lines.Count == 1 && test.Lines[0] == "✗ 1 failed · 1 passed" && test.IsError, "the test run's row: \"✗ 1 failed · 1 passed\", red");
+            Check(test != null && test.Lines.Count > 0 && test.Lines[0] == "✗ 1 failed · 1 passed" && test.IsError, "the test run's row: \"✗ 1 failed · 1 passed\", red");
+            Check(test != null && test.Lines.Count == 2 && test.Lines[1] == "AddsWrong", "the failing test named under it (Phase 111)");
             Console.WriteLine(failures.Count == 0 ? "PASS live tools" : "FAIL live tools: " + string.Join("; ", failures));
             return failures.Count == 0 ? 0 : 1;
         }
