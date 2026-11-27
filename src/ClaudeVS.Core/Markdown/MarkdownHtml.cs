@@ -132,11 +132,31 @@ namespace ClaudeVS.Core.Markdown
             return k;
         }
 
-        /// <summary>A code block as a monospace block.</summary>
+        // The chat's light palette (Phase 109): inline styles survive a paste into Word or Outlook, a stylesheet doesn't
+        private static readonly Dictionary<SyntaxKind, string> Colors = new Dictionary<SyntaxKind, string>
+        {
+            [SyntaxKind.Keyword] = "#0000FF", [SyntaxKind.String] = "#A31515", [SyntaxKind.Comment] = "#008000",
+            [SyntaxKind.Number] = "#098658", [SyntaxKind.Tag] = "#800000", [SyntaxKind.Attribute] = "#E50000",
+            [SyntaxKind.Inserted] = "#22863A", [SyntaxKind.Deleted] = "#B31D28", [SyntaxKind.Hunk] = "#6F42C1",
+        };
+
+        private const string PreStyle = "background:#f6f8fa;padding:8px 10px;border-radius:4px;font-family:Consolas,'Cascadia Mono',monospace;font-size:10pt;white-space:pre";
+
+        /// <summary>A code block as a monospace block, in its syntax colors (Phase 109).</summary>
         public static string Code(MdBlock b)
         {
+            string code = b.Code ?? "";
             string lang = string.IsNullOrEmpty(b.Language) ? "" : " class=\"language-" + E(b.Language) + "\"";
-            return "<pre><code" + lang + ">" + E(b.Code) + "</code></pre>";
+            var sb = new StringBuilder("<pre style=\"" + PreStyle + "\"><code" + lang + ">");
+            int pos = 0;
+            foreach (var s in SyntaxHighlighter.Tokenize(code, b.Language))
+            {
+                if (s.Start > pos) sb.Append(E(code.Substring(pos, s.Start - pos)));
+                sb.Append("<span style=\"color:").Append(Colors[s.Kind]).Append("\">").Append(E(code.Substring(s.Start, s.Length))).Append("</span>");
+                pos = s.Start + s.Length;
+            }
+            if (pos < code.Length) sb.Append(E(code.Substring(pos)));
+            return sb.Append("</code></pre>").ToString();
         }
 
         private static string Table(MdBlock t)
