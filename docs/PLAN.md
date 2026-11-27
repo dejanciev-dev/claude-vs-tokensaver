@@ -2986,9 +2986,14 @@ Planned on 2026-11-26, after Phase 106, on the same branch; the second of four.
 Planned on 2026-11-26, after Phase 107, on the same branch; the third of four. Phase 101's find bar searches the
 conversation's text only, a word as part of any other, and literally.
 
-- [ ] **Find in code blocks.** Code is most of what one looks for in a coding chat, and Phase 101 skips it (each
+- [x] **Find in code blocks.** Code is most of what one looks for in a coding chat, and Phase 101 skips it (each
       block is a control inside the conversation). Search the code blocks shown, and the tool output that is open, in
-      the conversation's order; a match there is selected in its block and scrolled into view
+      the conversation's order; a match there is selected in its block and scrolled into view.
+      `TranscriptView.MapText` goes into each embedded element's shown `RichTextBox`es (logical tree, visible ones
+      only: a folded block's head, an open tool row's colored output; a plain-text output box isn't one) and records
+      the box with each run; `ShowMatch` selects in that box and scrolls by its position in the conversation, and
+      clears the last box's selection. No Core part: the mapping is WPF's. The changelog's find entry says so.
+      Builds clean; not yet run in VS
 - [ ] **Whole word.** A *W* toggle beside *Aa*: `id` doesn't find `width`. Word edges as in an editor (letters,
       digits and `_`). In Core, tested
 - [ ] **Regular expressions.** A *.\** toggle: the query is a .NET regular expression (`Validate\w*`, `TODO|FIXME`);

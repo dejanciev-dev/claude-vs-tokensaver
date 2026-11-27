@@ -84,53 +84,94 @@ namespace ClaudeVS.ToolWindow
         public sealed class TextMap
         {
             public string Text;
-            internal List<(int Offset, TextPointer Start, int Length)> Runs = new List<(int, TextPointer, int)>();
+            // Each run of text, the box it is in (the conversation, or a code block's or a tool output's own box)
+            internal List<(int Offset, TextPointer Start, int Length, RichTextBox Owner)> Runs = new List<(int, TextPointer, int, RichTextBox)>();
 
-            internal TextPointer At(int offset)
+            internal (TextPointer Pointer, RichTextBox Owner) At(int offset)
             {
                 // The run that holds the offset (or the next one after a paragraph break)
                 foreach (var r in Runs)
-                    if (offset < r.Offset + r.Length) return r.Start.GetPositionAtOffset(Math.Max(0, offset - r.Offset));
+                    if (offset < r.Offset + r.Length) return (r.Start.GetPositionAtOffset(Math.Max(0, offset - r.Offset)), r.Owner);
                 var last = Runs.Count > 0 ? Runs[Runs.Count - 1] : default;
-                return last.Start?.GetPositionAtOffset(last.Length);
+                return (last.Start?.GetPositionAtOffset(last.Length), last.Owner);
             }
         }
 
+        /// <summary>
+        /// The conversation's text for find, in its order: its own runs, and those of the boxes it holds that are shown
+        /// (code blocks, open tool output; Phase 108). Paragraphs and boxes are apart by a line break.
+        /// </summary>
         public TextMap MapText()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             var map = new TextMap();
             var sb = new StringBuilder();
+            AddRuns(map, sb, Box);
+            map.Text = sb.ToString();
+            return map;
+        }
+
+        private static void AddRuns(TextMap map, StringBuilder sb, RichTextBox owner)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var doc = owner.Document;
             DependencyObject lastParagraph = null;
-            for (var p = _doc.ContentStart; p != null && p.CompareTo(_doc.ContentEnd) < 0; p = p.GetNextContextPosition(LogicalDirection.Forward))
+            for (var p = doc.ContentStart; p != null && p.CompareTo(doc.ContentEnd) < 0; p = p.GetNextContextPosition(LogicalDirection.Forward))
             {
-                if (p.GetPointerContext(LogicalDirection.Forward) != TextPointerContext.Text) continue;
+                var context = p.GetPointerContext(LogicalDirection.Forward);
+                if (context == TextPointerContext.EmbeddedElement)
+                {
+                    // A code block or a tool row: the text boxes in it that are shown
+                    if (p.GetAdjacentElement(LogicalDirection.Forward) is DependencyObject element)
+                        foreach (var inner in BoxesIn(element))
+                        {
+                            if (sb.Length > 0) sb.Append('\n');
+                            AddRuns(map, sb, inner);
+                            lastParagraph = null;
+                        }
+                    continue;
+                }
+                if (context != TextPointerContext.Text) continue;
                 string run = p.GetTextInRun(LogicalDirection.Forward);
                 if (run.Length == 0) continue;
                 var paragraph = p.Paragraph;
                 if (lastParagraph != null && paragraph != lastParagraph) sb.Append('\n');
                 lastParagraph = paragraph;
-                map.Runs.Add((sb.Length, p, run.Length));
+                map.Runs.Add((sb.Length, p, run.Length, owner));
                 sb.Append(run);
             }
-            map.Text = sb.ToString();
-            return map;
         }
+
+        /// <summary>The rich text boxes shown inside <paramref name="element"/>, in order (not inside each other).</summary>
+        private static IEnumerable<RichTextBox> BoxesIn(DependencyObject element)
+        {
+            if (element is RichTextBox box) { if (box.IsVisible) yield return box; yield break; }
+            if (element is UIElement ui && !ui.IsVisible) yield break;
+            foreach (var child in LogicalTreeHelper.GetChildren(element).OfType<DependencyObject>())
+                foreach (var inner in BoxesIn(child)) yield return inner;
+        }
+
+        private RichTextBox _matchOwner; // the box the shown match is selected in
 
         /// <summary>Selects a match (shown while the find bar has the focus) and scrolls it to a third of the view.</summary>
         public void ShowMatch(TextMap map, int offset, int length)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            var start = map.At(offset);
-            var end = map.At(offset + length - 1)?.GetPositionAtOffset(1);
-            if (start == null || end == null) return;
-            Box.IsInactiveSelectionHighlightEnabled = true;
-            Box.Selection.Select(start, end);
+            var (start, owner) = map.At(offset);
+            var end = map.At(offset + length - 1).Pointer?.GetPositionAtOffset(1);
+            if (start == null || end == null || owner == null) return;
+            ClearMatch();
+            owner.IsInactiveSelectionHighlightEnabled = true;
+            owner.Selection.Select(start, end);
+            _matchOwner = owner;
             var rect = start.GetCharacterRect(LogicalDirection.Forward);
-            if (!rect.IsEmpty && (rect.Top < 0 || rect.Bottom > Box.ActualHeight))
+            if (rect.IsEmpty) return;
+            // Where the match is in the conversation's view (a code block's box is inside it)
+            double top = owner == Box ? rect.Top : owner.TranslatePoint(rect.TopLeft, Box).Y;
+            if (top < 0 || top + rect.Height > Box.ActualHeight)
             {
                 _followEnd = false; // the user is reading back: don't jump to the end when output arrives
-                Box.ScrollToVerticalOffset(Box.VerticalOffset + rect.Top - Box.ActualHeight / 3);
+                Box.ScrollToVerticalOffset(Box.VerticalOffset + top - Box.ActualHeight / 3);
             }
         }
 
@@ -138,7 +179,9 @@ namespace ClaudeVS.ToolWindow
         public void ClearMatch()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            Box.Selection.Select(Box.Selection.Start, Box.Selection.Start);
+            var owner = _matchOwner ?? Box;
+            owner.Selection.Select(owner.Selection.Start, owner.Selection.Start);
+            _matchOwner = null;
         }
 
         /// <summary>Whether to show message times (read on each message, so the option applies right away).</summary>
