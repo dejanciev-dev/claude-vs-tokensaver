@@ -1170,6 +1170,22 @@ namespace ClaudeVS.Core.Tests
             Eq("gpt-x", ConversationExport.ModelName("gpt-x"), "anything else as it is");
         }
 
+        private static void Test_Export_DarkAndPrint()
+        {
+            // Phase 112: the page follows the system's dark theme and prints cleanly
+            var t = new SessionTranscript();
+            t.Items.Add(new TranscriptItem { Kind = TranscriptItemKind.User, Text = "Hi" });
+            string html = ConversationExport.ToHtml(t, "T", new DateTime(2026, 11, 27, 12, 0, 0));
+            True(html.Contains("<meta name=\"color-scheme\" content=\"light dark\">"), "the browser's own parts follow the theme");
+            int dark = html.IndexOf("@media (prefers-color-scheme:dark){", StringComparison.Ordinal);
+            True(dark > 0 && html.IndexOf("body{background:#0d1117;color:#e6edf3}", dark, StringComparison.Ordinal) > 0, "dark colors");
+            True(html.IndexOf("pre{color:#1f2328}", dark, StringComparison.Ordinal) > 0, "a code block's plain text stays dark on its light background");
+            int print = html.IndexOf("@media print{", StringComparison.Ordinal);
+            True(print > 0 && html.IndexOf("nav.contents,details.tool{display:none}", print, StringComparison.Ordinal) > 0, "printed without contents or tool output");
+            True(html.IndexOf("pre{white-space:pre-wrap!important;break-inside:avoid", print, StringComparison.Ordinal) > 0, "code wrapped (over its inline style) and kept on one page");
+            True(!html.Contains("<script") && !html.Contains("<link"), "still nothing loaded from elsewhere");
+        }
+
         private static void Test_Export_Contents()
         {
             // Phase 112: three prompts or more start with a list of them, each a link to its section
