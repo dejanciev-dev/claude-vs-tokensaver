@@ -933,6 +933,38 @@ namespace ClaudeVS.Core.Tests
             Eq("Build failed · 3 errors", ToolCallView.Summarize("Bash", "src/a.ts:3:1 - error TS2322\nFound 3 errors in 2 files.", true).Lines.Single(), "tsc stays a build");
         }
 
+        private static void Test_RunResults_Git()
+        {
+            // Phase 111: what a git command did, from git 2.x's own output (captured in a scratch repository)
+            string G(string o) => RunResults.Git(o)?.Line;
+            Eq("1 deleted · 1 modified · 1 untracked", G("On branch main\nChanges to be committed:\n  (use \"git restore --staged <file>...\" to unstage)\n\tdeleted:    b.txt\n\n" +
+                "Changes not staged for commit:\n  (use \"git add <file>...\" to update what will be committed)\n\tmodified:   a.txt\n\n" +
+                "Untracked files:\n  (use \"git add <file>...\" to include in what will be committed)\n\tc.txt\n\n"), "git status");
+            Eq("Clean · 2 commits ahead", G("On branch main\nYour branch is ahead of 'origin/main' by 2 commits.\n  (use \"git push\" to publish your local commits)\n\nnothing to commit, working tree clean"), "clean, ahead");
+            Eq("Clean", G("On branch main\nYour branch is up to date with 'origin/main'.\n\nnothing to commit, working tree clean\nShell cwd was reset to C:\\r"), "clean");
+            Eq("1 modified · 1 deleted · 1 untracked", G(" M a.txt\nD  b.txt\n?? c.txt\nShell cwd was reset to C:\\r"), "git status --short, with Claude Code's line after it");
+            Eq("1 file · +1", G("warning: in the working copy of 'a.txt', LF will be replaced by CRLF\n a.txt | 1 +\n 1 file changed, 1 insertion(+)"), "git diff --stat");
+            Eq("3 files · +10 −2", G(" a | 5 ++\n b | 5 ++\n c | 2 --\n 3 files changed, 10 insertions(+), 2 deletions(-)"), "diff --stat, both");
+            Eq("Committed a0b4892 · 3 files · +2 −1", G("[main a0b4892] Second change\n 3 files changed, 2 insertions(+), 1 deletion(-)\n delete mode 100644 b.txt\n create mode 100644 c.txt"), "git commit");
+            Eq("Committed 740503b · 2 files · +2", G("[main (root-commit) 740503b] init\n 2 files changed, 2 insertions(+)"), "the first commit");
+            Eq("Pushed main (new branch)", G("To ../gr\n * [new branch]      main -> main\nbranch 'main' set up to track 'origin/main'."), "git push, a new branch");
+            Eq("Pushed main", G("To github.com:o/r.git\n   740503b..a0b4892  main -> main"), "git push");
+            Eq("Pushed main (forced)", G("To github.com:o/r.git\n + 1111111...2222222 main -> main (forced update)"), "a forced push");
+            var rejected = RunResults.Git("To github.com:o/r.git\n ! [rejected]        main -> main (fetch first)\nerror: failed to push some refs to 'github.com:o/r.git'");
+            Eq("✗ Push rejected (fetch first)", rejected.Line, "a rejected push");
+            True(rejected.Failed, "red");
+            Eq("Nothing to push", G("Everything up-to-date"), "nothing to push");
+            Eq("2 commits", G("a0b4892 (HEAD -> main) Second change\n740503b init"), "git log --oneline");
+            Eq("2 commits", G("* a0b4892 Second change\n* 740503b init"), "git log --oneline --graph");
+            Eq(null, G("fatal: not a git repository (or any of the parent directories): .git"), "a failure keeps its error lines");
+            Eq(null, G("hello world"), "not git");
+            Eq(null, G("d41d8cd98f00b204e9800998ecf8427e  a.txt\n0cc175b9c0f1b6a831c399e269772661  b.txt"), "md5sum's hashes are no commits");
+            Eq(null, G("Build succeeded.\n    0 Warning(s)"), "not git either");
+
+            var row = ToolCallView.Summarize("Bash", "[main a0b4892] Second change\n 3 files changed, 2 insertions(+), 1 deletion(-)", false);
+            Eq("Committed a0b4892 · 3 files · +2 −1", row.Lines.Single(), "the row");
+        }
+
         private static void Test_RunResults_FailingTestsNamed()
         {
             // Phase 111: which tests failed, under the summary
