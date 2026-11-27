@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ClaudeVS.Core.Chat
 {
@@ -55,12 +56,32 @@ namespace ClaudeVS.Core.Chat
         public string Previous(string current)
         {
             if (_items.Count == 0) return null;
-            if (_pos == -1) { _draft = current ?? ""; _pos = _items.Count; }
-            if (_pos == 0) return null;
+            if (_pos == -1)
+            {
+                _draft = current ?? "";
+                _pos = _items.Count;
+                // Text in the box searches (Phase 113): only the prompts that contain it, as a shell's history search;
+                // when none does, all of them
+                string find = _draft.Trim();
+                _filter = find.Length > 0 && _items.Any(i => Contains(i, find)) ? find : null;
+            }
+            int older = _pos - 1;
+            while (older >= 0 && !Matches(older)) older--;
+            if (older < 0) return null;
             Keep(current);
-            _pos--;
+            _pos = older;
             return Shown(_pos);
         }
+
+        // What the box held when browsing started, when it searches (Phase 113)
+        private string _filter;
+
+        /// <summary>True while <c>Ctrl+Up</c> goes only to prompts containing what the box held (Phase 113).</summary>
+        public bool Searching => _pos != -1 && _filter != null;
+
+        private bool Matches(int pos) => _filter == null || Contains(_items[pos], _filter);
+
+        private static bool Contains(string item, string find) => item.IndexOf(find, StringComparison.OrdinalIgnoreCase) >= 0;
 
         /// <summary>
         /// Newer entry; past the newest returns the saved draft. Null when not browsing. <paramref name="current"/>
@@ -71,7 +92,8 @@ namespace ClaudeVS.Core.Chat
             if (_pos == -1) return null;
             Keep(current);
             _pos++;
-            if (_pos >= _items.Count) { _pos = -1; _edits.Clear(); return _draft; }
+            while (_pos < _items.Count && !Matches(_pos)) _pos++;
+            if (_pos >= _items.Count) { _pos = -1; _edits.Clear(); _filter = null; return _draft; }
             return Shown(_pos);
         }
 

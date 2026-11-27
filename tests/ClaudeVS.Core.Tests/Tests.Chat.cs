@@ -724,6 +724,24 @@ namespace ClaudeVS.Core.Tests
             finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
         }
 
+        private static void Test_PromptHistory_Search()
+        {
+            // Phase 113: text in the box searches the history as Ctrl+Up steps back
+            var h = new ClaudeVS.Core.Chat.PromptHistory();
+            foreach (var p in new[] { "fix the Login bug", "add tests", "explain login flow", "build it" }) h.Add(p);
+            Eq("explain login flow", h.Previous("login"), "the newest prompt containing it, any case");
+            True(h.Searching, "searching");
+            Eq("fix the Login bug", h.Previous("explain login flow"), "the next older match, skipping the rest");
+            Eq(null, h.Previous("fix the Login bug"), "no older match: stays");
+            Eq("explain login flow", h.Next("fix the Login bug"), "newer matches only");
+            Eq("login", h.Next("explain login flow"), "past the newest match: what was typed");
+            True(!h.Searching, "done");
+            Eq("build it", h.Previous("nothing like it"), "no match at all: every prompt, as before");
+            Eq("explain login flow", h.Previous("build it"), "");
+            Eq("nothing like it", h.Next("explain login flow") == "build it" ? h.Next("build it") : "?", "back to what was typed");
+            Eq("build it", h.Previous("   "), "only blanks: every prompt");
+        }
+
         private static void Test_PromptHistory_EditsKept()
         {
             // As VS Code's 2.1.331-2.1.332 fixes: changing a recalled prompt, then moving on, doesn't lose the change
