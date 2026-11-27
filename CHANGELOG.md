@@ -24,6 +24,8 @@ All notable changes to this project are listed here. The format follows
 - **Git results summarized:** `git status` ("1 modified · 1 untracked", "Clean · 2 commits ahead"), `git diff --stat`
   ("3 files · +10 −2"), `git commit` ("Committed a0b4892 · 3 files · +2 −1"), `git push` ("Pushed main (new
   branch)", a rejected push in red) and `git log --oneline` ("12 commits").
+- **Package installs summarized:** npm, yarn, pnpm, pip, `dotnet add package` and `dotnet restore` say what changed:
+  "Added 120 packages · 3 vulnerabilities", "Up to date", "Added Newtonsoft.Json 13.0.4", "Restored 2 projects".
 - **Tables in Claude's answers are tables** (they were lines of pipes): a shaded header row, lines between columns,
   each column aligned as the separator row says, also while the rows arrive.
 - **Bold and inline code while they stream:** a `**bold` or `` `code `` that hasn't closed yet shows as bold or code,
