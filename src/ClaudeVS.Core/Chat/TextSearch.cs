@@ -95,6 +95,18 @@ namespace ClaudeVS.Core.Chat
             return 0;
         }
 
+        /// <summary>
+        /// What a screen reader says when the find bar's result changes (Phase 108): "3 of 12 for Validate", "No results
+        /// for Validate", or the bar's own words (a pattern that doesn't parse). Nothing for an empty query.
+        /// </summary>
+        public static string Announcement(string status, string query)
+        {
+            if (string.IsNullOrEmpty(query) || string.IsNullOrEmpty(status)) return "";
+            bool count = status == "No results" || status.EndsWith(" match", StringComparison.Ordinal) || status.EndsWith(" matches", StringComparison.Ordinal)
+                || System.Text.RegularExpressions.Regex.IsMatch(status, @"^\d+ of \d+$");
+            return count ? status + " for " + query : status;
+        }
+
         /// <summary>What the find bar says: "3 of 12", "No results", or nothing for an empty query.</summary>
         public static string Status(int index, int count, string query)
         {
