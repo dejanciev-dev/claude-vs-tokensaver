@@ -3050,8 +3050,15 @@ Planned on 2026-11-27, after Phase 109 (PR #99 merged); the four items picked fr
       redirected `dotnet build` uses MSBuild's classic "Build succeeded." and counts (no terminal logger), and
       `dotnet test` VSTest's "Failed!  - Failed: 1, Passed: 1…" line. Claude Code 2.1.332 adds "Shell cwd was reset
       to …" at the end of each result, after the summaries. CONTRIBUTING: 22 tests
-- [ ] **Copy a selection as HTML.** Copying part of an answer (Ctrl+C on a selection) puts only text on the
+- [x] **Copy a selection as HTML.** Copying part of an answer (Ctrl+C on a selection) puts only text on the
       clipboard. The selected blocks also go as HTML, so a pasted part keeps its headings, lists and colored code.
+      WPF's own copy puts rich text there, in the theme's colors (white text from a dark theme), without the code
+      blocks, which are boxes of their own. `MarkdownHtml.Selection` (Core): a block all selected as it is, one selected
+      in part with its kind and only the selected text (a list item without its drawn marker), a code block, table,
+      rule or section touched copied whole, a prompt's or tool line's text a paragraph. `TranscriptView.OnCopying`
+      (a Copying handler on the chat) finds the selected blocks through `_sourceOf` (each drawn block's parsed block,
+      kept by `Render`), puts the selection's text and the HTML on the clipboard and cancels WPF's copy; a selection
+      with no answer in it is copied as before. `Test_MarkdownHtml_Selection`. Builds clean; not yet run in VS
 - [ ] **Export: pick and fold.** *Export conversation…* writes everything. The HTML page can carry each tool's output
       folded (`<details>`), the export can leave the tool lines out, and it can start at a chosen message. In Core,
       tested.

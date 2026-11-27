@@ -70,9 +70,54 @@ namespace ClaudeVS.ToolWindow
                 _scroll = FindScrollViewer(Box);
                 if (_scroll != null) _scroll.ScrollChanged += OnScrollChanged;
             };
+            DataObject.AddCopyingHandler(Box, OnCopying);
         }
 
         public RichTextBox Box { get; }
+
+        // ---------------- Copying a selection (Phase 110) ----------------
+
+        // The parsed block each drawn answer block came from, for a selection copied as HTML
+        private readonly System.Runtime.CompilerServices.ConditionalWeakTable<Block, MdBlock> _sourceOf = new System.Runtime.CompilerServices.ConditionalWeakTable<Block, MdBlock>();
+
+        /// <summary>
+        /// Ctrl+C on a selection that takes in part of an answer: the selected text, and the selected blocks as HTML
+        /// (<see cref="MarkdownHtml.Selection"/>), so Word, Outlook and Teams paste headings, lists and colored code, in
+        /// the light palette. The rich text WPF would put there instead has the theme's colors (white text from a dark
+        /// theme) and leaves code blocks out. A selection outside answers is copied as WPF copies it.
+        /// </summary>
+        private void OnCopying(object sender, DataObjectCopyingEventArgs e)
+        {
+            var sel = Box.Selection;
+            if (sel.IsEmpty) return;
+            var parts = new List<(MdBlock, string)>();
+            bool anyAnswer = false;
+            void Visit(IEnumerable<Block> blocks)
+            {
+                foreach (var b in blocks)
+                {
+                    if (b.ContentEnd.CompareTo(sel.Start) <= 0 || b.ContentStart.CompareTo(sel.End) >= 0) continue;
+                    bool whole = sel.Start.CompareTo(b.ContentStart) <= 0 && sel.End.CompareTo(b.ContentEnd) >= 0;
+                    string Selected() => new TextRange(sel.Start.CompareTo(b.ContentStart) > 0 ? sel.Start : b.ContentStart,
+                                                       sel.End.CompareTo(b.ContentEnd) < 0 ? sel.End : b.ContentEnd).Text;
+                    if (_sourceOf.TryGetValue(b, out var md)) { anyAnswer = true; parts.Add((md, whole ? null : Selected())); }
+                    else if (b is Section section) Visit(section.Blocks);
+                    else if (b is Paragraph) parts.Add((null, Selected()));
+                }
+            }
+            Visit(_doc.Blocks);
+            string html = anyAnswer ? MarkdownHtml.Selection(parts) : null;
+            if (html == null) return;
+            try
+            {
+                var data = new DataObject();
+                data.SetData(DataFormats.UnicodeText, sel.Text);
+                data.SetData(DataFormats.Html, AnswerText.ClipboardHtml(html));
+                Clipboard.SetDataObject(data, true);
+                e.CancelCommand(); // ours is on the clipboard; WPF's would replace it
+            }
+            catch (Exception) { } // the clipboard is busy: let WPF copy as it does
+        }
 
         // ---------------- Find in the chat (Phase 101) ----------------
 
@@ -1865,6 +1910,15 @@ namespace ClaudeVS.ToolWindow
         // ---------------- Rendering ----------------
 
         private Block Render(MdBlock b)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var drawn = RenderBlock(b);
+            _sourceOf.Remove(drawn);
+            _sourceOf.Add(drawn, b); // a selection copied as HTML (Phase 110)
+            return drawn;
+        }
+
+        private Block RenderBlock(MdBlock b)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             switch (b.Kind)

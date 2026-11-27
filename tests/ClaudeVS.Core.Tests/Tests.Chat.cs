@@ -405,6 +405,21 @@ namespace ClaudeVS.Core.Tests
             True(ClaudeVS.Core.Markdown.MarkdownHtml.Render("```\nplain <b>\n```").Contains("<code>plain &lt;b&gt;</code>"), "no language: plain, escaped");
         }
 
+        private static void Test_MarkdownHtml_Selection()
+        {
+            // Phase 110: a selection in the chat as HTML; whole blocks as they are, partly selected ones with their text
+            var md = ClaudeVS.Core.Markdown.MarkdownParser.Parse("## Setup\n\nRun **it** now.\n\n- one\n- two\n\n```cs\nvar x = 1;\n```\n\n> [!NOTE]\n> Mind <this>.");
+            string S(params (int Block, string Part)[] parts) =>
+                ClaudeVS.Core.Markdown.MarkdownHtml.Selection(parts.Select(p => (p.Block < 0 ? null : md[p.Block], p.Part)))?.TrimEnd('\n');
+            Eq("<h2 id=\"setup\">Setup</h2>\n<p>Run <strong>it</strong> now.</p>", S((0, null), (1, null)), "whole blocks keep their inlines");
+            Eq("<h2 id=\"setup\">tup</h2>\n<p>Run it</p>", S((0, "tup"), (1, "Run it")), "partly selected: the selected text, the block's kind");
+            Eq("<ul><li>ne</li><li>two</li></ul>", S((2, "• ne"), (3, null)), "a list item's marker isn't its text; the items stay one list");
+            True(S((4, "")).StartsWith("<pre style=", StringComparison.Ordinal) && S((4, "")).Contains("var"), "a code block touched is copied whole");
+            Eq("<blockquote><p>Mind &lt;this&gt;.</p></blockquote>", S((6, "Mind <this>.")), "a note's line, escaped");
+            Eq("<p>You: hi</p>", S((-1, "You: hi\r\n")), "text that is no answer block: a paragraph");
+            Eq(null, S((-1, " "), (1, "")), "nothing selected: null");
+        }
+
         private static void Test_Markdown_HalfWritten()
         {
             // Phase 95: while an answer streams, its last line may be cut off
