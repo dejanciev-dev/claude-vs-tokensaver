@@ -80,6 +80,7 @@ namespace ClaudeVS.Core.Tests
                 ("links", RunLinks), // a file reference in a real answer links to the file and line (Phase 95)
                 ("markdown", RunMarkdown), // tasks, struck text, a <br> in a table, a diff and a note in a real answer (Phase 99)
                 ("ansi", RunAnsi), // a Bash result's color codes cleaned and colored (Phase 104)
+                ("tools", RunTools), // a real dotnet build and test run summarized on their rows (Phase 110)
                 ("session", RunSession),
                 ("long-prompt", RunLongPrompt),
                 ("prompt-tokens", RunPromptTokens),
@@ -658,6 +659,98 @@ namespace ClaudeVS.Core.Tests
             var row = ToolCallView.Summarize("Bash", clean, result.IsError, data: result.ResultData);
             Check(row.Lines.All(l => !TerminalText.HasCodes(l)), "the row's summary has no ESC: " + string.Join(" | ", row.Lines));
             Console.WriteLine(failures.Count == 0 ? "PASS live ansi" : "FAIL live ansi: " + string.Join("; ", failures));
+            return failures.Count == 0 ? 0 : 1;
+        }
+
+        /// <summary>
+        /// `--live-tools` (in --live-all, about a cent): a build and a test run in real tool rows (Phase 110). Phase 106
+        /// summarized them from each tool's documented output; here a two-test MSTest project (one test fails) is made
+        /// with <c>dotnet new mstest</c> in a temp folder, Haiku runs <c>dotnet build</c> and <c>dotnet test</c>, and
+        /// each Bash result summarized as the chat does must read "Build succeeded…" and "✗ 1 failed · 1 passed" (red).
+        /// Skipped without the .NET SDK, or when the template can't be restored.
+        /// </summary>
+        public static int RunTools()
+        {
+            string exe = ClaudeCliLocator.Resolve("");
+            if (exe == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }
+            string dir = Path.Combine(Path.GetTempPath(), "cvs-live-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            var events = new BlockingCollection<ClaudeEvent>();
+            ClaudeSession session = null;
+            var results = new Dictionary<string, ClaudeEvent>(); // "build" / "test" → its Bash result
+            try
+            {
+                // The project, built once here so Haiku's build is quick and restores nothing
+                string Dotnet(string args)
+                {
+                    var psi = new System.Diagnostics.ProcessStartInfo("dotnet", args)
+                    { WorkingDirectory = dir, UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true };
+                    using (var p = System.Diagnostics.Process.Start(psi))
+                    {
+                        var err = p.StandardError.ReadToEndAsync();
+                        string o = p.StandardOutput.ReadToEnd();
+                        p.WaitForExit();
+                        return p.ExitCode == 0 ? null : o + err.Result;
+                    }
+                }
+                string failed;
+                try { failed = Dotnet("new mstest -n Calc -o ."); }
+                catch (System.ComponentModel.Win32Exception) { Console.WriteLine("SKIP live tools: dotnet not found"); return 2; }
+                if (failed != null) { Console.WriteLine("SKIP live tools: dotnet new mstest failed: " + failed.Trim().Split('\n').Last()); return 2; }
+                File.Delete(Path.Combine(dir, "Test1.cs"));
+                File.WriteAllText(Path.Combine(dir, "CalcTests.cs"),
+                    "namespace Calc;\n[TestClass]\npublic sealed class CalcTests\n{\n" +
+                    "    [TestMethod] public void Adds() => Assert.AreEqual(4, Add(2, 2));\n" +
+                    "    [TestMethod] public void AddsWrong() => Assert.AreEqual(5, Add(2, 2));\n" +
+                    "    private static int Add(int a, int b) => a + b;\n}\n");
+                if (Dotnet("build") is string buildFailed) { Console.WriteLine("SKIP live tools: the project doesn't build: " + buildFailed.Trim().Split('\n').Last()); return 2; }
+
+                session = NewSession(new ClaudeLaunchOptions
+                {
+                    WorkingDirectory = dir, Model = ModelChoice.Haiku, Effort = EffortChoice.Low,
+                    ExtraArguments = "--allowedTools Bash",
+                });
+                session.EventReceived += (s, e) => events.Add(e);
+                session.SendPromptAsync("Run these two bash commands in this folder, one at a time, each exactly once: `dotnet build` and then `dotnet test`. " +
+                    "One test is meant to fail: don't change or fix anything. Then reply only 'ok'.").GetAwaiter().GetResult();
+                var commands = new Dictionary<string, string>(); // tool use id → "build" / "test"
+                var deadline = DateTime.UtcNow.AddSeconds(240);
+                while (DateTime.UtcNow < deadline)
+                {
+                    if (!events.TryTake(out var e, TimeSpan.FromMilliseconds(200))) continue;
+                    if (e.IsSubagent) continue;
+                    if (e.Kind == ClaudeEventKind.ToolUse && e.ToolName == "Bash")
+                    {
+                        string cmd = e.ToolInput?["command"]?.ToString() ?? "";
+                        Console.WriteLine("  Bash: " + cmd);
+                        commands[e.ToolUseId] = cmd.Contains("dotnet test") ? "test" : cmd.Contains("dotnet build") ? "build" : "other";
+                    }
+                    if (e.Kind == ClaudeEventKind.ToolResult && e.ToolUseId != null && commands.TryGetValue(e.ToolUseId, out var what) && !results.ContainsKey(what))
+                        results[what] = e;
+                    if (e.Kind == ClaudeEventKind.TurnCompleted) { Console.WriteLine($"  turn completed: error={e.IsError}, cost=${e.TotalCostUsd:0.0000}"); break; }
+                }
+            }
+            finally { session?.Dispose(); try { Directory.Delete(dir, true); } catch (IOException) { } catch (UnauthorizedAccessException) { } }
+
+            var failures = new List<string>();
+            void Check(bool ok, string what) { Console.WriteLine((ok ? "  ok   " : "  FAIL ") + what); if (!ok) failures.Add(what); }
+            ToolResultSummary Row(string what)
+            {
+                if (!results.TryGetValue(what, out var r)) return null;
+                string clean = TerminalText.Strip(TerminalText.Collapse(r.ResultText ?? ""));
+                var lines = clean.Split('\n');
+                foreach (var l in lines.Skip(Math.Max(0, lines.Length - 6))) Console.WriteLine($"  {what} | " + l.TrimEnd('\r'));
+                var row = ToolCallView.Summarize("Bash", clean, r.IsError, data: r.ResultData);
+                Console.WriteLine($"  {what} row: {string.Join(" | ", row.Lines)} (error={row.IsError})");
+                return row;
+            }
+            var build = Row("build");
+            var test = Row("test");
+            Check(build != null, "a dotnet build result");
+            Check(build != null && build.Lines.Count == 1 && build.Lines[0].StartsWith("Build succeeded", StringComparison.Ordinal) && !build.IsError, "the build's row: \"Build succeeded…\"");
+            Check(test != null, "a dotnet test result");
+            Check(test != null && test.Lines.Count == 1 && test.Lines[0] == "✗ 1 failed · 1 passed" && test.IsError, "the test run's row: \"✗ 1 failed · 1 passed\", red");
+            Console.WriteLine(failures.Count == 0 ? "PASS live tools" : "FAIL live tools: " + string.Join("; ", failures));
             return failures.Count == 0 ? 0 : 1;
         }
 

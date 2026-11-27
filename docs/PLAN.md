@@ -3040,10 +3040,16 @@ Markdown or plain text (Phase 100); pasted into Word, Outlook or Teams it loses 
 
 Planned on 2026-11-27, after Phase 109 (PR #99 merged); the four items picked from four proposed.
 
-- [ ] **Live test: tool rows.** Phase 106's run summaries were written from each tool's documented format, not from
+- [x] **Live test: tool rows.** Phase 106's run summaries were written from each tool's documented format, not from
       what Claude Code sends. A `tools` step in `--live-all`: Haiku runs `dotnet build` and `dotnet test` on a tiny
       test project in a temp folder; each Bash result summarized as the chat does must read "Build succeeded" and
       "✓ N passed". Fix what it finds.
+      `LiveSmoke.RunTools` (`--live-tools`, after `ansi`): `dotnet new mstest` with one passing and one failing test,
+      built once beforehand so Haiku's build restores nothing; skipped without the SDK. The rows must read "Build
+      succeeded" and "✗ 1 failed · 1 passed" in red. First run PASS, $0.0038, nothing to fix: with its output
+      redirected `dotnet build` uses MSBuild's classic "Build succeeded." and counts (no terminal logger), and
+      `dotnet test` VSTest's "Failed!  - Failed: 1, Passed: 1…" line. Claude Code 2.1.332 adds "Shell cwd was reset
+      to …" at the end of each result, after the summaries. CONTRIBUTING: 22 tests
 - [ ] **Copy a selection as HTML.** Copying part of an answer (Ctrl+C on a selection) puts only text on the
       clipboard. The selected blocks also go as HTML, so a pasted part keeps its headings, lists and colored code.
 - [ ] **Export: pick and fold.** *Export conversation…* writes everything. The HTML page can carry each tool's output
