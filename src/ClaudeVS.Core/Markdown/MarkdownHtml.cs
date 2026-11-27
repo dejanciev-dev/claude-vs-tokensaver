@@ -110,6 +110,47 @@ namespace ClaudeVS.Core.Markdown
             return sb.ToString();
         }
 
+        /// <summary>
+        /// What a selection in the chat covers, as HTML (Phase 110). Each part is a drawn block and the text selected in
+        /// it: a block that is all selected (<c>Part</c> null) is written as it is; one selected only in part keeps its
+        /// kind (a heading, a list item, a quote) with only the selected text in it; a code block, a table, a rule or a
+        /// section is written whole when the selection touches it. A part with no block (a prompt, a tool row) is its text
+        /// in a paragraph. Null when nothing is left.
+        /// </summary>
+        public static string Selection(IEnumerable<(MdBlock Block, string Part)> parts)
+        {
+            var blocks = new List<MdBlock>();
+            foreach (var (block, part) in parts ?? Enumerable.Empty<(MdBlock, string)>())
+            {
+                if (block == null)
+                {
+                    if (string.IsNullOrWhiteSpace(part)) continue;
+                    blocks.Add(Partial(new MdBlock { Kind = MdBlockKind.Paragraph }, part));
+                    continue;
+                }
+                bool whole = part == null || block.Kind == MdBlockKind.Code || block.Kind == MdBlockKind.Table
+                    || block.Kind == MdBlockKind.Rule || block.Kind == MdBlockKind.Details;
+                if (whole) blocks.Add(block);
+                else if (!string.IsNullOrWhiteSpace(part)) blocks.Add(Partial(block, part));
+            }
+            return blocks.Count == 0 ? null : Blocks(blocks);
+        }
+
+        /// <summary>A copy of a text block with only <paramref name="text"/> in it (a list item keeps its depth and number).</summary>
+        private static MdBlock Partial(MdBlock b, string text)
+        {
+            var copy = new MdBlock
+            {
+                Kind = b.Kind, Level = b.Level, Indent = b.Indent, Number = b.Number, Anchor = b.Anchor,
+                Alert = b.Alert, Task = null, AlertTitle = false,
+            };
+            // A drawn list item's selected text starts with its marker ("• ", "1. "), a note's with its title
+            string t = text.Trim('\r', '\n');
+            if (b.Kind == MdBlockKind.ListItem && t.StartsWith(b.Marker, StringComparison.Ordinal)) t = t.Substring(b.Marker.Length);
+            copy.Inlines.Add(new MdInline { Kind = MdInlineKind.Text, Text = t });
+            return copy;
+        }
+
         /// <summary>A run of list items from <paramref name="start"/> as nested lists; returns the index after it.</summary>
         private static int List(IReadOnlyList<MdBlock> blocks, int start, StringBuilder sb)
         {
