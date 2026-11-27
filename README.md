@@ -380,7 +380,7 @@ msbuild ClaudeVS.sln /restore /p:Configuration=Release /warnaserror     # → sr
 - **Debug in VS:** set **ClaudeVS** as the startup project and press **F5** to open the experimental instance.
 - **Live check against your CLI** (opt-in, costs a few cents, never runs in CI):
   `dotnet run --project tests/ClaudeVS.Core.Tests -- --live`. `--live-edit-review` checks a partly applied edit (about $0.005). `--live-dialogs` reads every dialog (no cost). `--live-setup` checks the installed hook and deny rules (about $0.005), `--live-session` the meter, model switching and /compact (about $0.05). `--live-haiku-router` routes four prompts with the Haiku router (about $0.001). `--live-mcp` checks that the CLI connects to the
-  Error List server, with no prompt and no cost. `--live-all` runs every live test in a row (22, about $0.23); see CONTRIBUTING.
+  Error List server, with no prompt and no cost. `--live-all` runs every live test in a row (24, about $0.24); see CONTRIBUTING.
 - **CI** builds every push and PR with warnings as errors, runs the tests and uploads the `.vsix`. Pushing a
   `v*` tag creates a draft GitHub Release; publishing it starts the Marketplace upload, after approval.
 
