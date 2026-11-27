@@ -3120,6 +3120,20 @@ first lines.
       or a compiler's error lines: a failed build also says "All projects are up-to-date for restore.". After tests,
       lint and builds, before git. `Test_RunResults_Install`. Builds clean; not yet run in VS
 
+## Phase 112 — Exported conversations you can read
+
+Planned on 2026-11-27, after Phase 111, on the same branch; the second of four. Phases 109–110 made the export a
+page; it says nothing about what the conversation cost, a long one has no way in, and it is light only.
+
+- [ ] **What it cost.** Under the title: the prompts, the cost (and the agents' part), the tokens, the models that
+      answered and when it started and ended, from the session file. In Core, tested.
+- [ ] **Contents.** A conversation of three prompts or more starts with a list of them, each a link to its section,
+      in the Markdown and on the page. In Core, tested.
+- [ ] **Dark and print.** The page follows the system's dark theme, and prints cleanly (tool output folded away, no
+      contents list, page breaks kept out of code). In Core, tested.
+- [ ] **Save one answer.** Right-click an answer's copy button → *Save as…*: that answer alone as Markdown or a
+      web page. In Core, tested.
+
 ---
 
 ## Working in Visual Studio — daily loop
