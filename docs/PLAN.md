@@ -3125,8 +3125,13 @@ first lines.
 Planned on 2026-11-27, after Phase 111, on the same branch; the second of four. Phases 109–110 made the export a
 page; it says nothing about what the conversation cost, a long one has no way in, and it is light only.
 
-- [ ] **What it cost.** Under the title: the prompts, the cost (and the agents' part), the tokens, the models that
+- [x] **What it cost.** Under the title: the prompts, the cost (and the agents' part), the tokens, the models that
       answered and when it started and ended, from the session file. In Core, tested.
+      `ExportOptions.Cost` (`SessionCost.Get`, now also keeping `Models` in the order they first answered) and
+      `ModelName` (the session's catalog; `ConversationExport.ModelName` turns an unlisted `claude-sonnet-4-5-20250929`
+      into "Sonnet 4.5"). The line has what there is: "*2 prompts · $0.42 ($0.10 agents) · 1.2M tokens · Sonnet 5.5,
+      Haiku 5.5 · 2026-11-27 09:00–11:30*"; from a chosen prompt on, the cost says it is the whole conversation's.
+      `Test_Export_WhatItCost`; `Test_Export_Markdown` has the prompt count. Builds clean; not yet run in VS
 - [ ] **Contents.** A conversation of three prompts or more starts with a list of them, each a link to its section,
       in the Markdown and on the page. In Core, tested.
 - [ ] **Dark and print.** The page follows the system's dark theme, and prints cleanly (tool output folded away, no

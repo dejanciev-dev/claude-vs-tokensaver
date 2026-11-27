@@ -16,6 +16,8 @@ namespace ClaudeVS.Core.Chat
         public double CostUsd { get; set; }
         /// <summary>The part of <see cref="CostUsd"/> its subagents used (their files under &lt;id&gt;/subagents).</summary>
         public double AgentCostUsd { get; set; }
+        /// <summary>The models that answered, as the API names them, in the order they first did (Phase 112).</summary>
+        public System.Collections.Generic.List<string> Models { get; } = new System.Collections.Generic.List<string>();
 
         /// <summary>"$0.42", or "$0.42 ($0.12 agents)" with subagents from half a cent, for the sessions list; null under half a cent.</summary>
         public string Short() => CostUsd < 0.005 ? null : Usd(CostUsd) + (AgentCostUsd >= 0.005 ? " (" + Usd(AgentCostUsd) + " agents)" : "");
@@ -111,6 +113,7 @@ namespace ClaudeVS.Core.Chat
                         if (u.IsEmpty) continue; // "<synthetic>" messages (errors, interruptions) cost nothing
                         info.Requests++;
                         info.Usage += u;
+                        if (!string.IsNullOrEmpty(model) && !info.Models.Contains(model)) info.Models.Add(model);
                         double cost = (prices.For(model) ?? prices.Sonnet).Cost(u);
                         info.CostUsd += cost;
                         if (subagent || o.Value<bool?>("isSidechain") == true) info.AgentCostUsd += cost; // a subagent's message in the main file, should one be there
