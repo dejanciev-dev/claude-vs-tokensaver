@@ -483,6 +483,7 @@ Needs **Options → Diagnostics → Keep local usage log** on.
 | Press *.\*\* in the find bar and type `Valid\w*`, then `(` | Matches of different lengths each selected whole; `(` says "Not a valid pattern: …" instead of a count |
 | With Narrator on, open find, type a word, press `Enter` twice, then tab across the toggles | Narrator says "N matches for …", then "1 of N for …", "2 of N for …"; the toggles are read as Match case, Whole word, Regular expression |
 | Click the copy button under an answer with a heading, a list, a table and a C# block; paste into Word or Outlook, then into Notepad | Word/Outlook get a heading, a bulleted list, a table and colored code in a gray block; Notepad gets the Markdown |
+| `/` → *Export conversation…*, pick *Web page (*.html)* and save; open the file in a browser | A readable page: the title, You and Claude sections, tool lines small and gray, code blocks colored, tables with borders; nothing loaded from the web |
 
 ## 34. Release (Phase 5)
 

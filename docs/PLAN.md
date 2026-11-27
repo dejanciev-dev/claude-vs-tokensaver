@@ -3029,8 +3029,12 @@ Markdown or plain text (Phase 100); pasted into Word, Outlook or Teams it loses 
       `TranscriptView.CopyMarkdown` (`UnicodeText` and CF_HTML through Phase 100's `ClipboardHtml`) for the button's
       click, its *Copy as Markdown* and the **/** menu's *Copy last response*; *Copy as plain text* stays text.
       Builds clean; not yet run in VS
-- [ ] **Export as HTML.** *Export conversation…* offers an HTML page beside Markdown: the same conversation as a page
-      that opens in a browser, styled for reading, the tool lines muted. In Core, tested
+- [x] **Export as HTML.** *Export conversation…* offers an HTML page beside Markdown: the same conversation as a page
+      that opens in a browser, styled for reading, the tool lines muted. In Core, tested.
+      `ConversationExport.ToHtml`: `ToMarkdown` through `MarkdownHtml`, a page with an inline stylesheet, the tool
+      lines' `li` classed. The dialog's second filter writes `.html`. `MarkdownHtml.E` now escapes only `& < > "`, so
+      emoji and boxes stay characters (the page and CF_HTML are UTF-8) rather than numeric entities. README's export
+      row and test count (308). `Test_Export_Html`. Builds clean; not yet run in VS
 
 ---
 

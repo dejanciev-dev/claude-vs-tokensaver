@@ -413,14 +413,18 @@ namespace ClaudeVS.ToolWindow
             string title = _fullTitle;
             var dlg = new Microsoft.Win32.SaveFileDialog
             {
-                Title = "Export conversation as Markdown",
+                Title = "Export conversation",
                 FileName = ConversationExport.FileName(title),
                 DefaultExt = ".md",
-                Filter = "Markdown (*.md)|*.md|All files (*.*)|*.*",
+                // A web page too (Phase 109): the same conversation, for a browser
+                Filter = "Markdown (*.md)|*.md|Web page (*.html)|*.html|All files (*.*)|*.*",
                 InitialDirectory = dir,
             };
             if (dlg.ShowDialog() != true) return;
             string target = dlg.FileName;
+            if (dlg.FilterIndex == 2 && !System.IO.Path.GetExtension(target).StartsWith(".htm", StringComparison.OrdinalIgnoreCase))
+                target = System.IO.Path.ChangeExtension(target, ".html");
+            bool html = System.IO.Path.GetExtension(target).StartsWith(".htm", StringComparison.OrdinalIgnoreCase);
 
             Jtf.RunAsync(async () =>
             {
@@ -432,7 +436,9 @@ namespace ClaudeVS.ToolWindow
                     {
                         var transcript = SessionTranscript.Read(source, maxItems: int.MaxValue);
                         items = transcript.Items.Count;
-                        Core.SafeFile.Replace(target, ConversationExport.ToMarkdown(transcript, title, DateTime.Now));
+                        Core.SafeFile.Replace(target, html
+                            ? ConversationExport.ToHtml(transcript, title, DateTime.Now)
+                            : ConversationExport.ToMarkdown(transcript, title, DateTime.Now));
                     });
                 }
                 catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException) { error = Core.SafeFile.Explain(ex, target); }
