@@ -3195,9 +3195,14 @@ Planned on 2026-11-27, after Phase 113, on the same branch; the last of four. Ph
 112's export were built from captured or documented output; a live test each shows what Claude Code really passes on.
 Then the docs and a release for Phases 100–113.
 
-- [ ] **Live test: git rows.** A `git` step in `--live-all`: in a temp repository with a local remote, Haiku runs
+- [x] **Live test: git rows.** A `git` step in `--live-all`: in a temp repository with a local remote, Haiku runs
       `git status`, `git commit -am …`, `git push` and `git log --oneline`; each row summarized as the chat does must
       read "1 modified", "Committed … · 1 file", "Pushed main", "2 commits".
+      `LiveSmoke.RunGit` (`--live-git`, after `tools`): the repository, its bare remote and a pushed first commit made
+      with git beforehand (a local user, `core.autocrlf` off); skipped without git; read-only object files cleared so
+      the folder can go. First run PASS, $0.0045: Claude Code 2.1.332 passes git's output as git prints it, with "Shell
+      cwd was reset to …" after the commit's, the push's and the log's. Phase 111 already left that line out of its
+      every-line checks; without that the log wouldn't read "2 commits". CONTRIBUTING describes it
 - [ ] **Live test: an export from a real session.** An `export` step: a turn with a Bash call, then the session file
       exported as the chat does, with the tool output folded and the cost; the page must hold the command's output,
       the prompt count, a model name and a cost.

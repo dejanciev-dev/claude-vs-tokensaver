@@ -81,6 +81,7 @@ namespace ClaudeVS.Core.Tests
                 ("markdown", RunMarkdown), // tasks, struck text, a <br> in a table, a diff and a note in a real answer (Phase 99)
                 ("ansi", RunAnsi), // a Bash result's color codes cleaned and colored (Phase 104)
                 ("tools", RunTools), // a real dotnet build and test run summarized on their rows (Phase 110)
+                ("git", RunGit), // git status, commit, push and log summarized on their rows (Phase 114)
                 ("session", RunSession),
                 ("long-prompt", RunLongPrompt),
                 ("prompt-tokens", RunPromptTokens),
@@ -752,6 +753,103 @@ namespace ClaudeVS.Core.Tests
             Check(test != null && test.Lines.Count > 0 && test.Lines[0] == "✗ 1 failed · 1 passed" && test.IsError, "the test run's row: \"✗ 1 failed · 1 passed\", red");
             Check(test != null && test.Lines.Count == 2 && test.Lines[1] == "AddsWrong", "the failing test named under it (Phase 111)");
             Console.WriteLine(failures.Count == 0 ? "PASS live tools" : "FAIL live tools: " + string.Join("; ", failures));
+            return failures.Count == 0 ? 0 : 1;
+        }
+
+        /// <summary>
+        /// `--live-git` (in --live-all, about a cent): git commands in real tool rows (Phase 114). Phase 111 summarized
+        /// them from output captured by hand; here, in a temp repository with a local bare remote and one changed file,
+        /// Haiku runs <c>git status</c>, <c>git commit -am</c>, <c>git push</c> and <c>git log --oneline</c>, and each Bash
+        /// result summarized as the chat does must read "1 modified", "Committed … · 1 file …", "Pushed main", "2 commits".
+        /// Skipped without git.
+        /// </summary>
+        public static int RunGit()
+        {
+            string exe = ClaudeCliLocator.Resolve("");
+            if (exe == null) { Console.WriteLine("SKIP: claude CLI not found"); return 2; }
+            string root = Path.Combine(Path.GetTempPath(), "cvs-live-" + Guid.NewGuid().ToString("N"));
+            string dir = Path.Combine(root, "repo"), remote = Path.Combine(root, "remote.git");
+            Directory.CreateDirectory(dir);
+            var events = new BlockingCollection<ClaudeEvent>();
+            ClaudeSession session = null;
+            var results = new Dictionary<string, ClaudeEvent>(); // "status" / "commit" / "push" / "log" → its Bash result
+            try
+            {
+                string Git(string args, string cwd)
+                {
+                    var psi = new System.Diagnostics.ProcessStartInfo("git", args)
+                    { WorkingDirectory = cwd, UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true };
+                    using (var p = System.Diagnostics.Process.Start(psi))
+                    {
+                        var err = p.StandardError.ReadToEndAsync();
+                        string o = p.StandardOutput.ReadToEnd();
+                        p.WaitForExit();
+                        return p.ExitCode == 0 ? null : o + err.Result;
+                    }
+                }
+                try { if (Git("--version", root) != null) { Console.WriteLine("SKIP live git: git doesn't run"); return 2; } }
+                catch (System.ComponentModel.Win32Exception) { Console.WriteLine("SKIP live git: git not found"); return 2; }
+                foreach (var (args, cwd) in new[]
+                {
+                    ("init -q --bare \"" + remote + "\"", root), ("init -q -b main", dir), ("config user.name \"Live Test\"", dir),
+                    ("config user.email live@example.invalid", dir), ("config core.autocrlf false", dir), ("remote add origin \"" + remote + "\"", dir),
+                })
+                    if (Git(args, cwd) is string failed) { Console.WriteLine("SKIP live git: git " + args.Split(' ')[0] + " failed: " + failed.Trim()); return 2; }
+                File.WriteAllText(Path.Combine(dir, "a.txt"), "one\n");
+                if ((Git("add a.txt", dir) ?? Git("commit -q -m init", dir) ?? Git("push -q -u origin main", dir)) is string setup) { Console.WriteLine("SKIP live git: " + setup.Trim()); return 2; }
+                File.AppendAllText(Path.Combine(dir, "a.txt"), "two\n");
+
+                session = NewSession(new ClaudeLaunchOptions
+                {
+                    WorkingDirectory = dir, Model = ModelChoice.Haiku, Effort = EffortChoice.Low,
+                    ExtraArguments = "--allowedTools Bash",
+                });
+                session.EventReceived += (s, e) => events.Add(e);
+                session.SendPromptAsync("Run these four bash commands in this folder, one at a time, each exactly once and nothing else: " +
+                    "`git status`, then `git commit -am \"Add a line\"`, then `git push`, then `git log --oneline`. Then reply only 'ok'.").GetAwaiter().GetResult();
+                var commands = new Dictionary<string, string>(); // tool use id → which
+                var deadline = DateTime.UtcNow.AddSeconds(180);
+                while (DateTime.UtcNow < deadline)
+                {
+                    if (!events.TryTake(out var e, TimeSpan.FromMilliseconds(200))) continue;
+                    if (e.IsSubagent) continue;
+                    if (e.Kind == ClaudeEventKind.ToolUse && e.ToolName == "Bash")
+                    {
+                        string cmd = e.ToolInput?["command"]?.ToString() ?? "";
+                        Console.WriteLine("  Bash: " + cmd);
+                        commands[e.ToolUseId] = cmd.Contains("git status") ? "status" : cmd.Contains("git commit") ? "commit"
+                            : cmd.Contains("git push") ? "push" : cmd.Contains("git log") ? "log" : "other";
+                    }
+                    if (e.Kind == ClaudeEventKind.ToolResult && e.ToolUseId != null && commands.TryGetValue(e.ToolUseId, out var what) && !results.ContainsKey(what))
+                        results[what] = e;
+                    if (e.Kind == ClaudeEventKind.TurnCompleted) { Console.WriteLine($"  turn completed: error={e.IsError}, cost=${e.TotalCostUsd:0.0000}"); break; }
+                }
+            }
+            finally
+            {
+                session?.Dispose();
+                // git makes its objects read-only; clear that so the folder can go
+                try { foreach (var f in Directory.GetFiles(root, "*", SearchOption.AllDirectories)) File.SetAttributes(f, FileAttributes.Normal); Directory.Delete(root, true); }
+                catch (IOException) { } catch (UnauthorizedAccessException) { }
+            }
+
+            var failures = new List<string>();
+            void Check(bool ok, string what) { Console.WriteLine((ok ? "  ok   " : "  FAIL ") + what); if (!ok) failures.Add(what); }
+            string Row(string what)
+            {
+                if (!results.TryGetValue(what, out var r)) { Console.WriteLine($"  {what}: no result"); return null; }
+                string clean = TerminalText.Strip(TerminalText.Collapse(r.ResultText ?? ""));
+                foreach (var l in clean.Split('\n').Take(8)) Console.WriteLine($"  {what} | " + l.TrimEnd('\r'));
+                var row = ToolCallView.Summarize("Bash", clean, r.IsError, data: r.ResultData);
+                Console.WriteLine($"  {what} row: {string.Join(" | ", row.Lines)} (error={row.IsError})");
+                return row.Lines.FirstOrDefault();
+            }
+            string status = Row("status"), commit = Row("commit"), push = Row("push"), log = Row("log");
+            Check(status == "1 modified", "git status: \"1 modified\"");
+            Check(commit != null && System.Text.RegularExpressions.Regex.IsMatch(commit, @"^Committed [0-9a-f]{7,} · 1 file · \+1$"), "git commit: \"Committed … · 1 file · +1\"");
+            Check(push == "Pushed main", "git push: \"Pushed main\"");
+            Check(log == "2 commits", "git log --oneline: \"2 commits\"");
+            Console.WriteLine(failures.Count == 0 ? "PASS live git" : "FAIL live git: " + string.Join("; ", failures));
             return failures.Count == 0 ? 0 : 1;
         }
 
