@@ -3156,6 +3156,21 @@ page; it says nothing about what the conversation cost, a long one has no way in
       opened; the button's tooltip says where it went or why not. `Test_Export_OneAnswer`. Builds clean; not yet run
       in VS
 
+## Phase 113 — Prompts you sent
+
+Planned on 2026-11-27, after Phase 112, on the same branch; the third of four. `Ctrl+Up` steps back through this
+chat's prompts only: a new chat, a restart of Visual Studio or a resumed conversation starts with none, and in a long
+history the one you want is far back.
+
+- [ ] **History kept.** The prompts you send are kept per solution (the last 100) and a new chat window starts with
+      them, also after Visual Studio restarts. In Core, tested.
+- [ ] **Search as you step back.** With text in the box, `Ctrl+Up` goes only to earlier prompts that contain it, as
+      a shell's history search does; with nothing matching, to all of them. In Core, tested.
+- [ ] **A resumed conversation's prompts.** Resuming a conversation puts its prompts in the history, and a prompt
+      sent again moves to the newest place instead of being kept twice. In Core, tested.
+- [ ] **Go to prompt.** `/` → *Go to prompt…* lists this chat's prompts, newest first, with when each was sent;
+      picking one scrolls to it.
+
 ---
 
 ## Working in Visual Studio — daily loop
