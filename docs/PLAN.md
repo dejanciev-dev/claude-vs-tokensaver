@@ -3170,8 +3170,12 @@ history the one you want is far back.
       damaged file reads as empty. `PromptHistory.Load` puts the saved ones before this chat's. The chat loads them
       the first time `Ctrl+Up` or a send needs them for the solution (`EnsurePromptHistory`) and adds each send off
       the UI thread. `Test_PromptHistory_Kept`. Builds clean; not yet run in VS
-- [ ] **Search as you step back.** With text in the box, `Ctrl+Up` goes only to earlier prompts that contain it, as
+- [x] **Search as you step back.** With text in the box, `Ctrl+Up` goes only to earlier prompts that contain it, as
       a shell's history search does; with nothing matching, to all of them. In Core, tested.
+      `PromptHistory.Previous` takes what the box held when browsing starts as the search (any case, trimmed) when a
+      prompt contains it; `Previous` and `Next` then skip the others, past the newest match comes what was typed, and
+      `Searching` says it is on. Edits to recalled prompts are kept as before. Only blanks, or no match: every prompt,
+      so the old tests stand. `Test_PromptHistory_Search`. Builds clean; not yet run in VS
 - [ ] **A resumed conversation's prompts.** Resuming a conversation puts its prompts in the history, and a prompt
       sent again moves to the newest place instead of being kept twice. In Core, tested.
 - [ ] **Go to prompt.** `/` → *Go to prompt…* lists this chat's prompts, newest first, with when each was sent;
