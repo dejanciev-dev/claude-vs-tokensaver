@@ -3111,8 +3111,14 @@ first lines.
       `log --oneline` (also `--graph`). The every-line checks skip git's `warning:` lines and the "Shell cwd was reset
       to …" line Claude Code adds (Phase 110). A `fatal:`/`error:` output is left to its error lines. Checked after
       tests, lint and builds. `Test_RunResults_Git` (md5sum's hashes aren't commits). Builds clean; not yet run in VS
-- [ ] **Package installs.** npm, pnpm and yarn ("added 120 packages"), pip ("Installed 3 packages"), `dotnet add
+- [x] **Package installs.** npm, pnpm and yarn ("added 120 packages"), pip ("Installed 3 packages"), `dotnet add
       package` and restore ("Restored 2 projects"). In Core, tested.
+      `RunResults.Install`: npm's "added 1 package, and audited 2 packages in 1s" (also removed, changed, "up to
+      date", and "· 3 vulnerabilities" when it found any), `dotnet add package` ("Added Newtonsoft.Json 13.0.4") and
+      restore, as npm 10 and dotnet 11 printed them here; pip, yarn and pnpm from their documented output (pip
+      wouldn't start on this machine). Only for a command that succeeded, and not when the output has an install's
+      or a compiler's error lines: a failed build also says "All projects are up-to-date for restore.". After tests,
+      lint and builds, before git. `Test_RunResults_Install`. Builds clean; not yet run in VS
 
 ---
 

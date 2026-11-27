@@ -965,6 +965,31 @@ namespace ClaudeVS.Core.Tests
             Eq("Committed a0b4892 · 3 files · +2 −1", row.Lines.Single(), "the row");
         }
 
+        private static void Test_RunResults_Install()
+        {
+            // Phase 111: what a package install did; npm and dotnet as they printed it here, the others as documented
+            string I(string o) => RunResults.Install(o)?.Line;
+            Eq("Added 1 package", I("\nadded 1 package, and audited 2 packages in 1s\n\nfound 0 vulnerabilities"), "npm install");
+            Eq("Up to date", I("\nup to date, audited 2 packages in 969ms\n\nfound 0 vulnerabilities"), "npm, nothing new");
+            Eq("Removed 1 package", I("removed 1 package, and audited 1 package in 608ms\n\nfound 0 vulnerabilities"), "npm uninstall");
+            Eq("Added 3 packages · removed 1 package · changed 2 packages · 3 vulnerabilities",
+               I("added 3 packages, removed 1 package, changed 2 packages, and audited 50 packages in 2s\n\n3 vulnerabilities (1 moderate, 2 high)\nfound 3 high severity vulnerabilities"), "npm, all of it");
+            Eq("Installed 3 packages", I("Collecting requests\n  Downloading requests-2.31.0-py3-none-any.whl\nSuccessfully installed certifi-2023.7.22 idna-3.4 requests-2.31.0"), "pip");
+            Eq("Already installed", I("Requirement already satisfied: requests in ./venv/lib/python3.12/site-packages (2.31.0)"), "pip, nothing to do");
+            Eq("Added 1 package", I("[4/4] Building fresh packages...\nsuccess Saved lockfile.\nsuccess Saved 1 new dependency.\ninfo Direct dependencies\n└─ is-number@7.0.0\nDone in 0.92s."), "yarn");
+            Eq("Added 12 packages · removed 1 package", I("Packages: +12 -1\n++++++++++++-\nProgress: resolved 12, reused 12, downloaded 0, added 12, done\nDone in 1.2s"), "pnpm");
+            Eq("Added Newtonsoft.Json 13.0.4", I("info : PackageReference for package 'Newtonsoft.Json' version '13.0.4' added to file 'C:\\t1\\Calc.csproj'.\n" +
+                "info : Writing assets file to disk. Path: C:\\t1\\obj\\project.assets.json\nlog  : Restored C:\\t1\\Calc.csproj (in 541 ms)."), "dotnet add package");
+            Eq("Restored 2 projects", I("  Determining projects to restore...\n  Restored C:\\a\\A.csproj (in 1.2 sec).\n  Restored C:\\a\\B.csproj (in 1.2 sec)."), "dotnet restore");
+            Eq("Up to date", I("  Determining projects to restore...\n  All projects are up-to-date for restore."), "dotnet restore, nothing to do");
+            Eq(null, I("npm error code E404\nnpm error 404 Not Found - GET https://registry.npmjs.org/nope"), "a failed install keeps its error lines");
+            Eq(null, I("hello"), "not an install");
+            Eq(null, I("  All projects are up-to-date for restore.\nsrc\\a.cs(3,1): error CS1002: ; expected"), "a build's compiler errors aren't an install");
+
+            Eq("✓ 2 passed", ToolCallView.Summarize("Bash", "  All projects are up-to-date for restore.\nPassed!  - Failed:     0, Passed:     2, Skipped:     0, Total:     2", false).Lines.Single(), "a test run's restore line doesn't win");
+            Eq("Build succeeded", ToolCallView.Summarize("Bash", "  Restored C:\\a\\A.csproj (in 1 sec).\nBuild succeeded.\n    0 Warning(s)\n    0 Error(s)", false).Lines.Single(), "nor a build's");
+        }
+
         private static void Test_RunResults_FailingTestsNamed()
         {
             // Phase 111: which tests failed, under the summary

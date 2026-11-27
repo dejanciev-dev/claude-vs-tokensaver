@@ -229,6 +229,62 @@ namespace ClaudeVS.Core.Cli
             return null;
         }
 
+        // Package installs (Phase 111). npm and dotnet as captured; pip, yarn and pnpm from their documented output
+        private static readonly Regex NpmAudited = new Regex(@"^(?<what>.*?)(?:,? and )?audited \d+ packages? in [\d.]+m?s\s*$", RegexOptions.Compiled | RegexOptions.Multiline);
+        private static readonly Regex NpmPart = new Regex(@"(?<w>added|removed|changed) (?<n>\d+) packages?", RegexOptions.Compiled);
+        private static readonly Regex NpmVulnerable = new Regex(@"^found (?<n>\d+) (?:\w+ )?(?:severity )?vulnerabilit(?:y|ies)", RegexOptions.Compiled | RegexOptions.Multiline);
+        private static readonly Regex PipInstalled = new Regex(@"^Successfully installed (?<p>.+?)\s*$", RegexOptions.Compiled | RegexOptions.Multiline);
+        private static readonly Regex PipSatisfied = new Regex(@"^Requirement already satisfied: ", RegexOptions.Compiled | RegexOptions.Multiline);
+        private static readonly Regex YarnSaved = new Regex(@"^success Saved (?<n>\d+) new dependenc(?:y|ies)", RegexOptions.Compiled | RegexOptions.Multiline);
+        private static readonly Regex YarnUpToDate = new Regex(@"^success Already up-to-date", RegexOptions.Compiled | RegexOptions.Multiline);
+        private static readonly Regex PnpmPackages = new Regex(@"^Packages: (?:\+(?<a>\d+))?\s*(?:-(?<r>\d+))?\s*$", RegexOptions.Compiled | RegexOptions.Multiline);
+        private static readonly Regex DotnetAdded = new Regex(@"PackageReference for package '(?<p>[^']+)' version '(?<v>[^']+)' (?:added to|updated in) file", RegexOptions.Compiled);
+        private static readonly Regex DotnetRestored = new Regex(@"^\s*(?:log\s*:\s*)?Restored .+?\.\w+proj \(in [^)]+\)", RegexOptions.Compiled | RegexOptions.Multiline);
+        private static readonly Regex DotnetRestoreUpToDate = new Regex(@"^\s*All projects are up-to-date for restore\.", RegexOptions.Compiled | RegexOptions.Multiline);
+        private static readonly Regex InstallFailed = new Regex(@"^(?:npm ERR!|npm error |ERROR: |error |error: )|: error [A-Z]+\d+", RegexOptions.Compiled | RegexOptions.Multiline);
+
+        /// <summary>
+        /// What a package install did (Phase 111): "Added 120 packages · 3 vulnerabilities", "Up to date", "Installed 3
+        /// packages", "Added Newtonsoft.Json 13.0.4", "Restored 2 projects". Null for anything else or a failed install.
+        /// </summary>
+        public static RunSummary Install(string output)
+        {
+            if (string.IsNullOrWhiteSpace(output) || InstallFailed.IsMatch(output)) return null;
+            string Count(int n, string w) => n == 1 ? "1 " + w : n + " " + w + "s";
+            string Cap(string s) => s.Length == 0 ? s : char.ToUpperInvariant(s[0]) + s.Substring(1);
+
+            var npm = NpmAudited.Matches(output).Cast<Match>().LastOrDefault();
+            if (npm != null)
+            {
+                var parts = NpmPart.Matches(npm.Groups["what"].Value).Cast<Match>()
+                    .Select(p => p.Groups["w"].Value + " " + Count(N(p.Groups["n"]), "package")).ToList();
+                string line = parts.Count > 0 ? Cap(string.Join(" · ", parts)) : "Up to date";
+                var vulnerable = NpmVulnerable.Match(output);
+                if (vulnerable.Success && N(vulnerable.Groups["n"]) > 0) line += " · " + Count(N(vulnerable.Groups["n"]), "vulnerability").Replace("vulnerabilitys", "vulnerabilities");
+                return new RunSummary { Line = line };
+            }
+            var pip = PipInstalled.Match(output);
+            if (pip.Success) return new RunSummary { Line = "Installed " + Count(pip.Groups["p"].Value.Split(new[] { ' ' }, System.StringSplitOptions.RemoveEmptyEntries).Length, "package") };
+            if (PipSatisfied.IsMatch(output) && !output.Contains("Collecting ")) return new RunSummary { Line = "Already installed" };
+            var yarn = YarnSaved.Match(output);
+            if (yarn.Success) return new RunSummary { Line = "Added " + Count(N(yarn.Groups["n"]), "package") };
+            if (YarnUpToDate.IsMatch(output)) return new RunSummary { Line = "Up to date" };
+            var pnpm = PnpmPackages.Match(output);
+            if (pnpm.Success && (pnpm.Groups["a"].Success || pnpm.Groups["r"].Success))
+            {
+                var parts = new List<string>();
+                if (pnpm.Groups["a"].Success) parts.Add("added " + Count(N(pnpm.Groups["a"]), "package"));
+                if (pnpm.Groups["r"].Success) parts.Add("removed " + Count(N(pnpm.Groups["r"]), "package"));
+                return new RunSummary { Line = Cap(string.Join(" · ", parts)) };
+            }
+            var added = DotnetAdded.Match(output);
+            if (added.Success) return new RunSummary { Line = "Added " + added.Groups["p"].Value + " " + added.Groups["v"].Value };
+            int restored = DotnetRestored.Matches(output).Count;
+            if (restored > 0) return new RunSummary { Line = "Restored " + Count(restored, "project") };
+            if (DotnetRestoreUpToDate.IsMatch(output)) return new RunSummary { Line = "Up to date" };
+            return null;
+        }
+
         // A failing test's own line, per runner (Phase 111)
         private static readonly Regex[] FailedTest =
         {
