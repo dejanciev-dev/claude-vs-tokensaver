@@ -3100,9 +3100,17 @@ first lines.
       file"; the form checked against dotnet 11's real output). Ruff's "Found 3 errors." is also how an older tsc ends,
       so it counts only with a `.py:line:col` in the output, and `Summarize` checks lint before builds. A clean ESLint
       prints nothing, so it keeps its first lines. `Test_RunResults_Lint`. Builds clean; not yet run in VS
-- [ ] **Git results.** `git status` ("2 modified · 1 untracked", "Clean"), `git diff --stat` ("3 files · +10 −2"),
+- [x] **Git results.** `git status` ("2 modified · 1 untracked", "Clean"), `git diff --stat` ("3 files · +10 −2"),
       `git commit` ("Committed abc1234: message"), `git push` ("Pushed to origin/branch"), `git log --oneline`
       ("12 commits"). In Core, tested.
+      `RunResults.Git`, from git 2.x's output captured in a scratch repository with a local bare remote: a push's
+      ref lines after "To …" ("Pushed main (new branch)", "(forced)", "✗ Push rejected (fetch first)" in red;
+      "Everything up-to-date" is "Nothing to push"); a commit's `[main a0b4892]` and its changes line ("Committed
+      a0b4892 · 3 files · +2 −1"; the message is in the row's title already, so it isn't repeated); `status` long
+      ("1 deleted · 1 modified · 1 untracked", "Clean · 2 commits ahead") and `--short`; `diff --stat`'s last line;
+      `log --oneline` (also `--graph`). The every-line checks skip git's `warning:` lines and the "Shell cwd was reset
+      to …" line Claude Code adds (Phase 110). A `fatal:`/`error:` output is left to its error lines. Checked after
+      tests, lint and builds. `Test_RunResults_Git` (md5sum's hashes aren't commits). Builds clean; not yet run in VS
 - [ ] **Package installs.** npm, pnpm and yarn ("added 120 packages"), pip ("Installed 3 packages"), `dotnet add
       package` and restore ("Restored 2 projects"). In Core, tested.
 

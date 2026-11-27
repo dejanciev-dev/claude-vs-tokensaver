@@ -121,6 +121,114 @@ namespace ClaudeVS.Core.Cli
             return null;
         }
 
+        // git, as git 2.x prints it (Phase 111; the forms captured from a real repository)
+        private static readonly Regex GitCommit = new Regex(@"^\[(?<b>[^\]\s]+)(?: \(root-commit\))? (?<h>[0-9a-f]{7,40})\] ", RegexOptions.Compiled | RegexOptions.Multiline);
+        private static readonly Regex GitChanged = new Regex(@"^\s*(?<f>\d+) files? changed(?:, (?<i>\d+) insertions?\(\+\))?(?:, (?<d>\d+) deletions?\(-\))?\s*$", RegexOptions.Compiled | RegexOptions.Multiline);
+        private static readonly Regex GitPushTo = new Regex(@"^To \S", RegexOptions.Compiled | RegexOptions.Multiline);
+        private static readonly Regex GitPushRef = new Regex(@"^ (?<flag>[ *+!=-])\s+(?<what>\[new branch\]|\[new tag\]|\[rejected\]|\[remote rejected\]|\[deleted\]|\[up to date\]|[0-9a-f]+\.{2,3}[0-9a-f]+)\s+(?<src>\S+) -> (?<dst>\S+)(?: \((?<why>[^)]+)\))?", RegexOptions.Compiled | RegexOptions.Multiline);
+        private static readonly Regex GitUpToDate = new Regex(@"^Everything up-to-date\s*$", RegexOptions.Compiled | RegexOptions.Multiline);
+        private static readonly Regex GitClean = new Regex(@"^nothing to commit, working tree clean\s*$", RegexOptions.Compiled | RegexOptions.Multiline);
+        private static readonly Regex GitAhead = new Regex(@"^Your branch is (?<w>ahead of|behind) '[^']+' by (?<n>\d+) commits?", RegexOptions.Compiled | RegexOptions.Multiline);
+        private static readonly Regex GitStatusEntry = new Regex(@"^\t(?<k>modified|new file|deleted|renamed|typechange|both modified):\s+\S", RegexOptions.Compiled | RegexOptions.Multiline);
+        private static readonly Regex GitShortLine = new Regex(@"^(?:## .+|[ MADRCUT?!][ MADRCUT?!] \S.*)$", RegexOptions.Compiled);
+        private static readonly Regex GitOneline = new Regex(@"^(?:[*|\\/ ]+ )?[0-9a-f]{7,40} \S", RegexOptions.Compiled);
+        private static readonly Regex GitFailed = new Regex(@"^(?:fatal|error): ", RegexOptions.Compiled | RegexOptions.Multiline);
+
+        /// <summary>
+        /// What a git command did (Phase 111): "Committed a0b4892 · 3 files · +2 −1", "Pushed main (new branch)",
+        /// "✗ Push rejected (fetch first)", "Nothing to push", "Clean", "1 modified · 1 deleted · 1 untracked",
+        /// "3 files · +10 −2", "12 commits". Null for anything else, and for a command that failed (its error lines say more).
+        /// </summary>
+        public static RunSummary Git(string output)
+        {
+            if (string.IsNullOrWhiteSpace(output)) return null;
+            string Count(int n, string w) => n == 1 ? "1 " + w : n + " " + w + "s";
+            string Changes(Match c)
+            {
+                var counts = new List<string>();
+                if (N(c.Groups["i"]) > 0) counts.Add("+" + N(c.Groups["i"]));
+                if (N(c.Groups["d"]) > 0) counts.Add("−" + N(c.Groups["d"]));
+                return Count(N(c.Groups["f"]), "file") + (counts.Count > 0 ? " · " + string.Join(" ", counts) : "");
+            }
+
+            // A push names its refs after "To <remote>"; a rejected one also says "error: failed to push"
+            if (GitPushTo.IsMatch(output))
+            {
+                var refs = GitPushRef.Matches(output).Cast<Match>().ToList();
+                var rejected = refs.FirstOrDefault(r => r.Groups["flag"].Value == "!");
+                if (rejected != null)
+                    return new RunSummary { Line = "✗ Push rejected" + (rejected.Groups["why"].Success ? " (" + rejected.Groups["why"].Value + ")" : ""), Failed = true };
+                var pushed = refs.Where(r => r.Groups["flag"].Value != "=").ToList();
+                if (pushed.Count > 0 && !GitFailed.IsMatch(output))
+                {
+                    var first = pushed[0];
+                    string what = first.Groups["what"].Value;
+                    string line = (first.Groups["flag"].Value == "-" ? "Deleted " + first.Groups["dst"].Value : "Pushed " + first.Groups["src"].Value)
+                        + (what == "[new branch]" ? " (new branch)" : what == "[new tag]" ? " (new tag)" : first.Groups["flag"].Value == "+" ? " (forced)" : "");
+                    if (pushed.Count > 1) line += $" · +{pushed.Count - 1} more";
+                    return new RunSummary { Line = line };
+                }
+            }
+            if (GitFailed.IsMatch(output)) return null;
+            if (GitUpToDate.IsMatch(output)) return new RunSummary { Line = "Nothing to push" };
+
+            var commit = GitCommit.Match(output);
+            if (commit.Success)
+            {
+                var changed = GitChanged.Match(output, commit.Index);
+                return new RunSummary { Line = "Committed " + commit.Groups["h"].Value + (changed.Success ? " · " + Changes(changed) : "") };
+            }
+
+            // git status, long form
+            var ahead = GitAhead.Match(output);
+            string Ahead() => ahead.Success ? " · " + Count(N(ahead.Groups["n"]), "commit") + (ahead.Groups["w"].Value == "behind" ? " behind" : " ahead") : "";
+            if (GitClean.IsMatch(output)) return new RunSummary { Line = "Clean" + Ahead() };
+            var entries = GitStatusEntry.Matches(output).Cast<Match>().Select(m => m.Groups["k"].Value).ToList();
+            int untracked = 0;
+            int u = output.IndexOf("\nUntracked files:", System.StringComparison.Ordinal);
+            if (u >= 0) u++; // the header's line
+            else if (output.StartsWith("Untracked files:", System.StringComparison.Ordinal)) u = 0;
+            if (u >= 0)
+                foreach (var l in output.Substring(u).Split('\n').Skip(1).Select(l => l.TrimEnd('\r')))
+                {
+                    if (l.StartsWith("\t", System.StringComparison.Ordinal)) untracked++;
+                    else if (l.Trim().Length > 0 && !l.TrimStart().StartsWith("(", System.StringComparison.Ordinal)) break;
+                }
+            if (entries.Count > 0 || untracked > 0)
+            {
+                var parts = entries.GroupBy(k => k == "new file" ? "added" : k == "both modified" ? "conflicted" : k)
+                    .Select(g => g.Count() + " " + g.Key).ToList();
+                if (untracked > 0) parts.Add(untracked + " untracked");
+                return new RunSummary { Line = string.Join(" · ", parts) + Ahead() };
+            }
+
+            // Without git's line-ending warnings and the line Claude Code adds after a command ("Shell cwd was reset to …")
+            var lines = output.Replace("\r\n", "\n").Split('\n')
+                .Where(l => l.Trim().Length > 0 && !l.StartsWith("warning: ", System.StringComparison.Ordinal) && !l.StartsWith("Shell cwd was reset to ", System.StringComparison.Ordinal))
+                .ToList();
+            if (lines.Count == 0) return null;
+            // git status --short: two status letters per file
+            if (lines.All(l => GitShortLine.IsMatch(l)) && lines.Any(l => !l.StartsWith("## ", System.StringComparison.Ordinal)))
+            {
+                var files = lines.Where(l => !l.StartsWith("## ", System.StringComparison.Ordinal)).ToList();
+                var kinds = files.Select(l => l.StartsWith("??", System.StringComparison.Ordinal) ? "untracked"
+                    : l.Contains("U") && l.IndexOf('U') < 2 ? "conflicted"
+                    : l[0] == 'A' ? "added" : l[0] == 'D' || l[1] == 'D' ? "deleted" : l[0] == 'R' ? "renamed" : "modified");
+                return new RunSummary { Line = string.Join(" · ", kinds.GroupBy(k => k).Select(g => g.Count() + " " + g.Key)) };
+            }
+            // git diff --stat (and git show --stat): the last line
+            var stat = GitChanged.Matches(output).Cast<Match>().LastOrDefault();
+            if (stat != null && lines.Count >= 2 && lines.Take(lines.Count - 1).All(l => l.Contains(" | ") || l.TrimStart().StartsWith("create mode") || l.TrimStart().StartsWith("delete mode")))
+                return new RunSummary { Line = Changes(stat) };
+            // git log --oneline (also --graph)
+            if (lines.All(l => GitOneline.IsMatch(l) || l.Trim('*', '|', '\\', '/', ' ').Length == 0))
+            {
+                int n = lines.Count(l => GitOneline.IsMatch(l));
+                if (n > 0) return new RunSummary { Line = Count(n, "commit") };
+            }
+            return null;
+        }
+
         // A failing test's own line, per runner (Phase 111)
         private static readonly Regex[] FailedTest =
         {
