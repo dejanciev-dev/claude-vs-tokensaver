@@ -335,6 +335,17 @@ namespace ClaudeVS.Core.Tests
             Eq(null, ClaudeVS.Core.Markdown.CodeText.Gutter(null), "nothing");
         }
 
+        private static void Test_TextSearch_WholeWord()
+        {
+            // Phase 108: a whole word only
+            string text = "id width _id id2 (id) Id";
+            Eq("0,4,10,13,18,22", string.Join(",", TextSearch.FindAll(text, "id", false)), "anywhere");
+            Eq("0,18,22", string.Join(",", TextSearch.FindAll(text, "id", false, wholeWord: true)), "as words; _ and digits join a word");
+            Eq("0,18", string.Join(",", TextSearch.FindAll(text, "id", true, wholeWord: true)), "with match case");
+            Eq("7", string.Join(",", TextSearch.FindAll("ididid id", "id", false, wholeWord: true)), "after a run that isn't one");
+            True(TextSearch.IsWholeWord("a.b", 2, 1), "punctuation is an edge");
+        }
+
         private static void Test_Markdown_HalfWritten()
         {
             // Phase 95: while an answer streams, its last line may be cut off
