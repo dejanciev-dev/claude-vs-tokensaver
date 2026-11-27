@@ -10,6 +10,10 @@ All notable changes to this project are listed here. The format follows
 
 - **Long answers stream without slowing down:** each streamed piece draws only the part of the answer that changed
   (usually its last paragraph), not the whole answer again, and the links in the rest aren't looked at again.
+- **Build and test rows checked live:** a new live test (`--live-tools`, in `--live-all`, now 22 tests) has Claude
+  Code run a real `dotnet build` and `dotnet test`; their rows say "Build succeeded" and "✗ 1 failed · 1 passed".
+- **README and the Marketplace overview** describe find in the chat, the new Markdown, copying and exporting with
+  formatting, and the summarized tool rows.
 
 ### Added
 
