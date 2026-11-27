@@ -1170,6 +1170,31 @@ namespace ClaudeVS.Core.Tests
             Eq("gpt-x", ConversationExport.ModelName("gpt-x"), "anything else as it is");
         }
 
+        private static void Test_Export_Contents()
+        {
+            // Phase 112: three prompts or more start with a list of them, each a link to its section
+            var t = new SessionTranscript();
+            foreach (var p in new[] { "How does [login] work?\nMore detail here.", "Fix `Parse` *now*", new string('x', 100) })
+            {
+                t.Items.Add(new TranscriptItem { Kind = TranscriptItemKind.User, Text = p });
+                t.Items.Add(new TranscriptItem { Kind = TranscriptItemKind.Answer, Text = "## Setup\n\nok" });
+            }
+            var when = new DateTime(2026, 11, 27, 12, 0, 0);
+            string md = ConversationExport.ToMarkdown(t, "T", when);
+            True(md.Contains("\n**Prompts**\n\n1. [How does login work?](#you)\n2. [Fix Parse now](#you-1)\n3. [" + new string('x', 79) + "…](#you-2)\n"),
+                 "the first lines, without marks, cut, linked to you, you-1, you-2: " + md);
+            True(md.IndexOf("**Prompts**", StringComparison.Ordinal) < md.IndexOf("## You", StringComparison.Ordinal), "before the first prompt");
+
+            string html = ConversationExport.ToHtml(t, "T", when);
+            True(html.Contains("<nav class=\"contents\"><p><strong>Prompts</strong></p>\n<ol><li><a href=\"#you\">How does login work?</a></li>"), "a nav on the page: " + html);
+            True(html.Contains("<h2 id=\"you-1\">You</h2>"), "the link's target is there");
+
+            t.Items.RemoveRange(4, 2);
+            True(!ConversationExport.ToMarkdown(t, "T", when).Contains("**Prompts**"), "two prompts: no contents");
+            t.Items.Add(new TranscriptItem { Kind = TranscriptItemKind.User, Text = "## You\n\nmy own heading" });
+            True(!ConversationExport.ToMarkdown(t, "T", when).Contains("**Prompts**"), "a prompt with a You heading of its own: no contents rather than wrong links");
+        }
+
         private static void Test_Export_OutputAndStart()
         {
             // Phase 110: tool output folded, no tools, from a chosen prompt on

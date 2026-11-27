@@ -3132,8 +3132,14 @@ page; it says nothing about what the conversation cost, a long one has no way in
       into "Sonnet 4.5"). The line has what there is: "*2 prompts · $0.42 ($0.10 agents) · 1.2M tokens · Sonnet 5.5,
       Haiku 5.5 · 2026-11-27 09:00–11:30*"; from a chosen prompt on, the cost says it is the whole conversation's.
       `Test_Export_WhatItCost`; `Test_Export_Markdown` has the prompt count. Builds clean; not yet run in VS
-- [ ] **Contents.** A conversation of three prompts or more starts with a list of them, each a link to its section,
+- [x] **Contents.** A conversation of three prompts or more starts with a list of them, each a link to its section,
       in the Markdown and on the page. In Core, tested.
+      `ConversationExport.Contents`: "**Prompts**" and a numbered list of each prompt's first line (without the marks
+      that would break a link, cut at 80) linking to `#you`, `#you-1`…; the anchors come from parsing the finished
+      document with `MarkdownParser`, so they are the ids the page gives the headings, and GitHub's. Left out when a
+      prompt holds a "You" heading of its own (the counts differ), rather than linking wrong. Inserted after the
+      header lines; the page wraps it in `<nav class="contents">` for item 3. `Test_Export_Contents`. Builds clean;
+      not yet run in VS
 - [ ] **Dark and print.** The page follows the system's dark theme, and prints cleanly (tool output folded away, no
       contents list, page breaks kept out of code). In Core, tested.
 - [ ] **Save one answer.** Right-click an answer's copy button → *Save as…*: that answer alone as Markdown or a
